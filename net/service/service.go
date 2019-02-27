@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"errors"
-	host "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
-	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
+
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	inet "gx/ipfs/QmXuRkCR7BNQa9uqfpTiFWsTQLzmTWYg91Ja1w95gnqb6u/go-libp2p-net"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	host "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	ggio "gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/io"
+
 	"io"
 	"sync"
 	"time"
@@ -16,7 +18,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	ctxio "github.com/jbenet/go-context/io"
+	"github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
 )
 
@@ -82,7 +84,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		return
 	}
 
-	ms, err := service.messageSenderForPeer(mPeer)
+	ms, err := service.messageSenderForPeer(service.ctx, mPeer)
 	if err != nil {
 		log.Error("Error getting message sender")
 		return
@@ -161,7 +163,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 
 func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Sending %s request to %s", pmes.MessageType.String(), p.Pretty())
-	ms, err := service.messageSenderForPeer(p)
+	ms, err := service.messageSenderForPeer(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +187,7 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	if pmes.MessageType != pb.Message_BLOCK {
 		log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
 	}
-	ms, err := service.messageSenderForPeer(p)
+	ms, err := service.messageSenderForPeer(ctx, p)
 	if err != nil {
 		return err
 	}

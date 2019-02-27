@@ -161,9 +161,9 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	respObj := []struct {
+	var respObj []struct {
 		AcceptedCurrencies []string `json:"acceptedCurrencies"`
-	}{}
+	}
 	err = json.Unmarshal(respBody, &respObj)
 	if err != nil {
 		t.Fatal(err)
@@ -177,8 +177,8 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
 	}
 
-	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
-		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	if respObj[0].AcceptedCurrencies[0] != "TBTC" {
+		t.Fatal("Listing acceptedCurrencies should contain 'TBTC'")
 	}
 }
 
@@ -225,6 +225,7 @@ func TestListingAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
 	}
 }
+
 func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")
@@ -280,6 +281,9 @@ func TestListings(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", updatedListingJSON, 404, NotFoundJSON("Listing")},
 		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
+
+		// Bulk update currency in listings
+		{"POST", "/ob/bulkupdatecurrency", bulkUpdateCurrencyJSON, 200, `{"success": "true"}`},
 	})
 }
 
@@ -447,8 +451,16 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
+		{"POST", "/wallet/spend/", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
+	})
+}
+
+func TestExchangeRates(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"GET", "/ob/exchangerates", "", 500, invalidCoinJSON},
+		{"GET", "/ob/exchangerates/", "", 500, invalidCoinJSON},
+		{"GET", "/ob/exchangerates/BTC", "", 200, anyResponseJSON},
 	})
 }
 
@@ -504,8 +516,10 @@ func TestPosts(t *testing.T) {
 
 func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	dbSetup := func(testRepo *test.Repository) error {
+		paymentCoin := repo.CurrencyCode("BTC")
 		expired := factory.NewExpiredDisputeCaseRecord()
 		expired.CaseID = "expiredCase"
+		expired.PaymentCoin = &paymentCoin
 		for _, r := range []*repo.DisputeCaseRecord{expired} {
 			if err := testRepo.DB.Cases().PutRecord(r); err != nil {
 				return err
@@ -525,6 +539,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
+	sale.Contract.BuyerOrder.Payment.Coin = "ZEC"
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err
@@ -642,12 +657,13 @@ func TestPurchasesGet(t *testing.T) {
 }
 
 func TestCasesGet(t *testing.T) {
+	paymentCoinCode := repo.CurrencyCode("BTC")
 	disputeCaseRecord := factory.NewDisputeCaseRecord()
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	disputeCaseRecord.CoinType = "ZEC"
-	disputeCaseRecord.PaymentCoin = "BTC"
+	disputeCaseRecord.PaymentCoin = &paymentCoinCode
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Cases().PutRecord(disputeCaseRecord)
 	}

@@ -1,17 +1,21 @@
 package test
 
 import (
-	// "github.com/ipfs/go-ipfs/thirdparty/testutil"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	inet "net"
+	"context"
+	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
 
+	"github.com/OpenBazaar/multiwallet"
+	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
-	"github.com/OpenBazaar/spvwallet"
+	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/core/mock"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -58,37 +62,43 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	tp, err := inet.ResolveTCPAddr("tcp4", "127.0.0.1:8333")
+	mPrivKey, err := hdkeychain.NewMaster(seed, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return nil, err
-	}
-	spvwalletConfig := &spvwallet.Config{
-		Mnemonic:    mnemonic,
-		Params:      &chaincfg.RegressionNetParams,
-		MaxFee:      50000,
-		LowFee:      8000,
-		MediumFee:   16000,
-		HighFee:     24000,
-		RepoPath:    repository.Path,
-		DB:          repository.DB,
-		UserAgent:   "OpenBazaar",
-		TrustedPeer: tp,
-		Proxy:       nil,
-		Logger:      NewLogger(),
 	}
 
-	wallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
+	coins := make(map[wi.CoinType]bool)
+	coins[wi.Bitcoin] = true
+	coins[wi.BitcoinCash] = true
+	coins[wi.Zcash] = true
+	coins[wi.Litecoin] = true
+
+	walletConf := config.NewDefaultConfig(coins, &chaincfg.RegressionNetParams)
+	walletConf.Mnemonic = mnemonic
+	walletConf.DisableExchangeRates = true
+	mw, err := multiwallet.NewMultiWallet(walletConf)
 	if err != nil {
 		return nil, err
 	}
+	host, err := libp2p.New(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	routing, err := dht.New(context.Background(), host)
+	if err != nil {
+		return nil, err
+	}
+	close(routing.BootstrapChan)
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
-		RepoPath:   GetRepoPath(),
-		IpfsNode:   ipfsNode,
-		Datastore:  repository.DB,
-		Wallet:     wallet,
-		BanManager: net.NewBanManager([]peer.ID{}),
+		RepoPath:         GetRepoPath(),
+		IpfsNode:         ipfsNode,
+		Datastore:        repository.DB,
+		Multiwallet:      mw,
+		BanManager:       net.NewBanManager([]peer.ID{}),
+		MasterPrivateKey: mPrivKey,
+		DHT:              routing,
 	}
 
 	node.Service = service.New(node, repository.DB)

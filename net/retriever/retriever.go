@@ -3,14 +3,16 @@ package net
 import (
 	"context"
 	"errors"
-	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	routing "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+
 	"io/ioutil"
 	gonet "net"
 	"net/http"
@@ -37,6 +39,7 @@ var log = logging.MustGetLogger("retriever")
 type MRConfig struct {
 	Db        repo.Datastore
 	IPFSNode  *core.IpfsNode
+	DHT       *routing.IpfsDHT
 	BanManger *net.BanManager
 	Service   net.NetworkService
 	PrefixLen int
@@ -49,6 +52,7 @@ type MRConfig struct {
 type MessageRetriever struct {
 	db         repo.Datastore
 	node       *core.IpfsNode
+	routing    *routing.IpfsDHT
 	bm         *net.BanManager
 	service    net.NetworkService
 	prefixLen  int
@@ -72,23 +76,26 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	if cfg.Dialer != nil {
 		dial = cfg.Dialer.Dial
 	}
+
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{
-		cfg.Db,
-		cfg.IPFSNode,
-		cfg.BanManger,
-		cfg.Service,
-		cfg.PrefixLen,
-		cfg.SendAck,
-		cfg.SendError,
-		client,
-		cfg.PushNodes,
-		new(sync.Mutex),
-		make(chan struct{}),
-		make(chan struct{}, 5),
-		new(sync.WaitGroup),
+		db:         cfg.Db,
+		node:       cfg.IPFSNode,
+		routing:    cfg.DHT,
+		bm:         cfg.BanManger,
+		service:    cfg.Service,
+		prefixLen:  cfg.PrefixLen,
+		sendAck:    cfg.SendAck,
+		sendError:  cfg.SendError,
+		httpClient: client,
+		dataPeers:  cfg.PushNodes,
+		queueLock:  new(sync.Mutex),
+		DoneChan:   make(chan struct{}),
+		inFlight:   make(chan struct{}, 5),
+		WaitGroup:  new(sync.WaitGroup),
 	}
+
 	mr.Add(1)
 	return &mr
 }
@@ -131,7 +138,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 		if useDHT {
 			pwg.Add(1)
 			go func(c chan ps.PeerInfo) {
-				iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+				iout := ipfs.FindPointersAsync(m.routing, ctx, mh, m.prefixLen)
 				for p := range iout {
 					c <- p
 				}
@@ -203,7 +210,7 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
-			provs, err := ipfs.GetPointersFromPeer(m.node, ctx, pid, k)
+			provs, err := ipfs.GetPointersFromPeer(m.routing, ctx, pid, &k)
 			if err != nil {
 				return
 			}
@@ -334,7 +341,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	}
 
 	m.node.Peerstore.AddPubKey(id, pubkey)
-	m.node.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix+id.Pretty())), env.Pubkey)
+	m.node.Repo.Datastore().Put(datastore.NewKey(KeyCachePrefix+id.Pretty()), env.Pubkey)
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
@@ -368,7 +375,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
 		log.Errorf("Nil handler for message type %s", env.Message.MessageType)
-		return errors.New("Nil handler for message")
+		return errors.New("nil handler for message")
 	}
 
 	// Dispatch handler

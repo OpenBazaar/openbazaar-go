@@ -39,15 +39,19 @@ const (
 	// End SQL Statements
 
 	// Configuration defaults
-	DataPushNodeOne = "QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ"
-	DataPushNodeTwo = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
+	EthereumRegistryAddressMainnet = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRinkeby = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+
+	DataPushNodeOne   = "QmbwN82MVyBukT7WTdaQDppaACo62oUfma8dUa5R9nBFHm"
+	DataPushNodeTwo   = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
+	DataPushNodeThree = "QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ"
 
 	BootstrapNodeTestnet_BrooklynFlea     = "/ip4/165.227.117.91/tcp/4001/ipfs/Qmaa6De5QYNqShzPb9SGSo8vLmoUte8mnWgzn4GYwzuUYA"
 	BootstrapNodeTestnet_Shipshewana      = "/ip4/46.101.221.165/tcp/4001/ipfs/QmVAQYg7ygAWTWegs8HSV2kdW1MqW8WMrmpqKG1PQtkgTC"
 	BootstrapNodeDefault_LeMarcheSerpette = "/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K"
 	BootstrapNodeDefault_BrixtonVillage   = "/ip4/139.59.174.197/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM"
 	BootstrapNodeDefault_Johari           = "/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg"
-	BootstrapNodeDefault_DuoSearch        = "/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX"
 	// End Configuration defaults
 )
 
@@ -58,16 +62,55 @@ var (
 )
 
 var (
-	DataPushNodes = []string{DataPushNodeOne, DataPushNodeTwo}
+	DataPushNodes = []string{DataPushNodeOne, DataPushNodeTwo, DataPushNodeThree}
 
 	BootstrapAddressesDefault = []string{
 		BootstrapNodeDefault_LeMarcheSerpette,
 		BootstrapNodeDefault_BrixtonVillage,
 		BootstrapNodeDefault_Johari,
-		BootstrapNodeDefault_DuoSearch,
 	}
 	BootstrapAddressesTestnet = []string{
 		BootstrapNodeTestnet_BrooklynFlea,
 		BootstrapNodeTestnet_Shipshewana,
 	}
+)
+
+func EthereumDefaultOptions() map[string]interface{} {
+	return map[string]interface{}{
+		"RegistryAddress":        EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": EthereumRegistryAddressRopsten,
+	}
+}
+
+const (
+	WalletTypeAPI = "API"
+	WalletTypeSPV = "SPV"
+)
+
+const (
+	CoinAPIOpenBazaarBTC = "https://btc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarBCH = "https://bch.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarLTC = "https://ltc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarZEC = "https://zec.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarETH = "https://rinkeby.infura.io"
+
+	CoinAPIOpenBazaarTBTC = "https://tbtc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTBCH = "https://tbch.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTLTC = "https://tltc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTZEC = "https://tzec.blockbook.api.openbazaar.org/api"
+)
+
+var (
+	CoinPoolBTC = []string{CoinAPIOpenBazaarBTC}
+	CoinPoolBCH = []string{CoinAPIOpenBazaarBCH}
+	CoinPoolLTC = []string{CoinAPIOpenBazaarLTC}
+	CoinPoolZEC = []string{CoinAPIOpenBazaarZEC}
+	CoinPoolETH = []string{CoinAPIOpenBazaarETH}
+
+	CoinPoolTBTC = []string{CoinAPIOpenBazaarTBTC}
+	CoinPoolTBCH = []string{CoinAPIOpenBazaarTBCH}
+	CoinPoolTLTC = []string{CoinAPIOpenBazaarTLTC}
+	CoinPoolTZEC = []string{CoinAPIOpenBazaarTZEC}
+	CoinPoolTETH = []string{CoinAPIOpenBazaarETH}
 )

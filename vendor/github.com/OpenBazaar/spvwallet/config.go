@@ -1,17 +1,18 @@
 package spvwallet
 
 import (
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/mitchellh/go-homedir"
-	"github.com/op/go-logging"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/mitchellh/go-homedir"
+	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 )
 
 type Config struct {
@@ -56,6 +57,9 @@ type Config struct {
 
 	// A logger. You can write the logs to file or stdout or however else you want.
 	Logger logging.Backend
+
+	// Disable the exchange rate provider
+	DisableExchangeRates bool
 }
 
 func NewDefaultConfig() *Config {

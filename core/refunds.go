@@ -24,6 +24,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		var outValue int64
@@ -39,7 +43,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			}
 		}
 
-		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
@@ -52,7 +56,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return err
 		}
@@ -60,7 +64,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -69,7 +73,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			return err
 		}
 
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return err
 		}
@@ -86,11 +90,11 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 				outValue += r.Value
 			}
 		}
-		refundAddr, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddr, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
-		txid, err := n.Wallet.Spend(outValue, refundAddr, wallet.NORMAL)
+		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL, orderID)
 		if err != nil {
 			return err
 		}
@@ -140,11 +144,11 @@ func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
-			return errors.New("Contract does not contain a signature for the refund")
+			return errors.New("contract does not contain a signature for the refund")
 		case invalidSigError:
-			return errors.New("Vendor's guid signature on contact failed to verify")
+			return errors.New("vendor's guid signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("Public key in order does not match reported vendor ID")
+			return errors.New("public key in order does not match reported vendor ID")
 		default:
 			return err
 		}

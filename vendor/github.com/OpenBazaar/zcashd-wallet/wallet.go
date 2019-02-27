@@ -9,9 +9,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/zcashd-wallet/exchangerates"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -25,13 +34,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"os"
-	"os/exec"
-	"path"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
+	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -53,6 +56,7 @@ type ZcashdWallet struct {
 	useTor           bool
 	addrsToWatch     []btc.Address
 	initChan         chan struct{}
+	exchangeRates    wallet.ExchangeRates
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -63,7 +67,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int) (*ZcashdWallet, error) {
+func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer, disableExchangeRates bool) (*ZcashdWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -94,6 +98,9 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		controlPort:      torControlPort,
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
+	}
+	if !disableExchangeRates {
+		w.exchangeRates = exchangerates.NewZcashPriceFetcher(proxy)
 	}
 	return &w, nil
 }
@@ -1060,4 +1067,8 @@ func (w *ZcashdWallet) Close() {
 		w.rpcClient.RawRequest("stop", []json.RawMessage{})
 		w.rpcClient.Shutdown()
 	}
+}
+
+func (w *ZcashdWallet) ExchangeRates() wallet.ExchangeRates {
+	return w.exchangeRates
 }

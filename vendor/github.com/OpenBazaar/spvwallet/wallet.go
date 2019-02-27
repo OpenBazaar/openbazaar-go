@@ -2,6 +2,11 @@ package spvwallet
 
 import (
 	"errors"
+	"io"
+	"sync"
+	"time"
+
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -13,9 +18,6 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io"
-	"sync"
-	"time"
 )
 
 type SPVWallet struct {
@@ -45,6 +47,8 @@ type SPVWallet struct {
 	running bool
 
 	config *PeerManagerConfig
+
+	exchangeRates wallet.ExchangeRates
 }
 
 var log = logging.MustGetLogger("bitcoin")
@@ -95,6 +99,12 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		fPositives:    make(chan *peer.Peer),
 		fpAccumulator: make(map[int32]int32),
 		mutex:         new(sync.RWMutex),
+	}
+
+	bpf := exchangerates.NewBitcoinPriceFetcher(config.Proxy)
+	w.exchangeRates = bpf
+	if !config.DisableExchangeRates {
+		go bpf.Run()
 	}
 
 	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)
@@ -431,4 +441,8 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.blockchain.Rollback(fromDate)
 	w.txstore.PopulateAdrs()
 	w.wireService.Resync()
+}
+
+func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
+	return w.exchangeRates
 }

@@ -52,6 +52,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	var pw string
 	for {
 		fmt.Print("Enter a veerrrry strong password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)
@@ -66,6 +67,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	}
 	for {
 		fmt.Print("Confirm your password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)

@@ -6,6 +6,9 @@ package spvwallet
 import (
 	"bytes"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -14,8 +17,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
-	"sync"
-	"time"
 )
 
 type TxStore struct {

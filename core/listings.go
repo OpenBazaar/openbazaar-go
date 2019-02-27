@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -64,9 +66,6 @@ const (
 	PriceModifierMin = -99.99
 	// PriceModifierMax = max price modifier
 	PriceModifierMax = 1000.00
-
-	// DefaultCoinDivisibility - decimals for price
-	DefaultCoinDivisibility uint32 = 1e8
 )
 
 type price struct {
@@ -143,12 +142,28 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		listing.Metadata.EscrowTimeoutHours = EscrowTimeout
 	}
 
-	// Set crypto currency
-	listing.Metadata.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	// Validate accepted currencies
+	if len(listing.Metadata.AcceptedCurrencies) == 0 {
+		return sl, errors.New("accepted currencies must be set")
+	}
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY && len(listing.Metadata.AcceptedCurrencies) != 1 {
+		return sl, errors.New("a cryptocurrency listing must only have one accepted currency")
+	}
+	currencyMap := make(map[string]bool)
+	for _, acceptedCurrency := range listing.Metadata.AcceptedCurrencies {
+		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
+		if err != nil {
+			return sl, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
+		}
+		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
+			return sl, errors.New("duplicate accepted currency in listing")
+		}
+		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
+	}
 
 	// Sanitize a few critical fields
 	if listing.Item == nil {
-		return sl, errors.New("No item in listing")
+		return sl, errors.New("no item in listing")
 	}
 	sanitizer := bluemonday.UGCPolicy()
 	for _, opt := range listing.Item.Options {
@@ -166,7 +181,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Check the listing data is correct for continuing
 	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
-	if err := validateListing(listing, testingEnabled); err != nil {
+	if err := n.validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
@@ -186,7 +201,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 	p := new(pb.ID_Pubkeys)
 	p.Identity = pubkey
-	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return sl, err
 	}
@@ -195,7 +210,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	listing.VendorID = id
 
 	// Sign the GUID with the Bitcoin key
-	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return sl, err
 	}
@@ -258,7 +273,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
-		err = n.Datastore.Inventory().Put(listing.Slug, i, int64(s.Quantity))
+		err = n.Datastore.Inventory().Put(listing.Slug, i, s.Quantity)
 		if err != nil {
 			return err
 		}
@@ -312,11 +327,11 @@ func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
 		}
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, true)
 }
 
 // UpdateListing - update the listing
-func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing, publish bool) error {
 	exists, err := n.listingExists(listing.Slug)
 	if err != nil {
 		return err
@@ -326,10 +341,10 @@ func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 		return ErrListingDoesNotExist
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, publish)
 }
 
-func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
+func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 	if len(listing.Moderators) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
@@ -338,7 +353,7 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	}
 
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -378,13 +393,27 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) saveListing(listing *pb.Listing, publish bool) error {
+
+	err := prepListingForPublish(n, listing)
+	if err != nil {
+		return err
+	}
+
 	// Update followers/following
 	err = n.UpdateFollow()
 	if err != nil {
 		return err
 	}
-	if err = n.SeedNode(); err != nil {
-		return err
+
+	if publish {
+		if err = n.SeedNode(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -430,10 +459,6 @@ func setCryptocurrencyListingDefaults(listing *pb.Listing) {
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
 }
 
-func coinDivisibilityForType(coinType string) uint32 {
-	return DefaultCoinDivisibility
-}
-
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
 	listingPath := path.Join(n.RepoPath, "root", "listings", listing.Listing.Slug+".json")
 
@@ -456,8 +481,8 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		return false
 	}
 
-	shipsTo := []string{}
-	freeShipping := []string{}
+	var shipsTo []string
+	var freeShipping []string
 	for _, shippingOption := range listing.Listing.ShippingOptions {
 		for _, region := range shippingOption.Regions {
 			if !contains(shipsTo, region.String()) {
@@ -490,7 +515,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,
 		ModeratorIDs:       listing.Listing.Moderators,
-		AcceptedCurrencies: []string{n.Wallet.CurrencyCode()},
+		AcceptedCurrencies: listing.Listing.Metadata.AcceptedCurrencies,
 	}
 	return ld, nil
 }
@@ -575,7 +600,7 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 		}
 	}
 	if !exists {
-		return errors.New("Listing for rating does not exist in index")
+		return errors.New("listing for rating does not exist in index")
 	}
 	totalRating := ld.AverageRating * float32(ld.RatingCount)
 	totalRating += float32(rating.RatingData.Overall)
@@ -806,7 +831,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, err
 	}
 
 	if slug == "" {
-		return nil, errors.New("Listing does not exist")
+		return nil, errors.New("listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
@@ -837,7 +862,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = int64(count)
+				s.Quantity = count
 				break
 			}
 		}
@@ -848,7 +873,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func validateListing(listing *pb.Listing, testnet bool) (err error) {
+func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -857,130 +882,130 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			case error:
 				err = x
 			default:
-				err = errors.New("Unknown panic")
+				err = errors.New("unknown panic")
 			}
 		}
 	}()
 
 	// Slug
 	if listing.Slug == "" {
-		return errors.New("Slug must not be empty")
+		return errors.New("slug must not be empty")
 	}
 	if len(listing.Slug) > SentenceMaxCharacters {
-		return fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+		return fmt.Errorf("slug is longer than the max of %d", SentenceMaxCharacters)
 	}
 	if strings.Contains(listing.Slug, " ") {
-		return errors.New("Slugs cannot contain spaces")
+		return errors.New("slugs cannot contain spaces")
 	}
 	if strings.Contains(listing.Slug, "/") {
-		return errors.New("Slugs cannot contain file separators")
+		return errors.New("slugs cannot contain file separators")
 	}
 
 	// Metadata
 	if listing.Metadata == nil {
-		return errors.New("Missing required field: Metadata")
+		return errors.New("missing required field: Metadata")
 	}
 	if listing.Metadata.ContractType > pb.Listing_Metadata_CRYPTOCURRENCY {
-		return errors.New("Invalid contract type")
+		return errors.New("invalid contract type")
 	}
 	if listing.Metadata.Format > pb.Listing_Metadata_MARKET_PRICE {
-		return errors.New("Invalid listing format")
+		return errors.New("invalid listing format")
 	}
 	if listing.Metadata.Expiry == nil {
-		return errors.New("Missing required field: Expiry")
+		return errors.New("missing required field: Expiry")
 	}
 	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
-		return errors.New("Listing expiration must be in the future")
+		return errors.New("listing expiration must be in the future")
 	}
 	if len(listing.Metadata.Language) > WordMaxCharacters {
-		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
+		return fmt.Errorf("language is longer than the max of %d characters", WordMaxCharacters)
 	}
 
 	if !testnet && listing.Metadata.EscrowTimeoutHours != EscrowTimeout {
-		return fmt.Errorf("Escrow timeout must be %d hours", EscrowTimeout)
+		return fmt.Errorf("escrow timeout must be %d hours", EscrowTimeout)
 	}
 	if len(listing.Metadata.AcceptedCurrencies) == 0 {
-		return errors.New("At least one accepted currency must be provided")
+		return errors.New("at least one accepted currency must be provided")
 	}
 	if len(listing.Metadata.AcceptedCurrencies) > MaxListItems {
-		return fmt.Errorf("AcceptedCurrencies is longer than the max of %d currencies", MaxListItems)
+		return fmt.Errorf("acceptedCurrencies is longer than the max of %d currencies", MaxListItems)
 	}
 	for _, c := range listing.Metadata.AcceptedCurrencies {
 		if len(c) > WordMaxCharacters {
-			return fmt.Errorf("Accepted currency is longer than the max of %d characters", WordMaxCharacters)
+			return fmt.Errorf("accepted currency is longer than the max of %d characters", WordMaxCharacters)
 		}
 	}
 
 	// Item
 	if listing.Item.Title == "" {
-		return errors.New("Listing must have a title")
+		return errors.New("listing must have a title")
 	}
 	if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && listing.Item.Price == 0 {
-		return errors.New("Zero price listings are not allowed")
+		return errors.New("zero price listings are not allowed")
 	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
-		return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)
+		return fmt.Errorf("title is longer than the max of %d characters", TitleMaxCharacters)
 	}
 	if len(listing.Item.Description) > DescriptionMaxCharacters {
-		return fmt.Errorf("Description is longer than the max of %d characters", DescriptionMaxCharacters)
+		return fmt.Errorf("description is longer than the max of %d characters", DescriptionMaxCharacters)
 	}
 	if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
-		return fmt.Errorf("Processing time length must be less than the max of %d", SentenceMaxCharacters)
+		return fmt.Errorf("processing time length must be less than the max of %d", SentenceMaxCharacters)
 	}
 	if len(listing.Item.Tags) > MaxTags {
-		return fmt.Errorf("Number of tags exceeds the max of %d", MaxTags)
+		return fmt.Errorf("number of tags exceeds the max of %d", MaxTags)
 	}
 	for _, tag := range listing.Item.Tags {
 		if tag == "" {
-			return errors.New("Tags must not be empty")
+			return errors.New("tags must not be empty")
 		}
 		if len(tag) > WordMaxCharacters {
-			return fmt.Errorf("Tags must be less than max of %d", WordMaxCharacters)
+			return fmt.Errorf("tags must be less than max of %d", WordMaxCharacters)
 		}
 	}
 	if len(listing.Item.Images) == 0 {
-		return errors.New("Listing must contain at least one image")
+		return errors.New("listing must contain at least one image")
 	}
 	if len(listing.Item.Images) > MaxListItems {
-		return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of listing images is greater than the max of %d", MaxListItems)
 	}
 	for _, img := range listing.Item.Images {
 		_, err := cid.Decode(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be properly formatted CID")
+			return errors.New("tiny image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be properly formatted CID")
+			return errors.New("small image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be properly formatted CID")
+			return errors.New("medium image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be properly formatted CID")
+			return errors.New("large image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be properly formatted CID")
+			return errors.New("original image hashes must be properly formatted CID")
 		}
 		if img.Filename == "" {
-			return errors.New("Image file names must not be nil")
+			return errors.New("image file names must not be nil")
 		}
 		if len(img.Filename) > FilenameMaxCharacters {
-			return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+			return fmt.Errorf("image filename length must be less than the max of %d", FilenameMaxCharacters)
 		}
 	}
 	if len(listing.Item.Categories) > MaxCategories {
-		return fmt.Errorf("Number of categories must be less than max of %d", MaxCategories)
+		return fmt.Errorf("number of categories must be less than max of %d", MaxCategories)
 	}
 	for _, category := range listing.Item.Categories {
 		if category == "" {
-			return errors.New("Categories must not be nil")
+			return errors.New("categories must not be nil")
 		}
 		if len(category) > WordMaxCharacters {
-			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("category length must be less than the max of %d", WordMaxCharacters)
 		}
 	}
 
@@ -989,59 +1014,59 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	optionMap := make(map[string]struct{})
 	for i, option := range listing.Item.Options {
 		if _, ok := optionMap[option.Name]; ok {
-			return errors.New("Option names must be unique")
+			return errors.New("option names must be unique")
 		}
 		if option.Name == "" {
-			return errors.New("Options titles must not be empty")
+			return errors.New("options titles must not be empty")
 		}
 		if len(option.Variants) < 2 {
-			return errors.New("Options must have more than one variants")
+			return errors.New("options must have more than one variants")
 		}
 		if len(option.Name) > WordMaxCharacters {
-			return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("option title length must be less than the max of %d", WordMaxCharacters)
 		}
 		if len(option.Description) > SentenceMaxCharacters {
-			return fmt.Errorf("Option description length must be less than the max of %d", SentenceMaxCharacters)
+			return fmt.Errorf("option description length must be less than the max of %d", SentenceMaxCharacters)
 		}
 		if len(option.Variants) > MaxListItems {
-			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
+			return fmt.Errorf("number of variants is greater than the max of %d", MaxListItems)
 		}
 		varMap := make(map[string]struct{})
 		for _, variant := range option.Variants {
 			if _, ok := varMap[variant.Name]; ok {
-				return errors.New("Variant names must be unique")
+				return errors.New("variant names must be unique")
 			}
 			if len(variant.Name) > WordMaxCharacters {
-				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("variant name length must be less than the max of %d", WordMaxCharacters)
 			}
 			if variant.Image != nil && (variant.Image.Filename != "" ||
 				variant.Image.Large != "" || variant.Image.Medium != "" || variant.Image.Small != "" ||
 				variant.Image.Tiny != "" || variant.Image.Original != "") {
 				_, err := cid.Decode(variant.Image.Tiny)
 				if err != nil {
-					return errors.New("Tiny image hashes must be properly formatted CID")
+					return errors.New("tiny image hashes must be properly formatted CID")
 				}
 				_, err = cid.Decode(variant.Image.Small)
 				if err != nil {
-					return errors.New("Small image hashes must be properly formatted CID")
+					return errors.New("small image hashes must be properly formatted CID")
 				}
 				_, err = cid.Decode(variant.Image.Medium)
 				if err != nil {
-					return errors.New("Medium image hashes must be properly formatted CID")
+					return errors.New("medium image hashes must be properly formatted CID")
 				}
 				_, err = cid.Decode(variant.Image.Large)
 				if err != nil {
-					return errors.New("Large image hashes must be properly formatted CID")
+					return errors.New("large image hashes must be properly formatted CID")
 				}
 				_, err = cid.Decode(variant.Image.Original)
 				if err != nil {
-					return errors.New("Original image hashes must be properly formatted CID")
+					return errors.New("original image hashes must be properly formatted CID")
 				}
 				if variant.Image.Filename == "" {
-					return errors.New("Image file names must not be nil")
+					return errors.New("image file names must not be nil")
 				}
 				if len(variant.Image.Filename) > FilenameMaxCharacters {
-					return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+					return fmt.Errorf("image filename length must be less than the max of %d", FilenameMaxCharacters)
 				}
 			}
 			varMap[variant.Name] = struct{}{}
@@ -1052,15 +1077,15 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	}
 
 	if len(listing.Item.Skus) > maxCombos {
-		return errors.New("More skus than variant combinations")
+		return errors.New("more skus than variant combinations")
 	}
 	comboMap := make(map[string]bool)
 	for _, sku := range listing.Item.Skus {
 		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
-			return errors.New("Skus must specify a variant combo when options are used")
+			return errors.New("skus must specify a variant combo when options are used")
 		}
 		if len(sku.ProductID) > WordMaxCharacters {
-			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("product ID length must be less than the max of %d", WordMaxCharacters)
 		}
 		formatted, err := json.Marshal(sku.VariantCombo)
 		if err != nil {
@@ -1070,14 +1095,14 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		if !ok {
 			comboMap[string(formatted)] = true
 		} else {
-			return errors.New("Duplicate sku")
+			return errors.New("duplicate sku")
 		}
 		if len(sku.VariantCombo) != len(listing.Item.Options) {
-			return errors.New("Incorrect number of variants in sku combination")
+			return errors.New("incorrect number of variants in sku combination")
 		}
 		for i, combo := range sku.VariantCombo {
 			if int(combo) > variantSizeMap[i] {
-				return errors.New("Invalid sku variant combination")
+				return errors.New("invalid sku variant combination")
 			}
 		}
 
@@ -1085,67 +1110,67 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 
 	// Taxes
 	if len(listing.Taxes) > MaxListItems {
-		return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of taxes is greater than the max of %d", MaxListItems)
 	}
 	for _, tax := range listing.Taxes {
 		if tax.TaxType == "" {
-			return errors.New("Tax type must be specified")
+			return errors.New("tax type must be specified")
 		}
 		if len(tax.TaxType) > WordMaxCharacters {
-			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("tax type length must be less than the max of %d", WordMaxCharacters)
 		}
 		if len(tax.TaxRegions) == 0 {
-			return errors.New("Tax must specify at least one region")
+			return errors.New("tax must specify at least one region")
 		}
 		if len(tax.TaxRegions) > MaxCountryCodes {
-			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)
+			return fmt.Errorf("number of tax regions is greater than the max of %d", MaxCountryCodes)
 		}
 		if tax.Percentage == 0 || tax.Percentage > 100 {
-			return errors.New("Tax percentage must be between 0 and 100")
+			return errors.New("tax percentage must be between 0 and 100")
 		}
 	}
 
 	// Coupons
 	if len(listing.Coupons) > MaxListItems {
-		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of coupons is greater than the max of %d", MaxListItems)
 	}
 	for _, coupon := range listing.Coupons {
 		if len(coupon.Title) > CouponTitleMaxCharacters {
-			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
+			return fmt.Errorf("coupon title length must be less than the max of %d", SentenceMaxCharacters)
 		}
 		if len(coupon.GetDiscountCode()) > CodeMaxCharacters {
-			return fmt.Errorf("Coupon code length must be less than the max of %d", CodeMaxCharacters)
+			return fmt.Errorf("coupon code length must be less than the max of %d", CodeMaxCharacters)
 		}
 		if coupon.GetPercentDiscount() > 100 {
-			return errors.New("Percent discount cannot be over 100 percent")
+			return errors.New("percent discount cannot be over 100 percent")
 		}
 		if coupon.GetPriceDiscount() > listing.Item.Price {
-			return errors.New("Price discount cannot be greater than the item price")
+			return errors.New("price discount cannot be greater than the item price")
 		}
 		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
-			return errors.New("Coupons must have at least one positive discount value")
+			return errors.New("coupons must have at least one positive discount value")
 		}
 	}
 
 	// Moderators
 	if len(listing.Moderators) > MaxListItems {
-		return fmt.Errorf("Number of moderators is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of moderators is greater than the max of %d", MaxListItems)
 	}
 	for _, moderator := range listing.Moderators {
 		_, err := mh.FromB58String(moderator)
 		if err != nil {
-			return errors.New("Moderator IDs must be multihashes")
+			return errors.New("moderator IDs must be multihashes")
 		}
 	}
 
 	// TermsAndConditions
 	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
-		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
+		return fmt.Errorf("terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
 	}
 
 	// RefundPolicy
 	if len(listing.RefundPolicy) > PolicyMaxCharacters {
-		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
+		return fmt.Errorf("refund policy length must be less than the max of %d", PolicyMaxCharacters)
 	}
 
 	// Type-specific validations
@@ -1155,7 +1180,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -1192,76 +1217,76 @@ func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 
 func validatePhysicalListing(listing *pb.Listing) error {
 	if listing.Metadata.PricingCurrency == "" {
-		return errors.New("Listing pricing currency code must not be empty")
+		return errors.New("listing pricing currency code must not be empty")
 	}
 	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
-		return fmt.Errorf("PricingCurrency is longer than the max of %d characters", WordMaxCharacters)
+		return fmt.Errorf("'PricingCurrency' is longer than the max of %d characters", WordMaxCharacters)
 	}
 	if len(listing.Item.Condition) > SentenceMaxCharacters {
-		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
+		return fmt.Errorf("'Condition' length must be less than the max of %d", SentenceMaxCharacters)
 	}
 	if len(listing.Item.Options) > MaxListItems {
-		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of options is greater than the max of %d", MaxListItems)
 	}
 
 	// ShippingOptions
 	if len(listing.ShippingOptions) == 0 {
-		return errors.New("Must be at least one shipping option for a physical good")
+		return errors.New("must be at least one shipping option for a physical good")
 	}
 	if len(listing.ShippingOptions) > MaxListItems {
-		return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
+		return fmt.Errorf("number of shipping options is greater than the max of %d", MaxListItems)
 	}
 	var shippingTitles []string
 	for _, shippingOption := range listing.ShippingOptions {
 		if shippingOption.Name == "" {
-			return errors.New("Shipping option title name must not be empty")
+			return errors.New("shipping option title name must not be empty")
 		}
 		if len(shippingOption.Name) > WordMaxCharacters {
-			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("shipping option service length must be less than the max of %d", WordMaxCharacters)
 		}
 		for _, t := range shippingTitles {
 			if t == shippingOption.Name {
-				return errors.New("Shipping option titles must be unique")
+				return errors.New("shipping option titles must be unique")
 			}
 		}
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
-			return errors.New("Unknown shipping option type")
+			return errors.New("unknown shipping option type")
 		}
 		if len(shippingOption.Regions) == 0 {
-			return errors.New("Shipping options must specify at least one region")
+			return errors.New("shipping options must specify at least one region")
 		}
 		if err := ValidShippingRegion(shippingOption); err != nil {
-			return fmt.Errorf("Invalid shipping option (%s): %s", shippingOption.String(), err.Error())
+			return fmt.Errorf("invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
-			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
+			return fmt.Errorf("number of shipping regions is greater than the max of %d", MaxCountryCodes)
 		}
 		if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
-			return errors.New("At least one service must be specified for a shipping option when not local pickup")
+			return errors.New("at least one service must be specified for a shipping option when not local pickup")
 		}
 		if len(shippingOption.Services) > MaxListItems {
-			return fmt.Errorf("Number of shipping services is greater than the max of %d", MaxListItems)
+			return fmt.Errorf("number of shipping services is greater than the max of %d", MaxListItems)
 		}
 		var serviceTitles []string
 		for _, option := range shippingOption.Services {
 			if option.Name == "" {
-				return errors.New("Shipping option service name must not be empty")
+				return errors.New("shipping option service name must not be empty")
 			}
 			if len(option.Name) > WordMaxCharacters {
-				return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("shipping option service length must be less than the max of %d", WordMaxCharacters)
 			}
 			for _, t := range serviceTitles {
 				if t == option.Name {
-					return errors.New("Shipping option services names must be unique")
+					return errors.New("shipping option services names must be unique")
 				}
 			}
 			serviceTitles = append(serviceTitles, option.Name)
 			if option.EstimatedDelivery == "" {
-				return errors.New("Shipping option estimated delivery must not be empty")
+				return errors.New("shipping option estimated delivery must not be empty")
 			}
 			if len(option.EstimatedDelivery) > SentenceMaxCharacters {
-				return fmt.Errorf("Shipping option estimated delivery length must be less than the max of %d", SentenceMaxCharacters)
+				return fmt.Errorf("shipping option estimated delivery length must be less than the max of %d", SentenceMaxCharacters)
 			}
 		}
 	}
@@ -1269,7 +1294,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) error {
 	switch {
 	case len(listing.Coupons) > 0:
 		return ErrCryptocurrencyListingIllegalField("coupons")
@@ -1285,7 +1310,14 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+	var expectedDivisibility uint32
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.CoinType); err != nil {
+		expectedDivisibility = DefaultCurrencyDivisibility
+	} else {
+		expectedDivisibility = uint32(wallet.ExchangeRates().UnitsPerCoin())
+	}
+
+	if listing.Metadata.CoinDivisibility != expectedDivisibility {
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
@@ -1333,9 +1365,9 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("Vendor's identity signature on contact failed to verify")
+			return errors.New("vendor's identity signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("Public key in order does not match reported buyer ID")
+			return errors.New("public key in order does not match reported buyer ID")
 		default:
 			return err
 		}
@@ -1349,10 +1381,74 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			return errors.New("vendor's Bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}
 	}
+	return nil
+}
+
+// SetCurrencyOnListings - set currencies accepted for a listing
+func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
+	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
+	if err != nil {
+		return err
+	}
+
+	walkpath := func(p string, f os.FileInfo, err error) error {
+		if !f.IsDir() && filepath.Ext(p) == ".json" {
+
+			sl, err := GetSignedListingFromPath(p)
+			if err != nil {
+				return err
+			}
+
+			SetAcceptedCurrencies(sl, currencies)
+
+			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingCoupons(savedCoupons, sl)
+			if err != nil {
+				return err
+			}
+
+			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+				err = ApplyShippingOptions(sl)
+				if err != nil {
+					return err
+				}
+			}
+
+			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingQuantities(inventory, sl)
+			if err != nil {
+				return err
+			}
+
+			err = n.UpdateListing(sl.Listing, false)
+			if err != nil {
+				return err
+			}
+
+		}
+		return nil
+	}
+
+	err = filepath.Walk(absPath, walkpath)
+	if err != nil {
+		return err
+	}
+
+	err = n.SeedNode()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

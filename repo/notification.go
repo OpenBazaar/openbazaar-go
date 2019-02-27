@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json" //"errors"
 	"fmt"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	"time"
 )
 
@@ -399,15 +399,24 @@ type messageTypingWrapper struct {
 	MessageRead Notifier `json:"messageTyping"`
 }
 
+type ListingPrice struct {
+	Amount           uint64  `json:"amount"`
+	CurrencyCode     string  `json:"currencyCode"`
+	PriceModifier    float32 `json:"priceModifier"`
+	CoinDivisibility uint32  `json:"coinDivisibility"`
+}
+
 type OrderNotification struct {
-	ID          string           `json:"notificationId"`
-	Type        NotificationType `json:"type"`
-	Title       string           `json:"title"`
-	BuyerID     string           `json:"buyerId"`
 	BuyerHandle string           `json:"buyerHandle"`
-	Thumbnail   Thumbnail        `json:"thumbnail"`
+	BuyerID     string           `json:"buyerId"`
+	ID          string           `json:"notificationId"`
+	ListingType string           `json:"listingType"`
 	OrderId     string           `json:"orderId"`
+	Price       ListingPrice     `json:"price"`
 	Slug        string           `json:"slug"`
+	Thumbnail   Thumbnail        `json:"thumbnail"`
+	Title       string           `json:"title"`
+	Type        NotificationType `json:"type"`
 }
 
 func (n OrderNotification) Data() ([]byte, error) {
@@ -434,6 +443,7 @@ type PaymentNotification struct {
 	Type         NotificationType `json:"type"`
 	OrderId      string           `json:"orderId"`
 	FundingTotal uint64           `json:"fundingTotal"`
+	CoinType     string           `json:"coinType"`
 }
 
 func (n PaymentNotification) Data() ([]byte, error) {
@@ -837,6 +847,7 @@ func (n ChatTyping) GetType() NotificationType                   { return Notifi
 func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 type IncomingTransaction struct {
+	Wallet        string    `json:"wallet"`
 	Txid          string    `json:"txid"`
 	Value         int64     `json:"value"`
 	Address       string    `json:"address"`

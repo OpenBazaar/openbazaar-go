@@ -45,23 +45,30 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"))`
+	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions, disputedAt) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"),?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
-	handle := contract.VendorListings[0].VendorID.Handle
-	shippingName := ""
-	shippingAddress := ""
+	var (
+		paymentAddr, shippingName, shippingAddress string
+		disputedAt                                 int
+
+		dispute = contract.Dispute
+		handle  = contract.VendorListings[0].VendorID.Handle
+	)
 	if contract.BuyerOrder.Shipping != nil {
 		shippingName = contract.BuyerOrder.Shipping.ShipTo
 		shippingAddress = contract.BuyerOrder.Shipping.Address
 	}
-	var paymentAddr string
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		paymentAddr = contract.BuyerOrder.Payment.Address
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		paymentAddr = contract.VendorOrderConfirmation.PaymentAddress
+	}
+
+	if dispute != nil {
+		disputedAt = int(dispute.Timestamp.Seconds)
 	}
 
 	defer stmt.Close()
@@ -81,6 +88,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		paymentAddr,
 		PaymentCoinForContract(&contract),
 		CoinTypeForContract(&contract),
+		disputedAt,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -218,17 +226,25 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 }
 
 func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
+	if addr == nil {
+		return nil, pb.OrderState(0), false, nil, fmt.Errorf("unable to find purchase with nil payment address")
+	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err
 	}
 	defer stmt.Close()
-	var contract []byte
-	var stateInt int
-	var fundedInt *int
-	var serializedTransactions []byte
+
+	var (
+		contract               []byte
+		stateInt               int
+		fundedInt              *int
+		serializedTransactions []byte
+	)
 	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err
@@ -252,27 +268,30 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
-func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, bool, error) {
+func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, bool, *repo.CurrencyCode, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	stmt, err := p.db.Prepare("select contract, state, funded, transactions, read from purchases where orderID=?")
+	stmt, err := p.db.Prepare("select contract, state, funded, transactions, read, paymentCoin from purchases where orderID=?")
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	defer stmt.Close()
-	var contract []byte
-	var stateInt int
-	var fundedInt *int
-	var readInt *int
-	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt)
+	var (
+		contract               []byte
+		stateInt               int
+		fundedInt              *int
+		readInt                *int
+		serializedTransactions []byte
+		paymentCoin            string
+	)
+	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt, &paymentCoin)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	funded := false
 	if fundedInt != nil && *fundedInt == 1 {
@@ -282,9 +301,13 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
+	cc, err := repo.NewCurrencyCode(paymentCoin)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, false, nil, err
+	}
 	var records []*wallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, read, nil
+	return rc, pb.OrderState(stateInt), funded, records, read, cc, nil
 }
 
 func (p *PurchasesDB) Count() int {

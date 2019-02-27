@@ -2,16 +2,18 @@ package ipfs
 
 import (
 	"context"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+
 	"time"
+
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-	path "github.com/ipfs/go-ipfs/path"
+
+	nameopts "github.com/ipfs/go-ipfs/namesys/opts"
 )
 
 // Resolve an IPNS record. This is a multi-step process.
@@ -24,27 +26,50 @@ import (
 // If the DHT query returns nothing it will finally attempt to return from cache.
 // All subsequent resolves will return from cache as the pubsub will update the cache in real time
 // as new records are published.
-func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, usecache bool) (string, error) {
+func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, usecache bool) (string, error) {
 	if usecache {
-		pth, err := getFromDatastore(n.Repo.Datastore(), "/ipns/"+p.Pretty())
+		pth, err := getFromDatastore(n.Repo.Datastore(), p)
 		if err == nil {
 			// Update the cache in background
-			go resolve(n, p, timeout)
+			go func() {
+				pth, err := resolve(n, p, timeout, quorum)
+				if err != nil {
+					return
+				}
+				if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
+					log.Error("Error putting IPNS record to datastore: %s", err.Error())
+				}
+			}()
 			return pth.Segments()[1], nil
 		}
 	}
-	return resolve(n, p, timeout)
+	pth, err := resolve(n, p, timeout, quorum)
+	if err != nil {
+		// Resolving fail. See if we have it in the db.
+		pth, err := getFromDatastore(n.Repo.Datastore(), p)
+		if err != nil {
+			return "", err
+		}
+		return pth.Segments()[1], nil
+	}
+	// Resolving succeeded. Update the cache.
+	if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
+		log.Error("Error putting IPNS record to datastore: %s", err.Error())
+	}
+	return pth.Segments()[1], nil
 }
 
-func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration) (string, error) {
+func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint) (ipath.Path, error) {
 	cctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty())
+	// TODO [cp]: we should load the record count from our config and set it here. We'll need a
+	// migration for this.
+	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty(), nameopts.DhtRecordCount(quorum))
 	if err != nil {
-		return "", err
+		return pth, err
 	}
-	return pth.Segments()[1], nil
+	return pth, nil
 }
 
 func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Duration) (string, error) {
@@ -58,24 +83,18 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 	return pth.Segments()[1], nil
 }
 
-func getFromDatastore(datastore ds.Datastore, name string) (path.Path, error) {
+func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
 	// resolve to what we may already have in the datastore
-	dsval, err := datastore.Get(dshelp.NewKeyFromBinary([]byte(name)))
+	data, err := datastore.Get(namesys.IpnsDsKey(p))
 	if err != nil {
 		if err == ds.ErrNotFound {
 			return "", namesys.ErrResolveFailed
 		}
 		return "", err
 	}
+	return ipath.ParsePath(string(data))
+}
 
-	data := dsval.([]byte)
-	entry := new(pb.IpnsEntry)
-
-	err = proto.Unmarshal(data, entry)
-	if err != nil {
-		return "", err
-	}
-
-	value, err := path.ParsePath(string(entry.GetValue()))
-	return value, err
+func putToDatastore(datastore ds.Datastore, p peer.ID, pth ipath.Path) error {
+	return datastore.Put(namesys.IpnsDsKey(p), []byte(pth.String()))
 }

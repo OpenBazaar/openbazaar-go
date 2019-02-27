@@ -9,7 +9,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-var STUN_SERVERS []string = []string{
+var STUN_SERVERS = []string{
 	"stun.ekiga.net",
 	"stun.ideasip.com",
 	"stun.voiparound.com",
@@ -18,7 +18,7 @@ var STUN_SERVERS []string = []string{
 	"stun.voxgratia.org",
 }
 
-var STUN_PORT int = 3478
+var STUN_PORT = 3478
 
 var log = logging.MustGetLogger("stun")
 
@@ -26,7 +26,7 @@ const _NATType_name = "NAT_ERRORNAT_UNKNOWNNAT_NONENAT_BLOCKEDNAT_FULLNAT_SYMETR
 
 var _NATType_index = [...]uint8{0, 9, 20, 28, 39, 47, 59, 73, 92, 117}
 
-var errStunFailed error = errors.New("Exhausted list of stun servers")
+var errStunFailed = errors.New("exhausted list of stun servers")
 
 func Stun() (int, error) {
 	Shuffle(STUN_SERVERS)

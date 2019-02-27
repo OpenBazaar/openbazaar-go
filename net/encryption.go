@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"io"
 
 	"golang.org/x/crypto/hkdf"
@@ -46,13 +46,13 @@ const (
 
 var (
 	// The ciphertext cannot be shorter than CiphertextVersionBytes + EncryptedSecretKeyBytes + aes.BlockSize + MacKeyBytes
-	ErrShortCiphertext = errors.New("Ciphertext is too short")
+	ErrShortCiphertext = errors.New("ciphertext is too short")
 
 	// The HMAC included in the ciphertext is invalid
-	ErrInvalidHmac = errors.New("Invalid Hmac")
+	ErrInvalidHmac = errors.New("invalid Hmac")
 
 	// Nacl box decryption failed
-	BoxDecryptionError = errors.New("Failed to decrypt curve25519")
+	BoxDecryptionError = errors.New("failed to decrypt curve25519")
 
 	// Satic salt used in the hdkf
 	Salt = []byte("OpenBazaar Encryption Algorithm")
@@ -67,7 +67,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	if ok {
 		return encryptCurve25519(ed25519Pubkey, plaintext)
 	}
-	return nil, errors.New("Could not determine key type")
+	return nil, errors.New("could not determine key type")
 }
 
 func encryptCurve25519(pubKey *libp2p.Ed25519PublicKey, plaintext []byte) ([]byte, error) {
@@ -116,15 +116,15 @@ func encryptRSA(pubKey *libp2p.RsaPublicKey, plaintext []byte) ([]byte, error) {
 	// Derive MAC and AES keys from the secret key using hkdf
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, secretKey, Salt, nil)
+	hkdfReader := hkdf.New(hash, secretKey, Salt, nil)
 
 	aesKey := make([]byte, AESKeyBytes)
-	_, err = io.ReadFull(hkdf, aesKey)
+	_, err = io.ReadFull(hkdfReader, aesKey)
 	if err != nil {
 		return nil, err
 	}
 	macKey := make([]byte, MacKeyBytes)
-	_, err = io.ReadFull(hkdf, macKey)
+	_, err = io.ReadFull(hkdfReader, macKey)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func Decrypt(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 	if ok {
 		return decryptCurve25519(ed25519Privkey, ciphertext)
 	}
-	return nil, errors.New("Could not determine key type")
+	return nil, errors.New("could not determine key type")
 }
 
 func decryptCurve25519(privKey *libp2p.Ed25519PrivateKey, ciphertext []byte) ([]byte, error) {
@@ -215,15 +215,15 @@ func decryptRSA(privKey *libp2p.RsaPrivateKey, ciphertext []byte) ([]byte, error
 	// Derive the AES and MAC keys from the secret key using hdkf
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, secretKey, Salt, nil)
+	hkdfReader := hkdf.New(hash, secretKey, Salt, nil)
 
 	aesKey := make([]byte, AESKeyBytes)
-	_, err = io.ReadFull(hkdf, aesKey)
+	_, err = io.ReadFull(hkdfReader, aesKey)
 	if err != nil {
 		return nil, err
 	}
 	macKey := make([]byte, MacKeyBytes)
-	_, err = io.ReadFull(hkdf, macKey)
+	_, err = io.ReadFull(hkdfReader, macKey)
 	if err != nil {
 		return nil, err
 	}

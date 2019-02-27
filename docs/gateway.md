@@ -1,3 +1,17 @@
+Configuring the Gateway when Running a Client
+=============================================
+Since the server and client are on different machines, you will need to replace the loopback address with the IP address of the device interface which has access to the internet.  On Linux, `ip addr show` will give you your IP address.
+
+First, locate the `config` inside the OpenBazaar2.0 data folder.
+
+Assuming you are on a home network 192.168.1.0/24, set the gateway address to:
+
+```
+"Addresses": {
+    "Gateway": "/ip4/192.168.1.X/tcp/4002",
+}
+```
+
 Running a Public Gateway
 =========================
 A public gateway is a server that allows others to view OpenBazaar user data (profiles, listings, etc) in a web browser.

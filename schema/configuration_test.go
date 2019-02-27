@@ -48,46 +48,10 @@ func TestGetApiConfig(t *testing.T) {
 	}
 }
 
-func TestGetWalletConfig(t *testing.T) {
-	config, err := GetWalletConfig(configFixture())
-	if config.FeeAPI != "https://btc.fees.openbazaar.org" {
-		t.Error("FeeApi does not equal expected value")
-	}
-	if config.TrustedPeer != "127.0.0.1:8333" {
-		t.Error("TrustedPeer does not equal expected value")
-	}
-	if config.Type != "spvwallet" {
-		t.Error("Type does not equal expected value")
-	}
-	if config.Binary != "/path/to/bitcoind" {
-		t.Error("Binary does not equal expected value")
-	}
-	if config.LowFeeDefault != 20 {
-		t.Error("Expected low to be 20, got ", config.LowFeeDefault)
-	}
-	if config.MediumFeeDefault != 40 {
-		t.Error("Expected medium to be 40, got ", config.MediumFeeDefault)
-	}
-	if config.HighFeeDefault != 60 {
-		t.Error("Expected high to be 60, got ", config.HighFeeDefault)
-	}
-	if config.MaxFee != 2000 {
-		t.Error("Expected maxFee to be 2000, got ", config.MaxFee)
-	}
-	if err != nil {
-		t.Error("GetFeeAPI threw an unexpected error")
-	}
-
-	_, err = GetWalletConfig([]byte{})
-	if err == nil {
-		t.Error("GetFeeAPI didn't throw an error")
-	}
-}
-
 func TestGetWalletsConfig(t *testing.T) {
 	config, err := GetWalletsConfig(configFixture())
 	if err != nil {
-		t.Error("GetWalletsConfig threw an unexpected error")
+		t.Errorf("GetWalletsConfig threw an unexpected error: %s", err.Error())
 	}
 	if config.BTC.FeeAPI != "https://btc.fees.openbazaar.org" {
 		t.Error("FeeApi does not equal expected value")
@@ -95,11 +59,11 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.BTC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if config.BTC.API != "https://btc.bloqapi.net/insight-api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.BTC.APIPool) == 0 || config.BTC.APIPool[0] != "https://btc.blockbook.api.openbazaar.org/api" {
+		t.Error("BTC APIPool does not equal expected value")
 	}
-	if config.BTC.APITestnet != "https://test-insight.bitpay.com/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.BTC.APITestnetPool) == 0 || config.BTC.APITestnetPool[0] != "https://tbtc.blockbook.api.openbazaar.org/api" {
+		t.Error("BTC APITestnetPool does not equal expected value")
 	}
 	if config.BTC.LowFeeDefault != 1 {
 		t.Error("Expected low to be 1, got ", config.BTC.LowFeeDefault)
@@ -117,11 +81,12 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.BCH.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if config.BCH.API != "https://bch-insight.bitpay.com/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.BCH.APIPool) == 0 || config.BCH.APIPool[0] != "https://bch.blockbook.api.openbazaar.org/api" {
+		t.Error("BCH APIPool does not equal expected value")
 	}
-	if config.BCH.APITestnet != "https://test-bch-insight.bitpay.com/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.BCH.APITestnetPool) == 0 || config.BCH.APITestnetPool[0] != "https://tbch.blockbook.api.openbazaar.org/api" {
+
+		t.Error("BCH APITestnetPool does not equal expected value")
 	}
 	if config.BCH.LowFeeDefault != 1 {
 		t.Error("Expected low to be 1, got ", config.BCH.LowFeeDefault)
@@ -139,11 +104,11 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.LTC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if config.LTC.API != "https://insight.litecore.io/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.LTC.APIPool) == 0 || config.LTC.APIPool[0] != "https://ltc.blockbook.api.openbazaar.org/api" {
+		t.Error("LTC APIPool does not equal expected value")
 	}
-	if config.LTC.APITestnet != "https://testnet.litecore.io/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.LTC.APITestnetPool) == 0 || config.LTC.APITestnetPool[0] != "https://tltc.blockbook.api.openbazaar.org/api" {
+		t.Error("LTC APITestnetPool does not equal expected value")
 	}
 	if config.LTC.LowFeeDefault != 5 {
 		t.Error("Expected low to be 5, got ", config.LTC.LowFeeDefault)
@@ -161,11 +126,11 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.ZEC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if config.ZEC.API != "https://zcashnetwork.info/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.ZEC.APIPool) == 0 || config.ZEC.APIPool[0] != "https://zec.blockbook.api.openbazaar.org/api" {
+		t.Error("ZEC APIPool does not equal expected value")
 	}
-	if config.ZEC.APITestnet != "https://explorer.testnet.z.cash/api" {
-		t.Error("Binary does not equal expected value")
+	if len(config.ZEC.APITestnetPool) == 0 || config.ZEC.APITestnetPool[0] != "https://tzec.blockbook.api.openbazaar.org/api" {
+		t.Error("ZEC APITestnetPool does not equal expected value")
 	}
 	if config.ZEC.LowFeeDefault != 5 {
 		t.Error("Expected low to be 5, got ", config.ZEC.LowFeeDefault)
@@ -204,6 +169,19 @@ func TestGetDropboxApiToken(t *testing.T) {
 	}
 }
 
+func TestGetIPNSExtraConfig(t *testing.T) {
+	ipnsConfig, err := GetIPNSExtraConfig(configFixture())
+	if err != nil {
+		t.Error(err)
+	}
+	if ipnsConfig.DHTQuorumSize != 1 {
+		t.Error("GetIPNSExtraConfig returned incorrect DHTQuorumSize")
+	}
+	if ipnsConfig.FallbackAPI != "https://gateway.ob1.io" {
+		t.Error("GetIPNSExtraConfig returned incorrect FallbackAPI")
+	}
+}
+
 func TestRepublishInterval(t *testing.T) {
 	interval, err := GetRepublishInterval(configFixture())
 	if interval != time.Hour*24 {
@@ -219,16 +197,6 @@ func TestRepublishInterval(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("GetRepublishInterval didn't throw an error")
-	}
-}
-
-func TestGetResolverConfig(t *testing.T) {
-	resolvers, err := GetResolverConfig(configFixture())
-	if err != nil {
-		t.Error("GetResolverUrl threw an unexpected error")
-	}
-	if resolvers.Id != "https://resolver.onename.com/" {
-		t.Error("resolverUrl does not equal expected value")
 	}
 }
 
@@ -324,6 +292,10 @@ func configFixture() []byte {
     "ResolveCacheSize": 128,
     "UsePersistentCache": true
   },
+  "IpnsExtra": {
+    "DHTQuorumSize": 1,
+    "FallbackAPI": "https://gateway.ob1.io"
+  },
   "JSON-API": {
     "AllowedIPs": [
       "127.0.0.1"
@@ -348,9 +320,6 @@ func configFixture() []byte {
     "Strategy": ""
   },
   "RepublishInterval": "24h",
-  "Resolvers": {
-    ".id": "https://resolver.onename.com/"
-  },
   "SupernodeRouting": {
     "Servers": null
   },
@@ -364,7 +333,7 @@ func configFixture() []byte {
   "Tour": {
     "Last": ""
   },
-  "Wallet": {
+  "LegacyWallet": {
     "Binary": "/path/to/bitcoind",
     "FeeAPI": "https://btc.fees.openbazaar.org",
     "HighFeeDefault": 60,
@@ -377,45 +346,89 @@ func configFixture() []byte {
     "Type": "spvwallet"
   },
   "Wallets": {
-    "BCH": {
-      "API": "https://bch-insight.bitpay.com/api",
-      "APITestnet": "https://test-bch-insight.bitpay.com/api",
-      "FeeAPI": "",
-      "HighFeeDefault": 10,
-      "LowFeeDefault": 1,
-      "MaxFee": 200,
-      "MediumFeeDefault": 5,
-      "Type": "API"
-    },
     "BTC": {
-      "API": "https://btc.bloqapi.net/insight-api",
-      "APITestnet": "https://test-insight.bitpay.com/api",
+      "Type": "API",
+      "API": [
+        "https://btc.blockbook.api.openbazaar.org/api"
+      ],
+      "APITestnet": [
+        "https://tbtc.blockbook.api.openbazaar.org/api"
+      ],
+      "MaxFee": 200,
       "FeeAPI": "https://btc.fees.openbazaar.org",
       "HighFeeDefault": 50,
-      "LowFeeDefault": 1,
-      "MaxFee": 200,
       "MediumFeeDefault": 10,
-      "Type": "API"
+      "LowFeeDefault": 1,
+      "TrustedPeer": "",
+      "WalletOptions": null
+    },
+    "BCH": {
+      "Type": "API",
+      "API": [
+        "https://bch.blockbook.api.openbazaar.org/api"
+      ],
+      "APITestnet": [
+        "https://tbch.blockbook.api.openbazaar.org/api"
+      ],
+      "MaxFee": 200,
+      "FeeAPI": "https://btc.fees.openbazaar.org",
+      "HighFeeDefault": 10,
+      "MediumFeeDefault": 5,
+      "LowFeeDefault": 1,
+      "TrustedPeer": "",
+      "WalletOptions": null
     },
     "LTC": {
-      "API": "https://insight.litecore.io/api",
-      "APITestnet": "https://testnet.litecore.io/api",
-      "FeeAPI": "",
-      "HighFeeDefault": 20,
-      "LowFeeDefault": 5,
+      "Type": "API",
+      "API": [
+        "https://ltc.blockbook.api.openbazaar.org/api"
+      ],
+      "APITestnet": [
+        "https://tltc.blockbook.api.openbazaar.org/api"
+      ],
       "MaxFee": 200,
+      "FeeAPI": "https://btc.fees.openbazaar.org",
+      "HighFeeDefault": 20,
       "MediumFeeDefault": 10,
-      "Type": "API"
+      "LowFeeDefault": 5,
+      "TrustedPeer": "",
+      "WalletOptions": null
     },
     "ZEC": {
-      "API": "https://zcashnetwork.info/api",
-      "APITestnet": "https://explorer.testnet.z.cash/api",
-      "FeeAPI": "",
-      "HighFeeDefault": 20,
-      "LowFeeDefault": 5,
+      "Type": "API",
+      "API": [
+        "https://zec.blockbook.api.openbazaar.org/api"
+      ],
+      "APITestnet": [
+        "https://tzec.blockbook.api.openbazaar.org/api"
+      ],
       "MaxFee": 200,
+      "FeeAPI": "https://btc.fees.openbazaar.org",
+      "HighFeeDefault": 20,
       "MediumFeeDefault": 10,
-      "Type": "API"
+      "LowFeeDefault": 5,
+      "TrustedPeer": "",
+      "WalletOptions": null
+    },
+    "ETH": {
+      "Type": "API",
+      "API": [
+        "https://rinkeby.infura.io"
+      ],
+      "APITestnet": [
+        "https://rinkeby.infura.io"
+      ],
+      "MaxFee": 200,
+      "FeeAPI": "https://btc.fees.openbazaar.org",
+      "HighFeeDefault": 30,
+      "MediumFeeDefault": 15,
+      "LowFeeDefault": 7,
+      "TrustedPeer": "",
+      "WalletOptions": {
+        "RegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+        "RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+        "RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
+      }
     }
   }
 }`)

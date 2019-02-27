@@ -2,10 +2,11 @@ package wallet
 
 import (
 	"bytes"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"time"
 )
 
 type Coin interface {
@@ -21,6 +22,12 @@ const (
 	Zcash                = 133
 	BitcoinCash          = 145
 	Ethereum             = 60
+
+	TestnetBitcoin     = 1000000
+	TestnetLitecoin    = 1000001
+	TestnetZcash       = 1000133
+	TestnetBitcoinCash = 1000145
+	TestnetEthereum    = 1000060
 )
 
 func (c *CoinType) String() string {
@@ -35,6 +42,16 @@ func (c *CoinType) String() string {
 		return "Litecoin"
 	case Ethereum:
 		return "Ethereum"
+	case TestnetBitcoin:
+		return "Testnet Bitcoin"
+	case TestnetBitcoinCash:
+		return "Testnet Bitcoin Cash"
+	case TestnetZcash:
+		return "Testnet Zcash"
+	case TestnetLitecoin:
+		return "Testnet Litecoin"
+	case TestnetEthereum:
+		return "Testnet Ethereum"
 	default:
 		return ""
 	}
@@ -52,6 +69,16 @@ func (c *CoinType) CurrencyCode() string {
 		return "LTC"
 	case Ethereum:
 		return "ETH"
+	case TestnetBitcoin:
+		return "TBTC"
+	case TestnetBitcoinCash:
+		return "TBCH"
+	case TestnetZcash:
+		return "TZEC"
+	case TestnetLitecoin:
+		return "TLTC"
+	case TestnetEthereum:
+		return "TETH"
 	default:
 		return ""
 	}

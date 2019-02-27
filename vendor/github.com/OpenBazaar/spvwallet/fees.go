@@ -2,11 +2,12 @@ package spvwallet
 
 import (
 	"encoding/json"
-	"github.com/OpenBazaar/wallet-interface"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/OpenBazaar/wallet-interface"
+	"golang.org/x/net/proxy"
 )
 
 type httpClient interface {

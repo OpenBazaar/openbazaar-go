@@ -330,21 +330,32 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 }
 
 func TestSalesGetByOrderId(t *testing.T) {
-	var saldb, teardown, err = buildNewSaleStore()
+	var (
+		expectedCoin         = "ABC"
+		saldb, teardown, err = buildNewSaleStore()
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
+	_, _, _, _, _, _, err = saldb.GetByOrderId("adsfads")
+	if err == nil {
+		t.Error("Get by unknown orderID failed to return error")
+	}
+
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
-	_, _, _, _, _, err = saldb.GetByOrderId("orderID")
+	contract.BuyerOrder.Payment.Coin = expectedCoin
+	if err := saldb.Put("orderID", *contract, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, _, _, actualCoin, err := saldb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, _, err = saldb.GetByOrderId("adsfads")
-	if err == nil {
-		t.Error("Get by unknown orderID failed to return error")
+
+	if actualCoin == nil || expectedCoin != actualCoin.String() {
+		t.Errorf("expected paymentCoin to be returned")
 	}
 }
 
@@ -552,20 +563,20 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
 			Contract:                     factory.NewUndisputeableContract(),
 			OrderID:                      "neverNotifiedButUndisputed",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.SaleRecord{
 			Contract:                     expectedContractOne,
 			OrderID:                      "neverNotified",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
 			Contract:                     factory.NewContract(),
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			OrderID:                      "finalNotificationSent",
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Now(),

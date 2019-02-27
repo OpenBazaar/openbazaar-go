@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
-	"strings"
 )
 
 const SatoshiPerBTC = 100000000
@@ -59,7 +60,6 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 		{"https://blockchain.info/ticker", b.cache, client, BlockchainInfoDecoder{}},
 		{"https://api.bitcoincharts.com/v1/weighted_prices.json", b.cache, client, BitcoinChartsDecoder{}},
 	}
-	go b.run()
 	return &b
 }
 
@@ -97,7 +97,11 @@ func (b *BitcoinPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, err
 	}
 	b.Lock()
 	defer b.Unlock()
-	return b.cache, nil
+	copy := make(map[string]float64, len(b.cache))
+	for k, v := range b.cache {
+		copy[k] = v
+	}
+	return copy, nil
 }
 
 func (b *BitcoinPriceFetcher) UnitsPerCoin() int {
@@ -137,7 +141,7 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 	return provider.decoder.decode(dataMap, provider.cache)
 }
 
-func (b *BitcoinPriceFetcher) run() {
+func (b *BitcoinPriceFetcher) Run() {
 	b.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
 	for range ticker.C {
@@ -147,7 +151,10 @@ func (b *BitcoinPriceFetcher) run() {
 
 // Decoders
 func (b BitcoinAverageDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
-	data := dat.(map[string]interface{})
+	data, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
 	for k, v := range data {
 		if k != "timestamp" {
 			val, ok := v.(map[string]interface{})
@@ -165,7 +172,11 @@ func (b BitcoinAverageDecoder) decode(dat interface{}, cache map[string]float64)
 }
 
 func (b BitPayDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
-	data := dat.([]interface{})
+	data, ok := dat.([]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, not JSON array")
+	}
+
 	for _, obj := range data {
 		code := obj.(map[string]interface{})
 		k, ok := code["code"].(string)
@@ -182,7 +193,10 @@ func (b BitPayDecoder) decode(dat interface{}, cache map[string]float64) (err er
 }
 
 func (b BlockchainInfoDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
-	data := dat.(map[string]interface{})
+	data, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, not JSON object")
+	}
 	for k, v := range data {
 		val, ok := v.(map[string]interface{})
 		if !ok {
@@ -198,7 +212,10 @@ func (b BlockchainInfoDecoder) decode(dat interface{}, cache map[string]float64)
 }
 
 func (b BitcoinChartsDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
-	data := dat.(map[string]interface{})
+	data, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, not JSON object")
+	}
 	for k, v := range data {
 		if k != "timestamp" {
 			val, ok := v.(map[string]interface{})

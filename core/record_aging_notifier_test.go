@@ -395,7 +395,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
 			Contract:                     factory.NewUndisputeableContract(),
 			OrderID:                      "neverNotifiedButUndisputed",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
@@ -403,7 +403,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		neverNotified = &repo.PurchaseRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "neverNotified",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
@@ -411,7 +411,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "notifiedUpToFifteenDay",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 		}
@@ -419,7 +419,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "notifiedUpToFourtyDay",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 		}
@@ -427,7 +427,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "notifiedUpToFourtyFourDays",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 		}
@@ -435,7 +435,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "notifiedUpToFourtyFiveDays",
-			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                   pb.OrderState_PENDING,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
@@ -704,7 +704,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
 			Contract:                    factory.NewUndisputeableContract(),
 			OrderID:                     "neverNotifiedButUndisputed",
-			OrderState:                  pb.OrderState(pb.OrderState_PENDING),
+			OrderState:                  pb.OrderState_PENDING,
 			Timestamp:                   timeStart,
 			DisputedAt:                  time.Unix(0, 0),
 			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
@@ -713,7 +713,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		neverNotified = &repo.PurchaseRecord{
 			Contract:                    factory.NewDisputeableContract(),
 			OrderID:                     "neverNotified",
-			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			DisputedAt:                  timeStart,
 			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
@@ -722,7 +722,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
 			Contract:                    factory.NewDisputeableContract(),
 			OrderID:                     "notifiedUpToFifteenDay",
-			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			DisputedAt:                  timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(firstInterval + twelveHours),
@@ -731,7 +731,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
 			Contract:                    factory.NewDisputeableContract(),
 			OrderID:                     "notifiedUpToFourtyDay",
-			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			DisputedAt:                  timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(secondInterval + twelveHours),
@@ -740,7 +740,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
 			Contract:                    factory.NewDisputeableContract(),
 			OrderID:                     "notifiedUpToFourtyFiveDays",
-			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			DisputedAt:                  timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(lastInterval + twelveHours),
@@ -978,7 +978,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		neverNotified = &repo.SaleRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "neverNotified",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
@@ -986,7 +986,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		notifiedUpToFourtyFiveDays = &repo.SaleRecord{
 			Contract:                     factory.NewDisputeableContract(),
 			OrderID:                      "notifiedUpToFourtyFiveDays",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
@@ -994,7 +994,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
 			Contract:                     factory.NewUndisputeableContract(),
 			OrderID:                      "neverNotifiedButUndisputeable",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}

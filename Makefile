@@ -1,4 +1,14 @@
 ##
+## Building
+##
+
+ios_framework:
+	gomobile bind -target=ios github.com/OpenBazaar/openbazaar-go/mobile
+
+android_framework:
+	gomobile bind -target=android github.com/OpenBazaar/openbazaar-go/mobile
+
+##
 ## Protobuf compilation
 ##
 P_TIMESTAMP = Mgoogle/protobuf/timestamp.proto=github.com/golang/protobuf/ptypes/timestamp

@@ -3,7 +3,8 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -12,7 +13,7 @@ import (
 var (
 	ipfsInventoryCacheMaxDuration = 1 * time.Hour
 	// ErrInventoryNotFoundForSlug - inventory not found error
-	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
+	ErrInventoryNotFoundForSlug = errors.New("could not find slug in inventory")
 )
 
 // InventoryListing is the listing representation stored on IPFS
@@ -72,11 +73,12 @@ func (n *OpenBazaarNode) GetLocalInventoryForSlug(slug string) (*InventoryListin
 
 // PublishInventory stores an inventory on IPFS
 func (n *OpenBazaarNode) PublishInventory() error {
-	inventory, err := n.GetLocalInventory()
+	// TODO: [cp] need to refactor the inventory publishing and getting as we've discussed before
+	// now is a good time to do that.
+	/*inventory, err := n.GetLocalInventory()
 	if err != nil {
 		return err
 	}
-
 	n.Broadcast <- repo.StatusNotification{Status: "publishing"}
 	go func() {
 		hash, err := repo.PublishObjectToIPFS(n.IpfsNode, n.RepoPath, "inventory", inventory)
@@ -92,7 +94,7 @@ func (n *OpenBazaarNode) PublishInventory() error {
 		if err != nil {
 			log.Error(err)
 		}
-	}()
+	}()*/
 
 	return nil
 }

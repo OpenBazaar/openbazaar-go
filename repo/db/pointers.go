@@ -2,10 +2,12 @@ package db
 
 import (
 	"database/sql"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+
 	"strconv"
 	"sync"
 	"time"
@@ -108,7 +110,7 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 			canID = &c
 		}
 		pointer := ipfs.Pointer{
-			Cid: k,
+			Cid: &k,
 			Value: ps.PeerInfo{
 				ID:    pid,
 				Addrs: []ma.Multiaddr{maAddr},
@@ -163,7 +165,7 @@ func (p *PointersDB) GetByPurpose(purpose ipfs.Purpose) ([]ipfs.Pointer, error) 
 			canID = &c
 		}
 		pointer := ipfs.Pointer{
-			Cid: k,
+			Cid: &k,
 			Value: ps.PeerInfo{
 				ID:    pid,
 				Addrs: []ma.Multiaddr{maAddr},
@@ -214,7 +216,7 @@ func (p *PointersDB) Get(id peer.ID) (ipfs.Pointer, error) {
 		canID = &c
 	}
 	pointer = ipfs.Pointer{
-		Cid: k,
+		Cid: &k,
 		Value: ps.PeerInfo{
 			ID:    pid,
 			Addrs: []ma.Multiaddr{maAddr},

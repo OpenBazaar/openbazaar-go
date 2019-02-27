@@ -24,38 +24,30 @@ type TorConfig struct {
 	TorControl string
 }
 
-type ResolverConfig struct {
-	Id  string `json:".id"`
-	Eth string `json:".eth"`
-}
-
-type WalletConfig struct {
-	Type             string
-	Binary           string
-	MaxFee           int
-	FeeAPI           string
-	HighFeeDefault   int
-	MediumFeeDefault int
-	LowFeeDefault    int
-	TrustedPeer      string
+type IpnsExtraConfig struct {
+	DHTQuorumSize int
+	FallbackAPI   string
 }
 
 type WalletsConfig struct {
-	BTC CoinConfig `json:"BTC"`
-	BCH CoinConfig `json:"BCH"`
-	LTC CoinConfig `json:"LTC"`
-	ZEC CoinConfig `json:"ZEC"`
+	BTC *CoinConfig `json:"BTC"`
+	BCH *CoinConfig `json:"BCH"`
+	LTC *CoinConfig `json:"LTC"`
+	ZEC *CoinConfig `json:"ZEC"`
+	ETH *CoinConfig `json:"ETH"`
 }
 
 type CoinConfig struct {
-	Type             string
-	API              string
-	APITestnet       string
-	MaxFee           int
-	FeeAPI           string
-	HighFeeDefault   int
-	MediumFeeDefault int
-	LowFeeDefault    int
+	Type             string                 `json:"Type"`
+	APIPool          []string               `json:"API"`
+	APITestnetPool   []string               `json:"APITestnet"`
+	MaxFee           uint64                 `json:"MaxFee"`
+	FeeAPI           string                 `json:"FeeAPI"`
+	HighFeeDefault   uint64                 `json:"HighFeeDefault"`
+	MediumFeeDefault uint64                 `json:"MediumFeeDefault"`
+	LowFeeDefault    uint64                 `json:"LowFeeDefault"`
+	TrustedPeer      string                 `json:"TrustedPeer"`
+	WalletOptions    map[string]interface{} `json:"WalletOptions"`
 }
 
 type DataSharing struct {
@@ -63,7 +55,68 @@ type DataSharing struct {
 	PushTo              []string
 }
 
-var MalformedConfigError error = errors.New("Config file is malformed")
+var MalformedConfigError = errors.New("config file is malformed")
+
+func DefaultWalletsConfig() *WalletsConfig {
+	var feeAPI = "https://btc.fees.openbazaar.org"
+	return &WalletsConfig{
+		BTC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolBTC,
+			APITestnetPool:   CoinPoolTBTC,
+			FeeAPI:           feeAPI,
+			LowFeeDefault:    1,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   50,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		BCH: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolBCH,
+			APITestnetPool:   CoinPoolTBCH,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    1,
+			MediumFeeDefault: 5,
+			HighFeeDefault:   10,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		LTC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolLTC,
+			APITestnetPool:   CoinPoolTLTC,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    5,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   20,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		ZEC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolZEC,
+			APITestnetPool:   CoinPoolTZEC,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    5,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   20,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		ETH: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolETH,
+			APITestnetPool:   CoinPoolTETH,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    7,
+			MediumFeeDefault: 15,
+			HighFeeDefault:   30,
+			MaxFee:           200,
+			WalletOptions:    EthereumDefaultOptions(),
+		},
+	}
+}
 
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	var cfgIface interface{}
@@ -202,115 +255,14 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	return apiConfig, nil
 }
 
-func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
-	var cfgIface interface{}
-	err := json.Unmarshal(cfgBytes, &cfgIface)
-	if err != nil {
-		return nil, MalformedConfigError
-	}
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	walletIface, ok := cfg["Wallet"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	wallet, ok := walletIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	feeAPI, ok := wallet["FeeAPI"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	feeAPIstr, ok := feeAPI.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	trustedPeer, ok := wallet["TrustedPeer"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	trustedPeerStr, ok := trustedPeer.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	low, ok := wallet["LowFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	lowFloat, ok := low.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	medium, ok := wallet["MediumFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	mediumFloat, ok := medium.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	high, ok := wallet["HighFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	highFloat, ok := high.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	maxFee, ok := wallet["MaxFee"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	maxFeeFloat, ok := maxFee.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	walletType, ok := wallet["Type"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	walletTypeStr, ok := walletType.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	binary, ok := wallet["Binary"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	binaryStr, ok := binary.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	wCfg := &WalletConfig{
-		Type:             walletTypeStr,
-		Binary:           binaryStr,
-		MaxFee:           int(maxFeeFloat),
-		FeeAPI:           feeAPIstr,
-		HighFeeDefault:   int(highFloat),
-		MediumFeeDefault: int(mediumFloat),
-		LowFeeDefault:    int(lowFloat),
-		TrustedPeer:      trustedPeerStr,
-	}
-	return wCfg, nil
-}
-
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
-	var cfgIface interface{}
+	var cfgIface map[string]interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
 		return nil, MalformedConfigError
 	}
 
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	walletIface, ok := cfg["Wallets"]
+	walletIface, ok := cfgIface["Wallets"]
 	if !ok {
 		return nil, MalformedConfigError
 	}
@@ -366,6 +318,47 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 	}
 
 	return &TorConfig{TorControl: controlUrlStr, Password: pwStr}, nil
+}
+
+func GetIPNSExtraConfig(cfgBytes []byte) (*IpnsExtraConfig, error) {
+	var cfgIface interface{}
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	ieIface, ok := cfg["IpnsExtra"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	ieCfg, ok := ieIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	quorumSize, ok := ieCfg["DHTQuorumSize"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	qsInt, ok := quorumSize.(float64)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	fallbackAPI, ok := ieCfg["FallbackAPI"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	fallbackAPIStr, ok := fallbackAPI.(string)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	return &IpnsExtraConfig{int(qsInt), fallbackAPIStr}, nil
 }
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {
@@ -506,41 +499,4 @@ func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
 	}
 
 	return addrs, nil
-}
-
-func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
-	var cfgIface interface{}
-	err := json.Unmarshal(cfgBytes, &cfgIface)
-	if err != nil {
-		return nil, MalformedConfigError
-	}
-
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	r, ok := cfg["Resolvers"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	resolverMap, ok := r.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	blockstack, ok := resolverMap[".id"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	idStr, ok := blockstack.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	resolvers := &ResolverConfig{
-		Id: idStr,
-	}
-
-	return resolvers, nil
 }

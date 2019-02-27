@@ -10,14 +10,14 @@ import (
 
 	repo "github.com/ipfs/go-ipfs/repo"
 
-	badgerds "gx/ipfs/QmPAiAmc3qhTFwzWnKpxr6WCXGZ5mqpaQ2YEwSTnwyduHo/go-ds-badger"
 	humanize "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
-	levelds "gx/ipfs/QmVVhwMHaGHPgZY6pi8hbWGLSgMcZUSdEhJBChjxhBMCoy/go-ds-leveldb"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	mount "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore/mount"
-	flatfs "gx/ipfs/QmaCTqBCt1aKaGfHfSVzsprqWRXCjHthK8xXrPbUZYCWga/go-ds-flatfs"
+	measure "gx/ipfs/QmQS6UXi1R87y9nEgnCNmG6YfMzvBSLir7xUheMNFP3hoe/go-ds-measure"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	mount "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore/mount"
+	badgerds "gx/ipfs/QmaixNkKwtinV3umL5VD1VDD5CQjnZhXY31awM2YHTzbui/go-ds-badger"
 	ldbopts "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/opt"
-	measure "gx/ipfs/QmbJgZGRtkFeSdCxBCPaMKWRDYbqMxHyFfvjQGcWzpqsDe/go-ds-measure"
+	flatfs "gx/ipfs/QmbYQHTSz4Sg4Y2Vyd7hftGgM1yXwSUBKb47VpoPRuP5Nc/go-ds-flatfs"
+	levelds "gx/ipfs/QmccqjKZUTqp4ikWNyAbjBuP5HEdqSqRuAr9mcEhYab54a/go-ds-leveldb"
 )
 
 // ConfigFromMap creates a new datastore config from a map
@@ -36,7 +36,12 @@ type DatastoreConfig interface {
 	Create(path string) (repo.Datastore, error)
 }
 
-// DiskSpec is the type returned by the DatastoreConfig's DiskSpec method
+// DiskSpec is a minimal representation of the characteristic values of the
+// datastore. If two diskspecs are the same, the loader assumes that they refer
+// to exactly the same datastore. If they differ at all, it is assumed they are
+// completely different datastores and a migration will be performed. Runtime
+// values such as cache options or concurrency options should not be added
+// here.
 type DiskSpec map[string]interface{}
 
 // Bytes returns a minimal JSON encoding of the DiskSpec
@@ -66,6 +71,16 @@ func init() {
 		"log":      LogDatastoreConfig,
 		"measure":  MeasureDatastoreConfig,
 	}
+}
+
+func AddDatastoreConfigHandler(name string, dsc ConfigFromMap) error {
+	_, ok := datastores[name]
+	if ok {
+		return fmt.Errorf("already have a datastore named %q", name)
+	}
+
+	datastores[name] = dsc
+	return nil
 }
 
 // AnyDatastoreConfig returns a DatastoreConfig from a spec based on

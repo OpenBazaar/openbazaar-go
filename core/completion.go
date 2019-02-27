@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"io/ioutil"
 	"os"
 	"path"
@@ -83,7 +83,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		var rk []byte
 		if contract.DisputeResolution != nil {
 			if contract.VendorOrderConfirmation == nil {
-				return errors.New("Cannot leave review because the vendor never accepted this order")
+				return errors.New("cannot leave review because the vendor never accepted this order")
 			}
 			for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 				if sig.Metadata.ListingSlug == r.Slug {
@@ -92,7 +92,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 				}
 			}
 			if len(contract.BuyerOrder.RatingKeys) < len(orderRatings.Ratings) {
-				return errors.New("Invalid number of rating keys in buyer order")
+				return errors.New("invalid number of rating keys in buyer order")
 			}
 			rk = contract.BuyerOrder.RatingKeys[z]
 
@@ -145,7 +145,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 
-		ratingKey, err := n.Wallet.MasterPrivateKey().Child(uint32(contract.BuyerOrder.Timestamp.Seconds))
+		ratingKey, err := n.MasterPrivateKey.Child(uint32(contract.BuyerOrder.Timestamp.Seconds))
 		if err != nil {
 			return err
 		}
@@ -162,13 +162,18 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		oc.Ratings = append(oc.Ratings, rating)
 	}
 
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
+
 	// Payout order if moderated and not disputed
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
 		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				addr, err := n.Wallet.DecodeAddress(r.Address)
+				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return err
 				}
@@ -187,7 +192,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			}
 		}
 
-		payoutAddress, err := n.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
+		payoutAddress, err := wal.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
 		if err != nil {
 			return err
 		}
@@ -200,7 +205,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return err
 		}
@@ -208,7 +213,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		buyerKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		buyerKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -217,7 +222,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 
-		buyerSignatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
 		if err != nil {
 			return err
 		}
@@ -234,7 +239,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = n.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
+		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
 		if err != nil {
 			return err
 		}
@@ -306,6 +311,10 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	} else if active {
 		return ErrPrematureReleaseOfTimedoutEscrowFunds
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	var txInputs []wallet.TransactionInput
@@ -316,17 +325,17 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 				return err
 			}
 
-			confirms, _, err := n.Wallet.GetConfirmations(*hash)
+			confirms, _, err := wal.GetConfirmations(*hash)
 			if err != nil {
 				return err
 			}
 
 			if confirms < minConfirms {
-				EscrowTimeLockedError = fmt.Errorf("Tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
+				EscrowTimeLockedError = fmt.Errorf("tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
 				return EscrowTimeLockedError
 			}
 
-			addr, err := n.Wallet.DecodeAddress(r.Address)
+			addr, err := wal.DecodeAddress(r.Address)
 			if err != nil {
 				return err
 			}
@@ -348,7 +357,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.Wallet.MasterPrivateKey()
+	mPrivKey := n.MasterPrivateKey
 	if err != nil {
 		return err
 	}
@@ -356,7 +365,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+	vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 	if err != nil {
 		return err
 	}
@@ -364,7 +373,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+	_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}
@@ -568,11 +577,11 @@ func verifySignaturesOnOrderCompletion(contract *pb.RicardianContract) error {
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
-			return errors.New("Contract does not contain a signature for the order completion")
+			return errors.New("contract does not contain a signature for the order completion")
 		case invalidSigError:
-			return errors.New("Buyer's guid signature on contact failed to verify")
+			return errors.New("buyer's guid signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("Public key in order does not match reported buyer ID")
+			return errors.New("public key in order does not match reported buyer ID")
 		default:
 			return err
 		}
