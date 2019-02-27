@@ -71,6 +71,10 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		blockingStartupMiddleware(i, w, r, i.POSTReleaseEscrow)
 	case strings.HasPrefix(path, "/ob/chat"):
 		blockingStartupMiddleware(i, w, r, i.POSTChat)
+	case strings.HasPrefix(path, "/ob/signmessage"):
+		i.POSTSignMessage(w, r)
+	case strings.HasPrefix(path, "/ob/verifymessage"):
+		i.POSTVerifyMessage(w, r)
 	case strings.HasPrefix(path, "/ob/groupchat"):
 		blockingStartupMiddleware(i, w, r, i.POSTGroupChat)
 	case strings.HasPrefix(path, "/ob/markchatasread"):

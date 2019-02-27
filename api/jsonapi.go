@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
@@ -2261,6 +2262,92 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	SanitizedResponse(w, `{}`)
+}
+
+func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request) {
+	type plaintext struct {
+		Content string `json:"content"`
+	}
+	var msg plaintext
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&msg)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	sig, err := i.node.IpfsNode.PrivateKey.Sign([]byte(msg.Content))
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	keyBytes, err := i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s","pubkey":"%s","peerId":"%s"}`,
+		hex.EncodeToString(sig),
+		hex.EncodeToString(keyBytes),
+		i.node.IpfsNode.Identity.Pretty()))
+}
+
+func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Request) {
+	type ciphertext struct {
+		Content   string `json:"content"`
+		Signature string `json:"signature"`
+		Pubkey    string `json:"pubkey"`
+		PeerId    string `json:"peerId"`
+	}
+	var msg ciphertext
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&msg)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	keyBytes, err := hex.DecodeString(msg.Pubkey)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	pubkey, err := crypto.UnmarshalPublicKey(keyBytes)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if peerId was generated from the pubkey provided
+	generatedPeer, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if generatedPeer.Pretty() != msg.PeerId {
+		SanitizedResponse(w, `{"error":"PEER_ID_PUBKEY_MISMATCH"}`)
+		return
+	}
+
+	contentBytes, err := hex.DecodeString(msg.Content)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sigBytes, err := hex.DecodeString(msg.Signature)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_, err = pubkey.Verify(contentBytes, sigBytes)
+	if err != nil {
+		SanitizedResponse(w, `{"error":"VERIFICATION_FAILED"}`)
+		return
+	}
+	SanitizedResponse(w, fmt.Sprintf(`{"error":"","peerId":"%s"}`, msg.PeerId))
 }
 
 func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
