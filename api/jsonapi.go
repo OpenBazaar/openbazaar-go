@@ -8,14 +8,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	routing "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
-	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	datastore "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 
 	"io/ioutil"
 	"net/http"
@@ -2266,7 +2265,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 
 func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request) {
 	type plaintext struct {
-		Content string `json:"content"`
+		Content []byte `json:"content"`
 	}
 	var msg plaintext
 	decoder := json.NewDecoder(r.Body)
@@ -2276,13 +2275,7 @@ func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sig, err := i.node.IpfsNode.PrivateKey.Sign([]byte(msg.Content))
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	keyBytes, err := i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
+	sig, pubKey, err := core.SignPayload(msg.Content, i.node.IpfsNode.PrivateKey)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -2290,7 +2283,7 @@ func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request)
 
 	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s","pubkey":"%s","peerId":"%s"}`,
 		hex.EncodeToString(sig),
-		hex.EncodeToString(keyBytes),
+		hex.EncodeToString(pubKey),
 		i.node.IpfsNode.Identity.Pretty()))
 }
 
@@ -2314,23 +2307,6 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	pubkey, err := crypto.UnmarshalPublicKey(keyBytes)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if peerId was generated from the pubkey provided
-	generatedPeer, err := peer.IDFromPublicKey(pubkey)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	if generatedPeer.Pretty() != msg.PeerId {
-		SanitizedResponse(w, `{"error":"PEER_ID_PUBKEY_MISMATCH"}`)
-		return
-	}
 
 	contentBytes, err := hex.DecodeString(msg.Content)
 	if err != nil {
@@ -2342,9 +2318,15 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err = pubkey.Verify(contentBytes, sigBytes)
+
+	peerID, err := core.VerifyPayload(contentBytes, sigBytes, keyBytes)
 	if err != nil {
 		SanitizedResponse(w, `{"error":"VERIFICATION_FAILED"}`)
+		return
+	}
+
+	if peerID != msg.PeerId {
+		SanitizedResponse(w, `{"error":"PEER_ID_PUBKEY_MISMATCH"}`)
 		return
 	}
 	SanitizedResponse(w, fmt.Sprintf(`{"error":"","peerId":"%s"}`, msg.PeerId))
