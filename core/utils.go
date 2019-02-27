@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"time"
 
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	util "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
@@ -11,9 +12,7 @@ import (
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 
-	"runtime"
 	"strings"
-	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -148,14 +147,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 
 // NormalizeCurrencyCode standardizes the format for the given currency code
 func NormalizeCurrencyCode(currencyCode string) string {
-	var c, err = repo.NewCurrencyCode(currencyCode)
+	var c, err = repo.LoadCurrencyDefinitions().Lookup(currencyCode)
 	if err != nil {
-		log.Errorf("invalid currency code (%s), please report this bug: %s", currencyCode, err.Error())
-		var (
-			stack     = make([]byte, 1<<16)
-			stackSize = runtime.Stack(stack, false)
-		)
-		log.Debugf(string(stack[:stackSize-1]))
+		log.Errorf("invalid currency code (%s): %s", currencyCode, err.Error())
 		return ""
 	}
 	return c.String()
