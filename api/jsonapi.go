@@ -1518,8 +1518,10 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", conf.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -1565,8 +1567,10 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -1634,8 +1638,10 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -1712,8 +1718,10 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -1905,8 +1913,10 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderId)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -1944,8 +1954,10 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", or.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -2030,8 +2042,10 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", d.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -2172,8 +2186,10 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -2215,8 +2231,10 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+	lookupCoin := contract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 

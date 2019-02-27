@@ -300,13 +300,13 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
-	cc, err := repo.NewCurrencyCode(paymentCoin)
+	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, nil, err
+		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, read, cc, nil
+	return rc, pb.OrderState(stateInt), funded, records, read, def.CurrencyCode(), nil
 }
 
 func (s *SalesDB) Count() int {

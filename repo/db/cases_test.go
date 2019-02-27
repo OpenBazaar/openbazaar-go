@@ -986,17 +986,13 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
 		contract.BuyerOrder.Payment.Coin = test.paymentCoin
-		paymentCoin, err := repo.NewCurrencyCode(test.paymentCoin)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		paymentCoin := repo.CurrencyCode(test.paymentCoin)
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
-			PaymentCoin:      paymentCoin,
+			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)
@@ -1028,11 +1024,8 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		paymentCoinCode, err := repo.NewCurrencyCode(testCoin)
-		if err != nil {
-			t.Fatal(err)
-		}
 		contract.VendorListings[0].Metadata.CoinType = testCoin
+		paymentCoin := repo.CurrencyCode(testCoin)
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
@@ -1040,7 +1033,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
 			CoinType:         testCoin,
-			PaymentCoin:      paymentCoinCode,
+			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)

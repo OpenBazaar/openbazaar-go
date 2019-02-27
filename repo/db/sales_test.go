@@ -331,7 +331,7 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 
 func TestSalesGetByOrderId(t *testing.T) {
 	var (
-		expectedCoin         = "ABC"
+		expectedCoin         = "BTC"
 		saldb, teardown, err = buildNewSaleStore()
 	)
 	if err != nil {
