@@ -63,7 +63,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(4)
+        time.sleep(10)
 
         # bob send order
         with open('testdata/order_direct.json') as order_file:
@@ -129,7 +129,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(45)
+        time.sleep(60)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

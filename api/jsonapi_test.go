@@ -137,6 +137,13 @@ func TestModerator(t *testing.T) {
 	})
 }
 
+func TestMessageSignVerify(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/signmessage", signMessageJSON, 200, anyResponseJSON},
+		{"POST", "/ob/verifymessage", verifyMessageJSON, 200, anyResponseJSON},
+	})
+}
+
 func TestListingsAcceptedCurrencies(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
