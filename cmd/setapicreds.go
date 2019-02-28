@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -32,6 +33,12 @@ func (x *SetAPICreds) Execute(args []string) error {
 		repoPath = x.DataDir
 	}
 	r, err := fsrepo.Open(repoPath)
+	if _, ok := err.(fsrepo.NoRepoError); ok {
+		return errors.New(fmt.Sprintf(
+					"IPFS repo in the data directory '%s' has not been initialized." +
+					"\nRun openbazaar with the 'start' command to initialize.",
+					repoPath));
+	}
 	if err != nil {
 		log.Error(err)
 		return err
