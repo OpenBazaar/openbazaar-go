@@ -4,16 +4,19 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
+
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+
+	"os"
 	"strings"
 	"syscall"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -31,15 +34,28 @@ func (x *SetAPICreds) Execute(args []string) error {
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
-	r, err := fsrepo.Open(repoPath)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	cfgPath := path.Join(repoPath, "config")
+	configFile, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return err
 	}
+	_, err = fsrepo.Open(repoPath)
+	if _, ok := err.(fsrepo.NoRepoError); ok {
+		return fmt.Errorf(
+			"IPFS repo in the data directory '%s' has not been initialized."+
+				"\nRun openbazaar with the 'start' command to initialize.",
+			repoPath)
+	}
+	if err != nil {
+		return err
+	}
+
+	configJson := make(map[string]interface{})
+	err = json.Unmarshal(configFile, &configJson)
+	if err != nil {
+		return err
+	}
+
 	apiCfg, err := schema.GetAPIConfig(configFile)
 	if err != nil {
 		log.Error(err)
@@ -90,7 +106,13 @@ func (x *SetAPICreds) Execute(args []string) error {
 		apiCfg.AllowedIPs = []string{}
 	}
 
-	err = r.SetConfigKey("JSON-API", apiCfg)
+	configJson["JSON_API"] = apiCfg
+
+	out, err := json.MarshalIndent(configJson, "", "    ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(cfgPath, out, os.ModePerm)
 	if err != nil {
 		return err
 	}
