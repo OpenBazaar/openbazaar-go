@@ -24,7 +24,6 @@ import (
 
 	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
 	ipfsconfig "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -53,6 +52,8 @@ import (
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 )
+
+var log = logging.MustGetLogger("mobile")
 
 // Node configuration structure
 type Node struct {
@@ -308,11 +309,14 @@ func (n *Node) Start() error {
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
 	if hasherr != nil {
-		return hasherr
+		log.Error("get ipns key:", hasherr)
 	}
-	e := new(ipnspb.IpnsEntry)
-	proto.Unmarshal(ival, e)
-	n.OpenBazaarNode.RootHash = ipath.Path(e.Value).String()
+	ourIpnsRecord := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(ival, ourIpnsRecord)
+	if err != nil {
+		log.Error("unmarshal record value", err)
+	}
+	n.OpenBazaarNode.RootHash = string(ourIpnsRecord.Value)
 
 	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
 	if err != nil {
