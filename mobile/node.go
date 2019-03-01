@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dht "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
-	dhtopts "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
+	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
-	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
-	record "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
 	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
-	manet "gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
-	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+	"gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
 	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
-	proto "gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
+	"gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -85,6 +85,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 
 // NewNodeWithConfig create a new node using the configuration file from NewNode()
 func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*Node, error) {
+	ipfscore.DHTOption = constructClientDHTRouting
 	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
@@ -121,6 +122,11 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	ipnsExtraConfig, err := apiSchema.GetIPNSExtraConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
@@ -163,12 +169,13 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
 		dataSharing.PushTo = []string{}
+	} else {
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
 	}
 
 	ncfg := &ipfscore.BuildCfg{
-		Repo:    r,
-		Online:  true,
-		Routing: DHTClientOption,
+		Repo:   r,
+		Online: true,
 		ExtraOpts: map[string]bool{
 			"mplex":  true,
 			"ipnsps": true,
@@ -249,6 +256,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		PushNodes:                     pushNodes,
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
+		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
+		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -374,6 +383,7 @@ func (n *Node) Start() error {
 				}()
 			}
 		}
+		<-n.OpenBazaarNode.DHT.BootstrapChan
 		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
 			Db:        n.OpenBazaarNode.Datastore,
@@ -432,7 +442,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 	return sqliteDB, nil
 }
 
-// newHttpGateway Collects options, creates listener, prints status message and starts serving requests
+// Collects options, creates listener, prints status message and starts serving requests
 func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := ctx.GetConfig()
@@ -445,8 +455,8 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
 	}
-
-	gwLis, err := manet.Listen(gatewayMaddr)
+	var gwLis manet.Listener
+	gwLis, err = manet.Listen(gatewayMaddr)
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
 	}
@@ -468,11 +478,9 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
 
+	// Create and return an API gateway
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
 }
-
-// DHTClientOption required for constructClientDHTRouting()
-var DHTClientOption ipfscore.RoutingOption = constructClientDHTRouting
 
 // constructClientDHTRouting create DHT routing
 func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
