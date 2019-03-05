@@ -201,12 +201,14 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		req.URL.RawQuery = query.Encode()
 	}
 	if err != nil {
+		Log.Errorf("creating request (%s): %s", requestUrl.String(), err.Error())
 		return nil, fmt.Errorf("creating request: %s", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := i.HTTPClient.Do(req)
 	if err != nil {
+		Log.Errorf("executing request (%s): %s", requestUrl.String(), err.Error())
 		return nil, err
 	}
 	// Try again if for some reason it returned a bad request
@@ -215,6 +217,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		req.Body = ioutil.NopCloser(bytes.NewReader(body))
 		resp, err = i.HTTPClient.Do(req)
 		if err != nil {
+			Log.Errorf("retry request (%s): %s", requestUrl.String(), err.Error())
 			return nil, err
 		}
 	}
@@ -641,30 +644,34 @@ func (i *BlockBookClient) GetBestBlock() (*model.Block, error) {
 
 	resp, err := i.RequestFunc("", http.MethodGet, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting block index: %s", err.Error())
 	}
+	defer resp.Body.Close()
+
 	decoder := json.NewDecoder(resp.Body)
 	bi := new(resIndex)
-	defer resp.Body.Close()
 	if err = decoder.Decode(bi); err != nil {
-		return nil, fmt.Errorf("error decoding block index: %s", err)
+		return nil, fmt.Errorf("decoding block index: %s", err)
 	}
-	resp2, err := i.RequestFunc("/block-index/"+strconv.Itoa(bi.Backend.Blocks-1), http.MethodGet, nil, nil)
+	blockIndexPath := "/block-index/" + strconv.Itoa(bi.Backend.Blocks-1)
+
+	resp2, err := i.RequestFunc(blockIndexPath, http.MethodGet, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting block detail (%s): %s", blockIndexPath, err.Error())
 	}
+	defer resp2.Body.Close()
+
 	decoder2 := json.NewDecoder(resp2.Body)
 	bh := new(resBlockHash)
-	defer resp2.Body.Close()
 	if err = decoder2.Decode(bh); err != nil {
-		return nil, fmt.Errorf("error decoding block hash: %s", err)
+		return nil, fmt.Errorf("decoding block detail: %s", err)
 	}
-	ret := model.Block{
+
+	return &model.Block{
 		Hash:              bi.Backend.BestBlockHash,
 		Height:            bi.Backend.Blocks,
 		PreviousBlockhash: bh.BlockHash,
-	}
-	return &ret, nil
+	}, nil
 }
 
 func (i *BlockBookClient) GetBlocksBefore(to time.Time, limit int) (*model.BlockList, error) {

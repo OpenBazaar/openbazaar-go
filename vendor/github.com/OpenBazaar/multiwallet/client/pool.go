@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/OpenBazaar/multiwallet/client/blockbook"
@@ -169,7 +170,7 @@ func (p *ClientPool) executeRequest(queryFunc func(c *blockbook.BlockBookClient)
 	for e := p.newMaximumTryEnumerator(); e.next(); {
 		var client = p.poolManager.AcquireCurrentWhenReady()
 		if err := queryFunc(client); err != nil {
-			Log.Infof("error executing wallet client request: %s", err.Error())
+			Log.Warningf("request attempt: %s", err.Error())
 			p.poolManager.ReleaseCurrent()
 			p.FailAndCloseCurrentClient()
 		} else {
@@ -177,7 +178,7 @@ func (p *ClientPool) executeRequest(queryFunc func(c *blockbook.BlockBookClient)
 			return nil
 		}
 	}
-	return errors.New("exhausted maximum attempts for request")
+	return errors.New("exhausted maximum request attempts")
 }
 
 // BlockNofity proxies the active client's block channel
@@ -190,6 +191,7 @@ func (p *ClientPool) Broadcast(tx []byte) (string, error) {
 	var (
 		txid      string
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) broadcasting transaction", c.EndpointURL().String())
 			r, err := c.Broadcast(tx)
 			if err != nil {
 				return err
@@ -208,6 +210,7 @@ func (p *ClientPool) EstimateFee(nBlocks int) (int, error) {
 	var (
 		fee       int
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) requesting fee estimate", c.EndpointURL().String())
 			r, err := c.EstimateFee(nBlocks)
 			if err != nil {
 				return err
@@ -226,6 +229,7 @@ func (p *ClientPool) GetBestBlock() (*model.Block, error) {
 	var (
 		block     *model.Block
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request best block info", c.EndpointURL().String())
 			r, err := c.GetBestBlock()
 			if err != nil {
 				return err
@@ -244,6 +248,7 @@ func (p *ClientPool) GetInfo() (*model.Info, error) {
 	var (
 		info      *model.Info
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request backend info", c.EndpointURL().String())
 			r, err := c.GetInfo()
 			if err != nil {
 				return err
@@ -262,6 +267,7 @@ func (p *ClientPool) GetRawTransaction(txid string) ([]byte, error) {
 	var (
 		tx        []byte
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request transaction info, txid: %s", c.EndpointURL().String(), txid)
 			r, err := c.GetRawTransaction(txid)
 			if err != nil {
 				return err
@@ -279,6 +285,12 @@ func (p *ClientPool) GetTransactions(addrs []btcutil.Address) ([]model.Transacti
 	var (
 		txs       []model.Transaction
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			var addrStrings []string
+			for a := range addrs {
+				addrStrings = append(addrStrings, a.String())
+			}
+			Log.Debugf("(%s) request transactions for (%d) addrs", c.EndpointURL().String(), len(addrs))
+			Log.Debugf("\taddrs requested: %s", strings.Join(addrStrings, ","))
 			r, err := c.GetTransactions(addrs)
 			if err != nil {
 				return err
@@ -297,6 +309,7 @@ func (p *ClientPool) GetTransaction(txid string) (*model.Transaction, error) {
 	var (
 		tx        *model.Transaction
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request transaction data, txid: %s", c.EndpointURL().String(), txid)
 			r, err := c.GetTransaction(txid)
 			if err != nil {
 				return err
@@ -315,6 +328,12 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 	var (
 		utxos     []model.Utxo
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			var addrStrings []string
+			for a := range addrs {
+				addrStrings = append(addrStrings, a.String())
+			}
+			Log.Debugf("(%s) request utxos for (%d) addrs", c.EndpointURL().String(), len(addrs))
+			Log.Debugf("\taddrs requested: %s", strings.Join(addrStrings, ","))
 			r, err := c.GetUtxos(addrs)
 			if err != nil {
 				return err
@@ -334,6 +353,7 @@ func (p *ClientPool) ListenAddress(addr btcutil.Address) {
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
+	Log.Debugf("(%s) listen address %s", c.EndpointURL().String(), addr.String())
 	p.listenAddrs = append(p.listenAddrs, addr)
 	client.ListenAddress(addr)
 }

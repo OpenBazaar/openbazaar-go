@@ -5,9 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/btcsuite/btcd/chaincfg"
+	"time"
 
 	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
