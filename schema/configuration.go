@@ -2,7 +2,8 @@ package schema
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -55,7 +56,20 @@ type DataSharing struct {
 	PushTo              []string
 }
 
-var MalformedConfigError = errors.New("config file is malformed")
+type malformedConfigError struct {
+	path []string
+}
+
+func malformedConfigKey(pathArgs ...string) malformedConfigError {
+	return malformedConfigError{path: pathArgs}
+}
+
+func (err malformedConfigError) Error() string {
+	if len(err.path) != 0 {
+		return fmt.Sprintf("malformed config: %s", strings.Join(err.path, "."))
+	}
+	return "malformed config"
+}
 
 func DefaultWalletsConfig() *WalletsConfig {
 	var feeAPI = "https://btc.fees.openbazaar.org"
@@ -118,125 +132,145 @@ func DefaultWalletsConfig() *WalletsConfig {
 	}
 }
 
+func keyError(section string, key string) string {
+	if section == "" {
+		return fmt.Sprintf("Error parsing key '%s'", key)
+	}
+	return fmt.Sprintf("Error parsing key '%s' in section '%s'", key, section)
+}
+
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
+	const (
+		KeyAllowedIPs    = "AllowedIPs"
+		KeyAuthenticated = "Authenticated"
+		KeyCORS          = "CORS"
+		KeyEnabled       = "Enabled"
+		KeyHTTPHeaders   = "HTTPHeaders"
+		KeyJSONAPI       = "JSON-API"
+		KeyPassword      = "Password"
+		KeySSL           = "SSL"
+		KeySSLCert       = "SSLCert"
+		KeySSLKey        = "SSLKey"
+		KeyUsername      = "Username"
+	)
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
-	apiIface, ok := cfg["JSON-API"]
+	apiIface, ok := cfg[KeyJSONAPI]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI)
 	}
 
 	api, ok := apiIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI)
 	}
 
 	var headers map[string]interface{}
-	h, ok := api["HTTPHeaders"]
+	h, ok := api[KeyHTTPHeaders]
 	if h == nil || !ok {
 		headers = nil
 	} else {
 		headers, ok = h.(map[string]interface{})
 		if !ok {
-			return nil, MalformedConfigError
+			return nil, malformedConfigKey(KeyJSONAPI, KeyHTTPHeaders)
 		}
 	}
 
-	enabled, ok := api["Enabled"]
+	enabled, ok := api[KeyEnabled]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyEnabled)
 	}
 	enabledBool, ok := enabled.(bool)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyEnabled)
 	}
-	authenticated := api["Authenticated"]
+	authenticated := api[KeyAuthenticated]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyAuthenticated)
 	}
 	authenticatedBool, ok := authenticated.(bool)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyAuthenticated)
 	}
-	allowedIPs, ok := api["AllowedIPs"]
+	allowedIPs, ok := api[KeyAllowedIPs]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyAllowedIPs)
 	}
 	allowedIPsIface, ok := allowedIPs.([]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyAllowedIPs)
 	}
 	var allowedIPstrings []string
 	for _, ip := range allowedIPsIface {
 		ipStr, ok := ip.(string)
 		if !ok {
-			return nil, MalformedConfigError
+			return nil, malformedConfigKey(KeyJSONAPI, KeyAllowedIPs)
 		}
 		allowedIPstrings = append(allowedIPstrings, ipStr)
 	}
 
-	username, ok := api["Username"]
+	username, ok := api[KeyUsername]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyUsername)
 	}
 	usernameStr, ok := username.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyUsername)
 	}
 
-	password, ok := api["Password"]
+	password, ok := api[KeyPassword]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyPassword)
 	}
 	passwordStr, ok := password.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeyPassword)
 	}
 
-	c, ok := api["CORS"]
+	c, ok := api[KeyCORS]
 	var cors *string
 	if c == nil || !ok {
 		cors = nil
 	} else {
 		crs, ok := c.(string)
 		if !ok {
-			return nil, MalformedConfigError
+			return nil, malformedConfigKey(KeyJSONAPI, KeyCORS)
 		}
 		cors = &crs
 	}
-	sslEnabled, ok := api["SSL"]
+	sslEnabled, ok := api[KeySSL]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSL)
 	}
 	sslEnabledBool, ok := sslEnabled.(bool)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSL)
 	}
 
-	certFile, ok := api["SSLCert"]
+	certFile, ok := api[KeySSLCert]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSLCert)
 	}
 	certFileStr, ok := certFile.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSLCert)
 	}
-	keyFile, ok := api["SSLKey"]
+	keyFile, ok := api[KeySSLKey]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSLKey)
 	}
 	keyFileStr, ok := keyFile.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyJSONAPI, KeySSLKey)
 	}
 
 	apiConfig := &APIConfig{
@@ -256,15 +290,16 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 }
 
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
+	const KeyWallets = "Wallets"
 	var cfgIface map[string]interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
-	walletIface, ok := cfgIface["Wallets"]
+	walletIface, ok := cfgIface[KeyWallets]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyWallets)
 	}
 
 	b, err := json.Marshal(walletIface)
@@ -280,130 +315,142 @@ func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
 }
 
 func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
+	const (
+		KeyPassword   = "Password"
+		KeyTorConfig  = "Tor-config"
+		KeyTorControl = "TorControl"
+	)
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
-	tcIface, ok := cfg["Tor-config"]
+	tcIface, ok := cfg[KeyTorConfig]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig)
 	}
 	tc, ok := tcIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig)
 	}
 
-	pw, ok := tc["Password"]
+	pw, ok := tc[KeyPassword]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig, KeyPassword)
 	}
 	pwStr, ok := pw.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig, KeyPassword)
 	}
-	controlUrl, ok := tc["TorControl"]
+	controlUrl, ok := tc[KeyTorControl]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig, KeyTorControl)
 	}
 	controlUrlStr, ok := controlUrl.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyTorConfig, KeyTorControl)
 	}
 
 	return &TorConfig{TorControl: controlUrlStr, Password: pwStr}, nil
 }
 
 func GetIPNSExtraConfig(cfgBytes []byte) (*IpnsExtraConfig, error) {
+	const (
+		KeyAPIRouter     = "APIRouter"
+		KeyDHTQuorumSize = "DHTQuorumSize"
+		KeyIpnsExtra     = "IpnsExtra"
+	)
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
-	ieIface, ok := cfg["IpnsExtra"]
+	ieIface, ok := cfg[KeyIpnsExtra]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra)
 	}
 	ieCfg, ok := ieIface.(map[string]interface{})
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra)
 	}
 
-	quorumSize, ok := ieCfg["DHTQuorumSize"]
+	quorumSize, ok := ieCfg[KeyDHTQuorumSize]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra, KeyDHTQuorumSize)
 	}
 	qsInt, ok := quorumSize.(float64)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra, KeyDHTQuorumSize)
 	}
-	apiRouter, ok := ieCfg["APIRouter"]
+	apiRouter, ok := ieCfg[KeyAPIRouter]
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra, KeyAPIRouter)
 	}
 	apiRouterStr, ok := apiRouter.(string)
 	if !ok {
-		return nil, MalformedConfigError
+		return nil, malformedConfigKey(KeyIpnsExtra, KeyAPIRouter)
 	}
 
 	return &IpnsExtraConfig{int(qsInt), apiRouterStr}, nil
 }
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {
+	const KeyDropboxApiToken = "Dropbox-api-token"
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return "", MalformedConfigError
+		return "", malformedConfigError{}
 	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return "", MalformedConfigError
+		return "", malformedConfigError{}
 	}
 
-	token, ok := cfg["Dropbox-api-token"]
+	token, ok := cfg[KeyDropboxApiToken]
 	if !ok {
-		return "", MalformedConfigError
+		return "", malformedConfigKey(KeyDropboxApiToken)
 	}
 	tokenStr, ok := token.(string)
 	if !ok {
-		return "", MalformedConfigError
+		return "", malformedConfigKey(KeyDropboxApiToken)
 	}
 
 	return tokenStr, nil
 }
 
 func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
+	const KeyRepublishInterval = "RepublishInterval"
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return time.Duration(0), MalformedConfigError
+		return time.Duration(0), malformedConfigError{}
 	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return time.Duration(0), MalformedConfigError
+		return time.Duration(0), malformedConfigError{}
 	}
 
-	interval, ok := cfg["RepublishInterval"]
+	interval, ok := cfg[KeyRepublishInterval]
 	if !ok {
-		return time.Duration(0), MalformedConfigError
+		return time.Duration(0), malformedConfigKey(KeyRepublishInterval)
 	}
 	intervalStr, ok := interval.(string)
 	if !ok {
-		return time.Duration(0), MalformedConfigError
+		return time.Duration(0), malformedConfigKey(KeyRepublishInterval)
 	}
 	if intervalStr == "" {
 		return time.Duration(0), nil
@@ -416,51 +463,57 @@ func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 }
 
 func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
+	const (
+		KeyAcceptStoreRequest = "AcceptStoreRequests"
+		KeyDataSharing        = "DataSharing"
+		KeyPushTo             = "PushTo"
+	)
+
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
 	dataSharing := new(DataSharing)
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigError{}
 	}
 
-	dscfg, ok := cfg["DataSharing"]
+	dscfg, ok := cfg[KeyDataSharing]
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing)
 	}
 	ds, ok := dscfg.(map[string]interface{})
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing)
 	}
 
-	acceptcfg, ok := ds["AcceptStoreRequests"]
+	acceptcfg, ok := ds[KeyAcceptStoreRequest]
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing, KeyAcceptStoreRequest)
 	}
 	accept, ok := acceptcfg.(bool)
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing, KeyAcceptStoreRequest)
 	}
 	dataSharing.AcceptStoreRequests = accept
 
-	pushcfg, ok := ds["PushTo"]
+	pushcfg, ok := ds[KeyPushTo]
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing, KeyPushTo)
 	}
 	pushList, ok := pushcfg.([]interface{})
 	if !ok {
-		return dataSharing, MalformedConfigError
+		return dataSharing, malformedConfigKey(KeyDataSharing, KeyPushTo)
 	}
 
 	for _, nd := range pushList {
 		ndStr, ok := nd.(string)
 		if !ok {
-			return dataSharing, MalformedConfigError
+			return dataSharing, malformedConfigKey(KeyDataSharing, KeyPushTo)
 		}
 		dataSharing.PushTo = append(dataSharing.PushTo, ndStr)
 	}
@@ -468,32 +521,33 @@ func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 }
 
 func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
+	const KeyBootstrapTestnet = "Bootstrap-testnet"
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
-		return nil, MalformedConfigError
+		return nil, malformedConfigError{}
 	}
 
 	var addrs []string
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return addrs, MalformedConfigError
+		return addrs, malformedConfigError{}
 	}
 
-	bootstrap, ok := cfg["Bootstrap-testnet"]
+	bootstrap, ok := cfg[KeyBootstrapTestnet]
 	if !ok {
-		return addrs, MalformedConfigError
+		return addrs, malformedConfigKey(KeyBootstrapTestnet)
 	}
 	addrList, ok := bootstrap.([]interface{})
 	if !ok {
-		return addrs, MalformedConfigError
+		return addrs, malformedConfigKey(KeyBootstrapTestnet)
 	}
 
 	for _, addr := range addrList {
 		addrStr, ok := addr.(string)
 		if !ok {
-			return addrs, MalformedConfigError
+			return addrs, malformedConfigKey(KeyBootstrapTestnet)
 		}
 		addrs = append(addrs, addrStr)
 	}
