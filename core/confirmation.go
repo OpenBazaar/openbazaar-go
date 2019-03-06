@@ -272,7 +272,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.OrderID != orderID {
 		return errors.New("Vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
+	if contract.VendorOrderConfirmation.RequestedAmount.Value != contract.BuyerOrder.Payment.Amount.Value {
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)

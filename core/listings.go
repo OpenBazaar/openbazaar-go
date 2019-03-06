@@ -474,7 +474,8 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				if service.Price == 0 && !contains(freeShipping, region.String()) {
+				servicePrice, _ := new(big.Int).SetString(service.Price.Value, 10)
+				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
 			}
@@ -1130,10 +1131,11 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 			return errors.New("Percent discount cannot be over 100 percent")
 		}
 		n, _ := new(big.Int).SetString(listing.Item.Price.Value, 10)
-		if n.Cmp(big.NewInt(int64(coupon.GetPriceDiscount()))) < 0 {
+		discount0, _ := new(big.Int).SetString(coupon.GetPriceDiscount().Value, 10)
+		if n.Cmp(discount0) < 0 {
 			return errors.New("Price discount cannot be greater than the item price")
 		}
-		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
+		if coupon.GetPercentDiscount() == 0 && n.Cmp(discount0) == 0 {
 			return errors.New("Coupons must have at least one positive discount value")
 		}
 	}

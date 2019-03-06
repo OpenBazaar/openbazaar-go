@@ -131,7 +131,7 @@ listingLoop:
 			}
 			listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
 				Code:         strings.ToUpper(record[pos]),
-				Divisibility: 8,
+				Divisibility: n.getDivisibility(strings.ToUpper(record[pos])),
 			}
 			pos, ok = fields["language"]
 			if ok {
@@ -310,12 +310,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -339,12 +347,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -368,12 +384,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -418,12 +442,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -447,12 +479,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -476,12 +516,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -526,12 +574,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -555,12 +611,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -584,12 +648,20 @@ listingLoop:
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)

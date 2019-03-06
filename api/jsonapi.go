@@ -787,21 +787,32 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("in wallet spend handler : postspendcoins")
 	var spendArgs core.SpendRequest
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&spendArgs)
+	fmt.Println("after body decode: ")
+	fmt.Println(spendArgs)
+	fmt.Println(err)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
+	fmt.Println("calling node spend")
 	result, err := i.node.Spend(&spendArgs)
+	fmt.Println("after node spend")
+	fmt.Println(result)
+	fmt.Println(err)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	fmt.Println("before marshal indent")
 	ser, err := json.MarshalIndent(result, "", "    ")
+	fmt.Println("after marshal indent")
+	fmt.Println(ser)
+	fmt.Println(err)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

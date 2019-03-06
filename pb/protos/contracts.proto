@@ -94,7 +94,7 @@ message Listing {
         message Sku {
             repeated uint32 variantCombo = 1;
             string productID             = 2;
-            int64 surcharge              = 3;
+            CurrencyValue surcharge      = 3;
             int64 quantity               = 4; // Not saved with listing
         }
 
@@ -120,10 +120,10 @@ message Listing {
         }
 
         message Service {
-            string name                = 1;
-            uint64 price               = 2;
-            string estimatedDelivery   = 3;
-            uint64 additionalItemPrice = 4;
+            string name                       = 1;
+            CurrencyValue price               = 2;
+            string estimatedDelivery          = 3;
+            CurrencyValue additionalItemPrice = 4;
         }
     }
 
@@ -141,8 +141,8 @@ message Listing {
             string discountCode = 3;
         }
         oneof discount {
-            float percentDiscount = 5;
-            uint64 priceDiscount  = 6;
+            float percentDiscount        = 5;
+            CurrencyValue priceDiscount  = 6;
         }
     }
 }

@@ -328,12 +328,18 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		fmt.Println("in hanle order .. method = addr_req")
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
+		fmt.Println("seller calc total : ", total.String())
+		fmt.Println("buyer sent val : ", contract.BuyerOrder.Payment.Amount.Value)
+
 		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+		fmt.Println("buyer val again : ", n.String())
 		if !service.node.ValidatePaymentAmount(total, *n) {
+			fmt.Println("this should not be printed....")
 			return errorResponse("Calculated a different payment amount"), errors.New("Calculated different payment amount")
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true, false)
