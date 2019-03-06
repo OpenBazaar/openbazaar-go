@@ -10,10 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"strings"
-
 	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"golang.org/x/net/proxy"
+	"strings"
 )
 
 type ExchangeRateProvider struct {

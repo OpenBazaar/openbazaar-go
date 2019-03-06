@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
