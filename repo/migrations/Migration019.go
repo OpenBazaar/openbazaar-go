@@ -3,11 +3,17 @@ package migrations
 import (
 	"encoding/json"
 	"fmt"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreunix"
+
+	"gx/ipfs/QmZMWMvWMVKCbHetJ4RgndbuEF1io2UpUxwQwtNjtYPzSC/go-ipfs-files"
+
 	"github.com/ipfs/go-ipfs/core/mock"
 )
 
@@ -56,7 +62,7 @@ func (Migration019) Up(repoPath string, dbPassword string, testnet bool) error {
 	err = updateEachListingOnIndex(repoPath, func(ld *ListingData) error {
 		listingPath := path.Join(repoPath, "root", "listings", ld.Slug+".json")
 
-		listingHash, err := ipfs.GetHashOfFile(ipfsNode, listingPath)
+		listingHash, err := getHashOfFile(ipfsNode, listingPath)
 		if err != nil {
 			return err
 		}
@@ -120,4 +126,38 @@ func updateEachListingOnIndex(repoPath string, updateListing func(*ListingData) 
 		return werr
 	}
 	return nil
+}
+
+func getHashOfFile(n *core.IpfsNode, root string) (rootHash string, err error) {
+	defer n.Blockstore.PinLock().Unlock()
+
+	stat, err := os.Lstat(root)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := files.NewSerialFile(filepath.Base(root), root, false, stat)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	fileAdder, err := coreunix.NewAdder(n.Context(), n.Pinning, n.Blockstore, n.DAG)
+	if err != nil {
+		return "", err
+	}
+
+	fileAdder.Progress = false
+	fileAdder.Hidden = true
+	fileAdder.Pin = true
+	fileAdder.Trickle = false
+	fileAdder.Wrap = false
+	fileAdder.Chunker = ""
+	fileAdder.CidBuilder = cid.V0Builder{}
+
+	node, err := fileAdder.AddAllAndPin(f)
+	if err != nil {
+		return "", err
+	}
+	return node.Cid().String(), nil
 }
