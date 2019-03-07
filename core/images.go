@@ -198,61 +198,42 @@ func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *pb.Listing) error {
 		return nil
 	}
 
+	maybeMigrateImage := func(imgHash, size, filename string) (string, error) {
+		id, err := cid.Decode(imgHash)
+		if err != nil {
+			return "", err
+		}
+		if id.Version() > 0 {
+			newHash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", size, filename))
+			if err != nil {
+				return "", err
+			}
+			return newHash, nil
+		}
+		return imgHash, nil
+	}
+
+	var err error
 	for i, image := range listing.Item.Images {
-		largeID, err := cid.Decode(image.Large)
+		image.Large, err = maybeMigrateImage(image.Large, "large", image.Filename)
 		if err != nil {
 			return err
 		}
-		if largeID.Version() > 0 {
-			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "large", image.Filename))
-			if err != nil {
-				return err
-			}
-			image.Large = hash
-		}
-		mediumID, err := cid.Decode(image.Medium)
+		image.Medium, err = maybeMigrateImage(image.Medium, "medium", image.Filename)
 		if err != nil {
 			return err
 		}
-		if mediumID.Version() > 0 {
-			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "medium", image.Filename))
-			if err != nil {
-				return err
-			}
-			image.Medium = hash
-		}
-		smallID, err := cid.Decode(image.Small)
+		image.Small, err = maybeMigrateImage(image.Small, "small", image.Filename)
 		if err != nil {
 			return err
 		}
-		if smallID.Version() > 0 {
-			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "small", image.Filename))
-			if err != nil {
-				return err
-			}
-			image.Small = hash
-		}
-		tinyID, err := cid.Decode(image.Tiny)
+		image.Tiny, err = maybeMigrateImage(image.Tiny, "tiny", image.Filename)
 		if err != nil {
 			return err
 		}
-		if tinyID.Version() > 0 {
-			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "tiny", image.Filename))
-			if err != nil {
-				return err
-			}
-			image.Tiny = hash
-		}
-		originalID, err := cid.Decode(image.Original)
+		image.Original, err = maybeMigrateImage(image.Original, "original", image.Filename)
 		if err != nil {
 			return err
-		}
-		if originalID.Version() > 0 {
-			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "original", image.Filename))
-			if err != nil {
-				return err
-			}
-			image.Original = hash
 		}
 		listing.Item.Images[i] = image
 	}

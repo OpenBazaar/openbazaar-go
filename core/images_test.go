@@ -6,7 +6,6 @@ import (
 	_ "image/png"
 	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -59,66 +58,39 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 
 	node := OpenBazaarNode{IpfsNode: ipfsNode, RepoPath: testRepo.DataPath()}
 
+	v1Hash := "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2"
+
 	listing := factory.NewListing("testListing")
+	imageDirs := []string{"large", "medium", "small", "tiny", "original"}
 	for _, image := range listing.Item.Images {
-		err := ioutil.WriteFile(path.Join(testRepo.DataPath(), "root", "images", "large", image.Filename), []byte("image"), os.ModePerm)
-		if err != nil {
-			t.Error(err)
-		}
-		err = ioutil.WriteFile(path.Join(testRepo.DataPath(), "root", "images", "medium", image.Filename), []byte("image"), os.ModePerm)
-		if err != nil {
-			t.Error(err)
-		}
-		err = ioutil.WriteFile(path.Join(testRepo.DataPath(), "root", "images", "small", image.Filename), []byte("image"), os.ModePerm)
-		if err != nil {
-			t.Error(err)
-		}
-		err = ioutil.WriteFile(path.Join(testRepo.DataPath(), "root", "images", "tiny", image.Filename), []byte("image"), os.ModePerm)
-		if err != nil {
-			t.Error(err)
-		}
-		err = ioutil.WriteFile(path.Join(testRepo.DataPath(), "root", "images", "original", image.Filename), []byte("image"), os.ModePerm)
-		if err != nil {
-			t.Error(err)
+		image.Original = v1Hash
+		image.Large = v1Hash
+		image.Medium = v1Hash
+		image.Small = v1Hash
+		image.Tiny = v1Hash
+		for _, dir := range imageDirs {
+			err := ioutil.WriteFile(testRepo.DataPathJoin("root", "images", dir, image.Filename), []byte("image"), os.ModePerm)
+			if err != nil {
+				t.Error(err)
+			}
 		}
 	}
 
-	checkImage := func(image *pb.Listing_Item_Image) {
-		largeID, err := cid.Decode(image.Large)
-		if err != nil {
-			t.Error(err)
+	checkImages := func(image *pb.Listing_Item_Image) {
+		checkImage := func(imageHash, size string) {
+			id, err := cid.Decode(imageHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if id.Version() > 0 {
+				t.Errorf("%s image failed to migrate to v0", size)
+			}
 		}
-		if largeID.Version() > 0 {
-			t.Error("Large image failed to migrate to v0")
-		}
-		mediumID, err := cid.Decode(image.Medium)
-		if err != nil {
-			t.Error(err)
-		}
-		if mediumID.Version() > 0 {
-			t.Error("Medium image failed to migrate to v0")
-		}
-		smallID, err := cid.Decode(image.Small)
-		if err != nil {
-			t.Error(err)
-		}
-		if smallID.Version() > 0 {
-			t.Error("Small image failed to migrate to v0")
-		}
-		tinyID, err := cid.Decode(image.Tiny)
-		if err != nil {
-			t.Error(err)
-		}
-		if tinyID.Version() > 0 {
-			t.Error("Tiny image failed to migrate to v0")
-		}
-		originalID, err := cid.Decode(image.Original)
-		if err != nil {
-			t.Error(err)
-		}
-		if originalID.Version() > 0 {
-			t.Error("Original image failed to migrate to v0")
-		}
+		checkImage(image.Large, "large")
+		checkImage(image.Medium, "medium")
+		checkImage(image.Small, "small")
+		checkImage(image.Tiny, "tiny")
+		checkImage(image.Original, "original")
 	}
 
 	// Test converting v1 to v0
@@ -127,7 +99,7 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 	}
 
 	for _, image := range listing.Item.Images {
-		checkImage(image)
+		checkImages(image)
 	}
 
 	// Test v0 remaining at v0
@@ -136,6 +108,6 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 	}
 
 	for _, image := range listing.Item.Images {
-		checkImage(image)
+		checkImages(image)
 	}
 }
