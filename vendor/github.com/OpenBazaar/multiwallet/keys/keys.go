@@ -2,6 +2,7 @@ package keys
 
 import (
 	"errors"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
