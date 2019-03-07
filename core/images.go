@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"image" // load gif
 	_ "image/gif"
 	"image/jpeg" // load png
@@ -188,4 +189,72 @@ func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename s
 	}
 	_, filename = path.Split(u.Path)
 	return img, filename, nil
+}
+
+// maybeMigrateImageHashes will iterate over the listing's images and migrate them
+// to a v0 cid if they are not already v0.
+func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *pb.Listing) error {
+	if listing.Item == nil || len(listing.Item.Images) == 0 {
+		return nil
+	}
+
+	for i, image := range listing.Item.Images {
+		largeID, err := cid.Decode(image.Large)
+		if err != nil {
+			return err
+		}
+		if largeID.Version() > 0 {
+			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "large", image.Filename))
+			if err != nil {
+				return err
+			}
+			image.Large = hash
+		}
+		mediumID, err := cid.Decode(image.Medium)
+		if err != nil {
+			return err
+		}
+		if mediumID.Version() > 0 {
+			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "medium", image.Filename))
+			if err != nil {
+				return err
+			}
+			image.Medium = hash
+		}
+		smallID, err := cid.Decode(image.Small)
+		if err != nil {
+			return err
+		}
+		if smallID.Version() > 0 {
+			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "small", image.Filename))
+			if err != nil {
+				return err
+			}
+			image.Small = hash
+		}
+		tinyID, err := cid.Decode(image.Tiny)
+		if err != nil {
+			return err
+		}
+		if tinyID.Version() > 0 {
+			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "tiny", image.Filename))
+			if err != nil {
+				return err
+			}
+			image.Tiny = hash
+		}
+		originalID, err := cid.Decode(image.Original)
+		if err != nil {
+			return err
+		}
+		if originalID.Version() > 0 {
+			hash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", "original", image.Filename))
+			if err != nil {
+				return err
+			}
+			image.Original = hash
+		}
+		listing.Item.Images[i] = image
+	}
+	return nil
 }
