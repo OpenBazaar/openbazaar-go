@@ -151,7 +151,8 @@ func (i *BlockBookClient) TxChannel() chan model.Transaction {
 }
 
 func (i *BlockBookClient) EndpointURL() *url.URL {
-	return i.apiUrl
+	var u = *i.apiUrl
+	return &u
 }
 
 func (i *BlockBookClient) Start(closeChan chan<- error) error {
