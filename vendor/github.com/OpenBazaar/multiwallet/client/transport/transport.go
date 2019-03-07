@@ -2,13 +2,14 @@ package transport
 
 import (
 	"errors"
-	tp "github.com/OpenBazaar/golang-socketio/transport"
-	"github.com/gorilla/websocket"
-	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
+
+	tp "github.com/OpenBazaar/golang-socketio/transport"
+	"github.com/gorilla/websocket"
+	"golang.org/x/net/proxy"
 )
 
 const (
