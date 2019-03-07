@@ -286,7 +286,7 @@ func (p *ClientPool) GetTransactions(addrs []btcutil.Address) ([]model.Transacti
 		txs       []model.Transaction
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			var addrStrings []string
-			for a := range addrs {
+			for _, a := range addrs {
 				addrStrings = append(addrStrings, a.String())
 			}
 			Log.Debugf("(%s) request transactions for (%d) addrs", c.EndpointURL().String(), len(addrs))
@@ -329,7 +329,7 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 		utxos     []model.Utxo
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			var addrStrings []string
-			for a := range addrs {
+			for _, a := range addrs {
 				addrStrings = append(addrStrings, a.String())
 			}
 			Log.Debugf("(%s) request utxos for (%d) addrs", c.EndpointURL().String(), len(addrs))
@@ -353,7 +353,7 @@ func (p *ClientPool) ListenAddress(addr btcutil.Address) {
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
-	Log.Debugf("(%s) listen address %s", c.EndpointURL().String(), addr.String())
+	Log.Debugf("(%s) listen address %s", client.EndpointURL().String(), addr.String())
 	p.listenAddrs = append(p.listenAddrs, addr)
 	client.ListenAddress(addr)
 }

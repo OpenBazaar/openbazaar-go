@@ -96,7 +96,7 @@ func (w *wsWatchdog) putAway() {
 }
 
 type BlockBookClient struct {
-	apiUrl            url.URL
+	apiUrl            *url.URL
 	blockNotifyChan   chan model.Block
 	closeChan         chan<- error
 	listenLock        sync.Mutex
@@ -131,7 +131,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 	tbTransport := &http.Transport{Dial: dial}
 	ic := &BlockBookClient{
 		HTTPClient:      http.Client{Timeout: time.Second * 30, Transport: tbTransport},
-		apiUrl:          *u,
+		apiUrl:          u,
 		proxyDialer:     proxyDialer,
 		blockNotifyChan: bch,
 		txNotifyChan:    tch,
@@ -150,7 +150,7 @@ func (i *BlockBookClient) TxChannel() chan model.Transaction {
 	return i.txNotifyChan
 }
 
-func (i *BlockBookClient) EndpointURL() url.URL {
+func (i *BlockBookClient) EndpointURL() *url.URL {
 	return i.apiUrl
 }
 
@@ -501,7 +501,7 @@ func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
 	}
 }
 
-func connectSocket(u url.URL, proxyDialer proxy.Dialer) (model.SocketClient, error) {
+func connectSocket(u *url.URL, proxyDialer proxy.Dialer) (model.SocketClient, error) {
 	socketClient, err := gosocketio.Dial(
 		gosocketio.GetUrl(u.Hostname(), model.DefaultPort(u), model.HasImpliedURLSecurity(u)),
 		transport.GetDefaultWebsocketTransport(proxyDialer),
