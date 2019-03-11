@@ -95,7 +95,7 @@ Help Options:
 
 ## Documentation
 
-Documentation of the OpenBazaar protocol has not been formalized yet. If you would like to help, please reach out on [Slack](https://openbazaar.slack.com/) or via a new issue on GitHub.
+Documentation of the OpenBazaar protocol has not been formalized yet. If you would like to help, please reach out on [Slack](https://openbazaar.org/slack/) or via a new issue on GitHub.
 
 `openbazaar-go` exposes an HTTP API which permits high-level interactions on the network and the internal wallet. Find the HTTP API documentation at [https://api.docs.openbazaar.org](https://api.docs.openbazaar.org).
 
