@@ -3,6 +3,7 @@ package path
 
 import (
 	"errors"
+	"fmt"
 	"path"
 	"strings"
 
@@ -107,6 +108,7 @@ func ParsePath(txt string) (Path, error) {
 	// we expect this to start with a hash, and be an 'ipfs' path
 	if parts[0] != "" {
 		if _, err := ParseCidToPath(parts[0]); err != nil {
+			fmt.Printf("no protocol prefix, parse cid to path (%s): %s", txt, err.Error())
 			return "", ErrBadPath
 		}
 		// The case when the path starts with hash without a protocol prefix
@@ -114,14 +116,17 @@ func ParsePath(txt string) (Path, error) {
 	}
 
 	if len(parts) < 3 {
+		fmt.Printf("parse path (%s): parts fewer than 3", txt)
 		return "", ErrBadPath
 	}
 
 	if parts[1] == "ipfs" {
 		if _, err := ParseCidToPath(parts[2]); err != nil {
+			fmt.Printf("parse cid to path (%s): %s", txt, err.Error())
 			return "", err
 		}
 	} else if parts[1] != "ipns" && parts[1] != "ipld" { //TODO: make this smarter
+		fmt.Printf("parse path (%s): %s", txt, "parts[1] did not include ipns|ipld")
 		return "", ErrBadPath
 	}
 
