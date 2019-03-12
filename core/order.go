@@ -1042,7 +1042,10 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 
 		var secondarySatoshi big.Int
-		serviceAddlItemPrice, _ := new(big.Int).SetString(service.AdditionalItemPrice.Value, 10)
+		serviceAddlItemPrice := big.NewInt(0)
+		if service.AdditionalItemPrice != nil {
+			serviceAddlItemPrice, _ = new(big.Int).SetString(service.AdditionalItemPrice.Value, 10)
+		}
 		if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
 			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code,
 				listing.Metadata.PricingCurrency.Code, *serviceAddlItemPrice)

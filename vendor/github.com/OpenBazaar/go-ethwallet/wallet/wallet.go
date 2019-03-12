@@ -718,14 +718,14 @@ func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address 
 		return nil, err
 	}
 
-	tx := types.Transaction{}
+	//tx := types.Transaction{}
 
-	err = tx.UnmarshalJSON(data)
-	if err != nil {
-		return nil, err
-	}
+	//err = tx.UnmarshalJSON(data)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	hash := tx.Hash()
+	hash := common.BytesToHash(data)
 
 	return chainhash.NewHashFromStr(hash.Hex()[2:])
 }
@@ -886,7 +886,7 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		//num := len(outs)
 		outVal := new(big.Int)
 		for _, out := range outs {
-			outVal.Add(outVal, &out.Value)
+			outVal = new(big.Int).Add(outVal, &out.Value)
 		}
 		if totalVal.Cmp(outVal) != 0 {
 			if totalVal.Cmp(outVal) < 0 {
@@ -934,18 +934,17 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	var sigs []wi.Signature
 
-	payables := make(map[string]*big.Int)
+	payables := make(map[string]big.Int)
 	for _, out := range payouts {
 		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
 		}
-		val := &out.Value
+		val := new(big.Int).SetBytes(out.Value.Bytes()) // &out.Value
 		if p, ok := payables[out.Address.String()]; ok {
-			sum := big.NewInt(0)
-			sum.Add(val, p)
-			payables[out.Address.String()] = sum
+			sum := new(big.Int).Add(val, &p)
+			payables[out.Address.String()] = *sum
 		} else {
-			payables[out.Address.String()] = val
+			payables[out.Address.String()] = *val
 		}
 	}
 
@@ -966,14 +965,17 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		copy(sampleDest[12:], addr.Bytes())
 		//a := make([]byte, 8)
 		//binary.BigEndian.PutUint64(a, v.Uint64())
+		val := v.Bytes()
+		l := len(val)
 
-		copy(sample[24:], v.Bytes())
+		copy(sample[32-l:], val)
 		//destinations = append(destinations, addr)
 		//amounts = append(amounts, v)
 		//addrStr := fmt.Sprintf("%064s", addr.String())
 		//destStr = destStr + addrStr
 		destArr = append(destArr, sampleDest[:]...)
 		amountArr = append(amountArr, sample[:]...)
+		//amountArr = append(amountArr, v.Bytes()...)
 		//amnt := fmt.Sprintf("%064s", fmt.Sprintf("%x", v.Int64()))
 		//amountStr = amountStr + amnt
 	}
@@ -1107,18 +1109,20 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		return strings.Compare(payouts[i].Address.String(), payouts[j].Address.String()) == -1
 	})
 
-	payables := make(map[string]*big.Int)
+	fmt.Println("payouts in multisign ... ")
+	fmt.Println(payouts)
+
+	payables := make(map[string]big.Int)
 	for _, out := range payouts {
 		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
 		}
-		val := &out.Value
+		val := new(big.Int).SetBytes(out.Value.Bytes()) // &out.Value
 		if p, ok := payables[out.Address.String()]; ok {
-			sum := big.NewInt(0)
-			sum.Add(val, p)
-			payables[out.Address.String()] = sum
+			sum := new(big.Int).Add(val, &p)
+			payables[out.Address.String()] = *sum
 		} else {
-			payables[out.Address.String()] = val
+			payables[out.Address.String()] = *val
 		}
 	}
 
@@ -1162,8 +1166,11 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	amounts := []*big.Int{}
 
 	for k, v := range payables {
+		fmt.Println("in payables  : ")
+		fmt.Println(k)
+		fmt.Println(v.String())
 		destinations = append(destinations, common.HexToAddress(k))
-		amounts = append(amounts, v)
+		amounts = append(amounts, new(big.Int).SetBytes(v.Bytes()))
 	}
 
 	fromAddress := wallet.account.Address()

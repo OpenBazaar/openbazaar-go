@@ -41,7 +41,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		f := wal.GetFeePerByte(wallet.NORMAL)
 		payout.PayoutFeePerByte = f.String()
 		var ins []wallet.TransactionInput
-		var outValue *big.Int
+		outValue := big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))

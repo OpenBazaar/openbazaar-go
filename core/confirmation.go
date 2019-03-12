@@ -159,11 +159,13 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 			return err
 		}
 		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		fmt.Println("after sweep address : ", err)
 		if err != nil {
 			return err
 		}
 	}
 	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.PeerID, contract)
+	fmt.Println("after send order conf : ", err)
 	if err != nil {
 		return err
 	}

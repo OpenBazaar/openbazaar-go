@@ -139,13 +139,13 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 	if err != nil {
 		return *big.NewInt(0), err
 	}
-	t := big.NewFloat(float64(transactionTotal.Int64()))
+	t := new(big.Float).SetInt(&transactionTotal)
 	switch profile.ModeratorInfo.Fee.FeeType {
 	case pb.Moderator_Fee_PERCENTAGE:
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
 		t.Mul(t, f)
-		total, _ := t.Int(&transactionTotal)
+		total, _ := t.Int(nil)
 		return *total, nil
 	case pb.Moderator_Fee_FIXED:
 		fixedFee, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Value, 10)
@@ -165,7 +165,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		return fee, err
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
-		var fixed *big.Int
+		fixed := big.NewInt(0)
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
 			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Value, 10)
 		} else {

@@ -519,7 +519,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Calculate total out value
-	var totalOut *big.Int
+	totalOut := big.NewInt(0)
 	for _, o := range outpoints {
 		n, _ := new(big.Int).SetString(o.Value.Value, 10)
 		totalOut.Add(totalOut, n)
@@ -550,7 +550,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	var buyerAddr btcutil.Address
-	var buyerValue *big.Int
+	buyerValue := big.NewInt(0)
 	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
@@ -568,7 +568,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
-	var vendorValue *big.Int
+	vendorValue := big.NewInt(0)
 	if payDivision.VendorAny() {
 		vendorAddr, err = wal.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
