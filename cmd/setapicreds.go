@@ -106,7 +106,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 		apiCfg.AllowedIPs = []string{}
 	}
 
-	configJson["JSON_API"] = apiCfg
+	configJson["JSON-API"] = apiCfg
 
 	out, err := json.MarshalIndent(configJson, "", "    ")
 	if err != nil {

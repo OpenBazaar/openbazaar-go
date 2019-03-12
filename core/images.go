@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"image" // load gif
 	_ "image/gif"
 	"image/jpeg" // load png
@@ -188,4 +189,53 @@ func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename s
 	}
 	_, filename = path.Split(u.Path)
 	return img, filename, nil
+}
+
+// maybeMigrateImageHashes will iterate over the listing's images and migrate them
+// to a v0 cid if they are not already v0.
+func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *pb.Listing) error {
+	if listing.Item == nil || len(listing.Item.Images) == 0 {
+		return nil
+	}
+
+	maybeMigrateImage := func(imgHash, size, filename string) (string, error) {
+		id, err := cid.Decode(imgHash)
+		if err != nil {
+			return "", err
+		}
+		if id.Version() > 0 {
+			newHash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", size, filename))
+			if err != nil {
+				return "", err
+			}
+			return newHash, nil
+		}
+		return imgHash, nil
+	}
+
+	var err error
+	for i, image := range listing.Item.Images {
+		image.Large, err = maybeMigrateImage(image.Large, "large", image.Filename)
+		if err != nil {
+			return err
+		}
+		image.Medium, err = maybeMigrateImage(image.Medium, "medium", image.Filename)
+		if err != nil {
+			return err
+		}
+		image.Small, err = maybeMigrateImage(image.Small, "small", image.Filename)
+		if err != nil {
+			return err
+		}
+		image.Tiny, err = maybeMigrateImage(image.Tiny, "tiny", image.Filename)
+		if err != nil {
+			return err
+		}
+		image.Original, err = maybeMigrateImage(image.Original, "original", image.Filename)
+		if err != nil {
+			return err
+		}
+		listing.Item.Images[i] = image
+	}
+	return nil
 }

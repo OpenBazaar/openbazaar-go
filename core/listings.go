@@ -366,6 +366,11 @@ func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 		return err
 	}
 
+	err = n.maybeMigrateImageHashes(listing)
+	if err != nil {
+		return err
+	}
+
 	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
