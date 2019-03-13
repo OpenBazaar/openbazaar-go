@@ -40,6 +40,7 @@ var (
 		migrations.Migration017{},
 		migrations.Migration018{},
 		migrations.Migration019{},
+		migrations.Migration020{},
 	}
 )
 
