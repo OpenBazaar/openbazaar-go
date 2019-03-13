@@ -21,12 +21,6 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
-var (
-	oldIPNSRecordHex = `0a282f69706e732f12201e96ac2751c730f45798aa472e290e987ec08cac23b6ee827aa7e292e0039ef3129c010a342f697066732f516d554e4c4c73504143437a31764c7851566b5871714c5835523158333435717166486273663637687641334e6e1240ce97421affaed4a97b00d212e2c5d73d8b7d6651aa969db5692157aa7757707acfa3933781175bd62ab39e728fac8295379d2b0a47af977b7c3a22b7f4d52b0b1800221e323031392d30332d31395432303a35383a30322e3135303439373036345a28011a2212201e96ac2751c730f45798aa472e290e987ec08cac23b6ee827aa7e292e0039ef3`
-	newIPNSRecordHex = `0a342f697066732f516d554e4c4c73504143437a31764c7851566b5871714c5835523158333435717166486273663637687641334e6e1240ce97421affaed4a97b00d212e2c5d73d8b7d6651aa969db5692157aa7757707acfa3933781175bd62ab39e728fac8295379d2b0a47af977b7c3a22b7f4d52b0b1800221e323031392d30332d31395432303a35383a30322e3135303439373036345a2801`
-	datastoreSpec    = `{"mounts":[{"mountpoint":"/blocks","path":"blocks","shardFunc":"/repo/flatfs/shard/v1/next-to-last/2","type":"flatfs"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}`
-)
-
 func TestMigration020(t *testing.T) {
 	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
@@ -35,6 +29,7 @@ func TestMigration020(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer testRepo.DestroySchemaDirectories()
 
 	if err = testRepo.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
@@ -45,9 +40,12 @@ func TestMigration020(t *testing.T) {
 	if err := testRepo.InitializeIPFSRepo(); err != nil {
 		t.Fatal(err)
 	}
-	defer testRepo.DestroySchemaDirectories()
 
 	var (
+		oldIPNSRecordHex = `0a282f69706e732f12201e96ac2751c730f45798aa472e290e987ec08cac23b6ee827aa7e292e0039ef3129c010a342f697066732f516d554e4c4c73504143437a31764c7851566b5871714c5835523158333435717166486273663637687641334e6e1240ce97421affaed4a97b00d212e2c5d73d8b7d6651aa969db5692157aa7757707acfa3933781175bd62ab39e728fac8295379d2b0a47af977b7c3a22b7f4d52b0b1800221e323031392d30332d31395432303a35383a30322e3135303439373036345a28011a2212201e96ac2751c730f45798aa472e290e987ec08cac23b6ee827aa7e292e0039ef3`
+		newIPNSRecordHex = `0a342f697066732f516d554e4c4c73504143437a31764c7851566b5871714c5835523158333435717166486273663637687641334e6e1240ce97421affaed4a97b00d212e2c5d73d8b7d6651aa969db5692157aa7757707acfa3933781175bd62ab39e728fac8295379d2b0a47af977b7c3a22b7f4d52b0b1800221e323031392d30332d31395432303a35383a30322e3135303439373036345a2801`
+		datastoreSpec    = `{"mounts":[{"mountpoint":"/blocks","path":"blocks","shardFunc":"/repo/flatfs/shard/v1/next-to-last/2","type":"flatfs"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}`
+
 		configPath        = testRepo.DataPathJoin("config")
 		datastoreSpecPath = testRepo.DataPathJoin("datastore_spec")
 		repoverPath       = testRepo.DataPathJoin("repover")
@@ -96,12 +94,18 @@ func TestMigration020(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, ipns := migrations.IpnsKeysForID(peerID)
+	_, ipns := migrations.IPNSKeysForID(peerID)
 	if err := r.Datastore().Put(dshelp.NewKeyFromBinary([]byte(ipns)), recordBytes); err != nil {
 		t.Fatal(err)
 	}
 	r.Close()
 
+	if err := ioutil.WriteFile(ipfsverPath, []byte("6"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(repoverPath, []byte("20"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 	var m migrations.Migration020
 	err = m.Up(testRepo.DataPath(), "", true)
 	if err != nil {
@@ -142,7 +146,7 @@ func TestMigration020(t *testing.T) {
 	}
 	r.Close()
 
-	var rec dhtpb.RecordOldFormat
+	var rec dhtpb.Migration020_RecordOldFormat
 	err = proto.Unmarshal(val, &rec)
 	if err != nil {
 		t.Fatal(err)

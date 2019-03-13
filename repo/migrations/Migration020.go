@@ -28,7 +28,7 @@ type Migration020 struct{}
 func (Migration020) Up(repoPath string, dbPassword string, testnet bool) error {
 	// IPFS code errors if it detects an invalid version so we'll migrate the version first.
 	if err := writeIPFSVer(repoPath, 7); err != nil {
-		return fmt.Errorf("bumping repover to 21: %s", err.Error())
+		return fmt.Errorf("bumping IPFS version to 21: %s", err.Error())
 	}
 
 	// Open the repo
@@ -200,7 +200,7 @@ func (Migration020) Down(repoPath string, dbPassword string, testnet bool) error
 		return fmt.Errorf("bumping repover to 20: %s", err.Error())
 	}
 	if err := writeIPFSVer(repoPath, 6); err != nil {
-		return fmt.Errorf("bumping ipfs version to 6: %s", err.Error())
+		return fmt.Errorf("bumping IPFS version to 6: %s", err.Error())
 	}
 	return nil
 }
@@ -240,7 +240,7 @@ func applyForKey(dstore ds.Datastore, k ci.PrivKey) error {
 	if err != nil {
 		return fmt.Errorf("invalid peer ID: %s", err)
 	}
-	_, ipns := IpnsKeysForID(id)
+	_, ipns := IPNSKeysForID(id)
 	recordbytes, err := dstore.Get(dshelp.NewKeyFromBinary([]byte(ipns)))
 	if err == ds.ErrNotFound {
 		return nil
@@ -249,7 +249,7 @@ func applyForKey(dstore ds.Datastore, k ci.PrivKey) error {
 		return fmt.Errorf("datastore error: %s", err)
 	}
 
-	dhtrec := new(dhtpb.RecordOldFormat)
+	dhtrec := new(dhtpb.Migration020_RecordOldFormat)
 	err = proto.Unmarshal(recordbytes, dhtrec)
 	if err != nil {
 		return fmt.Errorf("failed to decode DHT record: %s", err)
@@ -270,7 +270,7 @@ func revertForKey(dstore ds.Datastore, sk ci.PrivKey, k ci.PrivKey) error {
 		return fmt.Errorf("invalid peer ID: %s", err)
 	}
 
-	_, ipns := IpnsKeysForID(id)
+	_, ipns := IPNSKeysForID(id)
 
 	newkey := ds.NewKey("/ipns/" + base32.RawStdEncoding.EncodeToString([]byte(id)))
 	value, err := dstore.Get(newkey)
@@ -299,8 +299,8 @@ func revertForKey(dstore ds.Datastore, sk ci.PrivKey, k ci.PrivKey) error {
 }
 
 // MakePutRecord creates and signs a dht record for the given key/value pair
-func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.RecordOldFormat, error) {
-	record := new(dhtpb.RecordOldFormat)
+func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.Migration020_RecordOldFormat, error) {
+	record := new(dhtpb.Migration020_RecordOldFormat)
 
 	record.Key = proto.String(key)
 	record.Value = value
@@ -327,14 +327,14 @@ func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.R
 }
 
 // RecordBlobForSig returns the blob protected by the record signature
-func RecordBlobForSig(r *dhtpb.RecordOldFormat) []byte {
+func RecordBlobForSig(r *dhtpb.Migration020_RecordOldFormat) []byte {
 	k := []byte(r.GetKey())
 	v := r.GetValue()
 	a := []byte(r.GetAuthor())
 	return bytes.Join([][]byte{k, v, a}, []byte{})
 }
 
-func IpnsKeysForID(id peer.ID) (name, ipns string) {
+func IPNSKeysForID(id peer.ID) (name, ipns string) {
 	namekey := "/pk/" + string(id)
 	ipnskey := "/ipns/" + string(id)
 
