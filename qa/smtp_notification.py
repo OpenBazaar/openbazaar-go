@@ -143,7 +143,7 @@ You received an order "Ron Swanson Tshirt".
 
 Order ID: QmNiPgKNq27qQE8fRxMbtDfRcFDEYMH5wDRgdqtqoWBpGg
 Buyer: Qmd5qDpcYkHCmkj9pMXU9TKBqEDWgEmtoHD5xjdJgumaHg
-Thumbnail: zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15
+Thumbnail: QmS73grfbWgWrNztd8Lns9GCG3jjRNDfcPYg2VYQzKDZSt
 Timestamp: 1487699826
 '''
         expected_lines = [e for e in expected.splitlines() if not e.startswith('Timestamp:') and not e.startswith('Order ID:')]
