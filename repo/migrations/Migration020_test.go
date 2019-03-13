@@ -146,7 +146,7 @@ func TestMigration020(t *testing.T) {
 	}
 	r.Close()
 
-	var rec dhtpb.Migration020_RecordOldFormat
+	var rec dhtpb.Migration020RecordOldFormat
 	err = proto.Unmarshal(val, &rec)
 	if err != nil {
 		t.Fatal(err)

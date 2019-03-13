@@ -8,7 +8,7 @@ syntax = "proto2";
 
 // RecordOldFormat represents a dht record that contains a value
 // for a key value pair
-message Migration020_RecordOldFormat {
+message Migration020RecordOldFormat {
     // The key that references this record
     optional string key = 1;
 

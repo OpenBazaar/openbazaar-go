@@ -249,7 +249,7 @@ func applyForKey(dstore ds.Datastore, k ci.PrivKey) error {
 		return fmt.Errorf("datastore error: %s", err)
 	}
 
-	dhtrec := new(dhtpb.Migration020_RecordOldFormat)
+	dhtrec := new(dhtpb.Migration020RecordOldFormat)
 	err = proto.Unmarshal(recordbytes, dhtrec)
 	if err != nil {
 		return fmt.Errorf("failed to decode DHT record: %s", err)
@@ -299,8 +299,8 @@ func revertForKey(dstore ds.Datastore, sk ci.PrivKey, k ci.PrivKey) error {
 }
 
 // MakePutRecord creates and signs a dht record for the given key/value pair
-func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.Migration020_RecordOldFormat, error) {
-	record := new(dhtpb.Migration020_RecordOldFormat)
+func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.Migration020RecordOldFormat, error) {
+	record := new(dhtpb.Migration020RecordOldFormat)
 
 	record.Key = proto.String(key)
 	record.Value = value
@@ -327,7 +327,7 @@ func MakePutRecord(sk ci.PrivKey, key string, value []byte, sign bool) (*dhtpb.M
 }
 
 // RecordBlobForSig returns the blob protected by the record signature
-func RecordBlobForSig(r *dhtpb.Migration020_RecordOldFormat) []byte {
+func RecordBlobForSig(r *dhtpb.Migration020RecordOldFormat) []byte {
 	k := []byte(r.GetKey())
 	v := r.GetValue()
 	a := []byte(r.GetAuthor())
