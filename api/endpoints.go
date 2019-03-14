@@ -195,6 +195,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETWalletStatus(w, r)
 	case strings.HasPrefix(path, "/ob/ipns"):
 		i.GETIPNS(w, r)
+	case strings.HasPrefix(path, "/ob/resolveipns"):
+		i.ResolveIPNS(w, r)
 	case strings.HasPrefix(path, "/ob/peerinfo"):
 		i.GETPeerInfo(w, r)
 	case strings.HasPrefix(path, "/ob/posts"):
