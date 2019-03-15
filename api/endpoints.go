@@ -258,6 +258,6 @@ func gatewayAllowedPath(path, method string) bool {
 }
 
 func blockingStartupMiddleware(i *jsonAPIHandler, w http.ResponseWriter, r *http.Request, requestFunc func(w http.ResponseWriter, r *http.Request)) {
-	<-i.node.DHT.BootstrapChan
+	i.node.Service.WaitForReady()
 	requestFunc(w, r)
 }

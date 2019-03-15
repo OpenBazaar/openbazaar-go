@@ -713,8 +713,8 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
-		<-core.Node.DHT.BootstrapChan
 		core.Node.Service = service.New(core.Node, sqliteDB)
+		core.Node.Service.WaitForReady()
 
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()

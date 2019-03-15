@@ -383,8 +383,8 @@ func (n *Node) Start() error {
 				}()
 			}
 		}
-		<-n.OpenBazaarNode.DHT.BootstrapChan
 		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
+		n.OpenBazaarNode.Service.WaitForReady()
 		MR := ret.NewMessageRetriever(ret.MRConfig{
 			Db:        n.OpenBazaarNode.Datastore,
 			IPFSNode:  n.OpenBazaarNode.IpfsNode,
