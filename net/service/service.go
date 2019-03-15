@@ -54,6 +54,10 @@ func New(node *core.OpenBazaarNode, datastore repo.Datastore) *OpenBazaarService
 	return service
 }
 
+func (service *OpenBazaarService) WaitForReady() {
+	<-service.node.DHT.BootstrapChan
+}
+
 func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
 	log.Debugf("Disconnecting from %s", p.Pretty())
 	service.senderlk.Lock()

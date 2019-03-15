@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
@@ -857,7 +856,8 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
 	if settings.StoreModerators != nil {
-		go i.node.NotifyModerators(*settings.StoreModerators)
+		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, nil)
+		go i.node.NotifyModerators(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -895,7 +895,7 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err = i.node.Datastore.Settings().Get()
+	currentSettings, err := i.node.Datastore.Settings().Get()
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
 		return
@@ -912,7 +912,8 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
 	if settings.StoreModerators != nil {
-		go i.node.NotifyModerators(*settings.StoreModerators)
+		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
+		go i.node.NotifyModerators(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -957,6 +958,11 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	currentSettings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
+		return
+	}
 	if err = validateSMTPSettings(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -966,7 +972,8 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if settings.StoreModerators != nil {
-		go i.node.NotifyModerators(*settings.StoreModerators)
+		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
+		go i.node.NotifyModerators(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
