@@ -1541,7 +1541,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	if err != nil {
 		return err
 	}
-	if order.Payment.Address != addr.String() {
+	if strings.TrimPrefix(order.Payment.Address, "0x") != strings.TrimPrefix(addr.String(), "0x") {
 		return errors.New("invalid payment address")
 	}
 	if order.Payment.RedeemScript != hex.EncodeToString(redeemScript) {

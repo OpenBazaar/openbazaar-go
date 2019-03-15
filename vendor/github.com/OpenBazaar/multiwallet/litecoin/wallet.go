@@ -299,10 +299,6 @@ func (w *LitecoinWallet) AddTransactionListener(callback func(wi.TransactionCall
 	w.ws.AddTransactionListener(callback)
 }
 
-func (w *LitecoinWallet) CallTransactionListeners(callback wi.TransactionCallback) {
-	// invoke the listeners
-}
-
 func (w *LitecoinWallet) ReSyncBlockchain(fromTime time.Time) {
 	go w.ws.UpdateState()
 }

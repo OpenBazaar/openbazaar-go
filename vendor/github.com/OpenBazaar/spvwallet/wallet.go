@@ -402,10 +402,6 @@ func (w *SPVWallet) AddTransactionListener(callback func(wallet.TransactionCallb
 	w.txstore.listeners = append(w.txstore.listeners, callback)
 }
 
-func (w *SPVWallet) CallTransactionListeners(callback wallet.TransactionCallback) {
-
-}
-
 func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
 	var ch chainhash.Hash
 	sh, err := w.blockchain.db.GetBestHeader()

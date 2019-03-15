@@ -228,12 +228,6 @@ type Wallet interface {
 	// owned by this wallet, or being watched by the wallet via AddWatchedAddress method.
 	AddTransactionListener(func(TransactionCallback))
 
-	// CallTransactionListener is how openbazaar-go invokes callbacks whenever
-	// a transaction is received that is relevant to this wallet or any of its watch only
-	// addresses. An address is considered relevant if any inputs or outputs match an address
-	// owned by this wallet, or being watched by the wallet via AddWatchedAddress method.
-	CallTransactionListeners(callback TransactionCallback)
-
 	// ReSyncBlockchain is called in response to a user action to rescan transactions. API based
 	// wallets should do another scan of their addresses to find anything missing. Full node, or SPV
 	// wallets should rescan/re-download blocks starting at the fromTime.
@@ -249,6 +243,10 @@ type Wallet interface {
 	// Close should cleanly disconnect from the wallet and finish writing
 	// anything it needs to to disk.
 	Close()
+}
+
+type WalletMustManuallyAssociateTransactionToOrder interface {
+	AssociateTransactionWithOrder(cb TransactionCallback)
 }
 
 type FeeLevel int

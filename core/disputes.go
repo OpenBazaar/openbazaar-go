@@ -922,7 +922,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 
-		if contract.BuyerOrder.Payment.Address != addr.String() {
+		if strings.TrimPrefix(contract.BuyerOrder.Payment.Address, "0x") != strings.TrimPrefix(addr.String(), "0x") {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
 

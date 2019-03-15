@@ -1582,6 +1582,12 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	wal0, ok := wal.(wallet.WalletMustManuallyAssociateTransactionToOrder)
+
+	if !ok {
+		return nil, nil
+	}
+
 	chash, err := chainhash.NewHashFromStr(paymentDetails.GetTransactionID())
 	if err != nil {
 		return nil, err
@@ -1652,7 +1658,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		WatchOnly: false,
 	}
 
-	wal.CallTransactionListeners(cb)
+	wal0.AssociateTransactionWithOrder(cb)
 
 	return nil, nil
 }
