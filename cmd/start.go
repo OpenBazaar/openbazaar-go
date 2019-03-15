@@ -284,7 +284,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	ipnsExtraConfig, err := schema.GetIPNSExtraConfig(configFile)
 	if err != nil {
-		log.Error("scan wallets config:", err)
+		log.Error("scan ipns extra config:", err)
 		return err
 	}
 
