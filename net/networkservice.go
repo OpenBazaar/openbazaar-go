@@ -30,4 +30,7 @@ type NetworkService interface {
 
 	// Disconnect from the given peer
 	DisconnectFromPeer(p peer.ID) error
+
+	// Block until the service is available
+	WaitForReady()
 }

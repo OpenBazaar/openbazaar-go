@@ -98,7 +98,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case strings.HasPrefix(path, "/ob/purchases"):
 		i.POSTPurchases(w, r)
 	case strings.HasPrefix(path, "/ob/purchase"):
-		i.POSTPurchase(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTPurchase)
 	case strings.HasPrefix(path, "/ob/cases"):
 		i.POSTCases(w, r)
 	case strings.HasPrefix(path, "/ob/publish"):
@@ -258,6 +258,6 @@ func gatewayAllowedPath(path, method string) bool {
 }
 
 func blockingStartupMiddleware(i *jsonAPIHandler, w http.ResponseWriter, r *http.Request, requestFunc func(w http.ResponseWriter, r *http.Request)) {
-	<-i.node.DHT.BootstrapChan
+	i.node.Service.WaitForReady()
 	requestFunc(w, r)
 }
