@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -405,15 +406,18 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 		configPath := path.Join(subject.dataPath, "config")
 		configFile, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			t.Error(err)
+			//t.Error(err)
+			return map[string]interface{}{}, err
 		}
 		var cfgIface interface{}
 		if err := json.Unmarshal(configFile, &cfgIface); err != nil {
-			t.Error(err)
+			//t.Error(err)
+			return map[string]interface{}{}, err
 		}
 		cfg, ok := cfgIface.(map[string]interface{})
 		if !ok {
-			t.Error("invalid config file")
+			//t.Error("invalid config file")
+			return map[string]interface{}{}, errors.New("invalid config file")
 		}
 		return cfg, nil
 	}
