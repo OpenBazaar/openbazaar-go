@@ -314,10 +314,6 @@ func (w *ZCashWallet) AddTransactionListener(callback func(wi.TransactionCallbac
 	w.ws.AddTransactionListener(callback)
 }
 
-func (w *ZCashWallet) CallTransactionListeners(callback wi.TransactionCallback) {
-	// invoke the listeners
-}
-
 func (w *ZCashWallet) ReSyncBlockchain(fromTime time.Time) {
 	go w.ws.UpdateState()
 }

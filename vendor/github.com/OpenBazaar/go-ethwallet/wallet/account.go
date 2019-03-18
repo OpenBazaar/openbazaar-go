@@ -27,7 +27,7 @@ func (addr EthAddress) String() string {
 
 // EncodeAddress returns hex representation of the address
 func (addr EthAddress) EncodeAddress() string {
-	return addr.address.Hex()[2:]
+	return addr.address.Hex() // [2:]
 }
 
 // ScriptAddress returns byte representation of address

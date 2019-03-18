@@ -563,7 +563,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.CallTransactionListeners(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now(), false))
+				go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now(), false))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
@@ -626,7 +626,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 	}
 }
 
-func (wallet *EthereumWallet) CallTransactionListeners(txnCB wi.TransactionCallback) {
+func (wallet *EthereumWallet) AssociateTransactionWithOrder(txnCB wi.TransactionCallback) {
 	for _, l := range wallet.listeners {
 		go l(txnCB)
 	}
@@ -659,7 +659,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 			toAddr := common.HexToAddress(pTxn.To)
 			n := new(big.Int)
 			n, _ = n.SetString(pTxn.Amount, 10)
-			go wallet.CallTransactionListeners(
+			go wallet.AssociateTransactionWithOrder(
 				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
 					*n, time.Now(), pTxn.WithInput))
 		}
@@ -892,7 +892,7 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 			if totalVal.Cmp(outVal) < 0 {
 				return nil, errors.New("payout greater than initial amount")
 			}
-			difference.Sub(&totalVal, outVal)
+			difference = new(big.Int).Sub(&totalVal, outVal)
 			//delta1 = difference / int64(num)
 		}
 		//delta2 = totalVal - (outVal + (int64(num) * delta1))
@@ -934,7 +934,25 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	var sigs []wi.Signature
 
+	/*
+		payables := make(map[string]*big.Int)
+		for _, out := range payouts {
+			if out.Value <= 0 {
+				continue
+			}
+			val := big.NewInt(out.Value)
+			if p, ok := payables[out.Address.String()]; ok {
+				sum := big.NewInt(0)
+				sum.Add(val, p)
+				payables[out.Address.String()] = sum
+			} else {
+				payables[out.Address.String()] = val
+			}
+		}
+	*/
+
 	payables := make(map[string]big.Int)
+	addresses := []string{}
 	for _, out := range payouts {
 		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
@@ -945,8 +963,11 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 			payables[out.Address.String()] = *sum
 		} else {
 			payables[out.Address.String()] = *val
+			addresses = append(addresses, out.Address.String())
 		}
 	}
+
+	sort.Strings(addresses)
 
 	//destinations := []common.Address{}
 	//amounts := []*big.Int{}
@@ -958,7 +979,8 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	//spew.Dump(payables)
 
-	for k, v := range payables {
+	for _, k := range addresses {
+		v := payables[k]
 		addr := common.HexToAddress(k)
 		sample := [32]byte{}
 		sampleDest := [32]byte{}
@@ -1029,8 +1051,8 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	//txData = append(txData, byte(32))
 	txData = append(txData, payloadHash[:]...)
 	txnHash := crypto.Keccak256(txData)
-	//fmt.Println("txnHash        : ", hexutil.Encode(txnHash))
-	//fmt.Println("phash          : ", hexutil.Encode(payloadHash[:]))
+	log.Debugf("txnHash        : %s", hexutil.Encode(txnHash))
+	log.Debugf("phash          : %s", hexutil.Encode(payloadHash[:]))
 	copy(txHash[:], txnHash)
 
 	sig, err := crypto.Sign(txHash[:], wallet.account.privateKey)
@@ -1113,6 +1135,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	fmt.Println(payouts)
 
 	payables := make(map[string]big.Int)
+	addresses := []string{}
 	for _, out := range payouts {
 		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
@@ -1123,6 +1146,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 			payables[out.Address.String()] = *sum
 		} else {
 			payables[out.Address.String()] = *val
+			addresses = append(addresses, out.Address.String())
 		}
 	}
 
@@ -1159,16 +1183,14 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 
 	smtct, err := NewEscrow(rScript.MultisigAddress, wallet.client)
 	if err != nil {
-		log.Fatalf("error initilaizing contract failed: %s", err.Error())
+		log.Fatalf("error initializing contract failed: %s", err.Error())
 	}
 
 	destinations := []common.Address{}
 	amounts := []*big.Int{}
 
-	for k, v := range payables {
-		fmt.Println("in payables  : ")
-		fmt.Println(k)
-		fmt.Println(v.String())
+	for _, k := range addresses {
+		v := payables[k]
 		destinations = append(destinations, common.HexToAddress(k))
 		amounts = append(amounts, new(big.Int).SetBytes(v.Bytes()))
 	}
@@ -1218,7 +1240,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		if rcpt.Status > 0 {
 			// all good to update order state
 			fmt.Println("txn successfull")
-			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, *totalVal, time.Now(), true))
+			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, *totalVal, time.Now(), true))
 		} else {
 			// there was some error processing this txn
 			nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
@@ -1252,7 +1274,7 @@ func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
 	return nil
 }
 
-// AddTransactionListener - add a txn listener
+// AddTransactionListener will call the function callback when new transactions are discovered
 func (wallet *EthereumWallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service
 	wallet.listeners = append(wallet.listeners, callback)

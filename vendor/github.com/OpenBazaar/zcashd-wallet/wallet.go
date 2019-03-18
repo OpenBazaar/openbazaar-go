@@ -21,6 +21,7 @@ import (
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/zcashd-wallet/exchangerates"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -67,7 +68,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer) (*ZcashdWallet, error) {
+func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer, disableExchangeRates bool) (*ZcashdWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -88,8 +89,6 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
 
-	er := NewZcashPriceFetcher(proxy)
-
 	w := ZcashdWallet{
 		params:           params,
 		repoPath:         dataDir,
@@ -100,7 +99,9 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		controlPort:      torControlPort,
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
-		exchangeRates:    er,
+	}
+	if !disableExchangeRates {
+		w.exchangeRates = exchangerates.NewZcashPriceFetcher(proxy)
 	}
 	return &w, nil
 }

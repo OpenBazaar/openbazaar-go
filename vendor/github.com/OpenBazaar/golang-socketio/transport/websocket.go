@@ -2,14 +2,15 @@ package transport
 
 import (
 	"errors"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
-	upgradeFailed     = "Upgrade failed: "
+	upgradeFailed = "Upgrade failed: "
 
 	WsDefaultPingInterval   = 30 * time.Second
 	WsDefaultPingTimeout    = 60 * time.Second

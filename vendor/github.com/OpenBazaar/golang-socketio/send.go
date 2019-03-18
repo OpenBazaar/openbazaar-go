@@ -3,9 +3,10 @@ package gosocketio
 import (
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/golang-socketio/protocol"
 	"log"
 	"time"
+
+	"github.com/OpenBazaar/golang-socketio/protocol"
 )
 
 var (
@@ -90,4 +91,3 @@ func (c *Channel) Ack(method string, args interface{}, timeout time.Duration) (s
 		return "", ErrorSendTimeout
 	}
 }
-
