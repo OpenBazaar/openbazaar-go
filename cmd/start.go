@@ -5,25 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-
-	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
-	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
-	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	"gx/ipfs/QmTkKN1x5Jvhc5Np55gJzD3PQ6GL74aKm9145t9WbvJyrB/go-tcp-transport"
-	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
-	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
-	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
-	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
-	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
-	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
-	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
-	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
-	"gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
-	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
-	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
-	"gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
-
 	"io"
 	"io/ioutil"
 	"net"
@@ -38,7 +19,24 @@ import (
 	"time"
 
 	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
-	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	config "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	dht "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	dhtopts "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	tcp "gx/ipfs/QmTkKN1x5Jvhc5Np55gJzD3PQ6GL74aKm9145t9WbvJyrB/go-tcp-transport"
+	libp2p "gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
+	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
+	routinghelpers "gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
+	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
+	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
+	record "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	manet "gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	proto "gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -68,6 +66,7 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
 )
@@ -219,24 +218,6 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error("write user_agent:", err)
 		return err
-	}
-
-	// If the database cannot be decrypted, exit
-	if sqliteDB.Config().IsEncrypted() {
-		sqliteDB.Close()
-		fmt.Print("Database is encrypted, enter your password: ")
-		// nolint:unconvert
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println("")
-		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
-		if err != nil && err != repo.ErrRepoExists {
-			return err
-		}
-		if sqliteDB.Config().IsEncrypted() {
-			log.Error("Invalid password")
-			os.Exit(3)
-		}
 	}
 
 	// Get creation date. Ignore the error and use a default timestamp.
@@ -951,6 +932,28 @@ func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 	// Initialize the IPFS repo if it does not already exist
 	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, creationDate, sqliteDB.Config().Init)
 	if err != nil {
+		// handle encrypted databases
+		if sqliteDB.Config().IsEncrypted() {
+			sqliteDB.Close()
+			fmt.Printf("Database at %s appears encrypted.\nEnter your password (will not appear while typing): ", dataDir)
+
+			// nolint:unconvert
+			bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+			fmt.Println("")
+			pw := string(bytePassword)
+
+			sqliteDB, err = db.Create(dataDir, pw, testnet, coinType)
+			if err != nil {
+				return sqliteDB, err
+			}
+
+			// try again with the password
+			err = repo.DoInit(dataDir, 4096, testnet, pw, mnemonic, creationDate, sqliteDB.Config().Init)
+			if err != nil && err != repo.ErrRepoExists {
+				log.Errorf("unable to open encrypted database: %s", err.Error())
+				return sqliteDB, fmt.Errorf("repo init encrypted: %s", err.Error())
+			}
+		}
 		return sqliteDB, err
 	}
 	return sqliteDB, nil
