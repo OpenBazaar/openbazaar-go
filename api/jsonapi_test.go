@@ -143,7 +143,7 @@ func TestMessageSignVerify(t *testing.T) {
 	"content": "test"
 }`
 		verifyMessageJSON = `{
-	"content": "74657374",
+	"content": "test",
 	"signature": "fac9dec1ce872c931bda1af85f9107e8733b42ed6401bc989a84b6b53ad263290d9bd9d470f046024884f502ecb7af50de2fea11268e82dcb1c72d50753c330a",
 	"pubkey": "080112203f94c7707af68ede9ddd24a16edd813146550df565eda8fb81114476ccfe6b78",
 	"peerId": "QmRmisSghsxUMrTQZ5vmqFroxxuCXJqXwXoTc21q5cefmM"

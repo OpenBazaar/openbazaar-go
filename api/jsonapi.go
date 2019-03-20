@@ -2330,18 +2330,13 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contentBytes, err := hex.DecodeString(msg.Content)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	sigBytes, err := hex.DecodeString(msg.Signature)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	peerID, err := core.VerifyPayload(contentBytes, sigBytes, keyBytes)
+	peerID, err := core.VerifyPayload([]byte(msg.Content), sigBytes, keyBytes)
 	if err != nil {
 		SanitizedResponse(w, `{"error":"VERIFICATION_FAILED"}`)
 		return
