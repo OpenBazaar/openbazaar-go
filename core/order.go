@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -88,7 +86,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 	currency := &pb.CurrencyDefinition{
 		Code:         data.PaymentCoin,
-		Divisibility: uint32(wal.ExchangeRates().UnitsPerCoin() / 10),
+		Divisibility: n.getDivisibility(data.PaymentCoin),
 	}
 
 	// Add payment data and send to vendor
@@ -130,7 +128,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.Amount = &pb.CurrencyValue{
 			Currency: &pb.CurrencyDefinition{
 				Code:         data.PaymentCoin,
-				Divisibility: uint32(wal.ExchangeRates().UnitsPerCoin() / 10),
+				Divisibility: n.getDivisibility(data.PaymentCoin),
 			},
 			Value: total.String(),
 		} // total
@@ -183,7 +181,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		contract.BuyerOrder.RefundFee = &pb.CurrencyValue{
 			Currency: &pb.CurrencyDefinition{
 				Code:         data.PaymentCoin,
-				Divisibility: uint32(wal.ExchangeRates().UnitsPerCoin() / 10),
+				Divisibility: n.getDivisibility(data.PaymentCoin),
 			},
 			Value: fee.String(),
 		}
@@ -283,7 +281,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	payment.Amount = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{
 			Code:         data.PaymentCoin,
-			Divisibility: uint32(wal.ExchangeRates().UnitsPerCoin() / 10),
+			Divisibility: n.getDivisibility(data.PaymentCoin),
 		},
 		Value: total.String(),
 	} // total
@@ -830,9 +828,6 @@ func (n *OpenBazaarNode) CalcOrderID(order *pb.Order) (string, error) {
 
 // CalculateOrderTotal - calculate the total in satoshi/wei
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (big.Int, error) {
-	fmt.Println("in calc order")
-	fmt.Println(contract.BuyerOrder)
-	spew.Dump(contract)
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return *big.NewInt(0), err
