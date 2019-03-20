@@ -142,6 +142,13 @@ func TestMessageSignVerify(t *testing.T) {
 		{"POST", "/ob/signmessage", signMessageJSON, 200, anyResponseJSON},
 		{"POST", "/ob/verifymessage", verifyMessageJSON, 200, anyResponseJSON},
 	})
+
+	validateSignWorksWithURLChars := `{
+		"content":"QmdQBWA75xQSMZpTibQ2G83enNdriz2v14tetGvNrpr5KB/this-is-a-social-post"
+	}`
+	runAPITests(t, apiTests{
+		{"POST", "/ob/signmessage", validateSignWorksWithURLChars, 200, anyResponseJSON},
+	})
 }
 
 func TestListingsAcceptedCurrencies(t *testing.T) {
