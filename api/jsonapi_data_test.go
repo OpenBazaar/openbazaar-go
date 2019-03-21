@@ -164,6 +164,18 @@ const settingsAlreadyExistsJSON = `{
     "reason": "Settings is already set. Use PUT."
 }`
 
+// Sign Verify Messages
+const signMessageJSON = `{
+	"content": "test"
+}`
+
+const verifyMessageJSON = `{
+	"content": "74657374",
+	"signature": "fac9dec1ce872c931bda1af85f9107e8733b42ed6401bc989a84b6b53ad263290d9bd9d470f046024884f502ecb7af50de2fea11268e82dcb1c72d50753c330a",
+	"pubkey": "080112203f94c7707af68ede9ddd24a16edd813146550df565eda8fb81114476ccfe6b78",
+	"peerId": "QmRmisSghsxUMrTQZ5vmqFroxxuCXJqXwXoTc21q5cefmM"
+}`
+
 //
 // Profile
 //
@@ -229,11 +241,11 @@ const avatarValidJSON = `{
 }`
 
 const avatarValidJSONResponse = `{
-    "large": "zb2rhbEB183zRmazfsY7ytQWfyPEQUuLy3Ryso4h8jkwSxQY6",
-    "medium": "zb2rhhf3ZxHrUyb43sQ2ivQTJvWUPgTyF5T2h4fM8xLxmtHuU",
-    "original": "zb2rhmfTQq3yixcKnEy5q68ujAayJLP3KsxjAR5gMocFcRQy5",
-    "small": "zb2rhY2W79RCbZDM87t9pVL4CHicYjQxmVih3q7u7QRDc5xqP",
-    "tiny": "zb2rhbrsSgjXymYSGqH6pvma72g6WRmx69sbCsc5ANCbVMAJs"
+    "large": "QmcUNDbsazULoEddnRSsiK1LgUCx6FnujgUG6r17GEviq2",
+    "medium": "Qmdj2NnzQwGuHN7RZmMhu1VEeLP7APDzFE5KmBKsPxZmuH",
+    "original": "QmYGE9UNEMvQ8W1qcVAMkJTYLpjNu1JHQtwqvppJ2QXiJe",
+    "small": "Qmf198F1mX2hhFJKkWUepxLh3vC853Xr79VQuhJFuBizZD",
+    "tiny": "QmPxXHGMm5J3y2G4S9brxe83CxLgt6D3MZKhxMBkNyKQWn"
 }`
 
 const avatarUnexpectedEOFJSON = `{
@@ -261,11 +273,11 @@ const imageValidJSON = `[{
 const imageValidJSONResponse = `[{
         "filename": "blue_tshirt.jpg",
         "hashes": {
-            "large": "zb2rhkProdDprVM9jGYwyN1sGTrTVQXebAup6oLLpQfcC9WsK",
-            "medium": "zb2rhZqKFguaaEodgYKHUUmvDVWeFpF2eWMNgvhxrdoKYjUKw",
-            "original": "zb2rhcuzHEovhfy4u2mvGkghj5FyEHZKu1fkzMB8t7MXo7fru",
-            "small": "zb2rhgKxh4gLKrqoVYmE3gzJve61PVwHP277rSQh4jyL4ftrK",
-            "tiny": "zb2rhnmhLobuoHHpbXoz3YE2aaptRvxMg4DCUY62MVr56ooUL"
+            "large": "Qmcy4pW7cv18RMCprxrxhiihQzUJNaCNr5v2qvZGjGAwsj",
+            "medium": "QmVGiFSwTkMPjvGnnreHkspb9Ui2upkctYtqMR5sBKncHR",
+            "original": "QmQ2QdYMLCPWuVpdAvj49Kf7FvbpPrN4bdborHGb3G9jQv",
+            "small": "QmUBvfRXHYmzNx6uke5USD3C5PgWr5Wa3XHzcK3zaTeytS",
+            "tiny": "QmNi2H4MUkLe9eBEPmyE9QVQ6Y3F1RwpPxB4B1us5HnxwG"
         }
 }]`
 
@@ -275,11 +287,11 @@ const headerValidJSON = `{
 }`
 
 const headerValidJSONResponse = `{
-    "large": "zb2rhmowivBcCAR9XQFm8yTYiescwZjzYqJzyiqsVuQwEpYFr",
-    "medium": "zb2rhhwb8anfu1GmJrD1yZcqp6AmxHA3h4yfNr1RdV8gqci5y",
-    "original": "zb2rhmfTQq3yixcKnEy5q68ujAayJLP3KsxjAR5gMocFcRQy5",
-    "small": "zb2rhXFSGMLsi5sSmVb5rrTx7E9biwycYzYVpAAbAkk7pypB5",
-    "tiny": "zb2rhbQwzGdgYeiqy213dqrFJkDruvid3EVVFUgkWn6samyCA"
+    "large": "QmSqNf7gM4LKMsqej8b4q2su14TButMZduF5FJRodttbTZ",
+    "medium": "QmZqF47LXvKvKh5YyCerkEAiS4EmVubACeoQTQKXzU79WV",
+    "original": "QmYGE9UNEMvQ8W1qcVAMkJTYLpjNu1JHQtwqvppJ2QXiJe",
+    "small": "QmQHHKV7cBFFE4WDJN9Vojxc3U14dt4dK5ihgtxwphdQij",
+    "tiny": "QmRheKdYREcdSHBdamY3ejZxh89UmnnjRQcqPPxAoQxn9X"
 }`
 
 //
@@ -291,6 +303,12 @@ const inventoryUpdateJSON = `[{
 	"variant": 0,
 	"quantity": 17
 }]`
+
+//
+// Bulk Update Currency
+//
+
+const bulkUpdateCurrencyJSON = ` { "currencies":["ZEC", "BTC", "BCH", "LTC"] }`
 
 //
 // Moderation

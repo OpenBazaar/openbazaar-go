@@ -2,37 +2,37 @@ package core
 
 import (
 	"errors"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"net/url"
+
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+
 	"path"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/kennygrant/sanitize"
-	"github.com/op/go-logging"
+	logging "github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 )
 
 const (
 	// VERSION - current version
-	VERSION = "0.13.0"
+	VERSION = "0.13.1"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
@@ -49,9 +49,12 @@ type OpenBazaarNode struct {
 	// IPFS node object
 	IpfsNode *core.IpfsNode
 
-	/* The roothash of the node directory inside the openbazaar repo.
-	   This directory hash is published on IPNS at our peer ID making
-	   the directory publicly viewable on the network. */
+	// An implementation of the custom DHT used by OpenBazaar
+	DHT *dht.IpfsDHT
+
+	// The roothash of the node directory inside the openbazaar repo.
+	// This directory hash is published on IPNS at our peer ID making
+	// the directory publicly viewable on the network.
 	RootHash string
 
 	// The path to the openbazaar repo in the file system
@@ -83,12 +86,6 @@ type OpenBazaarNode struct {
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher
 
-	// Used to resolve domains to OpenBazaar IDs
-	NameSystem *namesys.NameSystem
-
-	// A service that periodically fetches and caches the bitcoin exchange rates
-	//ExchangeRates wallet.ExchangeRates
-
 	// Optional nodes to push user data to
 	PushNodes []peer.ID
 
@@ -116,6 +113,10 @@ type OpenBazaarNode struct {
 
 	// The master private key derived from the mnemonic
 	MasterPrivateKey *hdkeychain.ExtendedKey
+
+	// The number of DHT records to collect before returning. The larger the number
+	// the slower the query but the less likely we will get an old record.
+	IPNSQuorumSize uint
 
 	TestnetEnable        bool
 	RegressionTestEnable bool
@@ -201,7 +202,7 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 
 	var graph []cid.Cid
 	if len(n.PushNodes) > 0 {
-		graph, err = ipfs.FetchGraph(n.IpfsNode, id)
+		graph, err = ipfs.FetchGraph(n.IpfsNode, &id)
 		if err != nil {
 			return err
 		}
@@ -220,7 +221,7 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 				if err != nil {
 					continue
 				}
-				graph = append(graph, *c)
+				graph = append(graph, c)
 			}
 		}
 	}
@@ -271,19 +272,19 @@ func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
   For now we will just encrypt outgoing offline messages with the long lived identity key.
   Optionally you may provide a public key, to avoid doing an IPFS lookup */
 func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, message []byte) (ct []byte, rerr error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
 	if peerKey == nil {
 		var pubKey libp2p.PubKey
-		keyval, err := n.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix + peerID.Pretty())))
+		keyval, err := n.IpfsNode.Repo.Datastore().Get(datastore.NewKey(KeyCachePrefix + peerID.Pretty()))
 		if err != nil {
-			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
+			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, peerID)
 			if err != nil {
 				log.Errorf("Failed to find public key for %s", peerID.Pretty())
 				return nil, err
 			}
 		} else {
-			pubKey, err = libp2p.UnmarshalPublicKey(keyval.([]byte))
+			pubKey, err = libp2p.UnmarshalPublicKey(keyval)
 			if err != nil {
 				log.Errorf("Failed to find public key for %s", peerID.Pretty())
 				return nil, err
@@ -307,11 +308,13 @@ func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
 }
 
-// createSlugFor Create a slug from a string
+// createSlugFor Create a slug from a multi-lang string
 func createSlugFor(slugName string) string {
 	l := SentenceMaxCharacters - SlugBuffer
-	if len(slugName) < SentenceMaxCharacters-SlugBuffer {
-		l = len(slugName)
+
+	slug := slug.Make(slugName)
+	if len(slug) < SentenceMaxCharacters-SlugBuffer {
+		l = len(slug)
 	}
-	return url.QueryEscape(sanitize.Path(strings.ToLower(slugName[:l])))
+	return slug[:l]
 }

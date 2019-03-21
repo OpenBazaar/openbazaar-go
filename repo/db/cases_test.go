@@ -3,12 +3,13 @@ package db_test
 import (
 	"bytes"
 	"database/sql"
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -786,7 +787,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		OrigName:     false,
 	}
 	for _, r := range existingRecords {
-		var isBuyerInitiated int = 0
+		var isBuyerInitiated = 0
 		if r.IsBuyerInitiated {
 			isBuyerInitiated = 1
 		}
@@ -1061,7 +1062,7 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
-			PaymentCoin:      paymentCoin,
+			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)
@@ -1093,11 +1094,8 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		paymentCoinCode, err := repo.NewCurrencyCode(testCoin)
-		if err != nil {
-			t.Fatal(err)
-		}
-		//contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Metadata.CoinType = testCoin
+		paymentCoin := repo.CurrencyCode(testCoin)
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
@@ -1105,7 +1103,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
 			CoinType:         testCoin,
-			PaymentCoin:      paymentCoinCode,
+			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)

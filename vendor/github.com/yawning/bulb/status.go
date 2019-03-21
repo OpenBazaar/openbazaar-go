@@ -9,8 +9,8 @@ package bulb
 
 import (
 	"fmt"
-	"strings"
 	"net/textproto"
+	"strings"
 )
 
 // The various control port StatusCode constants.

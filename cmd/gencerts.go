@@ -67,8 +67,8 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	}
 
 	// Check if host ip or dns name and count their quantity
-	ipAddresses := []net.IP{}
-	dnsNames := []string{}
+	var ipAddresses []net.IP
+	var dnsNames []string
 	hosts := strings.Split(x.Host, ",")
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
@@ -90,7 +90,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 
 	// Create certificate

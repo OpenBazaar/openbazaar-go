@@ -176,7 +176,7 @@ func (p *process) doClose() {
 	close(p.closing) // signal that we're shutting down (Closing)
 
 	for len(p.children) > 0 || len(p.waitfors) > 0 {
-		for plc, _ := range p.children {
+		for plc := range p.children {
 			child := plc.Child()
 			if child != nil { // check because child may already have been removed.
 				go child.Close() // force all children to shut down
@@ -189,7 +189,7 @@ func (p *process) doClose() {
 		// change under our feet.
 		wf := p.waitfors
 		p.waitfors = nil // clear them. release memory.
-		for w, _ := range wf {
+		for w := range wf {
 			// Here, we wait UNLOCKED, so that waitfors who are in the middle of
 			// adding a child to us can finish. we will immediately close the child.
 			p.Unlock()
@@ -244,7 +244,7 @@ func (p *process) CloseAfterChildren() error {
 	nextToWaitFor := func() Process {
 		p.Lock()
 		defer p.Unlock()
-		for e, _ := range p.waitfors {
+		for e := range p.waitfors {
 			c := e.Child()
 			if c == nil {
 				continue

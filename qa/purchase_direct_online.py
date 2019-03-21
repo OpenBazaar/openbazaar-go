@@ -9,11 +9,11 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 2
+        self.num_nodes = 3
 
     def run_test(self):
-        vendor = self.nodes[0]
-        buyer = self.nodes[1]
+        vendor = self.nodes[1]
+        buyer = self.nodes[2]
 
         # generate some coins and send them to buyer
         api_url = buyer["gateway_url"] + "wallet/address/" + self.cointype

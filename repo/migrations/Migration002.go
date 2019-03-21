@@ -19,7 +19,7 @@ func (Migration002) Up(repoPath string, dbPassword string, testnet bool) error {
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	pushNodes := []string{
@@ -69,7 +69,7 @@ func (Migration002) Down(repoPath string, dbPassword string, testnet bool) error
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	cfg["Crosspost-gateways"] = []string{"https://gateway.ob1.io/", "https://gateway.duosear.ch/"}

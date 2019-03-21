@@ -1,0 +1,24 @@
+{
+  "author": "mgutz",
+  "name": "ansi",
+  "version": "0.0.0",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "language": "go",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mgutz/ansi"
+  },
+  "gx": {
+    "dvcsimport": "github.com/mgutz/ansi"
+  },
+  "gxDependencies": [
+    {
+      "author": "mattn",
+      "hash": "QmTsHcKgTQ4VeYZd8eKYpTXeLW7KNwkRD9wjnrwsV2sToq",
+      "name": "go-colorable",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1"
+}
+

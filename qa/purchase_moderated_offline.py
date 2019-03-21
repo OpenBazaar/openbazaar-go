@@ -9,12 +9,12 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 3
+        self.num_nodes = 4
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
-        charlie = self.nodes[2]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
+        charlie = self.nodes[3]
 
         # generate some coins and send them to bob
         time.sleep(4)
@@ -90,7 +90,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(4)
+        time.sleep(10)
 
         # bob send order
         with open('testdata/order_direct.json') as order_file:
@@ -157,7 +157,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(45)
+        time.sleep(80)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

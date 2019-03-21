@@ -137,6 +137,13 @@ func TestModerator(t *testing.T) {
 	})
 }
 
+func TestMessageSignVerify(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/signmessage", signMessageJSON, 200, anyResponseJSON},
+		{"POST", "/ob/verifymessage", verifyMessageJSON, 200, anyResponseJSON},
+	})
+}
+
 func TestListingsAcceptedCurrencies(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
@@ -161,9 +168,9 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	respObj := []struct {
+	var respObj []struct {
 		AcceptedCurrencies []string `json:"acceptedCurrencies"`
-	}{}
+	}
 	err = json.Unmarshal(respBody, &respObj)
 	if err != nil {
 		t.Fatal(err)
@@ -281,6 +288,9 @@ func TestListings(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", updatedListingJSON, 404, NotFoundJSON("Listing")},
 		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
+
+		// Bulk update currency in listings
+		{"POST", "/ob/bulkupdatecurrency", bulkUpdateCurrencyJSON, 200, `{"success": "true"}`},
 	})
 }
 

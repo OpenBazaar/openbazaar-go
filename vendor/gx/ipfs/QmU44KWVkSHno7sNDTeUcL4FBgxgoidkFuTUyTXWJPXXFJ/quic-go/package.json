@@ -1,0 +1,16 @@
+{
+  "author": "marten-seemann",
+  "bugs": {
+    "url": "https://github.com/lucas-clemente/quic-go"
+  },
+  "gx": {
+    "dvcsimport": "github.com/lucas-clemente/quic-go"
+  },
+  "gxVersion": "0.11.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "quic-go",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.10.0"
+}
+

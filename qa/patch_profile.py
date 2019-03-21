@@ -9,10 +9,10 @@ class PatchProfileTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 1
+        self.num_nodes = 2
 
     def run_test(self):
-        alice = self.nodes[0]
+        alice = self.nodes[1]
         api_url = alice["gateway_url"] + "ob/profile"
         not_found = TestFailure("PatchProfileTest - FAIL: Profile post endpoint not found")
 
