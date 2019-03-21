@@ -8,12 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
-	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
-
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -27,11 +21,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/core/coreapi/interface"
-	"github.com/ipfs/go-ipfs/namesys"
-
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	datastore "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -45,7 +40,9 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
@@ -2288,18 +2285,19 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 }
 
 func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request) {
-	type plaintext struct {
-		Content []byte `json:"content"`
+	type signRequest struct {
+		Content string `json:"content"`
 	}
-	var msg plaintext
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&msg)
+	var (
+		req signRequest
+		err = json.NewDecoder(r.Body).Decode(&req)
+	)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	sig, pubKey, err := core.SignPayload(msg.Content, i.node.IpfsNode.PrivateKey)
+	sig, pubKey, err := core.SignPayload([]byte(req.Content), i.node.IpfsNode.PrivateKey)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -2332,18 +2330,13 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contentBytes, err := hex.DecodeString(msg.Content)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	sigBytes, err := hex.DecodeString(msg.Signature)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	peerID, err := core.VerifyPayload(contentBytes, sigBytes, keyBytes)
+	peerID, err := core.VerifyPayload([]byte(msg.Content), sigBytes, keyBytes)
 	if err != nil {
 		SanitizedResponse(w, `{"error":"VERIFICATION_FAILED"}`)
 		return
