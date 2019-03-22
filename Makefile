@@ -6,7 +6,7 @@ ios_framework:
 	gomobile bind -target=ios github.com/OpenBazaar/openbazaar-go/mobile
 
 android_framework:
-	gomobile bind -target=android github.com/OpenBazaar/openbazaar-go/mobile
+	gomobile bind -target=android github.com/OpenBazaar/openbazaar-go/mobile -v
 
 ##
 ## Protobuf compilation

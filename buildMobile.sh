@@ -22,7 +22,7 @@ case "$TRAVIS_OS_NAME" in
     export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee'
     yes | sdkmanager "ndk-bundle" > /dev/null
 
-    touch /Users/travis/.android/repositories.cfg
+    touch ~/.android/repositories.cfg
 
     go get golang.org/x/mobile/cmd/gomobile
     gomobile init
