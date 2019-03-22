@@ -1625,9 +1625,9 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// peerID in the vendorListing to the node peerID
 		if !(contract.VendorListings[0].VendorID.PeerID ==
 			service.node.IpfsNode.Identity.Pretty()) {
-			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s, nodePeerID: %s",
-				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID, service.node.IpfsNode.Identity.Pretty())
-			return nil, errors.New("the seller details dont match")
+			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s",
+				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
+			return nil, errors.New("mismatched peer id")
 		}
 	}
 

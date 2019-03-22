@@ -588,7 +588,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(hash.Hex()[2:])
+		h, err = chainhash.NewHashFromStr(strings.TrimPrefix(hash.Hex(), "0x"))
 	}
 	return h, err
 }
@@ -605,7 +605,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 
 	if withInput {
 		input = wi.TransactionInput{
-			OutpointHash:  []byte(txID[:32]),
+			OutpointHash:  []byte(strings.TrimPrefix(txID, "0x")), //[]byte(txID[:32]),
 			OutpointIndex: 1,
 			LinkedAddress: toAddress,
 			Value:         value,
