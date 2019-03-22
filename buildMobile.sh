@@ -20,7 +20,7 @@ case "$TRAVIS_OS_NAME" in
     export ANDROID_HOME=/usr/local/opt/android-sdk
     export ANDROID_NDK_HOME=/usr/local/opt/android-ndk
 
-    
+    yes | sdkmanager "ndk-bundle"
 
     # Build iOS framework
     make ios_framework
