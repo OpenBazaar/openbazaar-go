@@ -7,10 +7,9 @@ case "$TRAVIS_OS_NAME" in
   "osx")
 
     brew install ant
-    brew install maven
     brew install gradle
-    brew install android-sdk
-    brew install android-ndk
+    brew cask install android-sdk
+    brew cask install android-ndk
 
     android update sdk --no-ui
 
