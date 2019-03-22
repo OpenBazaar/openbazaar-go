@@ -13,7 +13,7 @@ before_install:
 install:
   - echo "No external dependencies required. Skipping travis default library dependency setup to use vendors..."
   - cd $GOPATH/src/github.com/cretz/tor-static
-  - go run build.go build-all
+  - go run build.go -verbose build-all
   - cd $TRAVIS_BUILD_DIR
 script:
   - $GOPATH/bin/golangci-lint run --deadline 10m
