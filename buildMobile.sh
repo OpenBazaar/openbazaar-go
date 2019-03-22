@@ -18,9 +18,12 @@ case "$TRAVIS_OS_NAME" in
     export ANDROID_HOME=/usr/local/share/android-sdk
     export ANDROID_NDK_HOME=/usr/local/share/android-ndk
 
+    export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee'
     yes | sdkmanager "ndk-bundle"
 
     go get golang.org/x/mobile/cmd/gomobile
+
+    gomobile init
 
     # Build iOS framework
     make ios_framework
