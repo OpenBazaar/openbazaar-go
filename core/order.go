@@ -19,8 +19,6 @@ import (
 	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 
-	
-
 	ipfspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -98,7 +96,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
-		
 
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
@@ -111,7 +108,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		}
 
 		// Send to order vendor
-		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
+		merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil {
 			return processOfflineModeratedOrder(n, contract)
 		}
@@ -163,7 +160,7 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_MODERATED
 	payment.Moderator = data.Moderator
-	payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
+	//payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
 
 	profile, err := n.FetchProfile(data.Moderator, true)
 	if err != nil {
@@ -186,20 +183,20 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 		return nil, err
 	}
 	payment.Amount = &pb.CurrencyValue{
-			Currency: &pb.CurrencyDefinition{
-				Code:         data.PaymentCoin,
-				Divisibility: n.getDivisibility(data.PaymentCoin),
-			},
-			Value: total.String(),
-		} // total
-		fpb := wal.GetFeePerByte(wallet.NORMAL)
-		//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
-		f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
-		t := new(big.Int).Div(&total, big.NewInt(4))
+		Currency: &pb.CurrencyDefinition{
+			Code:         data.PaymentCoin,
+			Divisibility: n.getDivisibility(data.PaymentCoin),
+		},
+		Value: total.String(),
+	} // total
+	fpb := wal.GetFeePerByte(wallet.NORMAL)
+	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
+	f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
+	t := new(big.Int).Div(&total, big.NewInt(4))
 
-		if f.Cmp(t) > 0 {
-			return nil, errors.New("transaction fee too high for moderated payment")
-		}
+	if f.Cmp(t) > 0 {
+		return nil, errors.New("transaction fee too high for moderated payment")
+	}
 
 	/* Generate a payment address using the first child key derived from the buyers's,
 	   vendors's and moderator's masterPubKey and a random chaincode. */
@@ -238,13 +235,13 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 	fee := wal.GetFeePerByte(wallet.NORMAL)
-		contract.BuyerOrder.RefundFee = &pb.CurrencyValue{
-			Currency: &pb.CurrencyDefinition{
-				Code:         data.PaymentCoin,
-				Divisibility: n.getDivisibility(data.PaymentCoin),
-			},
-			Value: fee.String(),
-		}
+	contract.BuyerOrder.RefundFee = &pb.CurrencyValue{
+		Currency: &pb.CurrencyDefinition{
+			Code:         data.PaymentCoin,
+			Divisibility: n.getDivisibility(data.PaymentCoin),
+		},
+		Value: fee.String(),
+	}
 
 	err = wal.AddWatchedAddress(addr)
 	if err != nil {
@@ -303,10 +300,11 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	// Vendor offline
 	// Change payment code to direct
 
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
 	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
 	f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
-	t := new(big.Int).Div(&total, big.NewInt(4))
+	t := new(big.Int).Div(total, big.NewInt(4))
 
 	//fpb := wal.GetFeePerByte(wallet.NORMAL)
 	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
@@ -380,7 +378,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+	//total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
 	return orderID, contract.BuyerOrder.Payment.Address, *total, false, err
 }
 
@@ -451,7 +449,7 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 		return "", "", *big.NewInt(0), false, err
 	}
 	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)	
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
 	return orderID, contract.BuyerOrder.Payment.Address, *total, false, err
 }
 
@@ -938,7 +936,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 			itemQuantity = 1
 		} else {
 			p, _ := new(big.Int).SetString(l.Item.Price.Value, 10)
-			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code, l.Metadata.PricingCurrency.Code, *p)			
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code, l.Metadata.PricingCurrency.Code, *p)
 		}
 		if err != nil {
 			return *big.NewInt(0), err
@@ -1251,13 +1249,13 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	return *resultValue.Amount, nil
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount uint64) (uint64, error) {
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {
 	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingCurrency)
 	if err != nil {
-		return 0, err
+		return *big.NewInt(0), err
 	}
 	if wal.ExchangeRates() == nil {
-		return 0, ErrPriceCalculationRequiresExchangeRates
+		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
 	rate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
