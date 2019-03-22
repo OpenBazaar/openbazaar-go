@@ -19,7 +19,7 @@ case "$TRAVIS_OS_NAME" in
     export ANDROID_NDK_HOME=/usr/local/share/android-ndk
 
     export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee'
-    yes | sdkmanager "ndk-bundle"
+    yes | sdkmanager "ndk-bundle" > /dev/null
 
     go get golang.org/x/mobile/cmd/gomobile
 
