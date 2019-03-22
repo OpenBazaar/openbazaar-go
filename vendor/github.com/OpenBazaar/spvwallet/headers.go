@@ -12,8 +12,6 @@ import (
 	"sync"
 	"strings"
 
-	"strings"
-
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
