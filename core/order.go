@@ -161,6 +161,12 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	payment.Method = pb.Order_Payment_MODERATED
 	payment.Moderator = data.Moderator
 	//payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
+	payment.Amount = &pb.CurrencyValue{
+		Currency: &pb.CurrencyDefinition{
+			Code:         data.PaymentCoin,
+			Divisibility: n.getDivisibility(data.PaymentCoin),
+		},
+	}
 
 	profile, err := n.FetchProfile(data.Moderator, true)
 	if err != nil {
