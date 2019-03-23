@@ -1,26 +1,28 @@
 package commands
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"path"
 	"sort"
-	"strings"
 
-	cmds "github.com/ipfs/go-ipfs/commands"
-	e "github.com/ipfs/go-ipfs/core/commands/e"
-	repo "github.com/ipfs/go-ipfs/repo"
-	config "github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	"github.com/ipfs/go-ipfs/core/commands/e"
+	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 
-	iaddr "gx/ipfs/QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW/go-ipfs-addr"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 	mafilter "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter"
-	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	cmdkit "gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
+	"gx/ipfs/QmSXUokcP4TJpFfqozT69AVAYRtzXVMUjzQVkYX41R9Svs/go-ipfs-cmds"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmVHhT8NxtApPTndiZPe4JNGNUxGWtJe3ebyxtRz4HnbEp/go-libp2p-swarm"
+	inet "gx/ipfs/QmXuRkCR7BNQa9uqfpTiFWsTQLzmTWYg91Ja1w95gnqb6u/go-libp2p-net"
+	iaddr "gx/ipfs/QmZc5PLgxW61uTPG24TroxHDF6xzgbhZZQf5i53ciQC47Y/go-ipfs-addr"
+	"gx/ipfs/Qmde5VP1qUkyQXKCfmEUA7bP64V2HAptbJ7phuPp7jXWwg/go-ipfs-cmdkit"
 )
 
 type stringList struct {
@@ -49,6 +51,13 @@ ipfs peers in the internet.
 	},
 }
 
+const (
+	swarmVerboseOptionName   = "verbose"
+	swarmStreamsOptionName   = "streams"
+	swarmLatencyOptionName   = "latency"
+	swarmDirectionOptionName = "direction"
+)
+
 var swarmPeersCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List peers with open connections.",
@@ -57,46 +66,45 @@ var swarmPeersCmd = &cmds.Command{
 `,
 	},
 	Options: []cmdkit.Option{
-		cmdkit.BoolOption("verbose", "v", "display all extra information"),
-		cmdkit.BoolOption("streams", "Also list information about open streams for each peer"),
-		cmdkit.BoolOption("latency", "Also list information about latency to each peer"),
+		cmdkit.BoolOption(swarmVerboseOptionName, "v", "display all extra information"),
+		cmdkit.BoolOption(swarmStreamsOptionName, "Also list information about open streams for each peer"),
+		cmdkit.BoolOption(swarmLatencyOptionName, "Also list information about latency to each peer"),
+		cmdkit.BoolOption(swarmDirectionOptionName, "Also list information about the direction of connection"),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
+		verbose, _ := req.Options[swarmVerboseOptionName].(bool)
+		latency, _ := req.Options[swarmLatencyOptionName].(bool)
+		streams, _ := req.Options[swarmStreamsOptionName].(bool)
+		direction, _ := req.Options[swarmDirectionOptionName].(bool)
+
+		conns, err := api.Swarm().Peers(req.Context)
+		if err != nil {
+			return err
 		}
 
-		verbose, _, _ := req.Option("verbose").Bool()
-		latency, _, _ := req.Option("latency").Bool()
-		streams, _, _ := req.Option("streams").Bool()
-
-		conns := n.PeerHost.Network().Conns()
-
-		var out []string
+		var out connInfos
 		for _, c := range conns {
-			pid := c.RemotePeer()
-			addr := c.RemoteMultiaddr()
-
 			ci := connInfo{
-				Addr: addr.String(),
-				Peer: pid.Pretty(),
+				Addr: c.Address().String(),
+				Peer: c.ID().Pretty(),
 			}
 
-			swcon, ok := c.(*swarm.Conn)
-			if ok {
-				ci.Muxer = fmt.Sprintf("%T", swcon.StreamConn().Conn())
+			if verbose || direction {
+				// set direction
+				ci.Direction = c.Direction()
 			}
 
 			if verbose || latency {
-				lat := n.Peerstore.LatencyEWMA(pid)
+				lat, err := c.Latency()
+				if err != nil {
+					return err
+				}
+
 				if lat == 0 {
 					ci.Latency = "n/a"
 				} else {
@@ -104,59 +112,52 @@ var swarmPeersCmd = &cmds.Command{
 				}
 			}
 			if verbose || streams {
-				strs, err := c.GetStreams()
+				strs, err := c.Streams()
 				if err != nil {
-					res.SetError(err, cmdkit.ErrNormal)
-					return
+					return err
 				}
 
 				for _, s := range strs {
-					ci.Streams = append(ci.Streams, streamInfo{Protocol: string(s.Protocol())})
+					ci.Streams = append(ci.Streams, streamInfo{Protocol: string(s)})
 				}
 			}
 			sort.Sort(&ci)
-			out = append(out, ci.Peer)
+			out.Peers = append(out.Peers, ci)
 		}
 
-		res.SetOutput(&out)
+		sort.Sort(&out)
+		return cmds.EmitOnce(res, &out)
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: func(res cmds.Response) (io.Reader, error) {
-			v, err := unwrapOutput(res.Output())
-			if err != nil {
-				return nil, err
-			}
-
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(func(req *cmds.Request, w io.Writer, v interface{}) error {
 			ci, ok := v.(*connInfos)
 			if !ok {
-				return nil, e.TypeErr(ci, v)
+				return e.TypeErr(ci, v)
 			}
 
-			buf := new(bytes.Buffer)
 			pipfs := ma.ProtocolWithCode(ma.P_IPFS).Name
 			for _, info := range ci.Peers {
-				ids := fmt.Sprintf("/%s/%s", pipfs, info.Peer)
-				if strings.HasSuffix(info.Addr, ids) {
-					fmt.Fprintf(buf, "%s", info.Addr)
-				} else {
-					fmt.Fprintf(buf, "%s%s", info.Addr, ids)
-				}
+				fmt.Fprintf(w, "%s/%s/%s", info.Addr, pipfs, info.Peer)
 				if info.Latency != "" {
-					fmt.Fprintf(buf, " %s", info.Latency)
+					fmt.Fprintf(w, " %s", info.Latency)
 				}
-				fmt.Fprintln(buf)
+
+				if info.Direction != inet.DirUnknown {
+					fmt.Fprintf(w, " %s", directionString(info.Direction))
+				}
+				fmt.Fprintln(w)
 
 				for _, s := range info.Streams {
 					if s.Protocol == "" {
 						s.Protocol = "<no protocol name>"
 					}
 
-					fmt.Fprintf(buf, "  %s\n", s.Protocol)
+					fmt.Fprintf(w, "  %s\n", s.Protocol)
 				}
 			}
 
-			return buf, nil
-		},
+			return nil
+		}),
 	},
 	Type: connInfos{},
 }
@@ -166,11 +167,12 @@ type streamInfo struct {
 }
 
 type connInfo struct {
-	Addr    string
-	Peer    string
-	Latency string
-	Muxer   string
-	Streams []streamInfo
+	Addr      string
+	Peer      string
+	Latency   string
+	Muxer     string
+	Direction inet.Direction
+	Streams   []streamInfo
 }
 
 func (ci *connInfo) Less(i, j int) bool {
@@ -201,6 +203,18 @@ func (ci connInfos) Swap(i, j int) {
 	ci.Peers[i], ci.Peers[j] = ci.Peers[j], ci.Peers[i]
 }
 
+// directionString transfers to string
+func directionString(d inet.Direction) string {
+	switch d {
+	case inet.DirInbound:
+		return "inbound"
+	case inet.DirOutbound:
+		return "outbound"
+	default:
+		return ""
+	}
+}
+
 var swarmAddrsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List known addresses. Useful for debugging.",
@@ -212,41 +226,32 @@ var swarmAddrsCmd = &cmds.Command{
 		"local":  swarmAddrsLocalCmd,
 		"listen": swarmAddrsListenCmd,
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
+		addrs, err := api.Swarm().KnownAddrs(req.Context)
+		if err != nil {
+			return err
 		}
 
-		addrs := make(map[string][]string)
-		ps := n.PeerHost.Network().Peerstore()
-		for _, p := range ps.Peers() {
+		out := make(map[string][]string)
+		for p, paddrs := range addrs {
 			s := p.Pretty()
-			for _, a := range ps.Addrs(p) {
-				addrs[s] = append(addrs[s], a.String())
+			for _, a := range paddrs {
+				out[s] = append(out[s], a.String())
 			}
-			sort.Sort(sort.StringSlice(addrs[s]))
 		}
 
-		res.SetOutput(&addrMap{Addrs: addrs})
+		return cmds.EmitOnce(res, &addrMap{Addrs: out})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: func(res cmds.Response) (io.Reader, error) {
-			v, err := unwrapOutput(res.Output())
-			if err != nil {
-				return nil, err
-			}
-
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(func(req *cmds.Request, w io.Writer, v interface{}) error {
 			m, ok := v.(*addrMap)
 			if !ok {
-				return nil, e.TypeErr(m, v)
+				return e.TypeErr(m, v)
 			}
 
 			// sort the ids first
@@ -256,16 +261,15 @@ var swarmAddrsCmd = &cmds.Command{
 			}
 			sort.Sort(sort.StringSlice(ids))
 
-			buf := new(bytes.Buffer)
 			for _, p := range ids {
 				paddrs := m.Addrs[p]
-				buf.WriteString(fmt.Sprintf("%s (%d)\n", p, len(paddrs)))
+				fmt.Fprintf(w, "%s (%d)\n", p, len(paddrs))
 				for _, addr := range paddrs {
-					buf.WriteString("\t" + addr + "\n")
+					fmt.Fprintf(w, "\t"+addr+"\n")
 				}
 			}
-			return buf, nil
-		},
+			return nil
+		}),
 	},
 	Type: addrMap{},
 }
@@ -280,36 +284,37 @@ var swarmAddrsLocalCmd = &cmds.Command{
 	Options: []cmdkit.Option{
 		cmdkit.BoolOption("id", "Show peer ID in addresses."),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		iCtx := req.InvocContext()
-		n, err := iCtx.GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
+		showid, _ := req.Options["id"].(bool)
+		self, err := api.Key().Self(req.Context)
+		if err != nil {
+			return err
 		}
 
-		showid, _, _ := req.Option("id").Bool()
-		id := n.Identity.Pretty()
+		maddrs, err := api.Swarm().LocalAddrs(req.Context)
+		if err != nil {
+			return err
+		}
 
 		var addrs []string
-		for _, addr := range n.PeerHost.Addrs() {
+		for _, addr := range maddrs {
 			saddr := addr.String()
 			if showid {
-				saddr = path.Join(saddr, "ipfs", id)
+				saddr = path.Join(saddr, "ipfs", self.ID().Pretty())
 			}
 			addrs = append(addrs, saddr)
 		}
 		sort.Sort(sort.StringSlice(addrs))
-		res.SetOutput(&stringList{addrs})
+		return cmds.EmitOnce(res, &stringList{addrs})
 	},
 	Type: stringList{},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 }
 
@@ -320,24 +325,16 @@ var swarmAddrsListenCmd = &cmds.Command{
 'ipfs swarm addrs listen' lists all interface addresses the node is listening on.
 `,
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
-		}
-
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
+			return err
 		}
 
 		var addrs []string
-		maddrs, err := n.PeerHost.Network().InterfaceListenAddresses()
+		maddrs, err := api.Swarm().ListenAddrs(req.Context)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		for _, addr := range maddrs {
@@ -345,11 +342,11 @@ var swarmAddrsListenCmd = &cmds.Command{
 		}
 		sort.Sort(sort.StringSlice(addrs))
 
-		res.SetOutput(&stringList{addrs})
+		return cmds.EmitOnce(res, &stringList{addrs})
 	},
 	Type: stringList{},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 }
 
@@ -367,54 +364,34 @@ ipfs swarm connect /ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3
 	Arguments: []cmdkit.Argument{
 		cmdkit.StringArg("address", true, true, "Address of peer to connect to.").EnableStdin(),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		ctx := req.Context()
-
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		addrs := req.Arguments()
-
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
-		}
-
-		snet, ok := n.PeerHost.Network().(*swarm.Network)
-		if !ok {
-			res.SetError(fmt.Errorf("peerhost network was not swarm"), cmdkit.ErrNormal)
-			return
-		}
-
-		swrm := snet.Swarm()
+		addrs := req.Arguments
 
 		pis, err := peersWithAddresses(addrs)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		output := make([]string, len(pis))
 		for i, pi := range pis {
-			swrm.Backoff().Clear(pi.ID)
-
 			output[i] = "connect " + pi.ID.Pretty()
 
-			err := n.PeerHost.Connect(ctx, pi)
+			err := api.Swarm().Connect(req.Context, pi)
 			if err != nil {
-				res.SetError(fmt.Errorf("%s failure: %s", output[i], err), cmdkit.ErrNormal)
-				return
+				return fmt.Errorf("%s failure: %s", output[i], err)
 			}
 			output[i] += " success"
 		}
 
-		res.SetOutput(&stringList{output})
+		return cmds.EmitOnce(res, &stringList{output})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 	Type: stringList{},
 }
@@ -435,77 +412,33 @@ it will reconnect.
 	Arguments: []cmdkit.Argument{
 		cmdkit.StringArg("address", true, true, "Address of peer to disconnect from.").EnableStdin(),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		api, err := cmdenv.GetApi(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		addrs := req.Arguments()
-
-		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
-			return
-		}
-
-		iaddrs, err := parseAddresses(addrs)
+		iaddrs, err := parseAddresses(req.Arguments)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		output := make([]string, len(iaddrs))
 		for i, addr := range iaddrs {
-			taddr := addr.Transport()
 			output[i] = "disconnect " + addr.ID().Pretty()
 
-			found := false
-			conns := n.PeerHost.Network().ConnsToPeer(addr.ID())
-			for _, conn := range conns {
-				if !conn.RemoteMultiaddr().Equal(taddr) {
-					continue
-				}
-
-				if err := conn.Close(); err != nil {
-					output[i] += " failure: " + err.Error()
-				} else {
-					output[i] += " success"
-				}
-				found = true
-				break
-			}
-
-			if !found {
-				output[i] += " failure: conn not found"
+			if err := api.Swarm().Disconnect(req.Context, addr.Multiaddr()); err != nil {
+				output[i] += " failure: " + err.Error()
+			} else {
+				output[i] += " success"
 			}
 		}
-		res.SetOutput(&stringList{output})
+		return cmds.EmitOnce(res, &stringList{output})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 	Type: stringList{},
-}
-
-func stringListMarshaler(res cmds.Response) (io.Reader, error) {
-	v, err := unwrapOutput(res.Output())
-	if err != nil {
-		return nil, err
-	}
-
-	list, ok := v.(*stringList)
-	if !ok {
-		return nil, e.TypeErr(list, v)
-	}
-
-	buf := new(bytes.Buffer)
-	for _, s := range list.Strings {
-		buf.WriteString(s)
-		buf.WriteString("\n")
-	}
-
-	return buf, nil
 }
 
 // parseAddresses is a function that takes in a slice of string peer addresses
@@ -523,16 +456,27 @@ func parseAddresses(addrs []string) (iaddrs []iaddr.IPFSAddr, err error) {
 
 // peersWithAddresses is a function that takes in a slice of string peer addresses
 // (multiaddr + peerid) and returns a slice of properly constructed peers
-func peersWithAddresses(addrs []string) (pis []pstore.PeerInfo, err error) {
+func peersWithAddresses(addrs []string) ([]pstore.PeerInfo, error) {
 	iaddrs, err := parseAddresses(addrs)
 	if err != nil {
 		return nil, err
 	}
 
+	peers := make(map[peer.ID][]ma.Multiaddr, len(iaddrs))
 	for _, iaddr := range iaddrs {
+		id := iaddr.ID()
+		current, ok := peers[id]
+		if tpt := iaddr.Transport(); tpt != nil {
+			peers[id] = append(current, tpt)
+		} else if !ok {
+			peers[id] = nil
+		}
+	}
+	pis := make([]pstore.PeerInfo, 0, len(peers))
+	for id, maddrs := range peers {
 		pis = append(pis, pstore.PeerInfo{
-			ID:    iaddr.ID(),
-			Addrs: []ma.Multiaddr{iaddr.Transport()},
+			ID:    id,
+			Addrs: maddrs,
 		})
 	}
 	return pis, nil
@@ -561,37 +505,34 @@ Filters default to those specified under the "Swarm.AddrFilters" config key.
 		"add": swarmFiltersAddCmd,
 		"rm":  swarmFiltersRmCmd,
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrNormal)
-			return
+			return ErrNotOnline
 		}
 
-		snet, ok := n.PeerHost.Network().(*swarm.Network)
+		// FIXME(steb)
+		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
 		if !ok {
-			res.SetError(errors.New("failed to cast network to swarm network"), cmdkit.ErrNormal)
-			return
+			return errors.New("failed to cast network to swarm network")
 		}
 
 		var output []string
-		for _, f := range snet.Filters.Filters() {
+		for _, f := range swrm.Filters.Filters() {
 			s, err := mafilter.ConvertIPNet(f)
 			if err != nil {
-				res.SetError(err, cmdkit.ErrNormal)
-				return
+				return err
 			}
 			output = append(output, s)
 		}
-		res.SetOutput(&stringList{output})
+		return cmds.EmitOnce(res, &stringList{output})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 	Type: stringList{},
 }
@@ -608,62 +549,54 @@ add your filters to the ipfs config file.
 	Arguments: []cmdkit.Argument{
 		cmdkit.StringArg("address", true, true, "Multiaddr to filter.").EnableStdin(),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrNormal)
-			return
+			return ErrNotOnline
 		}
 
-		snet, ok := n.PeerHost.Network().(*swarm.Network)
+		// FIXME(steb)
+		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
 		if !ok {
-			res.SetError(errors.New("failed to cast network to swarm network"), cmdkit.ErrNormal)
-			return
+			return errors.New("failed to cast network to swarm network")
 		}
 
-		if len(req.Arguments()) == 0 {
-			res.SetError(errors.New("no filters to add"), cmdkit.ErrClient)
-			return
+		if len(req.Arguments) == 0 {
+			return errors.New("no filters to add")
 		}
 
-		r, err := fsrepo.Open(req.InvocContext().ConfigRoot)
+		r, err := fsrepo.Open(env.(*commands.Context).ConfigRoot)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 		defer r.Close()
 		cfg, err := r.Config()
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		for _, arg := range req.Arguments() {
+		for _, arg := range req.Arguments {
 			mask, err := mafilter.NewMask(arg)
 			if err != nil {
-				res.SetError(err, cmdkit.ErrNormal)
-				return
+				return err
 			}
 
-			snet.Filters.AddDialFilter(mask)
+			swrm.Filters.AddDialFilter(mask)
 		}
 
-		added, err := filtersAdd(r, cfg, req.Arguments())
+		added, err := filtersAdd(r, cfg, req.Arguments)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
-
+			return err
 		}
 
-		res.SetOutput(&stringList{added})
+		return cmds.EmitOnce(res, &stringList{added})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 	Type: stringList{},
 }
@@ -680,73 +613,63 @@ remove your filters from the ipfs config file.
 	Arguments: []cmdkit.Argument{
 		cmdkit.StringArg("address", true, true, "Multiaddr filter to remove.").EnableStdin(),
 	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		n, err := req.InvocContext().GetNode()
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
 		if n.PeerHost == nil {
-			res.SetError(errNotOnline, cmdkit.ErrNormal)
-			return
+			return ErrNotOnline
 		}
 
-		snet, ok := n.PeerHost.Network().(*swarm.Network)
+		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
 		if !ok {
-			res.SetError(errors.New("failed to cast network to swarm network"), cmdkit.ErrNormal)
-			return
+			return errors.New("failed to cast network to swarm network")
 		}
 
-		r, err := fsrepo.Open(req.InvocContext().ConfigRoot)
+		r, err := fsrepo.Open(env.(*commands.Context).ConfigRoot)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 		defer r.Close()
 		cfg, err := r.Config()
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		if req.Arguments()[0] == "all" || req.Arguments()[0] == "*" {
-			fs := snet.Filters.Filters()
+		if req.Arguments[0] == "all" || req.Arguments[0] == "*" {
+			fs := swrm.Filters.Filters()
 			for _, f := range fs {
-				snet.Filters.Remove(f)
+				swrm.Filters.Remove(f)
 			}
 
 			removed, err := filtersRemoveAll(r, cfg)
 			if err != nil {
-				res.SetError(err, cmdkit.ErrNormal)
-				return
+				return err
 			}
 
-			res.SetOutput(&stringList{removed})
-
-			return
+			return cmds.EmitOnce(res, &stringList{removed})
 		}
 
-		for _, arg := range req.Arguments() {
+		for _, arg := range req.Arguments {
 			mask, err := mafilter.NewMask(arg)
 			if err != nil {
-				res.SetError(err, cmdkit.ErrNormal)
-				return
+				return err
 			}
 
-			snet.Filters.Remove(mask)
+			swrm.Filters.Remove(mask)
 		}
 
-		removed, err := filtersRemove(r, cfg, req.Arguments())
+		removed, err := filtersRemove(r, cfg, req.Arguments)
 		if err != nil {
-			res.SetError(err, cmdkit.ErrNormal)
-			return
+			return err
 		}
 
-		res.SetOutput(&stringList{removed})
+		return cmds.EmitOnce(res, &stringList{removed})
 	},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: stringListMarshaler,
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeEncoder(stringListEncoder),
 	},
 	Type: stringList{},
 }

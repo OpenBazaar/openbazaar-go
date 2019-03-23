@@ -1,7 +1,7 @@
 package factory
 
 import (
-	wallet "github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )

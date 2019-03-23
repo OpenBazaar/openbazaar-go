@@ -1,0 +1,22 @@
+sudo: false
+
+
+language: go
+go:
+  - 1.11.x
+
+before_install:
+  - make deps
+
+script:
+  - bash <(curl -s https://raw.githubusercontent.com/ipfs/ci-helpers/master/travis-ci/run-standard-tests.sh)
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+cache:
+  directories:
+    - $GOPATH/src/gx
+
+notifications:
+  email: false

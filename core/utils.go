@@ -4,15 +4,17 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	util "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"math/big"
-	"runtime"
-	"strings"
+  "math/big"
 	"time"
+	"strings"
+
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	util "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+
+	
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -29,7 +31,7 @@ func EncodeCID(b []byte) (*cid.Cid, error) {
 		return nil, err
 	}
 	id := cid.NewCidV1(cid.Raw, *multihash)
-	return id, err
+	return &id, err
 }
 
 // EncodeMultihash - sha256 encode
@@ -159,14 +161,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 
 // NormalizeCurrencyCode standardizes the format for the given currency code
 func NormalizeCurrencyCode(currencyCode string) string {
-	var c, err = repo.NewCurrencyCode(currencyCode)
+	var c, err = repo.LoadCurrencyDefinitions().Lookup(currencyCode)
 	if err != nil {
-		log.Errorf("invalid currency code (%s), please report this bug: %s", currencyCode, err.Error())
-		var (
-			stack     = make([]byte, 1<<16)
-			stackSize = runtime.Stack(stack, false)
-		)
-		log.Debugf(string(stack[:stackSize-1]))
+		log.Errorf("invalid currency code (%s): %s", currencyCode, err.Error())
 		return ""
 	}
 	return c.String()

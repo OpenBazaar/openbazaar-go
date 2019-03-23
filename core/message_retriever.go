@@ -10,6 +10,7 @@ func (n *OpenBazaarNode) StartMessageRetriever() {
 	config := net.MRConfig{
 		Db:        n.Datastore,
 		IPFSNode:  n.IpfsNode,
+		DHT:       n.DHT,
 		BanManger: n.BanManager,
 		Service:   n.Service,
 		PrefixLen: 14,

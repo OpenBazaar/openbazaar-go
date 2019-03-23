@@ -19,7 +19,7 @@ func (Migration003) Up(repoPath string, dbPassword string, testnet bool) error {
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	cfg["RepublishInterval"] = "24h"
@@ -59,7 +59,7 @@ func (Migration003) Down(repoPath string, dbPassword string, testnet bool) error
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	delete(cfg, "RepublishInterval")

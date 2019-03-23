@@ -3,10 +3,10 @@ package legacy
 import (
 	"io"
 
-	"gx/ipfs/QmTjNRVt2fvaRFu93keEC7z5M1GS1iH6qZ9227htQioTUY/go-ipfs-cmds"
-
 	oldcmds "github.com/ipfs/go-ipfs/commands"
-	logging "gx/ipfs/QmRb5jh8z2E8hMGN2tkvs1yHynUanqnZ3UeKwgN1i9P1F8/go-log"
+
+	"gx/ipfs/QmSXUokcP4TJpFfqozT69AVAYRtzXVMUjzQVkYX41R9Svs/go-ipfs-cmds"
+	logging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log"
 )
 
 var log = logging.Logger("cmds/lgc")
@@ -29,17 +29,15 @@ func NewCommand(oldcmd *oldcmds.Command) *cmds.Command {
 	}
 
 	if oldcmd.Run != nil {
-		cmd.Run = func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) {
+		cmd.Run = func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
 			oldReq := &requestWrapper{req, OldContext(env)}
 			res := &fakeResponse{req: oldReq, re: re, wait: make(chan struct{})}
 
 			errCh := make(chan error)
 			go res.Send(errCh)
+
 			oldcmd.Run(oldReq, res)
-			err := <-errCh
-			if err != nil {
-				log.Error(err)
-			}
+			return <-errCh
 		}
 	}
 

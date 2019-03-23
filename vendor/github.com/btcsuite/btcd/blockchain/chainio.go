@@ -232,28 +232,59 @@ func dbFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 //      - 0xb2...ec: pubkey hash
 // -----------------------------------------------------------------------------
 
-// spentTxOut contains a spent transaction output and potentially additional
+// SpentTxOut contains a spent transaction output and potentially additional
 // contextual information such as whether or not it was contained in a coinbase
 // transaction, the version of the transaction it was contained in, and which
 // block height the containing transaction was included in.  As described in
 // the comments above, the additional contextual information will only be valid
 // when this spent txout is spending the last unspent output of the containing
 // transaction.
-type spentTxOut struct {
-	amount     int64  // The amount of the output.
-	pkScript   []byte // The public key script for the output.
-	height     int32  // Height of the the block containing the creating tx.
-	isCoinBase bool   // Whether creating tx is a coinbase.
+type SpentTxOut struct {
+	// Amount is the amount of the output.
+	Amount int64
+
+	// PkScipt is the the public key script for the output.
+	PkScript []byte
+
+	// Height is the height of the the block containing the creating tx.
+	Height int32
+
+	// Denotes if the creating tx is a coinbase.
+	IsCoinBase bool
+}
+
+// FetchSpendJournal attempts to retrieve the spend journal, or the set of
+// outputs spent for the target block. This provides a view of all the outputs
+// that will be consumed once the target block is connected to the end of the
+// main chain.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) FetchSpendJournal(targetBlock *btcutil.Block) ([]SpentTxOut, error) {
+	b.chainLock.RLock()
+	defer b.chainLock.RUnlock()
+
+	var spendEntries []SpentTxOut
+	err := b.db.View(func(dbTx database.Tx) error {
+		var err error
+
+		spendEntries, err = dbFetchSpendJournalEntry(dbTx, targetBlock)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return spendEntries, nil
 }
 
 // spentTxOutHeaderCode returns the calculated header code to be used when
 // serializing the provided stxo entry.
-func spentTxOutHeaderCode(stxo *spentTxOut) uint64 {
+func spentTxOutHeaderCode(stxo *SpentTxOut) uint64 {
 	// As described in the serialization format comments, the header code
 	// encodes the height shifted over one bit and the coinbase flag in the
 	// lowest bit.
-	headerCode := uint64(stxo.height) << 1
-	if stxo.isCoinBase {
+	headerCode := uint64(stxo.Height) << 1
+	if stxo.IsCoinBase {
 		headerCode |= 0x01
 	}
 
@@ -262,38 +293,38 @@ func spentTxOutHeaderCode(stxo *spentTxOut) uint64 {
 
 // spentTxOutSerializeSize returns the number of bytes it would take to
 // serialize the passed stxo according to the format described above.
-func spentTxOutSerializeSize(stxo *spentTxOut) int {
+func spentTxOutSerializeSize(stxo *SpentTxOut) int {
 	size := serializeSizeVLQ(spentTxOutHeaderCode(stxo))
-	if stxo.height > 0 {
+	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
 		// containing transaction version when the height was non-zero,
 		// so this is required for backwards compat.
 		size += serializeSizeVLQ(0)
 	}
-	return size + compressedTxOutSize(uint64(stxo.amount), stxo.pkScript)
+	return size + compressedTxOutSize(uint64(stxo.Amount), stxo.PkScript)
 }
 
 // putSpentTxOut serializes the passed stxo according to the format described
 // above directly into the passed target byte slice.  The target byte slice must
 // be at least large enough to handle the number of bytes returned by the
-// spentTxOutSerializeSize function or it will panic.
-func putSpentTxOut(target []byte, stxo *spentTxOut) int {
+// SpentTxOutSerializeSize function or it will panic.
+func putSpentTxOut(target []byte, stxo *SpentTxOut) int {
 	headerCode := spentTxOutHeaderCode(stxo)
 	offset := putVLQ(target, headerCode)
-	if stxo.height > 0 {
+	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
 		// containing transaction version when the height was non-zero,
 		// so this is required for backwards compat.
 		offset += putVLQ(target[offset:], 0)
 	}
-	return offset + putCompressedTxOut(target[offset:], uint64(stxo.amount),
-		stxo.pkScript)
+	return offset + putCompressedTxOut(target[offset:], uint64(stxo.Amount),
+		stxo.PkScript)
 }
 
 // decodeSpentTxOut decodes the passed serialized stxo entry, possibly followed
 // by other data, into the passed stxo struct.  It returns the number of bytes
 // read.
-func decodeSpentTxOut(serialized []byte, stxo *spentTxOut) (int, error) {
+func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 	// Ensure there are bytes to decode.
 	if len(serialized) == 0 {
 		return 0, errDeserialize("no serialized bytes")
@@ -310,9 +341,9 @@ func decodeSpentTxOut(serialized []byte, stxo *spentTxOut) (int, error) {
 	//
 	// Bit 0 indicates containing transaction is a coinbase.
 	// Bits 1-x encode height of containing transaction.
-	stxo.isCoinBase = code&0x01 != 0
-	stxo.height = int32(code >> 1)
-	if stxo.height > 0 {
+	stxo.IsCoinBase = code&0x01 != 0
+	stxo.Height = int32(code >> 1)
+	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
 		// containing transaction version when the height was non-zero,
 		// so this is required for backwards compat.
@@ -332,8 +363,8 @@ func decodeSpentTxOut(serialized []byte, stxo *spentTxOut) (int, error) {
 		return offset, errDeserialize(fmt.Sprintf("unable to decode "+
 			"txout: %v", err))
 	}
-	stxo.amount = int64(amount)
-	stxo.pkScript = pkScript
+	stxo.Amount = int64(amount)
+	stxo.PkScript = pkScript
 	return offset, nil
 }
 
@@ -343,7 +374,7 @@ func decodeSpentTxOut(serialized []byte, stxo *spentTxOut) (int, error) {
 // Since the serialization format is not self describing, as noted in the
 // format comments, this function also requires the transactions that spend the
 // txouts.
-func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]spentTxOut, error) {
+func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]SpentTxOut, error) {
 	// Calculate the total number of stxos.
 	var numStxos int
 	for _, tx := range txns {
@@ -368,7 +399,7 @@ func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]spen
 	// reverse order to match the serialization order.
 	stxoIdx := numStxos - 1
 	offset := 0
-	stxos := make([]spentTxOut, numStxos)
+	stxos := make([]SpentTxOut, numStxos)
 	for txIdx := len(txns) - 1; txIdx > -1; txIdx-- {
 		tx := txns[txIdx]
 
@@ -394,7 +425,7 @@ func deserializeSpendJournalEntry(serialized []byte, txns []*wire.MsgTx) ([]spen
 
 // serializeSpendJournalEntry serializes all of the passed spent txouts into a
 // single byte slice according to the format described in detail above.
-func serializeSpendJournalEntry(stxos []spentTxOut) []byte {
+func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 	if len(stxos) == 0 {
 		return nil
 	}
@@ -422,7 +453,7 @@ func serializeSpendJournalEntry(stxos []spentTxOut) []byte {
 // NOTE: Legacy entries will not have the coinbase flag or height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
-func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]spentTxOut, error) {
+func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(spendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -450,7 +481,7 @@ func dbFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]spentTx
 // spend journal entry for the given block hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos []spentTxOut) error {
+func dbPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos []SpentTxOut) error {
 	spendBucket := dbTx.Metadata().Bucket(spendJournalBucketName)
 	serialized := serializeSpendJournalEntry(stxos)
 	return spendBucket.Put(blockHash[:], serialized)
@@ -1097,7 +1128,7 @@ func (b *BlockChain) initChainState() error {
 	}
 
 	// Attempt to load the chain state from the database.
-	return b.db.View(func(dbTx database.Tx) error {
+	err = b.db.View(func(dbTx database.Tx) error {
 		// Fetch the stored chain state from the database metadata.
 		// When it doesn't exist, it means the database hasn't been
 		// initialized for use with chain yet, so break out now to allow
@@ -1190,6 +1221,25 @@ func (b *BlockChain) initChainState() error {
 			return err
 		}
 
+		// As a final consistency check, we'll run through all the
+		// nodes which are ancestors of the current chain tip, and mark
+		// them as valid if they aren't already marked as such.  This
+		// is a safe assumption as all the block before the current tip
+		// are valid by definition.
+		for iterNode := tip; iterNode != nil; iterNode = iterNode.parent {
+			// If this isn't already marked as valid in the index, then
+			// we'll mark it as valid now to ensure consistency once
+			// we're up and running.
+			if !iterNode.status.KnownValid() {
+				log.Infof("Block %v (height=%v) ancestor of "+
+					"chain tip not marked as valid, "+
+					"upgrading to valid for consistency",
+					iterNode.hash, iterNode.height)
+
+				b.index.SetStatusFlags(iterNode, statusValid)
+			}
+		}
+
 		// Initialize the state related to the best block.
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(GetBlockWeight(btcutil.NewBlock(&block)))
@@ -1199,6 +1249,14 @@ func (b *BlockChain) initChainState() error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// As we might have updated the index after it was loaded, we'll
+	// attempt to flush the index to the DB. This will only result in a
+	// write if the elements are dirty, so it'll usually be a noop.
+	return b.index.flushToDB()
 }
 
 // deserializeBlockRow parses a value in the block index bucket into a block

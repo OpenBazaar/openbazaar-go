@@ -9,17 +9,18 @@ import (
 	"sync"
 	"time"
 
-	config "github.com/ipfs/go-ipfs/repo/config"
-	math2 "github.com/ipfs/go-ipfs/thirdparty/math2"
-	lgbl "gx/ipfs/Qmf9JgVLz46pxPXwG2eWSJpkqVCcjD4rp7zCRi2KP6GTNB/go-libp2p-loggables"
+	lgbl "gx/ipfs/QmVrDtvvQCUeMZaY9UFkae6c85kdQ1GvVEhPrjPTdjxRLv/go-libp2p-loggables"
 
-	host "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
+	math2 "github.com/ipfs/go-ipfs/thirdparty/math2"
+
+	config "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	procctx "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context"
 	periodicproc "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/periodic"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	inet "gx/ipfs/QmXuRkCR7BNQa9uqfpTiFWsTQLzmTWYg91Ja1w95gnqb6u/go-libp2p-net"
+	host "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
 )
 
 // ErrNotEnoughBootstrapPeers signals that we do not have enough bootstrap
@@ -53,8 +54,6 @@ type BootstrapConfig struct {
 	BootstrapPeers func() []pstore.PeerInfo
 }
 
-var bootstrapOnce sync.Once
-
 // DefaultBootstrapConfig specifies default sane parameters for bootstrapping.
 var DefaultBootstrapConfig = BootstrapConfig{
 	MinPeerThreshold:  4,
@@ -77,8 +76,7 @@ func BootstrapConfigWithPeers(pis []pstore.PeerInfo) BootstrapConfig {
 func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 
 	// make a signal to wait for one bootstrap round to complete.
-	//doneWithRound := make(chan struct{})
-	ch := make(chan struct{})
+	doneWithRound := make(chan struct{})
 
 	// the periodic bootstrap function -- the connection supervisor
 	periodic := func(worker goprocess.Process) {
@@ -90,29 +88,29 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 			log.Debugf("%s bootstrap error: %s", n.Identity, err)
 		}
 
-		bootstrapOnce.Do(func() { close(ch) })
+		<-doneWithRound
 	}
 
 	// kick off the node's periodic bootstrapping
 	proc := periodicproc.Tick(cfg.Period, periodic)
 	proc.Go(periodic) // run one right now.
 
+	// kick off Routing.Bootstrap
 	go func() {
-		<-ch
-		// kick off Routing.Bootstrap
+		doneWithRound <- struct{}{}
+		close(doneWithRound) // it no longer blocks periodic
 		if n.Routing != nil {
 			ctx := procctx.OnClosingContext(proc)
-			n.Routing.Bootstrap(ctx)
+			if err := n.Routing.Bootstrap(ctx); err != nil {
+				proc.Close()
+				log.Error(err)
+			}
 		}
 	}()
-
-	//doneWithRound <- struct{}{}
-	//close(doneWithRound) // it no longer blocks periodic
 	return proc, nil
 }
 
 func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) error {
-
 	ctx, cancel := context.WithTimeout(ctx, cfg.ConnectionTimeout)
 	defer cancel()
 	id := host.ID()
@@ -120,7 +118,6 @@ func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) er
 	// get bootstrap peers from config. retrieving them here makes
 	// sure we remain observant of changes to client configuration.
 	peers := cfg.BootstrapPeers()
-
 	// determine how many bootstrap connections to open
 	connected := host.Network().Peers()
 	if len(connected) >= cfg.MinPeerThreshold {
@@ -142,6 +139,11 @@ func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) er
 	// if connected to all bootstrap peer candidates, exit
 	if len(notConnected) < 1 {
 		log.Debugf("%s no more bootstrap peers to create %d connections", id, numToDial)
+		if len(peers) == 0 {
+			// We *need* to bootstrap but we have no bootstrap peers
+			// configured *at all*, inform the user.
+			log.Error("no bootstrap nodes configured: go-ipfs may have difficulty connecting to the network")
+		}
 		return ErrNotEnoughBootstrapPeers
 	}
 
@@ -161,7 +163,6 @@ func bootstrapConnect(ctx context.Context, ph host.Host, peers []pstore.PeerInfo
 	errs := make(chan error, len(peers))
 	var wg sync.WaitGroup
 	for _, p := range peers {
-
 		// performed asynchronously because when performed synchronously, if
 		// one `Connect` call hangs, subsequent calls are more likely to
 		// fail/abort due to an expiring context.

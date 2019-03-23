@@ -66,7 +66,7 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error {
-	paymentCoinCode, err := repo.NewCurrencyCode(paymentCoin)
+	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
 	if err != nil {
 		return fmt.Errorf("verifying paymentCoin: %s", err.Error())
 	}
@@ -75,7 +75,7 @@ func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, clai
 		Claim:            claim,
 		IsBuyerInitiated: buyerOpened,
 		OrderState:       state,
-		PaymentCoin:      paymentCoinCode,
+		PaymentCoin:      def.CurrencyCode(),
 		CoinType:         coinType,
 		Timestamp:        time.Now(),
 	}
@@ -176,7 +176,7 @@ func (c *CasesDB) MarkAsUnread(orderID string) error {
 
 func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error {
 	if resolution == nil {
-		return errors.New("Dispute resolution should not be nil")
+		return errors.New("dispute resolution should not be nil")
 	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -418,9 +418,9 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		return nil, err
 	}
 
-	paymentCoinCode, err := repo.NewCurrencyCode(paymentCoin)
+	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 
 	if isBuyerInitiated == 1 {
@@ -479,7 +479,7 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		CaseID:              caseID,
 		IsBuyerInitiated:    buyerInitiated,
 		OrderState:          pb.OrderState(stateInt),
-		PaymentCoin:         paymentCoinCode,
+		PaymentCoin:         def.CurrencyCode(),
 		Timestamp:           time.Unix(createdAt, 0),
 		VendorContract:      vrc,
 		VendorOutpoints:     toPointer(vendorOutpointsOut),

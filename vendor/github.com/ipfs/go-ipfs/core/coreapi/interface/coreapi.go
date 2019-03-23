@@ -5,7 +5,7 @@ package iface
 import (
 	"context"
 
-	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
+	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"
 )
 
 // CoreAPI defines an unified interface to IPFS for Go programs
@@ -31,8 +31,17 @@ type CoreAPI interface {
 	// ObjectAPI returns an implementation of Object API
 	Object() ObjectAPI
 
+	// Dht returns an implementation of Dht API
+	Dht() DhtAPI
+
+	// Swarm returns an implementation of Swarm API
+	Swarm() SwarmAPI
+
+	// PubSub returns an implementation of PubSub API
+	PubSub() PubSubAPI
+
 	// ResolvePath resolves the path using Unixfs resolver
-	ResolvePath(context.Context, Path) (Path, error)
+	ResolvePath(context.Context, Path) (ResolvedPath, error)
 
 	// ResolveNode resolves the path (if not resolved already) using Unixfs
 	// resolver, gets and returns the resolved Node

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package bitswap.message.pb;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message Message {
+
+  message Wantlist {
+
+    message Entry {
+			bytes block = 1;		// the block cid (cidV0 in bitswap 1.0.0, cidV1 in bitswap 1.1.0)
+			int32 priority = 2;	// the priority (normalized). default to 1
+			bool cancel = 3;		// whether this revokes an entry
+		}
+
+    repeated Entry entries = 1 [(gogoproto.nullable) = false];	// a list of wantlist entries
+    bool full = 2;							// whether this is the full wantlist. default to false
+  }
+
+  message Block {
+    bytes prefix = 1;		// CID prefix (cid version, multicodec and multihash prefix (type + length)
+    bytes data = 2;
+  }
+
+  Wantlist wantlist = 1 [(gogoproto.nullable) = false];
+  repeated bytes blocks = 2;		// used to send Blocks in bitswap 1.0.0
+  repeated Block payload = 3 [(gogoproto.nullable) = false];		// used to send Blocks in bitswap 1.1.0
+}

@@ -1,5 +1,4 @@
-// +build linux darwin freebsd netbsd openbsd
-// +build !nofuse
+// +build !windows,!nofuse
 
 package commands
 
@@ -11,9 +10,9 @@ import (
 	cmds "github.com/ipfs/go-ipfs/commands"
 	e "github.com/ipfs/go-ipfs/core/commands/e"
 	nodeMount "github.com/ipfs/go-ipfs/fuse/node"
-	config "github.com/ipfs/go-ipfs/repo/config"
 
-	"gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
+	config "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	"gx/ipfs/Qmde5VP1qUkyQXKCfmEUA7bP64V2HAptbJ7phuPp7jXWwg/go-ipfs-cmdkit"
 )
 
 var MountCmd = &cmds.Command{
@@ -92,7 +91,7 @@ baz
 
 		// error if we aren't running node in online mode
 		if node.LocalMode() {
-			res.SetError(errNotOnline, cmdkit.ErrClient)
+			res.SetError(ErrNotOnline, cmdkit.ErrClient)
 			return
 		}
 

@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	blocks "gx/ipfs/Qmej7nf81hi2x2tvjRBF3mcp74sQyuDH4VMYDGd1YtXjb2/go-block-format"
-
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	blocks "gx/ipfs/QmRcHuYzAyswytBuMF78rj3LTChYszomRFXNg4685ZN1WM/go-block-format"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -253,7 +253,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	if err != nil {
 		log.Errorf("handleOfflineRelayError: %s", err.Error())
 	}
-	err = service.node.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix+id.Pretty())), env.Pubkey)
+	err = service.node.IpfsNode.Repo.Datastore().Put(datastore.NewKey(core.KeyCachePrefix+id.Pretty()), env.Pubkey)
 	if err != nil {
 		log.Errorf("handleOfflineRelayError: %s", err.Error())
 	}
@@ -328,19 +328,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
-		fmt.Println("in hanle order .. method = addr_req")
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		fmt.Println("seller calc total : ", total.String())
-		fmt.Println("buyer sent val : ", contract.BuyerOrder.Payment.Amount.Value)
-
 		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
-		fmt.Println("buyer val again : ", n.String())
 		if !service.node.ValidatePaymentAmount(total, *n) {
-			fmt.Println("this should not be printed....")
-			return errorResponse("Calculated a different payment amount"), errors.New("Calculated different payment amount")
+			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true, false)
 		if err != nil {
@@ -1631,9 +1625,9 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// peerID in the vendorListing to the node peerID
 		if !(contract.VendorListings[0].VendorID.PeerID ==
 			service.node.IpfsNode.Identity.Pretty()) {
-			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s, nodePeerID: %s",
-				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID, service.node.IpfsNode.Identity.Pretty())
-			return nil, errors.New("the seller details dont match")
+			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s",
+				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
+			return nil, errors.New("mismatched peer id")
 		}
 	}
 

@@ -28,9 +28,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case strings.HasPrefix(path, "/ob/listing"):
 		i.POSTListing(w, r)
 	case strings.HasPrefix(path, "/ob/follow"):
-		i.POSTFollow(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTFollow)
 	case strings.HasPrefix(path, "/ob/unfollow"):
-		i.POSTUnfollow(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTUnfollow)
 	case strings.HasPrefix(path, "/ob/profile"):
 		i.POSTProfile(w, r)
 	case strings.HasPrefix(path, "/ob/images"):
@@ -46,35 +46,39 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case strings.HasPrefix(path, "/ob/header"):
 		i.POSTHeader(w, r)
 	case strings.HasPrefix(path, "/ob/orderconfirmation"):
-		i.POSTOrderConfirmation(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTOrderConfirmation)
 	case strings.HasPrefix(path, "/ob/ordercancel"):
-		i.POSTOrderCancel(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTOrderCancel)
 	case strings.HasPrefix(path, "/ob/orderfulfillment"):
-		i.POSTOrderFulfill(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTOrderFulfill)
 	case strings.HasPrefix(path, "/ob/ordercompletion"):
-		i.POSTOrderComplete(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTOrderComplete)
 	case strings.HasPrefix(path, "/ob/orderspend"):
-		i.POSTSpendCoinsForOrder(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTSpendCoinsForOrder)
 	case strings.HasPrefix(path, "/ob/refund"):
-		i.POSTRefund(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTRefund)
 	case strings.HasPrefix(path, "/wallet/resyncblockchain"):
 		i.POSTResyncBlockchain(w, r)
 	case strings.HasPrefix(path, "/wallet/bumpfee"):
 		i.POSTBumpFee(w, r)
 	case strings.HasPrefix(path, "/ob/opendispute"):
-		i.POSTOpenDispute(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTOpenDispute)
 	case strings.HasPrefix(path, "/ob/closedispute"):
-		i.POSTCloseDispute(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTCloseDispute)
 	case strings.HasPrefix(path, "/ob/releasefunds"):
-		i.POSTReleaseFunds(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTReleaseFunds)
 	case strings.HasPrefix(path, "/ob/releaseescrow"):
-		i.POSTReleaseEscrow(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTReleaseEscrow)
 	case strings.HasPrefix(path, "/ob/chat"):
-		i.POSTChat(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTChat)
+	case strings.HasPrefix(path, "/ob/signmessage"):
+		i.POSTSignMessage(w, r)
+	case strings.HasPrefix(path, "/ob/verifymessage"):
+		i.POSTVerifyMessage(w, r)
 	case strings.HasPrefix(path, "/ob/groupchat"):
-		i.POSTGroupChat(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTGroupChat)
 	case strings.HasPrefix(path, "/ob/markchatasread"):
-		i.POSTMarkChatAsRead(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTMarkChatAsRead)
 	case strings.HasPrefix(path, "/ob/marknotificationasread"):
 		i.POSTMarkNotificationAsRead(w, r)
 	case strings.HasPrefix(path, "/ob/marknotificationsasread"):
@@ -94,7 +98,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case strings.HasPrefix(path, "/ob/purchases"):
 		i.POSTPurchases(w, r)
 	case strings.HasPrefix(path, "/ob/purchase"):
-		i.POSTPurchase(w, r)
+		blockingStartupMiddleware(i, w, r, i.POSTPurchase)
 	case strings.HasPrefix(path, "/ob/cases"):
 		i.POSTCases(w, r)
 	case strings.HasPrefix(path, "/ob/publish"):
@@ -107,6 +111,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTTestEmailNotifications(w, r)
 	case strings.HasPrefix(path, "/ob/post"):
 		i.POSTPost(w, r)
+	case strings.HasPrefix(path, "/ob/bulkupdatecurrency"):
+		i.POSTBulkUpdateCurrency(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -187,8 +193,6 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETHealthCheck(w, r)
 	case strings.HasPrefix(path, "/wallet/status"):
 		i.GETWalletStatus(w, r)
-	case strings.HasPrefix(path, "/ob/resolve"):
-		i.GETResolve(w, r)
 	case strings.HasPrefix(path, "/ob/ipns"):
 		i.GETIPNS(w, r)
 	case strings.HasPrefix(path, "/ob/peerinfo"):
@@ -251,4 +255,9 @@ func gatewayAllowedPath(path, method string) bool {
 		}
 	}
 	return false
+}
+
+func blockingStartupMiddleware(i *jsonAPIHandler, w http.ResponseWriter, r *http.Request, requestFunc func(w http.ResponseWriter, r *http.Request)) {
+	i.node.Service.WaitForReady()
+	requestFunc(w, r)
 }

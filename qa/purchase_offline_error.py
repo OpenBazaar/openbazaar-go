@@ -12,8 +12,8 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
         self.num_nodes = 3
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
 
         # post profile for alice
         with open('testdata/profile.json') as profile_file:
@@ -63,7 +63,7 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(4)
+        time.sleep(30)
 
         # bob send order
         with open('testdata/order_direct.json') as order_file:

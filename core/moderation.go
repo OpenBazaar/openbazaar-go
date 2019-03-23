@@ -3,8 +3,9 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -50,10 +51,10 @@ func (n *OpenBazaarNode) IsModerator() bool {
 func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	if moderator != nil {
 		if moderator.Fee == nil {
-			return errors.New("Moderator must have a fee set")
+			return errors.New("moderator must have a fee set")
 		}
 		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
-			return errors.New("Fixed fee must be set when using a fixed fee type")
+			return errors.New("fixed fee must be set when using a fixed fee type")
 		}
 
 		// Update profile
@@ -95,14 +96,14 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		go ipfs.PublishPointer(n.IpfsNode, ctx, pointer)
+		go ipfs.PublishPointer(n.DHT, ctx, pointer)
 		pointer.Purpose = ipfs.MODERATOR
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err
 		}
 	} else {
-		go ipfs.PublishPointer(n.IpfsNode, ctx, pointers[0])
+		go ipfs.PublishPointer(n.DHT, ctx, pointers[0])
 	}
 	return nil
 }
@@ -273,32 +274,12 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 }
 
 // NotifyModerators - notify moderators(peers)
-func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {
-	settings, err := n.Datastore.Settings().Get()
-	if err != nil {
-		return err
-	}
-	currentMods := make(map[string]bool)
-	if settings.StoreModerators != nil {
-		for _, mod := range *settings.StoreModerators {
-			currentMods[mod] = true
-		}
-	}
-	var addedMods []string
-	for _, mod := range moderators {
-		if !currentMods[mod] {
-			addedMods = append(addedMods, mod)
-		} else {
-			delete(currentMods, mod)
-		}
-	}
-
-	removedMods := currentMods
-
+func (n *OpenBazaarNode) NotifyModerators(addedMods, removedMods []string) error {
+	n.Service.WaitForReady()
 	for _, mod := range addedMods {
 		go n.SendModeratorAdd(mod)
 	}
-	for mod := range removedMods {
+	for _, mod := range removedMods {
 		go n.SendModeratorRemove(mod)
 	}
 	return nil

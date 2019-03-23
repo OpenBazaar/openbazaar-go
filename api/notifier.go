@@ -61,7 +61,7 @@ func (m *notificationManager) sendNotification(n repo.Notifier) {
 // TODO: should be extended to include new notifiers in the list
 func (m *notificationManager) getNotifiers() []notifier {
 	settings, err := m.node.Datastore.Settings().Get()
-	notifiers := []notifier{}
+	var notifiers []notifier
 	if err != nil {
 		return notifiers
 	}

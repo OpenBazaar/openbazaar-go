@@ -153,7 +153,7 @@ loop:
 	}
 
 	for topic, chans := range reg.topics {
-		for ch, _ := range chans {
+		for ch := range chans {
 			reg.remove(topic, ch)
 		}
 	}

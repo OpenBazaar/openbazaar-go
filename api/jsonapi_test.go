@@ -137,6 +137,37 @@ func TestModerator(t *testing.T) {
 	})
 }
 
+func TestMessageSignVerify(t *testing.T) {
+	const (
+		signMessageJSON = `{
+	"content": "test"
+}`
+		verifyMessageJSON = `{
+	"content": "test",
+	"signature": "fac9dec1ce872c931bda1af85f9107e8733b42ed6401bc989a84b6b53ad263290d9bd9d470f046024884f502ecb7af50de2fea11268e82dcb1c72d50753c330a",
+	"pubkey": "080112203f94c7707af68ede9ddd24a16edd813146550df565eda8fb81114476ccfe6b78",
+	"peerId": "QmRmisSghsxUMrTQZ5vmqFroxxuCXJqXwXoTc21q5cefmM"
+}`
+	)
+
+	runAPITests(t, apiTests{
+		{"POST", "/ob/signmessage", signMessageJSON, 200, anyResponseJSON},
+		{"POST", "/ob/verifymessage", verifyMessageJSON, 200, anyResponseJSON},
+	})
+}
+
+func TestMessageSignsURLChars(t *testing.T) {
+	const (
+		validateSignWorksWithURLChars = `{
+		"content":"QmdQBWA75xQSMZpTibQ2G83enNdriz2v14tetGvNrpr5KB/this-is-a-social-post"
+	}`
+	)
+
+	runAPITests(t, apiTests{
+		{"POST", "/ob/signmessage", validateSignWorksWithURLChars, 200, anyResponseJSON},
+	})
+}
+
 func TestListingsAcceptedCurrencies(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
@@ -161,9 +192,9 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	respObj := []struct {
+	var respObj []struct {
 		AcceptedCurrencies []string `json:"acceptedCurrencies"`
-	}{}
+	}
 	err = json.Unmarshal(respBody, &respObj)
 	if err != nil {
 		t.Fatal(err)
@@ -281,6 +312,9 @@ func TestListings(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", updatedListingJSON, 404, NotFoundJSON("Listing")},
 		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
+
+		// Bulk update currency in listings
+		{"POST", "/ob/bulkupdatecurrency", bulkUpdateCurrencyJSON, 200, `{"success": "true"}`},
 	})
 }
 

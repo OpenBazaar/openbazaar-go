@@ -74,10 +74,11 @@ func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64
 func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
 	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
 
-	hash, err := CalcSignatureHash(subScript, hashType, tx, idx)
+	parsedScript, err := parseScript(subScript)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot parse output script: %v", err)
 	}
+	hash := calcSignatureHash(parsedScript, hashType, tx, idx)
 	signature, err := key.Sign(hash)
 	if err != nil {
 		return nil, fmt.Errorf("cannot sign tx input: %s", err)

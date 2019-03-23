@@ -588,7 +588,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(hash.Hex()[2:])
+		h, err = chainhash.NewHashFromStr(strings.TrimPrefix(hash.Hex(), "0x"))
 	}
 	return h, err
 }
@@ -605,7 +605,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 
 	if withInput {
 		input = wi.TransactionInput{
-			OutpointHash:  []byte(txID[:32]),
+			OutpointHash:  []byte(strings.TrimPrefix(txID, "0x")), //[]byte(txID[:32]),
 			OutpointIndex: 1,
 			LinkedAddress: toAddress,
 			Value:         value,
@@ -1068,7 +1068,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
 
 	//var buf bytes.Buffer
-	fmt.Println("in multisgin")
 
 	payouts := []wi.TransactionOutput{}
 	//delta1 := int64(0)
@@ -1102,7 +1101,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	referenceID := ""
 
 	for i, out := range outs {
-		fmt.Println("out : ", out)
 		if out.Address.String() != rScript.Moderator.Hex() {
 			indx = append(indx, i)
 		}
@@ -1114,7 +1112,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 		referenceID = out.OrderID
 		payouts = append(payouts, p)
-		fmt.Println("referenceId : ", referenceID)
 	}
 
 	if len(indx) > 0 {
@@ -1130,9 +1127,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	sort.Slice(payouts, func(i, j int) bool {
 		return strings.Compare(payouts[i].Address.String(), payouts[j].Address.String()) == -1
 	})
-
-	fmt.Println("payouts in multisign ... ")
-	fmt.Println(payouts)
 
 	payables := make(map[string]big.Int)
 	addresses := []string{}
@@ -1239,7 +1233,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			fmt.Println("txn successfull")
 			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, *totalVal, time.Now(), true))
 		} else {
 			// there was some error processing this txn

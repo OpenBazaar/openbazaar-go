@@ -12,8 +12,8 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         self.num_nodes = 3
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
 
         # post profile for alice
         with open('testdata/profile.json') as profile_file:

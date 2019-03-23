@@ -5,12 +5,12 @@ import (
 	"path"
 	"runtime"
 
+	version "github.com/ipfs/go-ipfs"
 	cmds "github.com/ipfs/go-ipfs/commands"
-	config "github.com/ipfs/go-ipfs/repo/config"
 
-	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
 	sysi "gx/ipfs/QmZRjKbHa6DenStpQJFiaPcEwkZqrx7TH6xTf342LDU3qM/go-sysinfo"
-	"gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
+	manet "gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	"gx/ipfs/Qmde5VP1qUkyQXKCfmEUA7bP64V2HAptbJ7phuPp7jXWwg/go-ipfs-cmdkit"
 )
 
 var sysDiagCmd = &cmds.Command{
@@ -57,8 +57,8 @@ Prints out information about your computer to aid in easier debugging.
 			return
 		}
 
-		info["ipfs_version"] = config.CurrentVersionNumber
-		info["ipfs_commit"] = config.CurrentCommit
+		info["ipfs_version"] = version.CurrentVersionNumber
+		info["ipfs_commit"] = version.CurrentCommit
 		res.SetOutput(info)
 	},
 }

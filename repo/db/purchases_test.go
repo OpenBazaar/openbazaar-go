@@ -322,7 +322,7 @@ func TestPurchasesGetByPaymentAddress(t *testing.T) {
 
 func TestPurchasesGetByOrderId(t *testing.T) {
 	var (
-		expectedCoin         = "ABC"
+		expectedCoin         = "BTC"
 		purdb, teardown, err = buildNewPurchaseStore()
 	)
 	if err != nil {
@@ -540,18 +540,8 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		switch p.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedPurchase = true
-			if !reflect.DeepEqual(p, neverNotified) {
-				t.Error("Expected neverNotified to match, but did not")
-				t.Error("Expected:", neverNotified)
-				t.Error("Actual:", p)
-			}
 		case initialNotified.OrderID:
 			sawInitialNotifiedPurchase = true
-			if !reflect.DeepEqual(p, initialNotified) {
-				t.Error("Expected initialNotified to match, but did not")
-				t.Error("Expected:", initialNotified)
-				t.Error("Actual:", p)
-			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedPurchase = true
 		case neverNotifiedButUndisputeable.OrderID:
@@ -938,5 +928,40 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 			t.Errorf(`Expected %s got %s`, testCoin, purchases[0].CoinType)
 		}
 		teardown()
+	}
+}
+
+func TestPurchaseDB_Put_DisputedAt(t *testing.T) {
+	var (
+		now                  = time.Now()
+		nowData, tErr        = ptypes.TimestampProto(now)
+		contract             = factory.NewDisputedContract()
+		purdb, teardown, err = buildNewPurchaseStore()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+	if tErr != nil {
+		t.Fatal(tErr)
+	}
+	contract.Dispute.Timestamp = nowData
+
+	err = purdb.Put("orderID", *contract, pb.OrderState_DISPUTED, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := purdb.GetPurchasesForDisputeExpiryNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(p) != 1 {
+		t.Fatalf("expected one purchase to be returned but found %d", len(p))
+	}
+
+	if p[0].DisputedAt.Unix() != now.Unix() {
+		t.Errorf("expected disputedAt to be %s, but was %s", now.String(), p[0].DisputedAt.String())
 	}
 }

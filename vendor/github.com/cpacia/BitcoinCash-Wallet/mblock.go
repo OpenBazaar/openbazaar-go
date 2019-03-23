@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"errors"
+
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )

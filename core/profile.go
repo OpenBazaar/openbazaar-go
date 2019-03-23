@@ -6,18 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"time"
 
+	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
-	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 // KeyCachePrefix - cache prefix for public key
@@ -138,11 +141,11 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	if pok && sok {
 		patchBool, ok := patchMod.(bool)
 		if !ok {
-			return errors.New("Invalid moderator type")
+			return errors.New("invalid moderator type")
 		}
 		storedBool, ok := storedMod.(bool)
 		if !ok {
-			return errors.New("Invalid moderator type")
+			return errors.New("invalid moderator type")
 		}
 		if patchBool && patchBool != storedBool {
 			if err := n.SetSelfAsModerator(nil); err != nil {
@@ -265,70 +268,70 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 // ValidateProfile - validate fetched profile
 func ValidateProfile(profile *pb.Profile) error {
 	if strings.Contains(profile.Handle, "@") {
-		return errors.New("Handle should not contain @")
+		return errors.New("handle should not contain @")
 	}
 	if len(profile.Handle) > WordMaxCharacters {
-		return fmt.Errorf("Handle character length is greater than the max of %d", WordMaxCharacters)
+		return fmt.Errorf("handle character length is greater than the max of %d", WordMaxCharacters)
 	}
 	if len(profile.Name) == 0 {
-		return errors.New("Profile name not set")
+		return errors.New("profile name not set")
 	}
 	if len(profile.Name) > WordMaxCharacters {
-		return fmt.Errorf("Name character length is greater than the max of %d", WordMaxCharacters)
+		return fmt.Errorf("name character length is greater than the max of %d", WordMaxCharacters)
 	}
 	if len(profile.Location) > WordMaxCharacters {
-		return fmt.Errorf("Location character length is greater than the max of %d", WordMaxCharacters)
+		return fmt.Errorf("location character length is greater than the max of %d", WordMaxCharacters)
 	}
 	if len(profile.About) > AboutMaxCharacters {
-		return fmt.Errorf("About character length is greater than the max of %d", AboutMaxCharacters)
+		return fmt.Errorf("about character length is greater than the max of %d", AboutMaxCharacters)
 	}
 	if len(profile.ShortDescription) > ShortDescriptionLength {
-		return fmt.Errorf("Short description character length is greater than the max of %d", ShortDescriptionLength)
+		return fmt.Errorf("short description character length is greater than the max of %d", ShortDescriptionLength)
 	}
 	if profile.ContactInfo != nil {
 		if len(profile.ContactInfo.Website) > URLMaxCharacters {
-			return fmt.Errorf("Website character length is greater than the max of %d", URLMaxCharacters)
+			return fmt.Errorf("website character length is greater than the max of %d", URLMaxCharacters)
 		}
 		if len(profile.ContactInfo.Email) > SentenceMaxCharacters {
-			return fmt.Errorf("Email character length is greater than the max of %d", SentenceMaxCharacters)
+			return fmt.Errorf("email character length is greater than the max of %d", SentenceMaxCharacters)
 		}
 		if len(profile.ContactInfo.PhoneNumber) > WordMaxCharacters {
-			return fmt.Errorf("Phone number character length is greater than the max of %d", WordMaxCharacters)
+			return fmt.Errorf("phone number character length is greater than the max of %d", WordMaxCharacters)
 		}
 		if len(profile.ContactInfo.Social) > MaxListItems {
-			return fmt.Errorf("Number of social accounts is greater than the max of %d", MaxListItems)
+			return fmt.Errorf("number of social accounts is greater than the max of %d", MaxListItems)
 		}
 		for _, s := range profile.ContactInfo.Social {
 			if len(s.Username) > WordMaxCharacters {
-				return fmt.Errorf("Social username character length is greater than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("social username character length is greater than the max of %d", WordMaxCharacters)
 			}
 			if len(s.Type) > WordMaxCharacters {
-				return fmt.Errorf("Social account type character length is greater than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("social account type character length is greater than the max of %d", WordMaxCharacters)
 			}
 			if len(s.Proof) > URLMaxCharacters {
-				return fmt.Errorf("Social proof character length is greater than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("social proof character length is greater than the max of %d", WordMaxCharacters)
 			}
 		}
 	}
 	if profile.ModeratorInfo != nil {
 		if len(profile.ModeratorInfo.Description) > AboutMaxCharacters {
-			return fmt.Errorf("Moderator description character length is greater than the max of %d", AboutMaxCharacters)
+			return fmt.Errorf("moderator description character length is greater than the max of %d", AboutMaxCharacters)
 		}
 		if len(profile.ModeratorInfo.TermsAndConditions) > PolicyMaxCharacters {
-			return fmt.Errorf("Moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
+			return fmt.Errorf("moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
 		}
 		if len(profile.ModeratorInfo.Languages) > MaxListItems {
-			return fmt.Errorf("Moderator number of languages greater than the max of %d", MaxListItems)
+			return fmt.Errorf("moderator number of languages greater than the max of %d", MaxListItems)
 		}
 		for _, l := range profile.ModeratorInfo.Languages {
 			if len(l) > WordMaxCharacters {
-				return fmt.Errorf("Moderator language character length is greater than the max of %d", WordMaxCharacters)
+				return fmt.Errorf("moderator language character length is greater than the max of %d", WordMaxCharacters)
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
 			if profile.ModeratorInfo.Fee.FixedFee != nil {
-				if len(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) > WordMaxCharacters {
-					return fmt.Errorf("Moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
+				if len(profile.ModeratorInfo.Fee.FixedFee.Currency.Code ) > WordMaxCharacters {
+					return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
 				}
 			}
 		}
@@ -337,54 +340,54 @@ func ValidateProfile(profile *pb.Profile) error {
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
 		_, err := cid.Decode(profile.AvatarHashes.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be properly formatted CID")
+			return errors.New("tiny image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.AvatarHashes.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be properly formatted CID")
+			return errors.New("small image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.AvatarHashes.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be properly formatted CID")
+			return errors.New("medium image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.AvatarHashes.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be properly formatted CID")
+			return errors.New("large image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.AvatarHashes.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be properly formatted CID")
+			return errors.New("original image hashes must be properly formatted CID")
 		}
 	}
 	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
 		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
 		_, err := cid.Decode(profile.HeaderHashes.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be properly formatted CID")
+			return errors.New("tiny image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.HeaderHashes.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be properly formatted CID")
+			return errors.New("small image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.HeaderHashes.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be properly formatted CID")
+			return errors.New("medium image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.HeaderHashes.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be properly formatted CID")
+			return errors.New("large image hashes must be properly formatted CID")
 		}
 		_, err = cid.Decode(profile.HeaderHashes.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be properly formatted CID")
+			return errors.New("original image hashes must be properly formatted CID")
 		}
 	}
 	if len(profile.BitcoinPubkey) > 66 {
-		return fmt.Errorf("Bitcoin public key character length is greater than the max of %d", 66)
+		return fmt.Errorf("bitcoin public key character length is greater than the max of %d", 66)
 	}
 	if profile.Stats != nil {
 		if profile.Stats.AverageRating > 5 {
-			return fmt.Errorf("Average rating cannot be greater than %d", 5)
+			return fmt.Errorf("average rating cannot be greater than %d", 5)
 		}
 	}
 	return nil

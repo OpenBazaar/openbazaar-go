@@ -21,13 +21,13 @@ func NewListing(slug string) *pb.Listing {
 		Item: &pb.Listing_Item{
 			Skus: []*pb.Listing_Item_Sku{
 				{
-					Surcharge:    0,
+					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "0"},
 					Quantity:     12,
 					ProductID:    "1",
 					VariantCombo: []uint32{0, 0},
 				},
 				{
-					Surcharge:    0,
+					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "0"},
 					Quantity:     44,
 					ProductID:    "2",
 					VariantCombo: []uint32{0, 1},
@@ -81,7 +81,7 @@ func NewListing(slug string) *pb.Listing {
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
 						Name:              "standard",
-						Price:             20,
+						Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "20"},
 						EstimatedDelivery: "3 days",
 					},
 				},
@@ -123,7 +123,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",
-					Price:             20,
+					Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "20"},
 					EstimatedDelivery: "3 days",
 				},
 			},
