@@ -116,7 +116,7 @@ func (x *Start) Execute(args []string) error {
 
 	if x.NativeTor {
 		fmt.Println("Starting Tor controller, please wait...")
-		t, err = tor.Start(nil, &tor.StartConf{
+		t, err = tor.Start(context.TODO(), &tor.StartConf{
 			ProcessCreator: embedded.NewCreator(),
 			DataDir:        path.Join(x.DataDir, "tordata"),
 		})
@@ -129,10 +129,20 @@ func (x *Start) Execute(args []string) error {
 		listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer listenCancel()
 
-		_, err := t.Dialer(listenCtx, nil)
+		dialer, err := t.Dialer(listenCtx, nil)
 		if err != nil {
 			return err
 		}
+
+		httpClient := &http.Client{Transport: &http.Transport{DialContext: dialer.DialContext}}
+		// Get /
+		resp, err := httpClient.Get("http://my7nrnmkscxr32zo.onion/verified_moderators")
+		if err != nil {
+			return err
+		}
+		fmt.Println(resp)
+		defer resp.Body.Close()
+
 	}
 
 	if x.Testnet && x.Regtest {
