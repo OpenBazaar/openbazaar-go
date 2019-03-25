@@ -264,7 +264,11 @@ func (t *OnionTransport) CanDial(a ma.Multiaddr) bool {
 
 // Protocols returns the list of terminal protocols this transport can dial.
 func (t *OnionTransport) Protocols() []int {
-	return []int{ma.P_ONION, ma.P_TCP}
+	if !t.onlyOnion {
+		return []int{ma.P_ONION, ma.P_TCP}
+	} else {
+		return []int{ma.P_ONION}
+	}
 }
 
 // Proxy always returns false for the onion transport.
