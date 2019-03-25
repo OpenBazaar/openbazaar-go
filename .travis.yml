@@ -1,4 +1,5 @@
 language: go
+dist: xenial
 go:
   - "1.10.3"
 sudo: required
@@ -12,6 +13,7 @@ before_install:
   - sudo apt-get install build-essential libtool autopoint
 install:
   - echo "No external dependencies required. Skipping travis default library dependency setup to use vendors..."
+  - source /opt/jdk_switcher/jdk_switcher
   - cd $GOPATH/src/github.com/cretz/tor-static
   - go run build.go -verbose build-all
   - cd $TRAVIS_BUILD_DIR
