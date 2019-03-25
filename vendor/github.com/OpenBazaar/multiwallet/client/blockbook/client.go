@@ -218,7 +218,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 			return nil, err
 		}
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
 	return resp, nil
