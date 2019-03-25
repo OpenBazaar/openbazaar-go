@@ -1,7 +1,5 @@
 language: go
 dist: xenial
-go:
-  - "1.11.6"
 sudo: required
 services:
   - docker
@@ -19,7 +17,7 @@ install:
   - cd $TRAVIS_BUILD_DIR
 script:
   - $GOPATH/bin/golangci-lint run --deadline 10m
-  - cd $TRAVIS_BUILD_DIR && go test -i && ./test_compile.sh
+  - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:
   - ./deploy.sh
