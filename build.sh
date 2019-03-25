@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGETS=${1:-windows/386,windows/amd64,darwin/amd64,linux/386,linux/amd64,linux/arm}
+TARGETS=${1:-darwin/amd64,linux/386,linux/amd64,linux/arm}
 
 export CGO_ENABLED=1
 docker pull karalabe/xgo-latest
