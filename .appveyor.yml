@@ -1,11 +1,8 @@
-version: '{build}'
+version: $(APPVEYOR_REPO_TAG_NAME)
 platform: x64
 configuration: Release
 os: Visual Studio 2015
-
 clone_depth: 50
-
-
 environment:
   GOPATH: c:\gopath
 
@@ -24,21 +21,16 @@ build_script:
   - set MSYSTEM=MINGW64
   - bash --debug -lc "ls /c/gopath/src/github.com/cretz/tor-static && export PATH=/mingw64/bin:$PATH && cd /c/gopath/src/github.com/cretz/tor-static && /c/go/bin/go run build.go -verbose build-all"
 
-test_script:
-  - set PATH=C:\msys64\mingw64\bin;%PATH%
-  - go get -u github.com/cretz/bine/tor
-  - cd c:\gopath\src\github.com\cretz\tor-static
-  - go test -v build_test.go -tor.verbose
-
 after_build:
-  - go run build.go build-all
-#deploy:
-#  description: 'New tor-static release'
-#  provider: GitHub
-#  auth_token:
-#    secure: 6FeJJsz3att0ChUBBFt+Llk8vr32vvZVDbkicQfpRn0mJrome0mIPbkLbH2J5ejC
-#  artifact: tor-static-windows-amd64.zip
-#  draft: true
-#  on:
-#    branch: master
-#    APPVEYOR_REPO_TAG: true
+  - 7z a tor-static-windows-amd64.zip /c/gopath/src/github.com/cretz/tor-static/tor/dist/bin/*
+deploy:
+  provider: GitHub
+  auth_token:
+    secure: rpEZEcM8WsyZpn9HVmgAZ4bTKUvB+dGf0suQpQUE5CJXvX64Aq4KlHY0YRK2my21
+  artifact: tor-static-windows-amd64.zip
+  draft: true
+  prerelease: true
+  force_update: true
+  on:
+    branch: embedded-tor
+    APPVEYOR_REPO_TAG: true
