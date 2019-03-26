@@ -31,7 +31,6 @@ test_script:
 
 after_build:
   - go run build.go build-all
-
 #deploy:
 #  description: 'New tor-static release'
 #  provider: GitHub
