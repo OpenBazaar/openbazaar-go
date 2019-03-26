@@ -55,8 +55,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/cretz/bine/process/embedded"
-	"github.com/cretz/bine/tor"
+
 	"github.com/fatih/color"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -108,41 +107,16 @@ type Start struct {
 
 func (x *Start) Execute(args []string) error {
 
-	var t *tor.Tor
 	var err error
 
 	ipfscore.DHTOption = constructDHTRouting
 	printSplashScreen(x.Verbose)
 
 	if x.NativeTor {
-		fmt.Println("Starting Tor controller, please wait...")
-		t, err = tor.Start(context.TODO(), &tor.StartConf{
-			ProcessCreator: embedded.NewCreator(),
-			DataDir:        path.Join(x.DataDir, "tordata"),
-		})
-
-		if err != nil {
-			log.Panicf("Unable to start Tor: %v", err)
-		}
-		defer t.Close()
-
-		listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		defer listenCancel()
-
-		dialer, err := t.Dialer(listenCtx, nil)
+		controlPort, err := core.StartNativeTor()
 		if err != nil {
 			return err
 		}
-
-		httpClient := &http.Client{Transport: &http.Transport{DialContext: dialer.DialContext}}
-		// Get /
-		resp, err := httpClient.Get("http://my7nrnmkscxr32zo.onion/verified_moderators")
-		if err != nil {
-			return err
-		}
-		fmt.Println(resp)
-		defer resp.Body.Close()
-
 	}
 
 	if x.Testnet && x.Regtest {
@@ -401,9 +375,7 @@ func (x *Start) Execute(args []string) error {
 	// Create Tor transport
 	if usingTor {
 		if torControl == "" {
-			if x.NativeTor {
-				controlPort = t.ControlPort
-			} else {
+			if !x.NativeTor {
 				controlPort, err = obnet.GetTorControlPort()
 			}
 
