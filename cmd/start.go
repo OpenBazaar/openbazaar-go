@@ -110,12 +110,13 @@ type Start struct {
 func (x *Start) Execute(args []string) error {
 
 	var err error
+	var nativeControlPort int
 
 	ipfscore.DHTOption = constructDHTRouting
 	printSplashScreen(x.Verbose)
 
 	if x.NativeTor {
-		controlPort, err := core.StartNativeTor(x.DataDir)
+		nativeControlPort, err = core.StartNativeTor(x.DataDir)
 		if err != nil {
 			return err
 		}
@@ -377,7 +378,9 @@ func (x *Start) Execute(args []string) error {
 	// Create Tor transport
 	if usingTor {
 		if torControl == "" {
-			if !x.NativeTor {
+			if x.NativeTor {
+				controlPort = nativeControlPort
+			} else {
 				controlPort, err = obnet.GetTorControlPort()
 			}
 
