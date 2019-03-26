@@ -1,5 +1,32 @@
 language: go
-dist: xenial
+matrix:
+  include:
+#    - name: linux-amd64
+#      os: linux
+#      dist: xenial
+#      env: CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+#      install:
+#        - sudo apt-get install build-essential
+#        - sudo apt-get install libtool
+#        - sudo apt-get install autopoint
+#    - name: darwin-amd64
+#      os: osx
+#      env: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64
+#      install:
+#        - brew install libtool
+#        - brew install gettext
+    - name: windows-amd64
+      os: windows
+      env: CGO_ENABLED=1 GOOS=windows GOARCH=amd64
+      install:
+        - choco install msys2
+        - c:\tools\msys64\msys2_shell.cmd
+        - pacman -Syuu
+        - exit
+        - c:\tools\msys64\msys2_shell.cmd
+        - pacman -Sy --needed base-devel mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain \
+          git subversion mercurial \
+          mingw-w64-i686-cmake mingw-w64-x86_64-cmake
 go:
   - "1.10.3"
 sudo: required
