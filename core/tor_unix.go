@@ -13,14 +13,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-func StartNativeTor() (int, error) {
+func StartNativeTor(dataDir string) (int, error) {
 
 	var t *tor.Tor
 
 	fmt.Println("Starting Tor controller, please wait...")
 	t, err := tor.Start(context.TODO(), &tor.StartConf{
 		ProcessCreator: embedded.NewCreator(),
-		DataDir:        path.Join(x.DataDir, "tordata"),
+		DataDir:        path.Join(dataDir, "tordata"),
 	})
 
 	if err != nil {
