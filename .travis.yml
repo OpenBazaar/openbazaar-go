@@ -9,12 +9,15 @@ matrix:
         - sudo apt-get install build-essential
         - sudo apt-get install libtool
         - sudo apt-get install autopoint
+        - sudo apt-get install openjdk-8-jre
     - name: darwin-amd64
       os: osx
       env: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64
       install:
         - brew install libtool
         - brew install gettext
+        - brew tap caskroom/versions
+        - brew cask install java8
 #    - name: windows-amd64
 #      os: windows
 #      env: CGO_ENABLED=1 GOOS=windows GOARCH=amd64
@@ -40,11 +43,10 @@ before_install:
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.10
 install:
   - echo "No external dependencies required. Skipping travis default library dependency setup to use vendors..."
-  - sudo apt-get install openjdk-8-jre
+script:
   - cd $GOPATH/src/github.com/cretz/tor-static
   - go run build.go build-all
   - cd $TRAVIS_BUILD_DIR
-script:
   - $GOPATH/bin/golangci-lint run --deadline 10m
   - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
