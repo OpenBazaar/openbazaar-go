@@ -1,4 +1,4 @@
-version: '{APPVEYOR_REPO_TAG_NAME}'
+version: '{build}'
 platform: x64
 configuration: Release
 os: Visual Studio 2015
