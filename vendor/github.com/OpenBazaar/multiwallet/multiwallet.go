@@ -8,7 +8,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/bitcoin"
 	"github.com/OpenBazaar/multiwallet/bitcoincash"
 	"github.com/OpenBazaar/multiwallet/client/blockbook"
-	"github.com/OpenBazaar/multiwallet/client/insight"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/multiwallet/litecoin"
 	"github.com/OpenBazaar/multiwallet/service"
@@ -28,7 +27,6 @@ type MultiWallet map[wallet.CoinType]wallet.Wallet
 func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 	log.SetBackend(logging.AddModuleLevel(cfg.Logger))
 	service.Log = log
-	insight.Log = log
 	blockbook.Log = log
 
 	if cfg.Mnemonic == "" {
