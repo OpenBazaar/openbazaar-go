@@ -4,7 +4,7 @@ configuration: Release
 os: Visual Studio 2015
 
 clone_depth: 50
-clone_folder: c:\gopath\src\github.com\cretz\tor-static
+
 
 environment:
   GOPATH: c:\gopath
@@ -16,6 +16,7 @@ install:
 
 before_build:
   - set MSYSTEM=MINGW64
+  - git clone --recursive https://github.com/cretz/tor-static c:\gopath\src\github.com\cretz\tor-static
   - cd c:\gopath\src\github.com\cretz\tor-static
   - git submodule update --init --recursive
 
