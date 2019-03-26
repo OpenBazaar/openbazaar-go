@@ -22,7 +22,7 @@ build_script:
   - bash --debug -lc "ls /c/gopath/src/github.com/cretz/tor-static && export PATH=/mingw64/bin:$PATH && cd /c/gopath/src/github.com/cretz/tor-static && /c/go/bin/go run build.go -verbose build-all"
 
 after_build:
-  - 7z a tor-static-windows-amd64.zip /c/gopath/src/github.com/cretz/tor-static/tor/dist/bin/*
+  - 7z a tor-static-windows-amd64.zip c:\gopath\src\github.com\cretz\tor-static\tor\dist\bin\*
 deploy:
   provider: GitHub
   auth_token:
