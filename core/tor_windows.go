@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func StartNativeTor() (int, error) {
+func StartNativeTor(dataDir string) (int, error) {
 	fmt.Println("Starting Tor controller, please wait...")
 	t, err = tor.Start(context.TODO(), nil)
 

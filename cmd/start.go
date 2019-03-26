@@ -113,7 +113,7 @@ func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
 
 	if x.NativeTor {
-		controlPort, err := core.StartNativeTor()
+		controlPort, err := core.StartNativeTor(x.DataDir)
 		if err != nil {
 			return err
 		}
