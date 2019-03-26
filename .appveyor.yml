@@ -31,6 +31,7 @@ deploy:
   draft: true
   prerelease: true
   force_update: true
+  release: $(APPVEYOR_REPO_TAG_NAME)
   on:
     branch: embedded-tor
     APPVEYOR_REPO_TAG: true
