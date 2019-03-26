@@ -1,3 +1,5 @@
+*Note: This document is out-of-date and does not accurately reflect the wallet architecture and changes introduced in v2.3.0/v0.13.0 (desktop/daemon).*
+
 Creating an altcoin integration
 ===============================
 
