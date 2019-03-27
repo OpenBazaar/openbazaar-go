@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json" //"errors"
 	"fmt"
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 	"time"
 )
 

@@ -57,7 +57,6 @@ func TestDoInit(t *testing.T) {
 	if err = paths.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
-
 	// Running DoInit on an empty, writable folder
 	if err = os.Chmod(paths.DataPath(), 0755); err != nil {
 		t.Fatal(err)

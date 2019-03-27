@@ -2,17 +2,16 @@ package ipfs
 
 import (
 	"context"
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
-	"gx/ipfs/QmZMWMvWMVKCbHetJ4RgndbuEF1io2UpUxwQwtNjtYPzSC/go-ipfs-files"
+	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
+	"gx/ipfs/QmPJNbVw8o3ohC43ppSXyNXwYKsWShG4zygnirHptfbHri/go-merkledag"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
@@ -90,7 +89,7 @@ func addAndPin(n *core.IpfsNode, root string) (rootHash string, err error) {
 		return "", err
 	}
 
-	f, err := files.NewSerialFile(filepath.Base(root), root, false, stat)
+	f, err := files.NewSerialFile(root, false, stat)
 	if err != nil {
 		return "", err
 	}

@@ -1,9 +1,0 @@
-language: go
-sudo: false
-
-go:
-  - tip
-
-os:
-  - linux
-  - osx

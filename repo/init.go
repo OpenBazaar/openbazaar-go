@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ipfs/go-ipfs/plugin/loader"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -21,6 +23,7 @@ const RepoVersion = "21"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
+var pluginOnce sync.Once
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
 	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
@@ -70,6 +73,21 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	conf.Identity = identity
 
 	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
+	pluginOnce.Do(func() {
+		loader, err := loader.NewPluginLoader("")
+		if err != nil {
+			panic(err)
+		}
+		err = loader.Initialize()
+		if err != nil {
+			panic(err)
+		}
+
+		err = loader.Inject()
+		if err != nil {
+			panic(err)
+		}
+	})
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
@@ -125,10 +143,14 @@ func checkWriteable(dir string) error {
 }
 
 func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
+
 	cfg, err := r.Config()
 	if err != nil {
 		log.Error(err)
@@ -140,18 +162,13 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	cfg.Identity = identity
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
 	}
 	defer nd.Close()
 
-	err = nd.SetupOfflineRouting()
-	if err != nil {
-		return err
-	}
 	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 

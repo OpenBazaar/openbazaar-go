@@ -1,6 +1,0 @@
-language: go
-go: 1.5
-before_install:
-  - go get github.com/frankbraun/gocheck
-script:
-  - gocheck -g -c -e _example -e sqlite3_test
