@@ -33,7 +33,7 @@ before_install:
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sudo bash -s -- -b $GOPATH/bin v1.10
 script:
   - cd $GOPATH/src/github.com/cretz/tor-static
-  - go run build.go build-all
+  - go run build.go -verbose build-all
   - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go
   - $GOPATH/bin/golangci-lint run --deadline 10m
   - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && ./test_compile.sh
