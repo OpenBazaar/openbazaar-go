@@ -37,7 +37,7 @@ script:
   - go run build.go -verbose build-all
   - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go
   - $GOPATH/bin/golangci-lint run --deadline 10m
-  - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && ./test_compile.sh
+  - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && sudo ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:
   - ./deploy.sh
