@@ -1,0 +1,18 @@
+{
+  "author": "lgierth",
+  "bugs": {
+    "url": "https://github.com/ipfs/dir-index-html"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/dir-index-html",
+    "goversion": "1.5.2"
+  },
+  "gxDependencies": [],
+  "gxVersion": "0.14.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "dir-index-html",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.4"
+}
+

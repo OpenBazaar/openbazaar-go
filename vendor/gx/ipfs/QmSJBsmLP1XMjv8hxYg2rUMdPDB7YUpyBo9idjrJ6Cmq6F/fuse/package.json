@@ -1,0 +1,24 @@
+{
+  "author": "bazil",
+  "bugs": {
+    "url": "https://github.com/bazil/fuse"
+  },
+  "gx": {
+    "dvcsimport": "bazil.org/fuse"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "BSD-new",
+  "name": "fuse",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.3"
+}
+

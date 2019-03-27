@@ -1,0 +1,42 @@
+{
+  "author": "magik6k",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ds-badger"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ds-badger"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP",
+      "name": "goprocess",
+      "version": "1.0.0"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9",
+      "name": "go-datastore",
+      "version": "3.6.1"
+    },
+    {
+      "author": "dgraph-io",
+      "hash": "QmU4emVTYFKnoJ5yK3pPEN9joyEx6U7y892PDx26ZtNxQd",
+      "name": "badger",
+      "version": "2.11.4"
+    },
+    {
+      "author": "Kubuxu",
+      "hash": "QmXuBJ7DR6k3rmUEKtvVMhwjmXDuJgXXPUt4LQXKBMsU93",
+      "name": "go-os-helper",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.8.0",
+  "language": "go",
+  "license": "",
+  "name": "go-ds-badger",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.12.3"
+}
+

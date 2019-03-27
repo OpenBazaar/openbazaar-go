@@ -1,0 +1,10 @@
+language: go
+go:
+- tip
+install:
+- go get golang.org/x/tools/cmd/cover
+- go get github.com/mattn/goveralls
+- make all
+script:
+- make test
+

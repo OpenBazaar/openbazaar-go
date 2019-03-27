@@ -1,0 +1,60 @@
+{
+  "author": "magik6k",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipfs-config"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipfs-config"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz",
+      "name": "go-ipfs-util",
+      "version": "1.2.9"
+    },
+    {
+      "author": "facebookgo",
+      "hash": "QmdYwCmx8pZRkzdcd8MhmLJqYVoVTC1aGsy5Q4reMGLNLg",
+      "name": "atomicfile",
+      "version": "0.0.0"
+    },
+    {
+      "author": "why",
+      "hash": "Qmdf1djucJ1jX5RMF1bDbFg5ybZnupmSAeETQQ3ZV7z6dU",
+      "name": "go-ipfs-addr",
+      "version": "0.1.33"
+    },
+    {
+      "author": "lgierth",
+      "hash": "QmU98UaAEh4WJAcir2qjfztU77JQ14kAwHNFkjUXHZA3Vy",
+      "name": "go-multiaddr-dns",
+      "version": "0.3.1"
+    },
+    {
+      "author": "mitchellh",
+      "hash": "QmdcULN1WCzgoQmcCaUAmEhwcxHYsDrbZ2LvRJKCL8dMrK",
+      "name": "go-homedir",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK",
+      "name": "go-libp2p-crypto",
+      "version": "2.0.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h",
+      "name": "go-libp2p-peer",
+      "version": "3.1.2"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "",
+  "name": "go-ipfs-config",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.27"
+}
+

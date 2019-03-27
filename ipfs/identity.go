@@ -12,6 +12,10 @@ import (
 	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 )
 
+func init() {
+	peer.AdvancedEnableInlining = false
+}
+
 func IdentityFromKey(privkey []byte) (config.Identity, error) {
 
 	ident := config.Identity{}

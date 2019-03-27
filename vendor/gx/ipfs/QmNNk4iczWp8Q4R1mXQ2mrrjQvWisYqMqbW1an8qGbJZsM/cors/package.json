@@ -1,0 +1,16 @@
+{
+  "author": "hsanjuan",
+  "bugs": {
+    "url": "https://github.com/rs/cors"
+  },
+  "gx": {
+    "dvcsimport": "github.com/rs/cors"
+  },
+  "gxVersion": "0.14.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "cors",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.6.0"
+}
+
