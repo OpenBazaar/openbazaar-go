@@ -30,11 +30,11 @@ env:
 before_install:
   - go get -u github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/tcnksm/ghr
   - go get -u github.com/cretz/tor-static github.com/cretz/bine golang.org/x/crypto/sha3 golang.org/x/net/proxy
-  - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then "curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.10"; fi
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.10
 script:
   - cd $GOPATH/src/github.com/cretz/tor-static
   - go run build.go build-all
-  - cd $TRAVIS_BUILD_DIR
+  - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go
   - $GOPATH/bin/golangci-lint run --deadline 10m
   - cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go && go test -i && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
