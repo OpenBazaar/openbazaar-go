@@ -4,9 +4,10 @@ matrix:
     - name: linux-amd64
       os: linux
       sudo: required
-      dist: trusty
+      dist: xenial
       env: CGO_ENABLED=1 GOOS=linux GOARCH=amd64
       install:
+        - ulimit -S -n 20480
         - sudo apt-get install build-essential
         - sudo apt-get install libtool
         - sudo apt-get install autopoint
