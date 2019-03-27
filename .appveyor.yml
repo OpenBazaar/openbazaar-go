@@ -33,5 +33,5 @@ deploy:
   force_update: true
   release: $(APPVEYOR_REPO_TAG_NAME)
   on:
-    branch: embedded-tor
+    branch: TOR
     APPVEYOR_REPO_TAG: true
