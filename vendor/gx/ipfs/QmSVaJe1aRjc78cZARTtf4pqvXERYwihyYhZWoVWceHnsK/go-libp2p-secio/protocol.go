@@ -194,10 +194,7 @@ func (s *secureSession) runHandshakeSync() error {
 	}
 
 	// get peer id
-	// OpenBazaar: set this to inline key so we check both
-	// This code will be removed after enough OpenBazaar nodes
-	// upgrade to inline pubkeys.
-	actualRemotePeer, err := peer.InlineIDFromPublicKey(s.remote.permanentPubKey)
+	actualRemotePeer, err := peer.IDFromPublicKey(s.remote.permanentPubKey)
 	if err != nil {
 		return err
 	}

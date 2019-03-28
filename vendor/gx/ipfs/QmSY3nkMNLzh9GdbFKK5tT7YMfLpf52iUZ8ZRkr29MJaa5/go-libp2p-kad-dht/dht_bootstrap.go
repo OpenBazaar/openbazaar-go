@@ -175,6 +175,7 @@ func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error
 		return err
 	})
 
+	// OpenBazaar: close bootstrap chan
 	bootstrapOnce.Do(func() {
 		close(dht.BootstrapChan)
 	})

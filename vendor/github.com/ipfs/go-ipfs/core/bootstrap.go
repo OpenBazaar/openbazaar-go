@@ -102,6 +102,11 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 	proc.Go(periodic) // run one right now.
 
 	// kick off Routing.Bootstrap
+	// OpenBazaar: the following two lines were moved from right before the return
+	// statement to here so that it blocks the dht bootstrap until after the init
+	// bootstrap peers are connected.
+	doneWithRound <- struct{}{}
+	close(doneWithRound) // it no longer blocks periodic
 	if n.Routing != nil {
 		ctx := procctx.OnClosingContext(proc)
 		if err := n.Routing.Bootstrap(ctx); err != nil {
@@ -110,8 +115,6 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 		}
 	}
 
-	doneWithRound <- struct{}{}
-	close(doneWithRound) // it no longer blocks periodic
 	return proc, nil
 }
 
