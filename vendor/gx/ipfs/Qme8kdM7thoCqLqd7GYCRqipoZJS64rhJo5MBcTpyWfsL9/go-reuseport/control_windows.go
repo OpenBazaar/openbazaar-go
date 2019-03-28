@@ -1,4 +1,4 @@
-// +build !darwin,!linux,!netbsd,!openbsd,!wasm
+// +build windows
 package reuseport
 
 import (
