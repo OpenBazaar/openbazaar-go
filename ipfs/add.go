@@ -2,61 +2,45 @@ package ipfs
 
 import (
 	"context"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreunix"
+	_ "github.com/ipfs/go-ipfs/core/mock"
 	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
-	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core/options"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strconv"
-	"strings"
-
-	"gx/ipfs/QmPJNbVw8o3ohC43ppSXyNXwYKsWShG4zygnirHptfbHri/go-merkledag"
-
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	_ "github.com/ipfs/go-ipfs/core/mock"
 )
 
 // Recursively add a directory to IPFS and return the root hash
 func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
-	s := strings.Split(root, "/")
-	dirName := s[len(s)-1]
-	h, err := addAndPin(n, root)
+	api, err := coreapi.NewCoreAPI(n)
 	if err != nil {
 		return "", err
 	}
-	i, err := cid.Decode(h)
+	stat, err := os.Lstat(root)
 	if err != nil {
 		return "", err
 	}
-	dag := merkledag.NewDAGService(n.Blocks)
-	m := make(map[string]bool)
-	ctx := context.Background()
-	m[i.String()] = true
-	for {
-		if len(m) == 0 {
-			break
-		}
-		for k := range m {
-			c, err := cid.Decode(k)
-			if err != nil {
-				return "", err
-			}
-			links, err := dag.GetLinks(ctx, c)
-			if err != nil {
-				return "", err
-			}
-			delete(m, k)
-			for _, link := range links {
-				if link.Name == dirName {
-					return link.Cid.String(), nil
-				}
-				m[link.Cid.String()] = true
-			}
-		}
+
+	f, err := files.NewSerialFile(root, false, stat)
+	if err != nil {
+		return "", err
 	}
-	return i.String(), nil
+
+	opts := []options.UnixfsAddOption{
+		options.Unixfs.CidVersion(0),
+		options.Unixfs.Pin(true),
+		options.Unixfs.Wrap(true),
+	}
+	pth, err := api.Unixfs().Add(context.Background(), files.ToDir(f), opts...)
+	if err != nil {
+		return "", err
+	}
+	return pth.Root().String(), nil
 }
 
 func AddFile(n *core.IpfsNode, file string) (string, error) {
