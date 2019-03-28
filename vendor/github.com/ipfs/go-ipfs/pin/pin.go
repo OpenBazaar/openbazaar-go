@@ -9,8 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-ipfs/dagutils"
 	mdag "gx/ipfs/QmPJNbVw8o3ohC43ppSXyNXwYKsWShG4zygnirHptfbHri/go-merkledag"
+
+	"github.com/ipfs/go-ipfs/dagutils"
 
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"

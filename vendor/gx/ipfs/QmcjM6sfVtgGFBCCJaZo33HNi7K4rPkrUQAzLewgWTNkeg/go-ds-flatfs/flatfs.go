@@ -1091,7 +1091,7 @@ func (bt *flatfsBatch) Commit() error {
 		return err
 	}
 
-	for k, _ := range bt.deletes {
+	for k := range bt.deletes {
 		if err := bt.ds.Delete(k); err != nil {
 			return err
 		}

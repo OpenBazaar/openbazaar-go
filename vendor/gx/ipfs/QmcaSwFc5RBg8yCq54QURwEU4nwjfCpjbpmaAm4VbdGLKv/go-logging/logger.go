@@ -269,7 +269,7 @@ func (l *Logger) Debugf(format string, args ...interface{}) {
 func defaultArgsFormat(argc int) string {
 	f := strings.Repeat("%s ", argc)
 	if argc > 0 {
-		f = f[:len(f) - 1]
+		f = f[:len(f)-1]
 	}
 	return f
 }

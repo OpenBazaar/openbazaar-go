@@ -88,7 +88,6 @@ type Walker struct {
 // * Active node.
 // * Path to the active node.
 
-
 // Function called each time a node is arrived upon in a walk operation
 // through the `down` method (not when going back `up`). It is the main
 // API to implement DAG functionality (e.g., read and seek a file DAG)

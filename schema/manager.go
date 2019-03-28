@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ipfs/go-ipfs/plugin/loader"
 	"io/ioutil"
 	"os"
 	"path"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ipfs/go-ipfs/plugin/loader"
 
 	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 
@@ -30,6 +31,7 @@ const (
 )
 
 var pluginOnce sync.Once
+
 func init() {
 	pluginOnce.Do(func() {
 		loader, err := loader.NewPluginLoader("")
@@ -542,5 +544,6 @@ func MustDefaultConfig() *config.Config {
 	return conf
 }
 
-type dummyWriter struct {}
-func (d *dummyWriter)  Write(p []byte) (n int, err error) {return 0, nil}
+type dummyWriter struct{}
+
+func (d *dummyWriter) Write(p []byte) (n int, err error) { return 0, nil }

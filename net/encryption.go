@@ -10,8 +10,9 @@ import (
 	"errors"
 	"fmt"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
-	extra "github.com/agl/ed25519/extra25519"
 	"io"
+
+	extra "github.com/agl/ed25519/extra25519"
 
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/nacl/box"

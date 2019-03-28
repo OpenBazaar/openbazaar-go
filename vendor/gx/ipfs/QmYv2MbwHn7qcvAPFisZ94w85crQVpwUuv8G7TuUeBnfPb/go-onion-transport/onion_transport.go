@@ -6,9 +6,6 @@ import (
 	"encoding/base32"
 	"encoding/pem"
 	"fmt"
-	"github.com/yawning/bulb"
-	"github.com/yawning/bulb/utils/pkcs1"
-	"golang.org/x/net/proxy"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"io/ioutil"
 	"net"
@@ -16,6 +13,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/yawning/bulb"
+	"github.com/yawning/bulb/utils/pkcs1"
+	"golang.org/x/net/proxy"
 
 	tpt "gx/ipfs/QmNQWMWWBmkAcaVEspSNwYB95axzKFhYTdqZtABA2zXoPu/go-libp2p-transport"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"

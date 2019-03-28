@@ -175,7 +175,7 @@ func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error
 		return err
 	})
 
-	bootstrapOnce.Do(func(){
+	bootstrapOnce.Do(func() {
 		close(dht.BootstrapChan)
 	})
 	return err

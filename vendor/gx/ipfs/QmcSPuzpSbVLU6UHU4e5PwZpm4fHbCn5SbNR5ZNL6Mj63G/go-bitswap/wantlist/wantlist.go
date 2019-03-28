@@ -69,7 +69,7 @@ func (w *SessionTrackedWantlist) Add(c cid.Cid, priority int, ses uint64) bool {
 
 	w.set[c] = &sessionTrackedEntry{
 		Entry:  Entry{Cid: c, Priority: priority},
-		sesTrk: map[uint64]struct{}{ses: struct{}{}},
+		sesTrk: map[uint64]struct{}{ses: {}},
 	}
 
 	return true
@@ -83,7 +83,7 @@ func (w *SessionTrackedWantlist) AddEntry(e Entry, ses uint64) bool {
 	}
 	w.set[e.Cid] = &sessionTrackedEntry{
 		Entry:  e,
-		sesTrk: map[uint64]struct{}{ses: struct{}{}},
+		sesTrk: map[uint64]struct{}{ses: {}},
 	}
 	return true
 }

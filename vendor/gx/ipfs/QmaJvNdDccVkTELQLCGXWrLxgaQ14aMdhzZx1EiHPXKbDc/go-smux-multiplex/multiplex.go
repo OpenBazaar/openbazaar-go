@@ -4,7 +4,7 @@ import (
 	"net"
 
 	smux "gx/ipfs/QmVtV1y2e8W4eQgzsP6qfSpCCZ6zWYE4m6NzJjB7iswwrT/go-stream-muxer" // Conn is a connection to a remote peer.
-	mp "gx/ipfs/QmWGQQ6Tz8AdUpxktLf3zgnVN9Vy8fcWVezZJSU3ZmiANj/go-mplex" // Conn is a connection to a remote peer.
+	mp "gx/ipfs/QmWGQQ6Tz8AdUpxktLf3zgnVN9Vy8fcWVezZJSU3ZmiANj/go-mplex"          // Conn is a connection to a remote peer.
 )
 
 type conn struct {

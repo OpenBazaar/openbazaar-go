@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bifurcation/mint"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/protocol"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/utils"
+
+	"github.com/bifurcation/mint"
 )
 
 type transportParameterID uint16

@@ -42,4 +42,3 @@ type Message struct {
 	Args   string
 	Source string
 }
-

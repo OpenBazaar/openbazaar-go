@@ -2,8 +2,9 @@ package mint
 
 import (
 	"fmt"
-	"github.com/bifurcation/mint/syntax"
 	"time"
+
+	"github.com/bifurcation/mint/syntax"
 )
 
 const (

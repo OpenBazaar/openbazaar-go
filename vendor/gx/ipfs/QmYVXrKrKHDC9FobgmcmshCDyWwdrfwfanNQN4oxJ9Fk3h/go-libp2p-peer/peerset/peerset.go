@@ -64,7 +64,7 @@ func (ps *PeerSet) TryAdd(p peer.ID) bool {
 func (ps *PeerSet) Peers() []peer.ID {
 	ps.lk.Lock()
 	out := make([]peer.ID, 0, len(ps.ps))
-	for p, _ := range ps.ps {
+	for p := range ps.ps {
 		out = append(out, p)
 	}
 	ps.lk.Unlock()

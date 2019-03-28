@@ -63,9 +63,9 @@ func Init(out io.Writer, nBitsForKeypair int) (*Config, error) {
 			NoFetch:      false,
 			PathPrefixes: []string{},
 			HTTPHeaders: map[string][]string{
-				"Access-Control-Allow-Origin":  []string{"*"},
-				"Access-Control-Allow-Methods": []string{"GET"},
-				"Access-Control-Allow-Headers": []string{"X-Requested-With", "Range", "User-Agent"},
+				"Access-Control-Allow-Origin":  {"*"},
+				"Access-Control-Allow-Methods": {"GET"},
+				"Access-Control-Allow-Headers": {"X-Requested-With", "Range", "User-Agent"},
 			},
 			APICommands: []string{},
 		},

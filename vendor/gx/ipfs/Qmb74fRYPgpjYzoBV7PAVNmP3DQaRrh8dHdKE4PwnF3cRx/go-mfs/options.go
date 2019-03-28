@@ -1,7 +1,7 @@
 package mfs
 
 type Flags struct {
-	Read bool
+	Read  bool
 	Write bool
-	Sync bool
+	Sync  bool
 }

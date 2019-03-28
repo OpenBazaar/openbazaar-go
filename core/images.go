@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	"io"
 	"image" // load gif
 	_ "image/gif"
 	"image/jpeg" // load png
 	_ "image/png"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"

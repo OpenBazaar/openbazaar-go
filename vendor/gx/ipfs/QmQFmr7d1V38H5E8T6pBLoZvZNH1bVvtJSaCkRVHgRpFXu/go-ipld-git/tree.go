@@ -77,7 +77,7 @@ func (t *Tree) Tree(p string, depth int) []string {
 	}
 
 	var out []string
-	for k, _ := range t.entries {
+	for k := range t.entries {
 		out = append(out, k, k+"/mode", k+"/type", k+"/hash")
 	}
 	return out

@@ -5,9 +5,10 @@ import (
 
 	"github.com/ipfs/go-ipfs/core/coreapi"
 
-	"github.com/ipfs/go-ipfs/core"
 	coreiface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	options "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core/options"
+
+	"github.com/ipfs/go-ipfs/core"
 )
 
 /* Recursively un-pin a directory given its hash.

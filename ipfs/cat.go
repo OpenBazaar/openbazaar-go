@@ -2,7 +2,6 @@ package ipfs
 
 import (
 	"context"
-	"github.com/go-errors/errors"
 	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
@@ -10,8 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/go-errors/errors"
+
 	coreiface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
+
+	"github.com/ipfs/go-ipfs/core/coreapi"
 
 	"github.com/ipfs/go-ipfs/core"
 )
@@ -38,7 +40,8 @@ func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 		return nil, err
 	}
 
-	r, ok := nd.(files.File); if !ok {
+	r, ok := nd.(files.File)
+	if !ok {
 		return nil, errors.New("Received incorrect type from Unixfs().Get()")
 	}
 

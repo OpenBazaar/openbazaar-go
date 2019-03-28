@@ -15,7 +15,7 @@ type ReaderFile struct {
 	reader  io.ReadCloser
 	stat    os.FileInfo
 
-	fsize   int64
+	fsize int64
 }
 
 func NewBytesFile(b []byte) File {

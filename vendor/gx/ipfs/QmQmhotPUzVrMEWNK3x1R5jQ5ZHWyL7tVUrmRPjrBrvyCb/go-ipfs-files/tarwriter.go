@@ -98,4 +98,3 @@ func writeSymlinkHeader(w *tar.Writer, target, fpath string) error {
 		Typeflag: tar.TypeSymlink,
 	})
 }
-
