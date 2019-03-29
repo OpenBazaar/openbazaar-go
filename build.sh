@@ -2,7 +2,7 @@
 
 mkdir dist && cd dist/
 
-if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then
+if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 #    TARGETS=${1:-darwin/amd64}
     export GOBIN=$GOPATH/bin
     go install openbazaard.go
