@@ -539,7 +539,7 @@ func MustDefaultConfig() *config.Config {
 		API:     []string{""},
 		Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
 	}
-	config.DefaultBootstrapAddresses = config.BootstrapPeerStrings(bootstrapPeers)
+	conf.Bootstrap = config.BootstrapPeerStrings(bootstrapPeers)
 
 	return conf
 }
