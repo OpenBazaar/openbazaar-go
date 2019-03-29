@@ -235,13 +235,13 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 	expectedErrs := map[string]error{
 		invalidOne.Code.String(): errOne,
 		invalidTwo.Code.String(): errTwo,
-		"DIF": repo.ErrDictionaryIndexMismatchedCode,
+		"DIF":                    repo.ErrDictionaryIndexMismatchedCode,
 	}
 	_, err := repo.NewCurrencyDictionary(map[string]*repo.CurrencyDefinition{
 		valid.Code.String():      valid,
 		invalidOne.Code.String(): invalidOne,
 		invalidTwo.Code.String(): invalidTwo,
-		"DIF": valid,
+		"DIF":                    valid,
 	})
 
 	var mappedErrs map[string]error
