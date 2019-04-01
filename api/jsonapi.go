@@ -138,7 +138,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			username, password, ok := r.BasicAuth()
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
-			if !ok || username != i.config.Username || strings.ToLower(password) != strings.ToLower(i.config.Password) {
+			if !ok || username != i.config.Username || !strings.EqualFold(password, i.config.Password) {
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return
@@ -2822,7 +2822,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 
 					pro, err := i.node.FetchProfile(pid, useCache)
 					if err != nil {
-						respondWithError("Not found")
+						respondWithError("not found")
 						return
 					}
 					obj := pb.PeerAndProfileWithID{Id: id, PeerId: pid, Profile: &pro}
@@ -2834,12 +2834,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					}
 					respJSON, err := m.MarshalToString(&obj)
 					if err != nil {
-						respondWithError("Error Marshalling to JSON")
+						respondWithError("error Marshalling to JSON")
 						return
 					}
 					b, err := SanitizeProtobuf(respJSON, new(pb.PeerAndProfileWithID))
 					if err != nil {
-						respondWithError("Error Marshalling to JSON")
+						respondWithError("error Marshalling to JSON")
 						return
 					}
 					i.node.Broadcast <- repo.PremarshalledNotifier{b}
@@ -3588,7 +3588,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					Error    string `json:"error"`
 				}
 				respondWithError := func(errorMsg string) {
-					e := ratingError{id, rid, "Not found"}
+					e := ratingError{id, rid, errorMsg}
 					ret, err := json.MarshalIndent(e, "", "    ")
 					if err != nil {
 						return
@@ -3597,14 +3597,14 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 				}
 				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
-					respondWithError("Not Found")
+					respondWithError("not Found")
 					return
 				}
 
 				rating := new(pb.Rating)
 				err = jsonpb.UnmarshalString(string(ratingBytes), rating)
 				if err != nil {
-					respondWithError("Invalid rating")
+					respondWithError("invalid rating")
 					return
 				}
 				valid, err := core.ValidateRating(rating)
@@ -3624,12 +3624,12 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 				}
 				out, err := m.MarshalToString(resp)
 				if err != nil {
-					respondWithError("Error marshalling rating")
+					respondWithError("error marshalling rating")
 					return
 				}
 				b, err := SanitizeProtobuf(out, new(pb.RatingWithID))
 				if err != nil {
-					respondWithError("Error marshalling rating")
+					respondWithError("error marshalling rating")
 					return
 				}
 				i.node.Broadcast <- repo.PremarshalledNotifier{b}

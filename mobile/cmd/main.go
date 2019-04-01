@@ -10,7 +10,8 @@ import (
 )
 
 type Options struct {
-	Datadir string `short:"d" long:"data" description:"location of openbazaar datastore"`
+	TestnetEnabled bool   `short:"t" long:"testnet" description:"use testnet protocol and wallet endpoints"`
+	Datadir        string `short:"d" long:"data" description:"location of openbazaar datastore"`
 }
 
 var (
@@ -26,16 +27,17 @@ func main() {
 		}
 		fmt.Printf("error parsing options: %s\n", err.Error())
 		os.Exit(1)
-	} else {
-		if options.Datadir != "" {
-			dataPath = options.Datadir
-		}
+	}
+
+	if options.Datadir != "" {
+		dataPath = options.Datadir
 	}
 
 	var (
 		wg     sync.WaitGroup
 		n, err = mobile.NewNodeWithConfig(&mobile.NodeConfig{
 			RepoPath: dataPath,
+			Testnet:  options.TestnetEnabled,
 		}, "", "")
 	)
 	if err != nil {
