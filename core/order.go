@@ -1321,11 +1321,11 @@ collectListings:
 		inv.Variant = selectedVariant
 		for _, o := range listingMap[item.ListingHash].Item.Options {
 			for _, checkOpt := range userOptions {
-				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
+				if strings.EqualFold(o.Name, checkOpt.Name) {
 					// var validVariant bool
 					validVariant := false
 					for _, v := range o.Variants {
-						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+						if strings.EqualFold(v.Name, checkOpt.Value) {
 							validVariant = true
 						}
 					}
@@ -1335,7 +1335,7 @@ collectListings:
 				}
 			check:
 				for i, lopt := range listingOptions {
-					if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
+					if strings.EqualFold(checkOpt.Name, lopt) {
 						listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
 						continue check
 					}
@@ -1385,7 +1385,7 @@ collectListings:
 				if option.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
 					var service *pb.Listing_ShippingOption_Service
 					for _, shippingService := range option.Services {
-						if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
+						if strings.EqualFold(shippingService.Name, item.ShippingOption.Service) {
 							service = shippingService
 						}
 					}
@@ -1646,9 +1646,9 @@ func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (i
 	for _, s := range listing.Item.Options {
 	optionsLoop:
 		for _, o := range itemOptions {
-			if strings.ToLower(o.Name) == strings.ToLower(s.Name) {
+			if strings.EqualFold(o.Name, s.Name) {
 				for i, va := range s.Variants {
-					if strings.ToLower(va.Name) == strings.ToLower(o.Value) {
+					if strings.EqualFold(va.Name, o.Value) {
 						selected = append(selected, i)
 						break optionsLoop
 					}
