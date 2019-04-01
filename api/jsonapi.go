@@ -176,6 +176,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		deleter(i, u.String(), w, r)
 	case "PATCH":
 		patch(i, u.String(), w, r)
+	case "HEAD":
+		get(i, u.String(), w, r)
 	}
 }
 
