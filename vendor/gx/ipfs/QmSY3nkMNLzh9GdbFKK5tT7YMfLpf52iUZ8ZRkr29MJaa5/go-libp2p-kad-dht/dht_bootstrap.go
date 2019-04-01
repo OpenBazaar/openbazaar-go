@@ -143,6 +143,11 @@ var bootstrapOnce sync.Once
 
 // runBootstrap builds up list of peers by requesting random peer IDs
 func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error {
+	// OpenBazaar: close bootstrap chan
+	defer bootstrapOnce.Do(func() {
+		close(dht.BootstrapChan)
+	})
+
 	bslog := func(msg string) {
 		logger.Debugf("DHT %s dhtRunBootstrap %s -- routing table size: %d", dht.self, msg, dht.routingTable.Size())
 	}
@@ -175,9 +180,6 @@ func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error
 		return err
 	})
 
-	// OpenBazaar: close bootstrap chan
-	bootstrapOnce.Do(func() {
-		close(dht.BootstrapChan)
-	})
+
 	return err
 }
