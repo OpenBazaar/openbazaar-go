@@ -22,6 +22,10 @@ const RepoVersion = "21"
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
+func init() {
+	ipfs.InstallDatabasePlugins()
+}
+
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
 	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,

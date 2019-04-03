@@ -11,10 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
-
-	"github.com/ipfs/go-ipfs/plugin/loader"
 
 	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 
@@ -29,26 +26,6 @@ const (
 	IdentityKeyLength     = 4096
 	DefaultSeedPassphrase = "Secret Passphrase"
 )
-
-var pluginOnce sync.Once
-
-func init() {
-	pluginOnce.Do(func() {
-		loader, err := loader.NewPluginLoader("")
-		if err != nil {
-			panic(err)
-		}
-		err = loader.Initialize()
-		if err != nil {
-			panic(err)
-		}
-
-		err = loader.Inject()
-		if err != nil {
-			panic(err)
-		}
-	})
-}
 
 type openbazaarSchemaManager struct {
 	database        *sql.DB
