@@ -3,7 +3,7 @@ package core
 import "testing"
 
 func TestIpnsAPIPathTransform(t *testing.T) {
-	peerID := "QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7"
+	peerID := "QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN"
 	expected := "https://gateway.ob1.io/ob/ipns/" + peerID
 
 	testVectors := []string{

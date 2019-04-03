@@ -1,0 +1,14 @@
+{
+  "author": "why",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/polydawn/refmt"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "",
+  "name": "refmt",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.2.1"
+}
+

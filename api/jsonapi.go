@@ -8,6 +8,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
+	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -21,12 +23,12 @@ import (
 	"sync"
 	"time"
 
-	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
-	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
-	datastore "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
+	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
+	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -41,7 +43,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/core/coreapi/interface"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
@@ -2670,23 +2671,31 @@ func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 	defer cancel()
 
-	api := coreapi.NewCoreAPI(i.node.IpfsNode)
+	api, err := coreapi.NewCoreAPI(i.node.IpfsNode)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	pth, err := iface.ParsePath("/ipfs/" + imageHash)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	dr, err := api.Unixfs().Get(ctx, pth)
+	nd, err := api.Unixfs().Get(ctx, pth)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	f, ok := nd.(files.File)
+	if !ok {
+		ErrorResponse(w, http.StatusInternalServerError, "Invalid type assertion")
+		return
+	}
 
-	defer dr.Close()
 	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	w.Header().Del("Content-Type")
-	http.ServeContent(w, r, imageHash, time.Now(), dr)
+	http.ServeContent(w, r, imageHash, time.Now(), f)
 }
 
 func (i *jsonAPIHandler) GETAvatar(w http.ResponseWriter, r *http.Request) {
@@ -2701,7 +2710,6 @@ func (i *jsonAPIHandler) GETAvatar(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer dr.Close()
 	w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	w.Header().Del("Content-Type")
 	http.ServeContent(w, r, path.Join("ipns", peerID, "images", size, "avatar"), time.Now(), dr)
@@ -2719,7 +2727,6 @@ func (i *jsonAPIHandler) GETHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer dr.Close()
 	w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	w.Header().Del("Content-Type")
 	http.ServeContent(w, r, path.Join("ipns", peerID, "images", size, "header"), time.Now(), dr)

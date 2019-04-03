@@ -17,13 +17,13 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	os.MkdirAll(path.Join("./", "root"), os.ModePerm)
-	d1 := []byte("hello world")
-	ioutil.WriteFile(path.Join("./", "root", "test"), d1, 0644)
+	os.MkdirAll(path.Join(os.TempDir(), "root"), os.ModePerm)
+	d := []byte("hello world")
+	ioutil.WriteFile(path.Join(os.TempDir(), "root", "test"), d, os.ModePerm)
 }
 
 func teardown() {
-	os.RemoveAll(path.Join("./", "root"))
+	os.RemoveAll(path.Join(os.TempDir(), "root"))
 }
 
 func TestAddFile(t *testing.T) {
@@ -31,7 +31,7 @@ func TestAddFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hash, err := AddFile(n, path.Join("./", "root", "test"))
+	hash, err := AddFile(n, path.Join(os.TempDir(), "root", "test"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,7 +45,7 @@ func TestAddDirectory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	root, err := AddDirectory(n, path.Join("./", "root"))
+	root, err := AddDirectory(n, path.Join(os.TempDir(), "root"))
 	if err != nil {
 		t.Error(err)
 	}

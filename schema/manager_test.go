@@ -17,6 +17,16 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
+func TestMain(m *testing.M) {
+	// The repo package usually installs the plugins
+	// on init() but the repo package isn't initialized
+	// here and it would be a circular import to import
+	// it. So we will install the plugin for the purposes
+	// of these tests.
+	ipfs.InstallDatabasePlugins()
+	os.Exit(m.Run())
+}
+
 func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	subject, err := NewSchemaManager()
 	if err != nil {

@@ -1,0 +1,35 @@
+{
+  "author": "dignifiedquire",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-fs-lock/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-fs-lock"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz",
+      "name": "go-ipfs-util",
+      "version": "1.2.9"
+    },
+    {
+      "hash": "QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF",
+      "name": "go-log",
+      "version": "1.5.9"
+    },
+    {
+      "author": "hsanjuan",
+      "hash": "QmYDxsntDcWC7CTisDmeorEvDVjkRAjjY9Vr9DJ6HSkXMS",
+      "name": "go4-lock",
+      "version": "0.0.3"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-fs-lock",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.11"
+}
+

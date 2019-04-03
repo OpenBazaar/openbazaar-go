@@ -2,14 +2,18 @@ package ipfs
 
 import (
 	"context"
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
+	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"io/ioutil"
 	"strings"
 	"time"
 
+	"github.com/go-errors/errors"
+
+	coreiface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
+
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/core/coreapi/interface"
 
 	"github.com/ipfs/go-ipfs/core"
 )
@@ -22,16 +26,25 @@ func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 	if !strings.HasPrefix(path, "/ipfs/") {
 		path = "/ipfs/" + path
 	}
-	api := coreapi.NewCoreAPI(n)
-	pth, err := iface.ParsePath(path)
+	api, err := coreapi.NewCoreAPI(n)
+	if err != nil {
+		return nil, err
+	}
+	pth, err := coreiface.ParsePath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := api.Unixfs().Get(ctx, pth)
+	nd, err := api.Unixfs().Get(ctx, pth)
 	if err != nil {
 		return nil, err
 	}
+
+	r, ok := nd.(files.File)
+	if !ok {
+		return nil, errors.New("Received incorrect type from Unixfs().Get()")
+	}
+
 	return ioutil.ReadAll(r)
 }
 
