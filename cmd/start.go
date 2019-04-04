@@ -432,6 +432,10 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
+	// Replace tiered router with a CachingRouter that uses an APIRouter backend
+	// for the cache and the tiered router as the origin
+	nd.Routing = ipfs.NewCachingRouter(ipfs.NewAPIRouter("https://routing.api.openbazaar.org"), tiered)
+
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
