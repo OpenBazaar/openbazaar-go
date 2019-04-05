@@ -18,6 +18,16 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
+func TestMain(m *testing.M) {
+	// The repo package usually installs the plugins
+	// on init() but the repo package isn't initialized
+	// here and it would be a circular import to import
+	// it. So we will install the plugin for the purposes
+	// of these tests.
+	ipfs.InstallDatabasePlugins()
+	os.Exit(m.Run())
+}
+
 func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	subject, err := NewSchemaManager()
 	if err != nil {
@@ -402,7 +412,7 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	loadConfig := func() (map[string]interface{}, error) {
+	loadConfig := func() map[string]interface{} {
 		configPath := path.Join(subject.dataPath, "config")
 		configFile, err := ioutil.ReadFile(configPath)
 		if err != nil {
@@ -419,15 +429,12 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 			//t.Error("invalid config file")
 			return map[string]interface{}{}, errors.New("invalid config file")
 		}
-		return cfg, nil
+		return cfg
 	}
 
 	// First load the config and make sure the identity object is indeed set.
 
-	cfg, err := loadConfig()
-	if err != nil {
-		t.Error(err)
-	}
+	cfg := loadConfig()
 	_, ok := cfg["Identity"]
 	if !ok {
 		t.Error("Identity object does not exist in config but should")
@@ -437,10 +444,7 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 	if err := subject.CleanIdentityFromConfig(); err != nil {
 		t.Error(err)
 	}
-	cfg, err = loadConfig()
-	if err != nil {
-		t.Error(err)
-	}
+	cfg = loadConfig()
 	_, ok = cfg["Identity"]
 	if ok {
 		t.Error("Identity object was not deleted from config")

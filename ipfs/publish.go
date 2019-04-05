@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
 	"github.com/ipfs/go-ipfs/core"
 

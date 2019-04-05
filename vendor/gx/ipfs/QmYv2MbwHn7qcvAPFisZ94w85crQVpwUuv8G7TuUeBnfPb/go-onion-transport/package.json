@@ -1,0 +1,45 @@
+{
+  "author": "chris",
+  "bugs": {
+    "url": "https://github.com/OpenBazaar/go-onion-transport"
+  },
+  "gxDependencies": [
+    {
+      "author": "multiformats",
+      "hash": "QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL",
+      "name": "go-multiaddr",
+      "version": "1.4.1"
+    },
+    {
+      "author": "multiformats",
+      "hash": "Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip",
+      "name": "go-multiaddr-net",
+      "version": "1.7.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNQWMWWBmkAcaVEspSNwYB95axzKFhYTdqZtABA2zXoPu",
+      "name": "go-libp2p-transport",
+      "version": "3.0.27"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmUrZZavcArYChpibtP8KgQXsAEpvgzUk73B2oj3HLbWc4",
+      "name": "mafmt",
+      "version": "1.2.11"
+    },
+    {
+      "author": "steb",
+      "hash": "QmeqC5shQjEBRG9B8roZqQCJ9xb7Pq6AbWxJFMyLgqBBWh",
+      "name": "go-libp2p-transport-upgrader",
+      "version": "0.1.28"
+    }
+  ],
+  "gxVersion": "0.11.0",
+  "language": "English",
+  "license": "",
+  "name": "go-onion-transport",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.1"
+}
+

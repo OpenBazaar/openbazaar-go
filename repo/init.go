@@ -22,6 +22,10 @@ const RepoVersion = "21"
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
+func init() {
+	ipfs.InstallDatabasePlugins()
+}
+
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
 	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,
@@ -125,10 +129,14 @@ func checkWriteable(dir string) error {
 }
 
 func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
+
 	cfg, err := r.Config()
 	if err != nil {
 		log.Error(err)
@@ -140,18 +148,13 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	cfg.Identity = identity
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
 	}
 	defer nd.Close()
 
-	err = nd.SetupOfflineRouting()
-	if err != nil {
-		return err
-	}
 	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 

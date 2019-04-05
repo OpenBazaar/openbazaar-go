@@ -3,16 +3,15 @@ package migrations
 import (
 	"encoding/json"
 	"fmt"
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 
-	"gx/ipfs/QmZMWMvWMVKCbHetJ4RgndbuEF1io2UpUxwQwtNjtYPzSC/go-ipfs-files"
+	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 
 	"github.com/ipfs/go-ipfs/core/mock"
 )
@@ -136,7 +135,7 @@ func getHashOfFile(n *core.IpfsNode, root string) (rootHash string, err error) {
 		return "", err
 	}
 
-	f, err := files.NewSerialFile(filepath.Base(root), root, false, stat)
+	f, err := files.NewSerialFile(root, false, stat)
 	if err != nil {
 		return "", err
 	}

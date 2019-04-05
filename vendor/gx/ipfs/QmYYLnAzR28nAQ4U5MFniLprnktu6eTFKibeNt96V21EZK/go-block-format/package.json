@@ -1,0 +1,36 @@
+{
+  "author": "stebalien",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-block-format"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-block-format"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN",
+      "name": "go-cid",
+      "version": "0.9.3"
+    },
+    {
+      "author": "multiformats",
+      "hash": "QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW",
+      "name": "go-multihash",
+      "version": "1.0.9"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz",
+      "name": "go-ipfs-util",
+      "version": "1.2.9"
+    }
+  ],
+  "gxVersion": "0.11.0",
+  "language": "go",
+  "license": "",
+  "name": "go-block-format",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.2"
+}
+

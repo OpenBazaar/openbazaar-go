@@ -1,0 +1,30 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ds-measure"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ds-measure"
+  },
+  "gxDependencies": [
+    {
+      "author": "ipfs",
+      "hash": "QmekzFM3hPZjTjUFGTABdQkEnQ3PTiMstY198PwSFr5w1Q",
+      "name": "go-metrics-interface",
+      "version": "0.2.0"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9",
+      "name": "go-datastore",
+      "version": "3.6.1"
+    }
+  ],
+  "gxVersion": "0.8.0",
+  "language": "go",
+  "license": "",
+  "name": "go-ds-measure",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.4.5"
+}
+

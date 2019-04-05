@@ -5,15 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-
-	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // NewOrderConfirmation - add order confirmation to the contract

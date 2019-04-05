@@ -1,4 +1,4 @@
-FROM golang:1.10
+FROM golang:1.11
 WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
 COPY . .
 RUN go build --ldflags '-extldflags "-static"' -o /opt/openbazaard .

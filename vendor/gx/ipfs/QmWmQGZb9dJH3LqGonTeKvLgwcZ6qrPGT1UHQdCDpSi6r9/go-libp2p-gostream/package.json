@@ -1,0 +1,24 @@
+{
+  "author": "hsanjuan",
+  "bugs": {
+    "url": "https://github.com/hsanjuan/go-libp2p-gostream"
+  },
+  "gx": {
+    "dvcsimport": "github.com/hsanjuan/go-libp2p-gostream"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK",
+      "name": "go-libp2p",
+      "version": "6.0.39"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-libp2p-gostream",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.29"
+}
+

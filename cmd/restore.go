@@ -5,17 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 
-	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
-	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
-	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"
-	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	"gx/ipfs/QmTkKN1x5Jvhc5Np55gJzD3PQ6GL74aKm9145t9WbvJyrB/go-tcp-transport"
-	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
-	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
-	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
+	"gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
+	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
+	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
+	ipld "gx/ipfs/QmZ6nzCLwGLVfRzYLpD7pW6UNuBDKEcA2imJtVpbEx2rxy/go-ipld-format"
+	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 	"io"
 
 	"io/ioutil"
@@ -27,10 +26,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+
+	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
@@ -216,11 +216,7 @@ func (x *Restore) Execute(args []string) error {
 		if usingClearnet {
 			transportOptions = libp2p.ChainOptions(
 				transportOptions,
-				libp2p.Transport(ws.New),
-			)
-			transportOptions = libp2p.ChainOptions(
-				transportOptions,
-				libp2p.Transport(tcp.NewTCPTransport),
+				libp2p.DefaultTransports,
 			)
 		}
 		libp2p.DefaultTransports = transportOptions
@@ -319,14 +315,18 @@ func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid
 			cctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 
-			api := coreapi.NewCoreAPI(nd)
+			api, err := coreapi.NewCoreAPI(nd)
+			if err != nil {
+				PrintError(fmt.Sprintf("Error retrieving %s\n", path.Join(directory, link.Name)))
+				return
+			}
 			pth, err := iface.ParsePath("/ipfs/" + link.Cid.String())
 			if err != nil {
 				PrintError(fmt.Sprintf("Error retrieving %s\n", path.Join(directory, link.Name)))
 				return
 			}
 
-			r, err := api.Unixfs().Get(cctx, pth)
+			ndi, err := api.Unixfs().Get(cctx, pth)
 			if err != nil {
 				PrintError(fmt.Sprintf("Error retrieving %s\n", path.Join(directory, link.Name)))
 				return
@@ -336,6 +336,11 @@ func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid
 			f, err := os.Create(path.Join(repoPath, "root", directory, link.Name))
 			if err != nil {
 				PrintError(err.Error())
+				return
+			}
+			r, ok := ndi.(files.File)
+			if !ok {
+				PrintError(fmt.Sprintf("Error retrieving %s\n", path.Join(directory, link.Name)))
 				return
 			}
 			_, err = io.Copy(f, r)
