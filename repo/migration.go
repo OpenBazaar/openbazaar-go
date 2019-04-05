@@ -41,7 +41,7 @@ var (
 		migrations.Migration018{},
 		migrations.Migration019{},
 		migrations.Migration020{},
-		migrations.Migration021{},
+		migrations.Migration023{},
 	}
 )
 
