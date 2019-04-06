@@ -413,7 +413,7 @@ func configFixture() []byte {
     "ETH": {
       "Type": "API",
       "API": [
-        "https://rinkeby.infura.io"
+        "https://mainnet.infura.io"
       ],
       "APITestnet": [
         "https://rinkeby.infura.io"
@@ -425,7 +425,7 @@ func configFixture() []byte {
       "LowFeeDefault": 7,
       "TrustedPeer": "",
       "WalletOptions": {
-        "RegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+        "RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
         "RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
         "RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
       }

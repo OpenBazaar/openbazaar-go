@@ -39,7 +39,7 @@ const (
 	// End SQL Statements
 
 	// Configuration defaults
-	EthereumRegistryAddressMainnet = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
 	EthereumRegistryAddressRinkeby = "0x403d907982474cdd51687b09a8968346159378f3"
 	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
 
@@ -93,12 +93,13 @@ const (
 	CoinAPIOpenBazaarBCH = "https://bch.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarLTC = "https://ltc.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarZEC = "https://zec.blockbook.api.openbazaar.org/api"
-	CoinAPIOpenBazaarETH = "https://rinkeby.infura.io"
+	CoinAPIOpenBazaarETH = "https://mainnet.infura.io"
 
 	CoinAPIOpenBazaarTBTC = "https://tbtc.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTBCH = "https://tbch.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTLTC = "https://tltc.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTZEC = "https://tzec.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTETH = "https://rinkeby.infura.io"
 )
 
 var (
@@ -112,5 +113,5 @@ var (
 	CoinPoolTBCH = []string{CoinAPIOpenBazaarTBCH}
 	CoinPoolTLTC = []string{CoinAPIOpenBazaarTLTC}
 	CoinPoolTZEC = []string{CoinAPIOpenBazaarTZEC}
-	CoinPoolTETH = []string{CoinAPIOpenBazaarETH}
+	CoinPoolTETH = []string{CoinAPIOpenBazaarTETH}
 )

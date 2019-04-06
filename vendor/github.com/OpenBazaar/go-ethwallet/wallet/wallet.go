@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nanmu42/etherscan-api"
+
 	"github.com/OpenBazaar/multiwallet/config"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -1278,9 +1280,13 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
 	// TODO: etherscan api is being used
 	// when mainnet is activated we may need a way to set the
-	// url correctly
+	// url correctly - done 6 April 2019
 	hash := common.HexToHash(txid.String())
-	urlStr := fmt.Sprintf("https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", hash.String())
+	network := etherscan.Rinkby
+	if strings.Contains(wallet.client.url, "mainnet") {
+		network = etherscan.Mainnet
+	}
+	urlStr := fmt.Sprintf("https://%s.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", network, hash.String())
 	res, err := http.Get(urlStr)
 	if err != nil {
 		return 0, 0, err
