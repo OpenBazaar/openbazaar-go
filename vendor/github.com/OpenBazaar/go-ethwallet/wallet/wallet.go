@@ -217,7 +217,13 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	var regAddr interface{}
 	var ok bool
-	if regAddr, ok = cfg.Options["RegistryAddress"]; !ok {
+	registryKey := "RegistryAddress"
+	if strings.Contains(cfg.ClientAPIs[0], "rinkeby") {
+		registryKey = "RinkebyRegistryAddress"
+	} else if strings.Contains(cfg.ClientAPIs[0], "ropsten") {
+		registryKey = "RopstenRegistryAddress"
+	}
+	if regAddr, ok = cfg.Options[registryKey]; !ok {
 		log.Errorf("ethereum registry not found: %s", err.Error())
 		return nil, err
 	}
