@@ -7,7 +7,6 @@ import (
 	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ropts "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing/options"
-	"gx/ipfs/QmfGQp6VVqdPCDyzEM6EGwMY74YPabTSEoQWHUxZuCSWj3/go-multierror"
 )
 
 var (
@@ -64,29 +63,4 @@ func (r CachingRouter) SearchValue(ctx context.Context, key string, opts ...ropt
 
 	// Cache miss; check tiered router
 	return r.Tiered.SearchValue(ctx, key, opts...)
-}
-
-func (r CachingRouter) get(ctx context.Context, do func(routing.IpfsRouting) (interface{}, error)) (interface{}, error) {
-	var errs []error
-	for _, ri := range r.Routers {
-		val, err := do(ri)
-		switch err {
-		case nil:
-			return val, nil
-		case routing.ErrNotFound, routing.ErrNotSupported:
-			continue
-		}
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		errs = append(errs, err)
-	}
-	switch len(errs) {
-	case 0:
-		return nil, routing.ErrNotFound
-	case 1:
-		return nil, errs[0]
-	default:
-		return nil, &multierror.Error{Errors: errs}
-	}
 }
