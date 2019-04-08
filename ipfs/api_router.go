@@ -85,12 +85,12 @@ func (r APIRouter) FindPeer(_ context.Context, id peer.ID) (pstore.PeerInfo, err
 	return pstore.PeerInfo{}, routing.ErrNotSupported
 }
 
-// FindProvidersAsync is unsupport
+// FindProvidersAsync is unsupported
 func (r APIRouter) FindProvidersAsync(_ context.Context, _ cid.Cid, _ int) <-chan pstore.PeerInfo {
 	return nil
 }
 
-// Provide is unsupport
+// Provide is unsupported
 func (r APIRouter) Provide(_ context.Context, _ cid.Cid, _ bool) error {
 	return routing.ErrNotSupported
 }
