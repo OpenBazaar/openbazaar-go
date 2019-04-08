@@ -710,14 +710,14 @@ func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address 
 		return nil, err
 	}
 
-	tx := types.Transaction{}
+	//tx := types.Transaction{}
 
-	err = tx.UnmarshalJSON(data)
-	if err != nil {
-		return nil, err
-	}
+	//err = tx.UnmarshalJSON(data)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	hash := tx.Hash()
+	hash := common.BytesToHash(data) // tx.Hash()
 
 	return chainhash.NewHashFromStr(hash.Hex()[2:])
 }
