@@ -27,7 +27,7 @@ func ToFloat(i interface{}) (float64, error) {
 
 // DefaultPort returns the default port for the given connection scheme unless
 // otherwise indicated in the url.URL provided
-func DefaultPort(u url.URL) int {
+func DefaultPort(u *url.URL) int {
 	var port int
 	if parsedPort, err := strconv.ParseInt(u.Port(), 10, 32); err == nil {
 		port = int(parsedPort)
@@ -43,4 +43,4 @@ func DefaultPort(u url.URL) int {
 }
 
 // HasImpliedURLSecurity returns true if the scheme is https
-func HasImpliedURLSecurity(u url.URL) bool { return u.Scheme == "https" }
+func HasImpliedURLSecurity(u *url.URL) bool { return u.Scheme == "https" }
