@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hunterlong/tokenbalance"
 	"github.com/nanmu42/etherscan-api"
@@ -112,9 +112,7 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 	}
 
 	transferFnSignature := []byte("transfer(address,uint256)")
-	hash := sha3.NewKeccak256()
-	hash.Write(transferFnSignature)
-	methodID := hash.Sum(nil)[:4]
+	methodID := crypto.Keccak256(transferFnSignature)[:4]
 
 	fmt.Printf("Method ID: %s\n", hexutil.Encode(methodID))
 

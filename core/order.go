@@ -131,6 +131,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 	// Send to order vendor and request a payment address
 	merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
+	fmt.Println("after send order ....: ", err)
 	if err != nil {
 		return processOfflineDirectOrder(n, wal, contract, payment)
 	}
@@ -266,6 +267,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 }
 
 func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, uint64, bool, error) {
+	fmt.Println("in process offline direct order")
 	// Vendor offline
 	// Change payment code to direct
 
@@ -279,18 +281,22 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	   and vendors's masterPubKeys and a random chaincode. */
 	chaincode := make([]byte, 32)
 	_, err := rand.Read(chaincode)
+	fmt.Println("11111  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 	vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
+	fmt.Println("111112  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 	buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
+	fmt.Println("111113  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
+	fmt.Println("111114  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -299,6 +305,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	payment.Chaincode = hex.EncodeToString(chaincode)
 
 	err = wal.AddWatchedAddress(addr)
+	fmt.Println("111115  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -306,6 +313,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	// Remove signature and resign
 	contract.Signatures = []*pb.Signature{contract.Signatures[0]}
 	contract, err = n.SignOrder(contract)
+	fmt.Println("111116  :", err)
 	if err != nil {
 		return "", "", 0, false, err
 	}
