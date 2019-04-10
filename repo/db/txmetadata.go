@@ -57,7 +57,7 @@ func (t *TxMetadataDB) Get(txid string) (repo.Metadata, error) {
 	if canBumpFee > 0 {
 		bumpable = true
 	}
-	m = repo.Metadata{id, address, memo, orderId, thumbnail, bumpable}
+	m = repo.Metadata{Txid: id, Address: address, Memo: memo, OrderId: orderId, Thumbnail: thumbnail, CanBumpFee: bumpable}
 	return m, nil
 }
 

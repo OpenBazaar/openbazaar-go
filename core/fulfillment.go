@@ -61,9 +61,9 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			return err
 		}
 		mPrivKey := n.MasterPrivateKey
-		if err != nil {
-			return err
-		}
+		//if err != nil {
+		//	return err
+		//}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return err
@@ -180,9 +180,9 @@ func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER_FULFILLMENT
-	if err != nil {
-		return contract, err
-	}
+	//if err != nil {
+	//	return contract, err
+	//}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrderFulfil)
 	if err != nil {
 		return contract, err

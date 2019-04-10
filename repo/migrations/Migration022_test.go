@@ -12,41 +12,9 @@ import (
 )
 
 const preMigration022Config = `{
-	"OtherConfigProperty1": [1, 2, 3],
-	"OtherConfigProperty2": "abc123",
+	"OtherConfigProperty11": [1, 2, 3],
+	"OtherConfigProperty21": "abc123",
 	"Wallets":{
-		"BTC": {
-			"API": [
-					"https://btc.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-					"https://tbtc.api.openbazaar.org/api"
-			]
-		},
-		"BCH": {
-			"API": [
-					"https://bch.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-					"https://tbch.api.openbazaar.org/api"
-			]
-		},
-		"LTC": {
-			"API": [
-					"https://ltc.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-					"https://tltc.api.openbazaar.org/api"
-			]
-		},
-		"ZEC": {
-			"API": [
-					"https://zec.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-					"https://tzec.api.openbazaar.org/api"
-			]
-		},
 		"ETH": {
 			"API": [
 					"https://mainnet.infura.io"
@@ -59,73 +27,9 @@ const preMigration022Config = `{
 }`
 
 const postMigration022Config = `{
-	"OtherConfigProperty1": [1, 2, 3],
-	"OtherConfigProperty2": "abc123",
+	"OtherConfigProperty11": [1, 2, 3],
+	"OtherConfigProperty21": "abc123",
 	"Wallets": {
-		"BTC": {
-			"Type": "API",
-			"API": [
-					"https://btc.blockbook.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-					"https://tbtc.blockbook.api.openbazaar.org/api"
-			],
-			"MaxFee": 200,
-			"FeeAPI": "https://btc.fees.openbazaar.org",
-			"HighFeeDefault": 50,
-			"MediumFeeDefault": 10,
-			"LowFeeDefault": 1,
-			"TrustedPeer": "",
-			"WalletOptions": null
-		},
-		"BCH": {
-			"Type": "API",
-			"API": [
-				"https://bch.blockbook.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-				"https://tbch.blockbook.api.openbazaar.org/api"
-			],
-			"MaxFee": 200,
-			"FeeAPI": "",
-			"HighFeeDefault": 10,
-			"MediumFeeDefault": 5,
-			"LowFeeDefault": 1,
-			"TrustedPeer": "",
-			"WalletOptions": null
-		},
-		"LTC": {
-			"Type": "API",
-			"API": [
-				"https://ltc.blockbook.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-				"https://tltc.blockbook.api.openbazaar.org/api"
-			],
-			"MaxFee": 200,
-			"FeeAPI": "",
-			"HighFeeDefault": 20,
-			"MediumFeeDefault": 10,
-			"LowFeeDefault": 5,
-			"TrustedPeer": "",
-			"WalletOptions": null
-		},
-		"ZEC": {
-			"Type": "API",
-			"API": [
-				"https://zec.blockbook.api.openbazaar.org/api"
-			],
-			"APITestnet": [
-				"https://tzec.blockbook.api.openbazaar.org/api"
-			],
-			"MaxFee": 200,
-			"FeeAPI": "",
-			"HighFeeDefault": 20,
-			"MediumFeeDefault": 10,
-			"LowFeeDefault": 5,
-			"TrustedPeer": "",
-			"WalletOptions": null
-		},
 		"ETH": {
 			"Type": "API",
 			"API": [
@@ -178,7 +82,7 @@ func TestMigration022(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile(repoverPath, []byte("15"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(repoverPath, []byte("21"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,19 +103,10 @@ func TestMigration022(t *testing.T) {
 	}
 
 	w := config["Wallets"].(map[string]interface{})
-	btc := w["BTC"].(map[string]interface{})
-	bch := w["BCH"].(map[string]interface{})
-	ltc := w["LTC"].(map[string]interface{})
-	zec := w["ZEC"].(map[string]interface{})
+	eth := w["ETH"].(map[string]interface{})
 
-	migration022AssertAPI(t, btc["API"], "https://btc.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, btc["APITestnet"], "https://tbtc.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, bch["API"], "https://bch.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, bch["APITestnet"], "https://tbch.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, ltc["API"], "https://ltc.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, ltc["APITestnet"], "https://tltc.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, zec["API"], "https://zec.blockbook.api.openbazaar.org/api")
-	migration022AssertAPI(t, zec["APITestnet"], "https://tzec.blockbook.api.openbazaar.org/api")
+	migration022AssertAPI(t, eth["API"], "https://mainnet.infura.io")
+	migration022AssertAPI(t, eth["APITestnet"], "https://rinkeby.infura.io")
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration022Config), "") {
@@ -219,7 +114,7 @@ func TestMigration022(t *testing.T) {
 		t.Fatal("incorrect post-migration config")
 	}
 
-	assertCorrectRepoVer(t, repoverPath, "17")
+	assertCorrectRepoVer(t, repoverPath, "23")
 
 	err = m.Down(testRepo.DataPath(), "", true)
 	if err != nil {
@@ -236,20 +131,5 @@ func TestMigration022(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w = config["Wallets"].(map[string]interface{})
-	btc = w["BTC"].(map[string]interface{})
-	bch = w["BCH"].(map[string]interface{})
-	ltc = w["LTC"].(map[string]interface{})
-	zec = w["ZEC"].(map[string]interface{})
-
-	migration022AssertAPI(t, btc["API"], "https://btc.api.openbazaar.org/api")
-	migration022AssertAPI(t, btc["APITestnet"], "https://tbtc.api.openbazaar.org/api")
-	migration022AssertAPI(t, bch["API"], "https://bch.api.openbazaar.org/api")
-	migration022AssertAPI(t, bch["APITestnet"], "https://tbch.api.openbazaar.org/api")
-	migration022AssertAPI(t, ltc["API"], "https://ltc.api.openbazaar.org/api")
-	migration022AssertAPI(t, ltc["APITestnet"], "https://tltc.api.openbazaar.org/api")
-	migration022AssertAPI(t, zec["API"], "https://zec.api.openbazaar.org/api")
-	migration022AssertAPI(t, zec["APITestnet"], "https://tzec.api.openbazaar.org/api")
-
-	assertCorrectRepoVer(t, repoverPath, "16")
+	assertCorrectRepoVer(t, repoverPath, "22")
 }
