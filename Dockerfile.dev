@@ -27,7 +27,8 @@ RUN wget https://github.com/google/protobuf/releases/download/v3.6.0/protoc-3.6.
 RUN go get -u github.com/gogo/protobuf/proto \
               github.com/golang/protobuf/protoc-gen-go \
               github.com/icrowley/fake \
-              github.com/derekparker/delve/cmd/dlv
+              github.com/derekparker/delve/cmd/dlv \
+              github.com/tools/godep
 
 RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.15.0
 

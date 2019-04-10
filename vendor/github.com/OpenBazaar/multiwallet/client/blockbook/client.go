@@ -18,6 +18,7 @@ import (
 
 	gosocketio "github.com/OpenBazaar/golang-socketio"
 	"github.com/OpenBazaar/golang-socketio/protocol"
+	clientErr "github.com/OpenBazaar/multiwallet/client/errors"
 	"github.com/OpenBazaar/multiwallet/client/transport"
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -50,7 +51,7 @@ func (w *wsWatchdog) guardWebsocket() {
 	for range t.C {
 		select {
 		case <-w.wsStopped:
-			Log.Warningf("reconnecting stopped websocket (%s)", w.client.apiUrl.Host)
+			Log.Warningf("reconnecting stopped websocket (%s)", w.client.String())
 			w.client.socketMutex.Lock()
 			if w.client.SocketClient != nil {
 				w.client.SocketClient.Close()
@@ -58,9 +59,9 @@ func (w *wsWatchdog) guardWebsocket() {
 			}
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
-				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
+				Log.Warningf("failed reconnecting websocket (%s)", w.client.String())
 				w.client.socketMutex.Unlock()
-				w.client.sendAndDiscardCloseChan(fmt.Errorf("websocket unavailable: %s", err.Error()))
+				w.client.sendAndDiscardCloseChan(fmt.Errorf("websocket unavailable (%s): %s", w.client.String(), err.Error()))
 				go w.putAway()
 				return
 			}
@@ -96,7 +97,7 @@ func (w *wsWatchdog) putAway() {
 }
 
 type BlockBookClient struct {
-	apiUrl            url.URL
+	apiUrl            *url.URL
 	blockNotifyChan   chan model.Block
 	closeChan         chan<- error
 	listenLock        sync.Mutex
@@ -131,7 +132,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 	tbTransport := &http.Transport{Dial: dial}
 	ic := &BlockBookClient{
 		HTTPClient:      http.Client{Timeout: time.Second * 30, Transport: tbTransport},
-		apiUrl:          *u,
+		apiUrl:          u,
 		proxyDialer:     proxyDialer,
 		blockNotifyChan: bch,
 		txNotifyChan:    tch,
@@ -142,6 +143,10 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 	return ic, nil
 }
 
+func (i *BlockBookClient) String() string {
+	return i.apiUrl.Host
+}
+
 func (i *BlockBookClient) BlockChannel() chan model.Block {
 	return i.blockNotifyChan
 }
@@ -150,8 +155,9 @@ func (i *BlockBookClient) TxChannel() chan model.Transaction {
 	return i.txNotifyChan
 }
 
-func (i *BlockBookClient) EndpointURL() url.URL {
-	return i.apiUrl
+func (i *BlockBookClient) EndpointURL() *url.URL {
+	var u = *i.apiUrl
+	return &u
 }
 
 func (i *BlockBookClient) Start(closeChan chan<- error) error {
@@ -165,7 +171,7 @@ func (i *BlockBookClient) Start(closeChan chan<- error) error {
 }
 
 func (i *BlockBookClient) Close() {
-	Log.Infof("closing client (%s)...", i.apiUrl.Host)
+	Log.Infof("closing client (%s)...", i.String())
 	i.socketMutex.Lock()
 	defer i.socketMutex.Unlock()
 	if i.SocketClient != nil {
@@ -201,24 +207,38 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		req.URL.RawQuery = query.Encode()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("creating request: %s", err)
+		Log.Errorf("creating: %s", err.Error())
+		return nil, fmt.Errorf("creating: %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := i.HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
-	}
-	// Try again if for some reason it returned a bad request
-	if resp.StatusCode == http.StatusBadRequest {
-		// Reset the body so we can read it again.
-		req.Body = ioutil.NopCloser(bytes.NewReader(body))
-		resp, err = i.HTTPClient.Do(req)
-		if err != nil {
-			return nil, err
+		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
+			Log.Errorf("timed out executing: %s", err.Error())
+			return nil, clientErr.MakeRetryable(err)
 		}
+		Log.Errorf("executing: %s", err.Error())
+		return nil, fmt.Errorf("executing: %s", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
+		errStr := fmt.Sprintf("not ok (%s %s): responded %s", method, requestUrl.String(), resp.Status)
+		Log.Errorf(errStr)
+
+		// log body
+		if body, err := ioutil.ReadAll(resp.Body); err != nil {
+			Log.Warningf("reading body (%s %s): %s", method, requestUrl.String(), err.Error())
+		} else {
+			if len(body) > 0 {
+				Log.Debugf("not ok response body (%s %s):\n\tstring: %s\n\thexencoded: %s", method, requestUrl.String(), string(body), hex.EncodeToString(body))
+			}
+		}
+
+		// mark 500 errors as fatal
+		if resp.StatusCode >= 500 {
+			err := fmt.Errorf("wallet server internal error (%s %s)", method, requestUrl.String())
+			return nil, clientErr.MakeRetryable(clientErr.MakeFatal(err))
+		}
 		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
 	return resp, nil
@@ -248,9 +268,9 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	tx := new(resTx)
 	decoder := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
 	if err = decoder.Decode(tx); err != nil {
 		return nil, fmt.Errorf("error decoding transactions: %s", err)
 	}
@@ -367,9 +387,9 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 		if err != nil {
 			return nil, err
 		}
+		defer resp.Body.Close()
 		res := new(resAddr)
 		decoder := json.NewDecoder(resp.Body)
-		defer resp.Body.Close()
 		if err = decoder.Decode(res); err != nil {
 			return nil, fmt.Errorf("error decoding addrs response: %s", err)
 		}
@@ -421,9 +441,9 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 					utxoChan <- utxoOrError{nil, err}
 					return
 				}
+				defer resp.Body.Close()
 				var utxos []model.Utxo
 				decoder := json.NewDecoder(resp.Body)
-				defer resp.Body.Close()
 				if err = decoder.Decode(&utxos); err != nil {
 					utxoChan <- utxoOrError{nil, err}
 					return
@@ -498,7 +518,7 @@ func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
 	}
 }
 
-func connectSocket(u url.URL, proxyDialer proxy.Dialer) (model.SocketClient, error) {
+func connectSocket(u *url.URL, proxyDialer proxy.Dialer) (model.SocketClient, error) {
 	socketClient, err := gosocketio.Dial(
 		gosocketio.GetUrl(u.Hostname(), model.DefaultPort(u), model.HasImpliedURLSecurity(u)),
 		transport.GetDefaultWebsocketTransport(proxyDialer),
@@ -516,7 +536,7 @@ func connectSocket(u url.URL, proxyDialer proxy.Dialer) (model.SocketClient, err
 	// Wait for socket to be ready or timeout
 	select {
 	case <-time.After(10 * time.Second):
-		return nil, fmt.Errorf("timeout connecting to websocket endpoint %s", u.Host)
+		return nil, fmt.Errorf("websocket connection timeout (%s)", u.Host)
 	case <-socketReady:
 		break
 	}
@@ -533,7 +553,7 @@ func (i *BlockBookClient) setupListeners() error {
 
 	client, err := connectSocket(i.apiUrl, i.proxyDialer)
 	if err != nil {
-		Log.Errorf("reconnect websocket: %s", err.Error())
+		Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
 		var (
 			setupTimeoutAt = time.Now().Add(10 * time.Second)
 			t              = time.NewTicker(2 * time.Second)
@@ -541,11 +561,11 @@ func (i *BlockBookClient) setupListeners() error {
 		defer t.Stop()
 		for range t.C {
 			if time.Now().After(setupTimeoutAt) {
-				return fmt.Errorf("unable to connect websocket to setup listeners")
+				return fmt.Errorf("websocket reconnection timeout (%s)", i.String())
 			}
 			client, err = connectSocket(i.apiUrl, i.proxyDialer)
 			if err != nil {
-				Log.Errorf("reconnect websocket: %s", err.Error())
+				Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
 				continue
 			}
 			break
@@ -555,18 +575,18 @@ func (i *BlockBookClient) setupListeners() error {
 	go i.websocketWatchdog.guardWebsocket()
 
 	i.SocketClient.On(gosocketio.OnError, func(c *gosocketio.Channel, args interface{}) {
-		Log.Warningf("websocket error: %s - %+v", i.apiUrl.Host, "-", args)
+		Log.Warningf("websocket error (%s): %+v", i.String(), "-", args)
 		i.websocketWatchdog.bark()
 	})
 	i.SocketClient.On(gosocketio.OnDisconnection, func(c *gosocketio.Channel) {
-		Log.Warningf("websocket disconnected: %s", i.apiUrl.Host)
+		Log.Warningf("websocket disconnected (%s)", i.String())
 		i.websocketWatchdog.bark()
 	})
 
 	i.SocketClient.On("bitcoind/hashblock", func(h *gosocketio.Channel, arg interface{}) {
 		best, err := i.GetBestBlock()
 		if err != nil {
-			Log.Errorf("Error downloading best block: %s", err.Error())
+			Log.Errorf("error downloading best block: %s", err.Error())
 			return
 		}
 		i.blockNotifyChan <- *best
@@ -576,20 +596,20 @@ func (i *BlockBookClient) setupListeners() error {
 	i.SocketClient.On("bitcoind/addresstxid", func(h *gosocketio.Channel, arg interface{}) {
 		m, ok := arg.(map[string]interface{})
 		if !ok {
-			Log.Errorf("Error checking type after socket notification: %T", arg)
+			Log.Errorf("error checking type after socket notification: %T", arg)
 			return
 		}
 		for _, v := range m {
 			txid, ok := v.(string)
 			if !ok {
-				Log.Errorf("Error checking type after socket notification: %T", arg)
+				Log.Errorf("error checking type after socket notification: %T", arg)
 				return
 			}
 			_, err := chainhash.NewHashFromStr(txid) // Check is 256 bit hash. Might also be address
 			if err == nil {
 				tx, err := i.GetTransaction(txid)
 				if err != nil {
-					Log.Errorf("Error downloading tx after socket notification: %s", err.Error())
+					Log.Errorf("error downloading tx after socket notification: %s", err.Error())
 					return
 				}
 				tx.Time = time.Now().Unix()
@@ -604,7 +624,7 @@ func (i *BlockBookClient) setupListeners() error {
 		i.SocketClient.Emit("subscribe", args)
 	}
 	i.listenQueue = []string{}
-	Log.Infof("Connected to websocket endpoint %s", i.apiUrl.Host)
+	Log.Infof("websocket connected (%s)", i.String())
 	return nil
 }
 
@@ -641,30 +661,34 @@ func (i *BlockBookClient) GetBestBlock() (*model.Block, error) {
 
 	resp, err := i.RequestFunc("", http.MethodGet, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting block index: %s", err.Error())
 	}
+	defer resp.Body.Close()
+
 	decoder := json.NewDecoder(resp.Body)
 	bi := new(resIndex)
-	defer resp.Body.Close()
 	if err = decoder.Decode(bi); err != nil {
-		return nil, fmt.Errorf("error decoding block index: %s", err)
+		return nil, fmt.Errorf("decoding block index: %s", err)
 	}
-	resp2, err := i.RequestFunc("/block-index/"+strconv.Itoa(bi.Backend.Blocks-1), http.MethodGet, nil, nil)
+	blockIndexPath := "/block-index/" + strconv.Itoa(bi.Backend.Blocks-1)
+
+	resp2, err := i.RequestFunc(blockIndexPath, http.MethodGet, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting block detail (%s): %s", blockIndexPath, err.Error())
 	}
+	defer resp2.Body.Close()
+
 	decoder2 := json.NewDecoder(resp2.Body)
 	bh := new(resBlockHash)
-	defer resp2.Body.Close()
 	if err = decoder2.Decode(bh); err != nil {
-		return nil, fmt.Errorf("error decoding block hash: %s", err)
+		return nil, fmt.Errorf("decoding block detail: %s", err)
 	}
-	ret := model.Block{
+
+	return &model.Block{
 		Hash:              bi.Backend.BestBlockHash,
 		Height:            bi.Backend.Blocks,
 		PreviousBlockhash: bh.BlockHash,
-	}
-	return &ret, nil
+	}, nil
 }
 
 func (i *BlockBookClient) GetBlocksBefore(to time.Time, limit int) (*model.BlockList, error) {
@@ -676,9 +700,9 @@ func (i *BlockBookClient) GetBlocksBefore(to time.Time, limit int) (*model.Block
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	list := new(model.BlockList)
 	decoder := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
 	if err = decoder.Decode(list); err != nil {
 		return nil, fmt.Errorf("error decoding block list: %s", err)
 	}
@@ -690,8 +714,8 @@ func (i *BlockBookClient) EstimateFee(nbBlocks int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	data := map[int]float64{}
 	defer resp.Body.Close()
+	data := map[int]float64{}
 	if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return 0, fmt.Errorf("error decoding fee estimate: %s", err)
 	}

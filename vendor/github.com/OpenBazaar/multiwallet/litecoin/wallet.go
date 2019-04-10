@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/ltcsuite/ltcutil"
 	"io"
 	"time"
-
-	"github.com/ltcsuite/ltcutil"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
