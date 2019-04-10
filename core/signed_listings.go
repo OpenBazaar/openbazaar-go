@@ -30,7 +30,7 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) err
 	for _, coupon := range sl.Listing.Coupons {
 		for _, c := range savedCoupons {
 			if coupon.GetHash() == c.Hash {
-				coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+				coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: c.Code}
 				break
 			}
 		}

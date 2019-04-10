@@ -765,7 +765,9 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		WithInput:     false,
 	}
 
+	fmt.Println("before send order pymnt : ", msg)
 	err = i.node.SendOrderPayment(result.PeerID, &msg)
+	fmt.Println("after send order pymnt : ", err)
 	if err != nil {
 		log.Errorf("error sending order payment: %v", err)
 	}
@@ -1486,7 +1488,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if profile.PeerID != peerID {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
+			ErrorResponse(w, http.StatusNotFound, "peerID mismatch")
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
@@ -1895,7 +1897,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{b}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 					} else {
 						type wsResp struct {
 							ID     string `json:"id"`
@@ -1906,7 +1908,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{data}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: data}
 					}
 				}(p)
 			}
@@ -2830,7 +2832,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 					}
 
 					pro, err := i.node.FetchProfile(pid, useCache)
@@ -2855,7 +2857,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("error Marshalling to JSON")
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{b}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 				}(p)
 			}
 		}()
@@ -3606,7 +3608,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 				}
 				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
@@ -3645,7 +3647,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("error marshalling rating")
 					return
 				}
-				i.node.Broadcast <- repo.PremarshalledNotifier{b}
+				i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 			}(r)
 		}
 	}

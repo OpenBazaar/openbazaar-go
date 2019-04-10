@@ -228,7 +228,6 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 	}
 
 	ethConfig.RegistryAddress = regAddr.(string)
-	fmt.Println("lets see the registry address : ", ethConfig.RegistryAddress)
 
 	/*
 		_, filename, _, _ := runtime.Caller(0)
@@ -545,7 +544,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			if rcpt != nil {
 				flag = true
 			}
-			if time.Since(start).Seconds() > 120 {
+			if time.Since(start).Seconds() > 140 {
 				flag = true
 			}
 			if err != nil {
