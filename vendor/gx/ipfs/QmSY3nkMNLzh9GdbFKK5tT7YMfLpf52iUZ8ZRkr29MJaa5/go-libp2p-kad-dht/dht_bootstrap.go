@@ -180,6 +180,5 @@ func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error
 		return err
 	})
 
-
 	return err
 }
