@@ -36,6 +36,7 @@ func (Migration021) Up(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	swarm["EnableAutoRelay"] = true
+	swarm["EnableAutoNATService"] = false
 	configMap["Swarm"] = swarm
 
 	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
@@ -77,6 +78,7 @@ func (Migration021) Down(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	delete(swarm, "EnableAutoRelay")
+	delete(swarm, "EnableAutoNATService")
 	configMap["Swarm"] = swarm
 
 	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
