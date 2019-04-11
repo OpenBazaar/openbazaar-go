@@ -22,9 +22,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/natefinch/lumberjack"
+
 	ipfsconfig "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
+
+	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -64,6 +68,10 @@ type Node struct {
 	apiConfig      *apiSchema.APIConfig
 }
 
+var fileLogFormat = logging.MustStringFormatter(
+	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+)
+
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
@@ -91,9 +99,32 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	os.Remove(repoLockFile)
 
 	// Logging
+	w := &lumberjack.Logger{
+		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
+		MaxSize:    10, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	var backendStdoutFormatter logging.Backend
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(logger)
+	backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+	logging.SetBackend(backendStdoutFormatter)
+
+	backendFile := logging.NewLogBackend(w, "", 0)
+	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+	ipfslogging.LdJSONFormatter()
+	w2 := &lumberjack.Logger{
+		Filename:   path.Join(config.RepoPath, "logs", "ipfs.log"),
+		MaxSize:    10, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	ipfslogging.Output(w2)()
+
+	var level logging.Level
+	level = logging.INFO
+	logging.SetLevel(level, "")
 
 	migrations.WalletCoinType = config.CoinType
 
