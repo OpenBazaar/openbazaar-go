@@ -123,8 +123,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	ipfslogging.Output(w2)()
 
-	var level logging.Level
-	level = logging.INFO
+	level := logging.INFO
 	logging.SetLevel(level, "")
 
 	migrations.WalletCoinType = config.CoinType
