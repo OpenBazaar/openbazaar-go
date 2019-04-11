@@ -93,6 +93,10 @@ Help Options:
                                   pass in the location of the zcashd binary.
 ```
 
+### Other Commands
+
+See the file `openbazaar.go` for a full list of commands, such as `status`, `stop`, `restart`, `restore`, and more.
+
 ## Documentation
 
 Documentation of the OpenBazaar protocol has not been formalized yet. If you would like to help, please reach out on [Slack](https://openbazaar.org/slack/) or via a new issue on GitHub.
