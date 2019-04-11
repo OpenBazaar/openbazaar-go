@@ -37,6 +37,7 @@ const postMigration021Config = `{
 		"DisableBandwidthMetrics": false,
       		"DisableNatPortMap": false,
       		"DisableRelay": false,
+		"EnableAutoNATService": false,
 		"EnableAutoRelay": true,
       		"EnableRelayHop": false
    	}
