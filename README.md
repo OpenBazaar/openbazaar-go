@@ -48,7 +48,7 @@ You can either pull in remote changes as normal or run `go get -u github.com/Ope
 
 ## Usage
 
-You can run the server with `go run openbazaard.go start`.
+You can run the server with `go run openbazaard.go start`. Ensure you are using at least version `1.10` of Golang, otherwise you might get errors while running.
 
 ### Options
 
