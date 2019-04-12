@@ -9,7 +9,7 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
-// The Wallet interface is used by openbazaar-go for both normal wallet operation (sending
+// Wallet interface is used by openbazaar-go for both normal wallet operation (sending
 // and receiving) as well as for handling multisig escrow payment as part of its order flow.
 // The following is a very high level of the order flow and how it relates to the methods
 // described by this interface.
@@ -44,15 +44,53 @@ import (
 // not the vendor is online or offline and whether or not the buyer is doing a direct payment or
 // escrowed payment.
 type Wallet interface {
+	walletMustManager
+	walletMustKeysmither
+	walletMustBanker
+	walletCanBumpFee
+}
 
+// WalletMustManuallyAssociateTransactionToOrder MUST be checked for by openbazaar-go to ensure
+// that wallets which require manual association between transactions and orders are properly
+// associated. If the interface is supported, AssociateTransactionToOrder must be called as
+// early as is reasonable to ensure proper reporting of payment.
+type WalletMustManuallyAssociateTransactionToOrder interface {
+	// AssociateOrderToTransaction must be called for wallets which implement it to support
+	// wallet implementations which are not able to generate unique Addresses on a per-Order
+	// basis. It should be called as soon as the wallet transaction and referenceID are both
+	// known by the openbazaar-go node (which should be reported from the buyer to the vendor).
+	AssociateTransactionToOrder(txid chainhash.Hash, referenceID string) error
+}
+
+type walletMustManager interface {
 	// Start is called when the openbazaar-go daemon starts up. At this point in time
 	// the wallet implementation should start syncing and/or updating balances, but
 	// not before.
 	Start()
 
+	// Close should cleanly disconnect from the wallet and finish writing
+	// anything it needs to to disk.
+	Close()
+
 	// CurrencyCode returns the currency code this wallet implements. For example, "BTC".
 	// When running on testnet a `T` should be prepended. For example "TBTC".
 	CurrencyCode() string
+
+	// ExchangeRates returns an ExchangeRates implementation which will provide
+	// fiat exchange rate data for this coin.
+	ExchangeRates() ExchangeRates
+
+	// AddWatchedAddress adds an address to the wallet to get notifications back when coins
+	// are received or spent from it. These watch only addresses should be persisted between
+	// sessions and upon each startup the wallet should be made to listen for transactions
+	// involving them.
+	AddWatchedAddress(addr btc.Address) error
+
+	// AddTransactionListener is how openbazaar-go registers to receive a callback whenever
+	// a transaction is received that is relevant to this wallet or any of its watch only
+	// addresses. An address is considered relevant if any inputs or outputs match an address
+	// owned by this wallet, or being watched by the wallet via AddWatchedAddress method.
+	AddTransactionListener(func(TransactionCallback))
 
 	// IsDust returns whether the amount passed in is considered dust by network. This
 	// method is called when building payout transactions from the multisig to the various
@@ -60,16 +98,6 @@ type Wallet interface {
 	// the dust threshold, openbazaar-go will not pay that party to avoid building a transaction
 	// that never confirms.
 	IsDust(amount int64) bool
-
-	// ChildKey generate a child key using the given chaincode. Each openbazaar-go node
-	// keeps a master key (an hd secp256k1 key) that it uses in multisig transactions.
-	// Rather than use the key directly (which would result in an on chain privacy leak),
-	// we create a random chaincode for each order (which is not made public) and a child
-	// key is derived from the master key using the chaincode. The child key for each party
-	// to the order (buyer, vendor, moderator) is what is used to create the multisig. This
-	// function leaves it up the wallet implementation to decide how to derive the child key
-	// so long as it's deterministic and uses the chaincode and the returned key is pseudorandom.
-	ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error)
 
 	// CurrentAddress returns an address suitable for receiving payments. `purpose` specifies
 	// whether the address should be internal or external. External addresses are typically
@@ -94,12 +122,6 @@ type Wallet interface {
 	// intend to remove it once most people have upgraded, but for now it needs to remain.
 	ScriptToAddress(script []byte) (btc.Address, error)
 
-	// HasKey returns whether or not the wallet has the key for the given address. This method
-	// is called by openbazaar-go when validating payouts from multisigs. It makes sure the
-	// transaction that the other party(s) signed does indeed pay to an address that we
-	// control.
-	HasKey(addr btc.Address) bool
-
 	// Balance returns the confirmed and unconfirmed aggregate balance for the wallet.
 	// For utxo based wallets, if a spend of confirmed coins is made, the resulting "change"
 	// should be also counted as confirmed even if the spending transaction is unconfirmed.
@@ -117,39 +139,31 @@ type Wallet interface {
 	// ChainTip returns the best block hash and height of the blockchain.
 	ChainTip() (uint32, chainhash.Hash)
 
-	// GetFeePerByte returns the current fee per byte for the given fee level. There
-	// are three fee levels ― priority, normal, and economic.
-	//
-	//The returned value should be in the coin's base unit (for example: satoshis).
-	GetFeePerByte(feeLevel FeeLevel) uint64
+	// ReSyncBlockchain is called in response to a user action to rescan transactions. API based
+	// wallets should do another scan of their addresses to find anything missing. Full node, or SPV
+	// wallets should rescan/re-download blocks starting at the fromTime.
+	ReSyncBlockchain(fromTime time.Time)
 
-	// Spend transfers the given amount of coins (in the coin's base unit. For example: in
-	// satoshis) to the given address using the provided fee level. Openbazaar-go calls
-	// this method in two places. 1) When the user requests a normal transfer from their
-	// wallet to another address. 2) When clicking 'pay from internal wallet' to fund
-	// an order the user just placed.
-	// It also includes a referenceID which basically refers to the order the spend will affect
-	Spend(amount int64, addr btc.Address, feeLevel FeeLevel, referenceID string) (*chainhash.Hash, error)
+	// GetConfirmations returns the number of confirmations and the height for a transaction.
+	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
+}
 
-	// BumpFee should attempt to bump the fee on a given unconfirmed transaction (if possible) to
-	// try to get it confirmed and return the txid of the new transaction (if one exists).
-	// Since this method is only called in response to user action, it is acceptable to
-	// return an error if this functionality is not available in this wallet or on the network.
-	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)
+type walletMustKeysmither interface {
+	// ChildKey generate a child key using the given chaincode. Each openbazaar-go node
+	// keeps a master key (an hd secp256k1 key) that it uses in multisig transactions.
+	// Rather than use the key directly (which would result in an on chain privacy leak),
+	// we create a random chaincode for each order (which is not made public) and a child
+	// key is derived from the master key using the chaincode. The child key for each party
+	// to the order (buyer, vendor, moderator) is what is used to create the multisig. This
+	// function leaves it up the wallet implementation to decide how to derive the child key
+	// so long as it's deterministic and uses the chaincode and the returned key is pseudorandom.
+	ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error)
 
-	// EstimateFee should return the estimate fee that will be required to make a transaction
-	// spending from the given inputs to the given outputs. FeePerByte is denominated in
-	// the coin's base unit (for example: satoshis).
-	EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64
-
-	// EstimateSpendFee should return the anticipated fee to transfer a given amount of coins
-	// out of the wallet at the provided fee level. Typically this involves building a
-	// transaction with enough inputs to cover the request amount and calculating the size
-	// of the transaction. It is OK, if a transaction comes in after this function is called
-	// that changes the estimated fee as it's only intended to be an estimate.
-	//
-	// All amounts should be in the coin's base unit (for example: satoshis).
-	EstimateSpendFee(amount int64, feeLevel FeeLevel) (uint64, error)
+	// HasKey returns whether or not the wallet has the key for the given address. This method
+	// is called by openbazaar-go when validating payouts from multisigs. It makes sure the
+	// transaction that the other party(s) signed does indeed pay to an address that we
+	// control.
+	HasKey(addr btc.Address) bool
 
 	// GenerateMultisigScript should deterministically create a redeem script and address from the information provided.
 	// This method should be strictly limited to taking the input data, combining it to produce the redeem script and
@@ -180,23 +194,6 @@ type Wallet interface {
 	// If `timeoutKey` is nil then the a normal multisig without a timeout should be created.
 	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error)
 
-	// SweepAddress should sweep all the funds from the provided inputs into the provided `address` using the given
-	// `key`. If `address` is nil, the funds should be swept into an internal address own by this wallet.
-	// If the `redeemScript` is not nil, this should be treated as a multisig (p2sh) address and signed accordingly.
-	//
-	// This method is called by openbazaar-go in the following scenarios:
-	// 1) The buyer placed a direct order to a vendor who was offline. The buyer sent funds into a 1 of 2 multisig.
-	// Upon returning online the vendor accepts the order and calls SweepAddress to move the funds into his wallet.
-	//
-	// 2) Same as above but the buyer wishes to cancel the order before the vendor comes online. He calls SweepAddress
-	// to return the funds from the 1 of 2 multisig back into has wallet.
-	//
-	// 3) Same as above but rather than accepting the order, the vendor rejects it. When the buyer receives the reject
-	// message he calls SweepAddress to move the funds back into his wallet.
-	//
-	// 4) The timeout has expired on a 2 of 3 multisig. The vendor calls SweepAddress to claim the funds.
-	SweepAddress(ins []TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error)
-
 	// CreateMultisigSignature should build a transaction using the given inputs and outputs and sign it with the
 	// provided key. A list of signatures (one for each input) should be returned.
 	//
@@ -215,34 +212,66 @@ type Wallet interface {
 	// This method is called by openbazaar-go by whichever party to the escrow is trying to release the funds only after
 	// all needed parties have signed using `CreateMultisigSignature` and have shared their signatures with each other.
 	Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error)
+}
 
-	// AddWatchedAddress adds an address to the wallet to get notifications back when coins
-	// are received or spent from it. These watch only addresses should be persisted between
-	// sessions and upon each startup the wallet should be made to listen for transactions
-	// involving them.
-	AddWatchedAddress(addr btc.Address) error
+type walletMustBanker interface {
+	// GetFeePerByte returns the current fee per byte for the given fee level. There
+	// are three fee levels ― priority, normal, and economic.
+	//
+	//The returned value should be in the coin's base unit (for example: satoshis).
+	GetFeePerByte(feeLevel FeeLevel) uint64
 
-	// AddTransactionListener is how openbazaar-go registers to receive a callback whenever
-	// a transaction is received that is relevant to this wallet or any of its watch only
-	// addresses. An address is considered relevant if any inputs or outputs match an address
-	// owned by this wallet, or being watched by the wallet via AddWatchedAddress method.
-	AddTransactionListener(func(TransactionCallback))
+	// Spend transfers the given amount of coins (in the coin's base unit. For example: in
+	// satoshis) to the given address using the provided fee level. Openbazaar-go calls
+	// this method in two places. 1) When the user requests a normal transfer from their
+	// wallet to another address. 2) When clicking 'pay from internal wallet' to fund
+	// an order the user just placed.
+	// It also includes a referenceID which basically refers to the order the spend will affect
+	//
+	// If spendAll is true the amount field will be ignored and all the funds in the wallet will
+	// be swept to the provided payment address. For most coins this entails subtracting the
+	// transaction fee from the total amount being sent rather than adding it on as is normally
+	// the case when spendAll is false.
+	Spend(amount int64, addr btc.Address, feeLevel FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error)
 
-	// ReSyncBlockchain is called in response to a user action to rescan transactions. API based
-	// wallets should do another scan of their addresses to find anything missing. Full node, or SPV
-	// wallets should rescan/re-download blocks starting at the fromTime.
-	ReSyncBlockchain(fromTime time.Time)
+	// EstimateFee should return the estimate fee that will be required to make a transaction
+	// spending from the given inputs to the given outputs. FeePerByte is denominated in
+	// the coin's base unit (for example: satoshis).
+	EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64
 
-	// GetConfirmations returns the number of confirmations and the height for a transaction.
-	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
+	// EstimateSpendFee should return the anticipated fee to transfer a given amount of coins
+	// out of the wallet at the provided fee level. Typically this involves building a
+	// transaction with enough inputs to cover the request amount and calculating the size
+	// of the transaction. It is OK, if a transaction comes in after this function is called
+	// that changes the estimated fee as it's only intended to be an estimate.
+	//
+	// All amounts should be in the coin's base unit (for example: satoshis).
+	EstimateSpendFee(amount int64, feeLevel FeeLevel) (uint64, error)
 
-	// ExchangeRates returns an ExchangeRates implementation which will provide
-	// fiat exchange rate data for this coin.
-	ExchangeRates() ExchangeRates
+	// SweepAddress should sweep all the funds from the provided inputs into the provided `address` using the given
+	// `key`. If `address` is nil, the funds should be swept into an internal address own by this wallet.
+	// If the `redeemScript` is not nil, this should be treated as a multisig (p2sh) address and signed accordingly.
+	//
+	// This method is called by openbazaar-go in the following scenarios:
+	// 1) The buyer placed a direct order to a vendor who was offline. The buyer sent funds into a 1 of 2 multisig.
+	// Upon returning online the vendor accepts the order and calls SweepAddress to move the funds into his wallet.
+	//
+	// 2) Same as above but the buyer wishes to cancel the order before the vendor comes online. He calls SweepAddress
+	// to return the funds from the 1 of 2 multisig back into has wallet.
+	//
+	// 3) Same as above but rather than accepting the order, the vendor rejects it. When the buyer receives the reject
+	// message he calls SweepAddress to move the funds back into his wallet.
+	//
+	// 4) The timeout has expired on a 2 of 3 multisig. The vendor calls SweepAddress to claim the funds.
+	SweepAddress(ins []TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error)
+}
 
-	// Close should cleanly disconnect from the wallet and finish writing
-	// anything it needs to to disk.
-	Close()
+type walletCanBumpFee interface {
+	// BumpFee should attempt to bump the fee on a given unconfirmed transaction (if possible) to
+	// try to get it confirmed and return the txid of the new transaction (if one exists).
+	// Since this method is only called in response to user action, it is acceptable to
+	// return an error if this functionality is not available in this wallet or on the network.
+	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)
 }
 
 type FeeLevel int
