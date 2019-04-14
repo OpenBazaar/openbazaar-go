@@ -2,65 +2,64 @@ package ipfs
 
 import (
 	"context"
-	"errors"
-
-	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
-	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
-	ropts "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing/options"
-)
-
-var (
-	ErrCachingRouterValueIsNotByteSlice = errors.New("Value is not byte slice")
+	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
+	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
+	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing/options"
+	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
+	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 )
 
 type CachingRouter struct {
-	cachingRouter routing.ValueStore
-	routinghelpers.Tiered
+	apiRouter *APIRouter
+	routing.IpfsRouting
+	RecordValidator record.Validator
 }
 
-func NewCachingRouter(cachingRouter routing.ValueStore, tiered routinghelpers.Tiered) routing.IpfsRouting {
-	return CachingRouter{
-		cachingRouter: cachingRouter,
-		Tiered:        tiered,
+func NewCachingRouter(dht *dht.IpfsDHT, apiRouter *APIRouter) *CachingRouter {
+	return &CachingRouter{
+		apiRouter: apiRouter,
+		IpfsRouting: dht,
+		RecordValidator: dht.Validator,
 	}
 }
 
-func (r CachingRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
+func (r *CachingRouter) DHT() *dht.IpfsDHT {
+	return r.IpfsRouting.(*dht.IpfsDHT)
+}
+
+func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
+	log.Notice("Putting value...")
 	// Write to the tiered router in the background then write to the caching
 	// router and return
-	go r.Tiered.PutValue(ctx, key, value, opts...)
-	return r.cachingRouter.PutValue(ctx, key, value, opts...)
+	go r.IpfsRouting.PutValue(ctx, key, value, opts...)
+	return r.apiRouter.PutValue(ctx, key, value, opts...)
 }
 
-func (r CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-	// First check the cache router. If it's successful return the value otherwise
+func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
+	log.Notice("Getting value...")
+	// First check the tiered router. If it's successful return the value otherwise
 	// continue on to check the other routers.
-	val, err := r.cachingRouter.GetValue(ctx, key, opts...)
-	if err == nil {
-		return val, nil
-	}
-
-	// Cache miss; Check tiered router
-	val, err = r.Tiered.GetValue(ctx, key, opts...)
+	val, err := r.IpfsRouting.GetValue(ctx, key, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	// Write value back to caching router so it can hit next time.
-	return val, r.cachingRouter.PutValue(ctx, key, val, opts...)
-}
-
-func (r CachingRouter) SearchValue(ctx context.Context, key string, opts ...ropts.Option) (<-chan []byte, error) {
-	// Check caching router for value. If it's found return a closed channel with
-	// just that value in it. If it's not found check the tiered router.
-	val, err := r.cachingRouter.GetValue(ctx, key, opts...)
+	// Value miss; Check API router
+	val, err = r.apiRouter.GetValue(ctx, key, opts...)
 	if err == nil {
-		valuesCh := make(chan ([]byte), 1)
-		valuesCh <- val
-		close(valuesCh)
-		return valuesCh, nil
+		return val, nil
 	}
 
-	// Cache miss; check tiered router
-	return r.Tiered.SearchValue(ctx, key, opts...)
+	// Write value back to caching router so it can hit next time.
+	return val, r.apiRouter.PutValue(ctx, key, val, opts...)
+}
+
+func (r *CachingRouter) SearchValue(ctx context.Context, key string, opts ...ropts.Option) (<-chan []byte, error) {
+	return routinghelpers.Parallel{
+		Routers: []routing.IpfsRouting{
+			r.IpfsRouting,
+			r.apiRouter,
+		},
+		Validator: r.RecordValidator,
+	}.SearchValue(ctx, key, opts...)
 }

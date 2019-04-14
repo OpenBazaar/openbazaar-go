@@ -104,7 +104,6 @@ type Start struct {
 }
 
 func (x *Start) Execute(args []string) error {
-	ipfscore.DHTOption = constructDHTRouting
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -395,6 +394,7 @@ func (x *Start) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
+		Routing: constructRouting,
 	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
@@ -424,17 +424,13 @@ func (x *Start) Execute(args []string) error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if _, ok := router.(*dht.IpfsDHT); ok {
-			dhtRouting = router.(*dht.IpfsDHT)
+		if r, ok := router.(*ipfs.CachingRouter); ok {
+			dhtRouting = r.DHT()
 		}
 	}
 	if dhtRouting == nil {
 		return errors.New("IPFS DHT routing is not configured")
 	}
-
-	// Replace tiered router with a CachingRouter that uses an APIRouter backend
-	// for the cache and the tiered router as the origin
-	nd.Routing = ipfs.NewCachingRouter(ipfs.NewAPIRouter("https://routing.api.openbazaar.org"), tiered)
 
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
@@ -851,12 +847,18 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 
 const IpnsValidatorTag = "ipns"
 
-func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	return dht.New(
+func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	dhtRouting, err := dht.New(
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter("https://9g76zbn6y8.execute-api.us-east-1.amazonaws.com")
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests
