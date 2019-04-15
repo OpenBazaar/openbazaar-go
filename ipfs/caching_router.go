@@ -27,8 +27,11 @@ func (r *CachingRouter) DHT() *dht.IpfsDHT {
 	return r.IpfsRouting.(*dht.IpfsDHT)
 }
 
+func (r *CachingRouter) APIRouter() *APIRouter {
+	return r.apiRouter
+}
+
 func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
-	log.Notice("Putting value...")
 	// Write to the tiered router in the background then write to the caching
 	// router and return
 	go r.IpfsRouting.PutValue(ctx, key, value, opts...)
@@ -36,7 +39,6 @@ func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, 
 }
 
 func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-	log.Notice("Getting value...")
 	// First check the tiered router. If it's successful return the value otherwise
 	// continue on to check the other routers.
 	val, err := r.IpfsRouting.GetValue(ctx, key, opts...)
