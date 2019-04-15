@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strings"
 	"time"
 
@@ -25,20 +26,20 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
-		var outValue int64
+		outValue := big.NewInt(0)
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return err
 				}
-				outValue += r.Value
+				outValue = new(big.Int).Add(outValue, &r.Value)
 				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
@@ -50,7 +51,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		}
 		output := wallet.TransactionOutput{
 			Address: refundAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -73,8 +74,8 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		f, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
 		if err != nil {
 			return err
 		}
@@ -85,23 +86,26 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		}
 		refundMsg.Sigs = sigs
 	} else {
-		var outValue int64
+		outValue := big.NewInt(0)
 		for _, r := range records {
-			if r.Value > 0 {
-				outValue += r.Value
+			if r.Value.Cmp(big.NewInt(0)) > 0 {
+				outValue = new(big.Int).Add(outValue, &r.Value)
 			}
 		}
 		refundAddr, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
-		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL, orderID)
+		txid, err := wal.Spend(*outValue, refundAddr, wallet.NORMAL, orderID)
 		if err != nil {
 			return err
 		}
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
-		txinfo.Value = uint64(outValue)
+		txinfo.Value = &pb.CurrencyValue{
+			Currency: contract.BuyerOrder.Payment.Amount.Currency,
+			Value:    outValue.String(),
+		} // uint64(outValue)
 		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg

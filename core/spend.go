@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -14,13 +15,13 @@ import (
 
 // DefaultCurrencyDivisibility is the Divisibility of the Currency if not
 // defined otherwise
-const DefaultCurrencyDivisibility uint32 = 1e8
+const DefaultCurrencyDivisibility uint32 = 8
 
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
 	Address                string `json:"address"`
-	Amount                 int64  `json:"amount"`
+	Amount                 string `json:"amount"`
 	FeeLevel               string `json:"feeLevel"`
 	Memo                   string `json:"memo"`
 	OrderID                string `json:"orderId"`
@@ -29,13 +30,13 @@ type SpendRequest struct {
 }
 
 type SpendResponse struct {
-	Amount             int64     `json:"amount"`
-	ConfirmedBalance   int64     `json:"confirmedBalance"`
+	Amount             string    `json:"amount"`
+	ConfirmedBalance   string    `json:"confirmedBalance"`
 	Memo               string    `json:"memo"`
 	OrderID            string    `json:"orderId"`
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
-	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+	UnconfirmedBalance string    `json:"unconfirmedBalance"`
 	PeerID             string    `json:"-"`
 }
 
@@ -71,8 +72,8 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-
-	txid, err := wal.Spend(args.Amount, addr, feeLevel, args.OrderID)
+	amt, _ := new(big.Int).SetString(args.Amount, 10)
+	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -128,9 +129,9 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
-		Amount:             -(txn.Value),
+		ConfirmedBalance:   confirmed.Value.String(),
+		UnconfirmedBalance: unconfirmed.Value.String(),
+		Amount:             "-" + txn.Value,
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,

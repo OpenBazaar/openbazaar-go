@@ -258,7 +258,7 @@ func (m *mockTxnStore) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	}
 	return wallet.Txn{
 		Txid:      t.txid,
-		Value:     int64(t.value),
+		Value:     strconv.Itoa(t.value),
 		Height:    int32(t.height),
 		Timestamp: t.timestamp,
 		WatchOnly: t.watchOnly,
@@ -271,7 +271,7 @@ func (m *mockTxnStore) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	for _, t := range m.txns {
 		txn := wallet.Txn{
 			Txid:      t.txid,
-			Value:     int64(t.value),
+			Value:     strconv.Itoa(t.value),
 			Height:    int32(t.height),
 			Timestamp: t.timestamp,
 			WatchOnly: t.watchOnly,
@@ -337,7 +337,7 @@ func TestUtxo_IsEqual(t *testing.T) {
 		Op:           *wire.NewOutPoint(h, 0),
 		ScriptPubkey: make([]byte, 32),
 		AtHeight:     400000,
-		Value:        1000000,
+		Value:        "1000000",
 	}
 	if !u.IsEqual(u) {
 		t.Error("Failed to return utxos as equal")
@@ -353,7 +353,7 @@ func TestUtxo_IsEqual(t *testing.T) {
 		t.Error("Failed to return utxos as not equal")
 	}
 	testUtxo = *u
-	testUtxo.Value = 4
+	testUtxo.Value = "4"
 	if u.IsEqual(&testUtxo) {
 		t.Error("Failed to return utxos as not equal")
 	}
@@ -385,7 +385,7 @@ func TestStxo_IsEqual(t *testing.T) {
 		Op:           *wire.NewOutPoint(h, 0),
 		ScriptPubkey: make([]byte, 32),
 		AtHeight:     400000,
-		Value:        1000000,
+		Value:        "1000000",
 	}
 	h2, err := chainhash.NewHashFromStr("1f64249abbf2fcc83fc060a64f69a91391e9f5d98c5d3135fe9716838283aa4c")
 	s := &wallet.Stxo{

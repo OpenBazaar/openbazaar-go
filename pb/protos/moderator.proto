@@ -12,7 +12,7 @@ message Moderator {
     Fee fee                            = 5;
 
     message Fee {
-        Price fixedFee   = 1;
+        CurrencyValue fixedFee   = 1;
         float percentage = 2;
         FeeType feeType  = 3;
 
@@ -21,11 +21,6 @@ message Moderator {
             PERCENTAGE            = 1;
             FIXED_PLUS_PERCENTAGE = 2;
         }
-    }
-
-    message Price {
-        string currencyCode = 1;
-        uint64 amount       = 2; // Bitcoins must be in satoshi
     }
 }
 

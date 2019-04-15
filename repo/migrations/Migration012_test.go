@@ -571,7 +571,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 4",
 			Description: "test",
-			Price:       999,
+			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Value: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,
@@ -593,7 +593,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 5",
 			Description: "test",
-			Price:       999,
+			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Value: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,

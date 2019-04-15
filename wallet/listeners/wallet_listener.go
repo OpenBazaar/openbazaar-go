@@ -1,6 +1,8 @@
 package bitcoin
 
 import (
+	"math/big"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 )
@@ -28,7 +30,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 		n := repo.IncomingTransaction{
 			Wallet:        l.coinType.CurrencyCode(),
 			Txid:          cb.Txid,
-			Value:         cb.Value,
+			Value:         cb.Value.String(),
 			Address:       metadata.Address,
 			Status:        status,
 			Memo:          metadata.Memo,
@@ -37,7 +39,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
-			CanBumpFee:    cb.Value > 0,
+			CanBumpFee:    cb.Value.Cmp(big.NewInt(0)) > 0,
 		}
 		l.broadcast <- n
 	}

@@ -19,6 +19,16 @@ message RicardianContract {
     repeated string errors                             = 11;
 }
 
+message CurrencyDefinition {
+    string      code = 1;
+    uint32 divisibility = 2;
+}
+
+message CurrencyValue {
+    CurrencyDefinition currency = 1;
+    string        value = 2;
+}
+
 message Listing {
     string slug                             = 1;
     ID vendorID                             = 2;
@@ -37,12 +47,10 @@ message Listing {
         Format format                      = 3;
         google.protobuf.Timestamp expiry   = 4;
         repeated string acceptedCurrencies = 5;
-        string pricingCurrency             = 6;
+        CurrencyDefinition pricingCurrency = 6;
         string language                    = 7;
         uint32 escrowTimeoutHours          = 8;
-        string coinType                    = 9;
-        uint32 coinDivisibility            = 10;
-        float priceModifier                = 11;
+        float priceModifier                = 9;
 
         enum ContractType {
             PHYSICAL_GOOD  = 0;
@@ -62,7 +70,7 @@ message Listing {
         string title               = 1;
         string description         = 2;
         string processingTime      = 3;
-        uint64 price               = 4;
+        CurrencyValue price        = 4;
         bool nsfw                  = 5;
         repeated string tags       = 6;
         repeated Image images      = 7;
@@ -86,7 +94,7 @@ message Listing {
         message Sku {
             repeated uint32 variantCombo = 1;
             string productID             = 2;
-            int64 surcharge              = 3;
+            CurrencyValue surcharge      = 3;
             int64 quantity               = 4; // Not saved with listing
         }
 
@@ -112,10 +120,10 @@ message Listing {
         }
 
         message Service {
-            string name                = 1;
-            uint64 price               = 2;
-            string estimatedDelivery   = 3;
-            uint64 additionalItemPrice = 4;
+            string name                       = 1;
+            CurrencyValue price               = 2;
+            string estimatedDelivery          = 3;
+            CurrencyValue additionalItemPrice = 4;
         }
     }
 
@@ -133,15 +141,15 @@ message Listing {
             string discountCode = 3;
         }
         oneof discount {
-            float percentDiscount = 5;
-            uint64 priceDiscount  = 6;
+            float percentDiscount        = 5;
+            CurrencyValue priceDiscount  = 6;
         }
     }
 }
 
 message Order {
     string refundAddress                 = 1;
-    uint64 refundFee                     = 2;
+    CurrencyValue refundFee              = 2;
     Shipping shipping                    = 3;
     ID buyerID                           = 4;
     google.protobuf.Timestamp timestamp  = 5;
@@ -185,12 +193,11 @@ message Order {
     message Payment {
         Method method       = 1;
         string moderator    = 2;
-        uint64 amount       = 3; // Satoshis
+        CurrencyValue amount = 3;
         string chaincode    = 4; // Hex encoded
         string address      = 5; // B58check encoded
         string redeemScript = 6; // Hex encoded
         bytes  moderatorKey = 7;
-        string coin         = 8;
 
         enum Method {
             ADDRESS_REQUEST = 0;
@@ -205,7 +212,7 @@ message OrderConfirmation {
     google.protobuf.Timestamp timestamp       = 2;
     // Direct payments only
     string paymentAddress                     = 3;
-    uint64 requestedAmount                    = 4;
+    CurrencyValue requestedAmount             = 4;
 
     repeated RatingSignature ratingSignatures = 5;
 }
@@ -282,7 +289,7 @@ message OrderFulfillment {
     message Payout {
         repeated BitcoinSignature sigs = 1;
         string payoutAddress           = 2;
-        uint64 payoutFeePerByte        = 3;
+        string payoutFeePerByte        = 3;
     }
 }
 
@@ -346,7 +353,7 @@ message DisputeResolution {
                 string script  = 1;
                 string address = 3;
               }
-              uint64 amount  = 2;
+              CurrencyValue amount  = 2;
             }
     }
 }
@@ -359,7 +366,7 @@ message DisputeAcceptance {
 message Outpoint {
         string hash  = 1; // Hex encoded
         uint32 index = 2;
-        uint64 value = 3;
+        CurrencyValue value = 3;
 }
 
 message Refund {
@@ -371,7 +378,7 @@ message Refund {
 
     message TransactionInfo {
         string txid  = 1;
-        uint64 value = 2;
+        CurrencyValue value = 2;
     }
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/url"
 	"os"
 	"path"
@@ -78,7 +79,7 @@ listingLoop:
 			listing := new(pb.Listing)
 			metadata := new(pb.Listing_Metadata)
 			item := new(pb.Listing_Item)
-			var shipping []*pb.Listing_ShippingOption
+			shipping := []*pb.Listing_ShippingOption{}
 			listing.Metadata = metadata
 			listing.Item = item
 			listing.ShippingOptions = shipping
@@ -128,7 +129,10 @@ listingLoop:
 				errChan <- fmt.Errorf("error in record %d: %s", i, "pricing_currency is a mandatory field")
 				return
 			}
-			listing.Metadata.PricingCurrency = strings.ToUpper(record[pos])
+			listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
+				Code:         strings.ToUpper(record[pos]),
+				Divisibility: n.getDivisibility(strings.ToUpper(record[pos])),
+			}
 			pos, ok = fields["language"]
 			if ok {
 				listing.Metadata.Language = record[pos]
@@ -160,17 +164,26 @@ listingLoop:
 				return
 			}
 			if !listingCurrencyIsBTC(listing) {
-				f, err := strconv.ParseFloat(record[pos], 64)
-				if err != nil {
-					errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
+				//f, err := strconv.ParseFloat(record[pos], 64)
+				f, ok := new(big.Int).SetString(record[pos], 10)
+				if !ok {
+					errChan <- fmt.Errorf("error in record %d: %s", i, "invalid price")
 					return
 				}
-				listing.Item.Price = uint64(f * 100)
+				listing.Item.Price = &pb.CurrencyValue{
+					Currency: listing.Metadata.PricingCurrency,
+					Value:    f.Mul(f, big.NewInt(100)).String(),
+				} // uint64(f * 100)
 			} else {
-				listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
-				if err != nil {
-					errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
+				//listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
+				f, ok := new(big.Int).SetString(record[pos], 10)
+				if !ok {
+					errChan <- fmt.Errorf("error in record %d: %s", i, "invalid price")
 					return
+				}
+				listing.Item.Price = &pb.CurrencyValue{
+					Currency: listing.Metadata.PricingCurrency,
+					Value:    f.String(),
 				}
 			}
 			pos, ok = fields["nsfw"]
@@ -297,12 +310,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -326,12 +347,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -355,12 +384,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -405,12 +442,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -434,12 +479,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -463,12 +516,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -513,12 +574,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -542,12 +611,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -571,12 +648,20 @@ listingLoop:
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
 						}
-						service.Price = uint64(f * 100)
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(f * 100)).String(),
+						} // uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
+						price0, err := strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
 							errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
 							return
+						}
+						service.Price = &pb.CurrencyValue{
+							Currency: listing.Metadata.PricingCurrency,
+							Value:    big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -675,5 +760,5 @@ listingLoop:
 }
 
 func listingCurrencyIsBTC(l *pb.Listing) bool {
-	return NormalizeCurrencyCode(l.Metadata.PricingCurrency) == "BTC"
+	return NormalizeCurrencyCode(l.Metadata.PricingCurrency.Code) == "BTC"
 }

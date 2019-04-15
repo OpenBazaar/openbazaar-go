@@ -19,7 +19,7 @@ func NewTransactionStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinType)
 	return &TxnsDB{modelStore{db, lock}, coinType}
 }
 
-func (t *TxnsDB) Put(raw []byte, txid string, value, height int, timestamp time.Time, watchOnly bool) error {
+func (t *TxnsDB) Put(raw []byte, txid, value string, height int, timestamp time.Time, watchOnly bool) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tx, err := t.db.Begin()
@@ -57,7 +57,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	var raw []byte
 	var height int
 	var timestamp int
-	var value int
+	var value string
 	var watchOnlyInt int
 	err = stmt.QueryRow(txid.String(), t.coinType.CurrencyCode()).Scan(&raw, &value, &height, &timestamp, &watchOnlyInt)
 	if err != nil {
@@ -69,7 +69,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	}
 	txn = wallet.Txn{
 		Txid:      txid.String(),
-		Value:     int64(value),
+		Value:     value,
 		Height:    int32(height),
 		Timestamp: time.Unix(int64(timestamp), 0),
 		WatchOnly: watchOnly,
@@ -91,7 +91,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	for rows.Next() {
 		var raw []byte
 		var txid string
-		var value int
+		var value string
 		var height int
 		var timestamp int
 		var watchOnlyInt int
@@ -109,7 +109,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 
 		txn := wallet.Txn{
 			Txid:      txid,
-			Value:     int64(value),
+			Value:     value,
 			Height:    int32(height),
 			Timestamp: time.Unix(int64(timestamp), 0),
 			WatchOnly: watchOnly,

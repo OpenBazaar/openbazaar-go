@@ -11,6 +11,7 @@ import (
 	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -593,11 +594,11 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	type purchaseReturn struct {
 		PaymentAddress string `json:"paymentAddress"`
-		Amount         uint64 `json:"amount"`
+		Amount         string `json:"amount"`
 		VendorOnline   bool   `json:"vendorOnline"`
 		OrderID        string `json:"orderId"`
 	}
-	ret := purchaseReturn{paymentAddr, amount, online, orderID}
+	ret := purchaseReturn{paymentAddr, amount.String(), online, orderID}
 	b, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -703,8 +704,8 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   int64  `json:"confirmed"`
-		Unconfirmed int64  `json:"unconfirmed"`
+		Confirmed   string `json:"confirmed"`
+		Unconfirmed string `json:"unconfirmed"`
 		Height      uint32 `json:"height"`
 	}
 	if coinType == "balance" {
@@ -712,7 +713,11 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		for ct, wal := range i.node.Multiwallet {
 			height, _ := wal.ChainTip()
 			confirmed, unconfirmed := wal.Balance()
-			ret[ct.CurrencyCode()] = balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+			ret[ct.CurrencyCode()] = balance{
+				Confirmed:   confirmed.Value.String(),
+				Unconfirmed: unconfirmed.Value.String(),
+				Height:      height,
+			}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -729,7 +734,11 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	height, _ := wal.ChainTip()
 	confirmed, unconfirmed := wal.Balance()
-	bal := balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+	bal := balance{
+		Confirmed:   confirmed.Value.String(),
+		Unconfirmed: unconfirmed.Value.String(),
+		Height:      height,
+	}
 	out, err := json.MarshalIndent(bal, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -765,9 +774,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		WithInput:     false,
 	}
 
-	fmt.Println("before send order pymnt : ", msg)
 	err = i.node.SendOrderPayment(result.PeerID, &msg)
-	fmt.Println("after send order pymnt : ", err)
 	if err != nil {
 		log.Errorf("error sending order payment: %v", err)
 	}
@@ -777,6 +784,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	SanitizedResponse(w, string(ser))
 }
 
@@ -1529,18 +1537,18 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
+	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING {
@@ -1578,18 +1586,18 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -1638,11 +1646,11 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		funded      bool
 		records     []*wallet.TransactionRecord
 		read        bool
-		paymentCoin *repo.CurrencyCode
+		//paymentCoin *repo.CurrencyCode
 	)
-	contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
+	contract, state, funded, records, read, _, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
 	if err != nil {
-		contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(orderID)
+		contract, state, funded, records, read, _, err = i.node.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -1656,11 +1664,11 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
@@ -1725,7 +1733,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1736,11 +1744,11 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	err = i.node.RefundOrder(contract, records)
@@ -1924,18 +1932,18 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
@@ -1965,18 +1973,18 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_FULFILLED &&
@@ -2047,11 +2055,11 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		contract    *pb.RicardianContract
 		state       pb.OrderState
 		records     []*wallet.TransactionRecord
-		paymentCoin *repo.CurrencyCode
+		//paymentCoin *repo.CurrencyCode
 	)
-	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
 	if err != nil {
-		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -2060,11 +2068,11 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -2192,11 +2200,11 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		contract    *pb.RicardianContract
 		state       pb.OrderState
 		records     []*wallet.TransactionRecord
-		paymentCoin *repo.CurrencyCode
+		//paymentCoin *repo.CurrencyCode
 	)
-	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -2204,11 +2212,11 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state == pb.OrderState_DECIDED {
@@ -2232,7 +2240,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		contract    *pb.RicardianContract
 		state       pb.OrderState
 		records     []*wallet.TransactionRecord
-		paymentCoin *repo.CurrencyCode
+		//paymentCoin *repo.CurrencyCode
 	)
 
 	decoder := json.NewDecoder(r.Body)
@@ -2242,18 +2250,18 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
+	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {
@@ -2878,7 +2886,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
 		Txid          string    `json:"txid"`
-		Value         int64     `json:"value"`
+		Value         string    `json:"value"`
 		Address       string    `json:"address"`
 		Status        string    `json:"status"`
 		ErrorMessage  string    `json:"errorMessage"`
@@ -3282,9 +3290,9 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	type response struct {
 		Txid               string    `json:"txid"`
-		Amount             int64     `json:"amount"`
-		ConfirmedBalance   int64     `json:"confirmedBalance"`
-		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+		Amount             string    `json:"amount"`
+		ConfirmedBalance   string    `json:"confirmedBalance"`
+		UnconfirmedBalance string    `json:"unconfirmedBalance"`
 		Timestamp          time.Time `json:"timestamp"`
 		Memo               string    `json:"memo"`
 	}
@@ -3296,9 +3304,9 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	resp := &response{
 		Txid:               newTxid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
-		Amount:             -(txn.Value),
+		ConfirmedBalance:   confirmed.Value.String(),
+		UnconfirmedBalance: unconfirmed.Value.String(),
+		Amount:             "-" + txn.Value,
 		Timestamp:          txn.Timestamp,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),
 	}
@@ -3315,9 +3323,9 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
-	amount, err := strconv.Atoi(amt)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+	amount, ok := new(big.Int).SetString(amt, 10) //strconv.Atoi(amt)
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, "invalid amount")
 		return
 	}
 
@@ -3340,7 +3348,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fee, err := wal.EstimateSpendFee(int64(amount), feeLevel)
+	fee, err := wal.EstimateSpendFee(*amount, feeLevel)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -3360,9 +3368,9 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type fees struct {
-		Priority uint64 `json:"priority"`
-		Normal   uint64 `json:"normal"`
-		Economic uint64 `json:"economic"`
+		Priority string `json:"priority"`
+		Normal   string `json:"normal"`
+		Economic string `json:"economic"`
 	}
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
@@ -3370,7 +3378,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
-			ret[ct.CurrencyCode()] = fees{Priority: priority, Normal: normal, Economic: economic}
+			ret[ct.CurrencyCode()] = fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -3388,7 +3396,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
-	f := fees{Priority: priority, Normal: normal, Economic: economic}
+	f := fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
 	out, err := json.MarshalIndent(f, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3410,7 +3418,7 @@ func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, "%d", int(amount))
+	fmt.Fprintf(w, "%s", amount.String())
 }
 
 func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
