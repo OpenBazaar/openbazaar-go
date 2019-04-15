@@ -93,7 +93,6 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 
 // NewNodeWithConfig create a new node using the configuration file from NewNode()
 func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*Node, error) {
-	ipfscore.DHTOption = constructClientDHTRouting
 	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
@@ -210,6 +209,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 			"mplex":  true,
 			"ipnsps": true,
 		},
+		Routing: constructRouting,
 	}
 
 	// Mnemonic
@@ -333,8 +333,8 @@ func (n *Node) Start() error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if _, ok := router.(*dht.IpfsDHT); ok {
-			dhtRouting = router.(*dht.IpfsDHT)
+		if r, ok := router.(*ipfs.CachingRouter); ok {
+			dhtRouting = r.DHT()
 		}
 	}
 	if dhtRouting == nil {
@@ -512,12 +512,18 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
 }
 
-// constructClientDHTRouting create DHT routing
-func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	return dht.New(
+func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	dhtRouting, err := dht.New(
 		ctx, host,
 		dhtopts.Client(true),
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter("https://9g76zbn6y8.execute-api.us-east-1.amazonaws.com")
+	apiRouter.Start(nil)
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
 }
