@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
+	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -22,16 +24,29 @@ var apiRouterHTTPClient = &http.Client{
 // ensure APIRouter satisfies the interface
 var _ routing.IpfsRouting = &APIRouter{}
 
+// ErrNotStarted is returned if a method is called before the router
+// is started using the Start() method.
+var ErrNotStarted = errors.New("API router not started")
+
 // APIRouter is a routing.IpfsRouting compliant struct backed by an API. It only
 // provides the features offerened by routing.ValueStore and marks the others as
 // unsupported.
 type APIRouter struct {
 	uri string
+	started bool
 }
 
 // NewAPIRouter creates a new APIRouter backed by the given URI.
 func NewAPIRouter(uri string) APIRouter {
 	return APIRouter{uri: uri}
+}
+
+func (r APIRouter) Start(proxyDialer proxy.Dialer) {
+	if proxyDialer != nil {
+		tbTransport := &http.Transport{Dial: proxyDialer.Dial}
+		apiRouterHTTPClient.Transport = tbTransport
+	}
+	r.started = true
 }
 
 // Bootstrap is a no-op. We don't need any setup to query the API.
@@ -41,6 +56,9 @@ func (r APIRouter) Bootstrap(_ context.Context) error {
 
 // PutValue writes the given value to the API for the given key
 func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
+	if !r.started {
+		return ErrNotStarted
+	}
 	req, err := http.NewRequest("PUT", r.pathForKey(key), bytes.NewBuffer(value))
 	if err != nil {
 		return err
@@ -52,6 +70,9 @@ func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts 
 
 // GetValue reads the value for the given key
 func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
+	if !r.started {
+		return nil, ErrNotStarted
+	}
 	resp, err := apiRouterHTTPClient.Get(r.pathForKey(key))
 	if err != nil {
 		return nil, err
@@ -63,12 +84,18 @@ func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Optio
 // GetValues reads the value for the given key. The API does not return multiple
 // values.
 func (r APIRouter) GetValues(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
+	if !r.started {
+		return nil, ErrNotStarted
+	}
 	return r.GetValue(ctx, key, opts...)
 }
 
 // SearchValue returns the value for the given key. It return either an error or
 // a closed channel containing one value.
 func (r APIRouter) SearchValue(ctx context.Context, key string, opts ...ropts.Option) (<-chan []byte, error) {
+	if !r.started {
+		return nil, ErrNotStarted
+	}
 	value, err := r.GetValue(ctx, key, opts...)
 	if err != nil {
 		return nil, err

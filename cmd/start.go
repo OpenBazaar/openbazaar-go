@@ -425,6 +425,7 @@ func (x *Start) Execute(args []string) error {
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
 		if r, ok := router.(*ipfs.CachingRouter); ok {
+			r.APIRouter().Start(torDialer)
 			dhtRouting = r.DHT()
 		}
 	}
