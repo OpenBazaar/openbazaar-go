@@ -47,7 +47,7 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		subject,
 		message,
 		readInt,
-		int(timestamp.Unix()),
+		int(timestamp.UnixNano()),
 		outgoingInt,
 	)
 	if err != nil {
@@ -79,21 +79,23 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 	}
 	defer rows.Close()
 	for _, peerId := range ids {
-		stm := "select Count(*) from chat where peerID='" + peerId + "' and read=0 and subject='' and outgoing=0;"
-		row := c.db.QueryRow(stm)
-		var count int
+		var (
+			count  int
+			m      string
+			ts     int64
+			outInt int
+			stm    = "select Count(*) from chat where peerID='" + peerId + "' and read=0 and subject='' and outgoing=0;"
+			row    = c.db.QueryRow(stm)
+		)
 		row.Scan(&count)
 		stm = "select max(timestamp), message, outgoing from chat where peerID='" + peerId + "' and subject=''"
 		row = c.db.QueryRow(stm)
-		var m string
-		var ts int
-		var outInt int
 		row.Scan(&ts, &m, &outInt)
 		outgoing := false
 		if outInt > 0 {
 			outgoing = true
 		}
-		timestamp := time.Unix(int64(ts), 0)
+		timestamp := time.Unix(0, ts)
 		convo := repo.ChatConversation{
 			PeerId:    peerId,
 			Unread:    count,
@@ -128,12 +130,15 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 		return ret
 	}
 	for rows.Next() {
-		var msgID string
-		var pid string
-		var message string
-		var readInt int
-		var timestampInt int
-		var outgoingInt int
+		var (
+			msgID        string
+			pid          string
+			message      string
+			readInt      int
+			timestampInt int64
+			timestamp    time.Time
+			outgoingInt  int
+		)
 		if err := rows.Scan(&msgID, &pid, &message, &readInt, &timestampInt, &outgoingInt); err != nil {
 			continue
 		}
@@ -145,7 +150,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 		if outgoingInt == 1 {
 			outgoing = true
 		}
-		timestamp := time.Unix(int64(timestampInt), 0)
+		timestamp = time.Unix(0, timestampInt)
 		chatMessage := repo.ChatMessage{
 			PeerId:    pid,
 			MessageId: msgID,
