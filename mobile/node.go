@@ -64,6 +64,8 @@ type Node struct {
 	apiConfig      *apiSchema.APIConfig
 }
 
+var apiRouterURI string
+
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
@@ -129,6 +131,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
+	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -257,7 +260,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
 		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
-		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -492,7 +494,7 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := ipfs.NewAPIRouter("https://9g76zbn6y8.execute-api.us-east-1.amazonaws.com")
+	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
 	apiRouter.Start(nil)
 	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
 	return cachingRouter, nil
