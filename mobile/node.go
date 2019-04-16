@@ -324,6 +324,13 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 	n.cancel = cancel
 
 	ctx := commands.Context{}
+
+	ipfscore.DefaultBootstrapConfig = ipfscore.BootstrapConfig{
+		MinPeerThreshold:  8,
+		Period:            time.Second * 10,
+		ConnectionTimeout: time.Second * 10 / 3,
+	}
+
 	nd, err := ipfscore.NewNode(cctx, config)
 	if err != nil {
 		return nil, ctx, err
