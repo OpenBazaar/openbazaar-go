@@ -606,7 +606,6 @@ func (x *Start) Execute(args []string) error {
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 		IpfsNode:                      nd,
 		DHT:                           dhtRouting,
 		MasterPrivateKey:              mPrivKey,

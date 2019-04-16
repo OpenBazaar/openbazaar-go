@@ -39,21 +39,15 @@ func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, 
 }
 
 func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-	// First check the tiered router. If it's successful return the value otherwise
+	// First check the DHT router. If it's successful return the value otherwise
 	// continue on to check the other routers.
 	val, err := r.IpfsRouting.GetValue(ctx, key, opts...)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		return val, r.apiRouter.PutValue(ctx, key, val, opts...)
 	}
 
 	// Value miss; Check API router
-	val, err = r.apiRouter.GetValue(ctx, key, opts...)
-	if err == nil {
-		return val, nil
-	}
-
-	// Write value back to caching router so it can hit next time.
-	return val, r.apiRouter.PutValue(ctx, key, val, opts...)
+	return r.apiRouter.GetValue(ctx, key, opts...)
 }
 
 func (r *CachingRouter) SearchValue(ctx context.Context, key string, opts ...ropts.Option) (<-chan []byte, error) {
