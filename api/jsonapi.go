@@ -1086,7 +1086,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "followers.json")), time.Minute, useCache)
+		followBytes, err := ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "followers.json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1139,7 +1139,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "following.json")), time.Minute, useCache)
+		followBytes, err := ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "following.json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1350,7 +1350,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(listingsBytes))
 	} else {
-		listingsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings.json")), time.Minute, useCache)
+		listingsBytes, err := ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "listings.json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1425,7 +1425,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		hash = listingID
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	} else {
-		listingBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings", listingID+".json")), time.Minute, useCache)
+		listingBytes, err = ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "listings", listingID+".json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3412,8 +3412,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 
 	var indexBytes []byte
 	if peerID != i.node.IPFSIdentityString() {
-		indexBytes, _ = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "ratings.json")), time.Minute, useCache)
-
+		indexBytes, _ = ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "ratings.json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 	} else {
 		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
 	}
@@ -4059,7 +4058,7 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(postsBytes))
 	} else {
-		postsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "posts.json")), time.Minute, useCache)
+		postsBytes, err := ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "posts.json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -4125,7 +4124,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		hash = postID
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	} else {
-		postBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "posts", postID+".json")), time.Minute, useCache)
+		postBytes, err = ipfs.ResolveThenCat(i.node.IpfsNode, ipnspath.FromString(path.Join(peerID, "posts", postID+".json")), time.Minute, i.node.IPNSQuorumSize, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return

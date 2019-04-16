@@ -79,7 +79,7 @@ var fileLogFormat = logging.MustStringFormatter(
 
 var (
 	ErrNoGateways = errors.New("no gateway addresses configured")
-	apiRouterURI string
+	apiRouterURI  string
 )
 
 type Start struct {

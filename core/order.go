@@ -1495,7 +1495,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 		return err
 	}
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute, true)
+	profileBytes, err := ipfs.ResolveThenCat(n.IpfsNode, ipnsPath, time.Minute, n.IPNSQuorumSize, true)
 	if err != nil {
 		return err
 	}

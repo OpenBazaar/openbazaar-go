@@ -95,4 +95,3 @@ func (Migration022) Down(repoPath, dbPassword string, testnet bool) error {
 	}
 	return nil
 }
-
