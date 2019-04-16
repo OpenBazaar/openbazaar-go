@@ -447,7 +447,7 @@ func (n *Node) Start() error {
 		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
-		MR.Wait()
+		// MR.Wait()
 
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
