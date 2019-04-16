@@ -485,7 +485,7 @@ func (n *Node) start() error {
 		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
-		MR.Wait()
+		// MR.Wait()
 
 		n.OpenBazaarNode.PublishLock.Unlock()
 		publishUnlocked = true
