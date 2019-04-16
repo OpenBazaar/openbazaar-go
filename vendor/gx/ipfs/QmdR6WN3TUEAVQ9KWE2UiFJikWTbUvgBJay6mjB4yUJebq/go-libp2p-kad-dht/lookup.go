@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	kb "gx/ipfs/QmSNE1XryoCMnZCbRaj1D23k6YKCaTQ386eJciu1pAfu8M/go-libp2p-kbucket"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
@@ -65,6 +66,7 @@ func (dht *IpfsDHT) GetClosestPeers(ctx context.Context, key string) (<-chan pee
 	// since the query doesnt actually pass our context down
 	// we have to hack this here. whyrusleeping isnt a huge fan of goprocess
 	parent := ctx
+	ctx, _ = context.WithTimeout(ctx, time.Second*3)
 	query := dht.newQuery(key, func(ctx context.Context, p peer.ID) (*dhtQueryResult, error) {
 		// For DHT query command
 		notif.PublishQueryEvent(parent, &notif.QueryEvent{
@@ -72,6 +74,7 @@ func (dht *IpfsDHT) GetClosestPeers(ctx context.Context, key string) (<-chan pee
 			ID:   p,
 		})
 
+		ctx, _ = context.WithTimeout(ctx, time.Second*3)
 		pmes, err := dht.findPeerSingle(ctx, p, peer.ID(key))
 		if err != nil {
 			logger.Debugf("error getting closer peers: %s", err)
