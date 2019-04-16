@@ -79,6 +79,7 @@ var fileLogFormat = logging.MustStringFormatter(
 
 var (
 	ErrNoGateways = errors.New("no gateway addresses configured")
+	apiRouterURI string
 )
 
 type Start struct {
@@ -265,6 +266,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan ipns extra config:", err)
 		return err
 	}
+	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -859,7 +861,7 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := ipfs.NewAPIRouter("https://routing.api.openbazaar.org")
+	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
 	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
 	return cachingRouter, nil
 }
