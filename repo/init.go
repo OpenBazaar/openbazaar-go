@@ -17,7 +17,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-const RepoVersion = "22"
+const RepoVersion = "23"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -176,7 +176,7 @@ func addConfigExtensions(repoRoot string) error {
 		}
 		ie = schema.IpnsExtraConfig{
 			DHTQuorumSize: 1,
-			FallbackAPI:   "https://gateway.ob1.io",
+			APIRouter:   "https://routing.api.openbazaar.org",
 		}
 
 		t = schema.TorConfig{}

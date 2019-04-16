@@ -859,7 +859,7 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := ipfs.NewAPIRouter("https://9g76zbn6y8.execute-api.us-east-1.amazonaws.com")
+	apiRouter := ipfs.NewAPIRouter("https://routing.api.openbazaar.org")
 	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
 	return cachingRouter, nil
 }
