@@ -32,7 +32,7 @@ var ErrNotStarted = errors.New("API router not started")
 // provides the features offerened by routing.ValueStore and marks the others as
 // unsupported.
 type APIRouter struct {
-	uri string
+	uri     string
 	started bool
 }
 
