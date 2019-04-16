@@ -394,7 +394,11 @@ func (x *Start) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
-		Routing: constructRouting,
+	}
+	if x.Regtest {
+		ncfg.Routing = constructDHTRouting
+	} else {
+		ncfg.Routing = constructRouting
 	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
@@ -846,8 +850,6 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
 }
 
-const IpnsValidatorTag = "ipns"
-
 func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	dhtRouting, err := dht.New(
 		ctx, host,
@@ -860,6 +862,14 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	apiRouter := ipfs.NewAPIRouter("https://9g76zbn6y8.execute-api.us-east-1.amazonaws.com")
 	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
 	return cachingRouter, nil
+}
+
+func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	return dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests
