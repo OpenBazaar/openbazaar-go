@@ -57,11 +57,13 @@ func (r APIRouter) Bootstrap(_ context.Context) error {
 // PutValue writes the given value to the API for the given key
 func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
 	<-r.started
-	req, err := http.NewRequest("PUT", r.pathForKey(key), bytes.NewBuffer(value))
+	path := r.pathForKey(key)
+	req, err := http.NewRequest("PUT", path, bytes.NewBuffer(value))
 	if err != nil {
 		return err
 	}
 
+	log.Debugf("Write value to %s", path)
 	_, err = apiRouterHTTPClient.Do(req)
 	return err
 }
@@ -69,11 +71,14 @@ func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts 
 // GetValue reads the value for the given key
 func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
 	<-r.started
-	resp, err := apiRouterHTTPClient.Get(r.pathForKey(key))
+	path := r.pathForKey(key)
+	resp, err := apiRouterHTTPClient.Get(path)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	log.Debugf("Read value from %s", path)
 	return ioutil.ReadAll(resp.Body)
 }
 
