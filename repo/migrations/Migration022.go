@@ -36,61 +36,36 @@ type migration022CoinConfig struct {
 }
 
 func migration022DefaultWalletConfig() *Migration022WalletsConfig {
-	var feeAPI = "https://btc.fees.openbazaar.org"
 	return &Migration022WalletsConfig{
 		BTC: &migration022CoinConfig{
-			Type:             "API",
-			APIPool:          []string{"https://btc.blockbook.api.openbazaar.org/api"},
-			APITestnetPool:   []string{"https://tbtc.blockbook.api.openbazaar.org/api"},
-			FeeAPI:           feeAPI,
-			LowFeeDefault:    1,
-			MediumFeeDefault: 10,
-			HighFeeDefault:   50,
-			MaxFee:           200,
-			WalletOptions:    nil,
+			Type:           "API",
+			APIPool:        []string{"https://btc.blockbook.api.openbazaar.org/api"},
+			APITestnetPool: []string{"https://tbtc.blockbook.api.openbazaar.org/api"},
+			FeeAPI:         "https://btc.fees.openbazaar.org",
 		},
 		BCH: &migration022CoinConfig{
-			Type:             "API",
-			APIPool:          []string{"https://bch.blockbook.api.openbazaar.org/api"},
-			APITestnetPool:   []string{"https://tbch.blockbook.api.openbazaar.org/api"},
-			FeeAPI:           "", // intentionally blank
-			LowFeeDefault:    1,
-			MediumFeeDefault: 5,
-			HighFeeDefault:   10,
-			MaxFee:           200,
-			WalletOptions:    nil,
+			Type:           "API",
+			APIPool:        []string{"https://bch.blockbook.api.openbazaar.org/api"},
+			APITestnetPool: []string{"https://tbch.blockbook.api.openbazaar.org/api"},
+			FeeAPI:         "", // intentionally blank
 		},
 		LTC: &migration022CoinConfig{
-			Type:             "API",
-			APIPool:          []string{"https://ltc.blockbook.api.openbazaar.org/api"},
-			APITestnetPool:   []string{"https://tltc.blockbook.api.openbazaar.org/api"},
-			FeeAPI:           "", // intentionally blank
-			LowFeeDefault:    5,
-			MediumFeeDefault: 10,
-			HighFeeDefault:   20,
-			MaxFee:           200,
-			WalletOptions:    nil,
+			Type:           "API",
+			APIPool:        []string{"https://ltc.blockbook.api.openbazaar.org/api"},
+			APITestnetPool: []string{"https://tltc.blockbook.api.openbazaar.org/api"},
+			FeeAPI:         "", // intentionally blank
 		},
 		ZEC: &migration022CoinConfig{
-			Type:             "API",
-			APIPool:          []string{"https://zec.blockbook.api.openbazaar.org/api"},
-			APITestnetPool:   []string{"https://tzec.blockbook.api.openbazaar.org/api"},
-			FeeAPI:           "", // intentionally blank
-			LowFeeDefault:    5,
-			MediumFeeDefault: 10,
-			HighFeeDefault:   20,
-			MaxFee:           200,
-			WalletOptions:    nil,
+			Type:           "API",
+			APIPool:        []string{"https://zec.blockbook.api.openbazaar.org/api"},
+			APITestnetPool: []string{"https://tzec.blockbook.api.openbazaar.org/api"},
+			FeeAPI:         "", // intentionally blank
 		},
 		ETH: &migration022CoinConfig{
-			Type:             "API",
-			APIPool:          []string{"https://mainnet.infura.io"},
-			APITestnetPool:   []string{"https://rinkeby.infura.io"},
-			FeeAPI:           "", // intentionally blank
-			LowFeeDefault:    7,
-			MediumFeeDefault: 15,
-			HighFeeDefault:   30,
-			MaxFee:           200,
+			Type:           "API",
+			APIPool:        []string{"https://mainnet.infura.io"},
+			APITestnetPool: []string{"https://rinkeby.infura.io"},
+			FeeAPI:         "", // intentionally blank
 			WalletOptions: map[string]interface{}{
 				"RegistryAddress":        migration022EthereumRegistryAddressMainnet,
 				"RinkebyRegistryAddress": migration022EthereumRegistryAddressRinkeby,
