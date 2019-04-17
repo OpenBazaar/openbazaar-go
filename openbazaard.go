@@ -19,13 +19,6 @@ type Opts struct {
 	Version bool `short:"v" long:"version" description:"Print the version number and exit"`
 }
 
-type Stop struct{}
-
-type Restart struct{}
-
-var stopServer Stop
-var restartServer Restart
-
 var opts Opts
 
 var parser = flags.NewParser(&opts, flags.Default)
@@ -75,14 +68,6 @@ func main() {
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
 		&cmd.Start{})
-	parser.AddCommand("stop",
-		"shutdown the server and disconnect",
-		"The stop command disconnects from peers and shuts down OpenBazaar-Server",
-		&stopServer)
-	parser.AddCommand("restart",
-		"restart the server",
-		"The restart command shuts down the server and restarts",
-		&restartServer)
 	parser.AddCommand("encryptdatabase",
 		"encrypt your database",
 		"This command encrypts the database containing your bitcoin private keys, identity key, and contracts",
