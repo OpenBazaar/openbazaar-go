@@ -41,7 +41,7 @@ func NewAPIRouter(uri string) APIRouter {
 	return APIRouter{uri: uri}
 }
 
-func (r APIRouter) Start(proxyDialer proxy.Dialer) {
+func (r *APIRouter) Start(proxyDialer proxy.Dialer) {
 	if proxyDialer != nil {
 		tbTransport := &http.Transport{Dial: proxyDialer.Dial}
 		apiRouterHTTPClient.Transport = tbTransport
