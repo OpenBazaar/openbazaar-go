@@ -123,5 +123,5 @@ func (r APIRouter) Provide(_ context.Context, _ cid.Cid, _ bool) error {
 }
 
 func (r APIRouter) pathForKey(key string) string {
-	return r.uri + "/" + base64.URLEncoding.EncodeToString([]byte(key))
+	return r.uri + "/value/" + base64.URLEncoding.EncodeToString([]byte(key))
 }
