@@ -21,6 +21,12 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	// timestamp.UnixNano() is undefined when time has a zero value
+	if timestamp.IsZero() {
+		log.Errorf("putting chat message (%s): recieved zero timestamp, using current time", messageId)
+		timestamp = time.Now()
+	}
+
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err

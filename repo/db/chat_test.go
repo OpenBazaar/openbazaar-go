@@ -1,6 +1,8 @@
 package db_test
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -456,4 +458,46 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 		t.Error("Delete failed")
 	}
 	stmt.Close()
+}
+
+// https://github.com/OpenBazaar/openbazaar-go/issues/1545
+func TestChatDB_DeterministicNanosecondOrdering_Issue1545(t *testing.T) {
+	var (
+		numMessages         = 10
+		startTime           = time.Now()
+		chdb, teardown, err = buildNewChatStore()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	// send numMessages in a random order where
+	// msg index 0 has the earliest timetstamp and index numMessages has the latest
+	for _, msgID := range rand.Perm(numMessages) {
+		var (
+			n = fmt.Sprintf("%d", msgID)
+			u = startTime.Add(time.Millisecond * time.Duration(msgID))
+		)
+		err = chdb.Put(n, "peerid", "subject", n, u, false, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	messages := chdb.GetMessages("peerid", "subject", "", -1)
+	if len(messages) != numMessages {
+		t.Fatalf("expected %d messages, but got %d", numMessages, len(messages))
+		return
+	}
+	// msgs should be in chronological order from most recent to oldest, thus never
+	// having an older time than the previous message
+	var latestTime = time.Now()
+	for _, m := range messages {
+		if m.Timestamp.After(latestTime) {
+			t.Fatalf("expected the messages to return in decending timestamp order, but were not")
+			t.Logf("\tmessages recieved: %+v", messages)
+		}
+		latestTime = m.Timestamp
+	}
 }
