@@ -63,7 +63,7 @@ func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts 
 		return err
 	}
 
-	log.Debugf("Write value to %s", path)
+	log.Debugf("write value to %s", path)
 	_, err = apiRouterHTTPClient.Do(req)
 	return err
 }
@@ -78,7 +78,7 @@ func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Optio
 	}
 	defer resp.Body.Close()
 
-	log.Debugf("Read value from %s", path)
+	log.Debugf("read value from %s", path)
 	return ioutil.ReadAll(resp.Body)
 }
 
