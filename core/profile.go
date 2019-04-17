@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 
@@ -47,7 +48,7 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 // FetchProfile - fetch peer's profile
 func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile, error) {
 	var pro pb.Profile
-	b, err := n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "profile.json")), time.Minute, useCache)
+	b, err := ipfs.ResolveThenCat(n.IpfsNode, ipnspath.FromString(path.Join(peerID, "profile.json")), time.Minute, n.IPNSQuorumSize, true)
 	if err != nil || len(b) == 0 {
 		return pro, err
 	}

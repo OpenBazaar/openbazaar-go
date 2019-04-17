@@ -55,7 +55,6 @@ type Restore struct {
 }
 
 func (x *Restore) Execute(args []string) error {
-	ipfscore.DHTOption = constructDHTRouting
 	reader := bufio.NewReader(os.Stdin)
 	if x.Mnemonic == "" {
 		fmt.Print("This command will override any current user data. Do you want to continue? (y/n): ")
@@ -229,6 +228,7 @@ func (x *Restore) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
+		Routing: constructRouting,
 	}
 	fmt.Println("Starting node...")
 	nd, err := ipfscore.NewNode(cctx, ncfg)
