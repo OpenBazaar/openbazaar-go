@@ -56,12 +56,7 @@ func (r APIRouter) Bootstrap(_ context.Context) error {
 
 // PutValue writes the given value to the API for the given key
 func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
-    select {
-        case <- r.started:
-        default:
-            return ErrNotStarted
-    }
-
+	<-r.started
 	req, err := http.NewRequest("PUT", r.pathForKey(key), bytes.NewBuffer(value))
 	if err != nil {
 		return err
@@ -73,12 +68,7 @@ func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts 
 
 // GetValue reads the value for the given key
 func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-    select {
-        case <- r.started:
-        default:
-            return nil, ErrNotStarted
-    }
-
+	<-r.started
 	resp, err := apiRouterHTTPClient.Get(r.pathForKey(key))
 	if err != nil {
 		return nil, err
@@ -90,12 +80,7 @@ func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Optio
 // GetValues reads the value for the given key. The API does not return multiple
 // values.
 func (r APIRouter) GetValues(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-    select {
-        case <- r.started:
-        default:
-            return nil, ErrNotStarted
-    }
-
+	<-r.started
 	return r.GetValue(ctx, key, opts...)
 }
 
