@@ -6,7 +6,8 @@ Install and Run Multiple Servers
 In your server directory, use the datadir option to init the server with a new data directory. This will create the data directory if it doesn't already exist, and generate all the files needed to run the server from that directory. 
 
 Example:
-`go run openbazaard.go init -d=c://Users/Username/OpenBazaar2.0StoreB`
+Windows: `go run openbazaard.go init -d=c://path/to/data/directory`
+Linux/MacOS: `go run openbazaard.go init -d=/path/to/data/directory`
 
 ### Change the Ports in the Config File
 
@@ -31,4 +32,5 @@ Example:
 You can now run an instance of the server from the new data directory with the daradir option. Multiple instances can be run simultaneously, one for each data directory you've created.
 
 Example:
-`go run openbazaard.go start -d=c://Users/Username/OpenBazaar2.0StoreB`
+Windows: `go run openbazaard.go start -d=c://path/to/data/directory`
+Linux/MacOS: `go run openbazaard.go start -d=/path/to/data/directory`

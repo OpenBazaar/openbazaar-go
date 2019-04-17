@@ -14,10 +14,10 @@ sudo apt-get install build-essential git -y
 
 These are some condensed steps which will get you started quickly, but we recommend following the installation steps at [https://golang.org/doc/install](https://golang.org/doc/install).
 
-Download Go 1.10 and extract executeables:
+Download Go 1.11 and extract executeables:
 ```
-wget https://storage.googleapis.com/golang/go1.10.7.linux-armv6l.tar.gz
-sudo tar -zxvf go1.10.7.linux-armv6l.tar.gz -C /usr/local/
+wget https://storage.googleapis.com/golang/go1.11.5.linux-armv6l.tar.gz
+sudo tar -zxvf go1.11.5.linux-armv6l.tar.gz -C /usr/local/
 ```
 
 Note: OpenBazaar has not been tested on v1.11 and may cause problems
@@ -57,7 +57,7 @@ It will use git to checkout the source code into `$GOPATH/src/github.com/OpenBaz
 
 Checkout a release version:
 ```
-git checkout v0.12.4
+git checkout v0.13.2
 ```
 
 Note: `go get` leaves the repo pointing at `master` which is a branch used for active development. Running OpenBazaar from `master` is NOT recommended. Check the [release versions](https://github.com/OpenBazaar/openbazaar-go/releases) for the available versions that you use iin checkout.
