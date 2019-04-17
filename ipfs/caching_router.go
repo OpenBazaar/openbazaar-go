@@ -9,6 +9,10 @@ import (
 	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 )
 
+var (
+	ErrCachingRouterIncorrectRoutingType = errors.New("Incorrect routing type")
+)
+
 type CachingRouter struct {
 	apiRouter *APIRouter
 	routing.IpfsRouting
@@ -23,8 +27,12 @@ func NewCachingRouter(dht *dht.IpfsDHT, apiRouter *APIRouter) *CachingRouter {
 	}
 }
 
-func (r *CachingRouter) DHT() *dht.IpfsDHT {
-	return r.IpfsRouting.(*dht.IpfsDHT)
+func (r *CachingRouter) DHT() (*dht.IpfsDHT, error) {
+	dht, ok := r.IpfsRouting.(*dht.IpfsDHT)
+	if !ok {
+		return nil, ErrCachingRouterIncorrectRoutingType
+	}
+	return dht, nil
 }
 
 func (r *CachingRouter) APIRouter() *APIRouter {

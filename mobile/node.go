@@ -334,7 +334,10 @@ func (n *Node) Start() error {
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
 		if r, ok := router.(*ipfs.CachingRouter); ok {
-			dhtRouting = r.DHT()
+			dhtRouting, err = r.DHT()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if dhtRouting == nil {

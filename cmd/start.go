@@ -432,7 +432,10 @@ func (x *Start) Execute(args []string) error {
 	for _, router := range tiered.Routers {
 		if r, ok := router.(*ipfs.CachingRouter); ok {
 			r.APIRouter().Start(torDialer)
-			dhtRouting = r.DHT()
+			dhtRouting, err = r.DHT()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if dhtRouting == nil {
