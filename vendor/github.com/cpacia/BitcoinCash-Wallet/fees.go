@@ -1,10 +1,9 @@
 package bitcoincash
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"net/http"
 	"time"
-
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type httpClient interface {

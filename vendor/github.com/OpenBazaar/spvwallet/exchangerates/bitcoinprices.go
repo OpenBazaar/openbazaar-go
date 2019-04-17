@@ -10,10 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"strings"
-
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
+	"strings"
 )
 
 const SatoshiPerBTC = 100000000
