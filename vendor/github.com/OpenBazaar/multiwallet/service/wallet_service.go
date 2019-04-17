@@ -529,7 +529,7 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 			msgTx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
 			txBytes = buf.Bytes()
 		}
-		err = ws.db.Txns().Put(txBytes, txHash.String(), int(value), int(height), ts, hits == 0)
+		err = ws.db.Txns().Put(txBytes, txHash.String(), value.String(), int(height), ts, hits == 0)
 		if err != nil {
 			Log.Errorf("putting txid (%s): %s", txHash.String(), err.Error())
 			return

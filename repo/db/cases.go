@@ -278,7 +278,8 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 				buyerHandle = contract.BuyerOrder.BuyerID.Handle
 			}
 			if contract.BuyerOrder.Payment != nil {
-				total = contract.BuyerOrder.Payment.Amount
+				n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+				total = n
 			}
 		}
 		//}

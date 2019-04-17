@@ -1320,10 +1320,17 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 	if err != nil {
 		return 0, 0, err
 	}
+	if len(body) == 0 {
+		return 0, 0, errors.New("invalid txn hash")
+	}
 	var s map[string]interface{}
 	err = json.Unmarshal(body, &s)
 	if err != nil {
 		return 0, 0, err
+	}
+
+	if s["result"] == nil {
+		return 0, 0, errors.New("invalid txn hash")
 	}
 
 	result := s["result"].(map[string]interface{})
