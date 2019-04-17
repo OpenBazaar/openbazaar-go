@@ -1391,7 +1391,7 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("vendor's Bitcoin signature on GUID failed to verify")
+			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}

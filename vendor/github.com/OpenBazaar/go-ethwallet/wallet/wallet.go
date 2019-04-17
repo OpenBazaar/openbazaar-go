@@ -1004,6 +1004,7 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		//destStr = destStr + addrStr
 		destArr = append(destArr, sampleDest[:]...)
 		amountArr = append(amountArr, sample[:]...)
+		//amountArr = append(amountArr, v.Bytes()...)
 		//amnt := fmt.Sprintf("%064s", fmt.Sprintf("%x", v.Int64()))
 		//amountStr = amountStr + amnt
 	}
@@ -1133,23 +1134,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	sort.Slice(payouts, func(i, j int) bool {
 		return strings.Compare(payouts[i].Address.String(), payouts[j].Address.String()) == -1
 	})
-
-	/*
-		payables := make(map[string]*big.Int)
-		for _, out := range payouts {
-			if out.Value <= 0 {
-				continue
-			}
-			val := big.NewInt(out.Value)
-			if p, ok := payables[out.Address.String()]; ok {
-				sum := big.NewInt(0)
-				sum.Add(val, p)
-				payables[out.Address.String()] = sum
-			} else {
-				payables[out.Address.String()] = val
-			}
-		}
-	*/
 
 	payables := make(map[string]big.Int)
 	addresses := []string{}

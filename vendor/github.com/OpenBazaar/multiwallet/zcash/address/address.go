@@ -2,7 +2,6 @@ package address
 
 import (
 	"errors"
-
 	"bytes"
 	"crypto/sha256"
 	"fmt"

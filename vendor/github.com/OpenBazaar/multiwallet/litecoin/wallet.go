@@ -4,11 +4,21 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/ltcsuite/ltcutil"
 	"io"
 	"math/big"
 	"strconv"
 	"time"
+
+	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ltcsuite/ltcutil"
+	"github.com/ltcsuite/ltcwallet/wallet/txrules"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -18,15 +28,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
-	wi "github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/ltcsuite/ltcwallet/wallet/txrules"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/net/proxy"
 )
 
 type LitecoinWallet struct {

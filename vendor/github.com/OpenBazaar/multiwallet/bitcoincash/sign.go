@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"github.com/btcsuite/btcd/chaincfg"
 	"time"
+
+	"github.com/btcsuite/btcd/chaincfg"
 
 	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"

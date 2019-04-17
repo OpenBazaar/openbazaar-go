@@ -10,7 +10,6 @@ import (
 	"path"
 	"sort"
 	"sync"
-
 	"strings"
 
 	"github.com/boltdb/bolt"

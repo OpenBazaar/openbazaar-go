@@ -1639,13 +1639,13 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
 	var (
-		err         error
-		isSale      bool
-		contract    *pb.RicardianContract
-		state       pb.OrderState
-		funded      bool
-		records     []*wallet.TransactionRecord
-		read        bool
+		err      error
+		isSale   bool
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		funded   bool
+		records  []*wallet.TransactionRecord
+		read     bool
 		//paymentCoin *repo.CurrencyCode
 	)
 	contract, state, funded, records, read, _, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
@@ -2051,10 +2051,10 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var (
-		isSale      bool
-		contract    *pb.RicardianContract
-		state       pb.OrderState
-		records     []*wallet.TransactionRecord
+		isSale   bool
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		records  []*wallet.TransactionRecord
 		//paymentCoin *repo.CurrencyCode
 	)
 	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
@@ -2197,9 +2197,9 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var (
-		contract    *pb.RicardianContract
-		state       pb.OrderState
-		records     []*wallet.TransactionRecord
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		records  []*wallet.TransactionRecord
 		//paymentCoin *repo.CurrencyCode
 	)
 	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
@@ -2237,9 +2237,9 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		rel struct {
 			OrderID string `json:"orderId"`
 		}
-		contract    *pb.RicardianContract
-		state       pb.OrderState
-		records     []*wallet.TransactionRecord
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		records  []*wallet.TransactionRecord
 		//paymentCoin *repo.CurrencyCode
 	)
 
@@ -3362,7 +3362,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %d}`, fee)
+	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
