@@ -220,11 +220,23 @@ func (w *BitcoinCashWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
 	return w.fp.GetFeePerByte(feeLevel)
 }
 
-func (w *BitcoinCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
-	tx, err := w.buildTx(amount, addr, feeLevel, nil)
-	if err != nil {
-		return nil, err
+func (w *BitcoinCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+	var (
+		tx  *wire.MsgTx
+		err error
+	)
+	if spendAll {
+		tx, err = w.buildSpendAllTx(addr, feeLevel)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tx, err = w.buildTx(amount, addr, feeLevel, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	// Broadcast
 	if err := w.Broadcast(tx); err != nil {
 		return nil, err

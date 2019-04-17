@@ -11,12 +11,11 @@ import (
 	"sort"
 	"sync"
 
-	"strings"
-
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cevaris/ordered_map"
+	"strings"
 )
 
 const (

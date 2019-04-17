@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"sort"
-	"strconv"
-	"testing"
-	"time"
-
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"sort"
+	"strconv"
+	"testing"
+	"time"
 )
 
 type MockDatastore struct {
