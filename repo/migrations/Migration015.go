@@ -161,7 +161,7 @@ func (Migration015) Down(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	if err := writeRepoVer(repoPath, 15); err != nil {
-		return fmt.Errorf("bumping repover to 16: %s", err.Error())
+		return fmt.Errorf("reducing repover to 15: %s", err.Error())
 	}
 	return nil
 }
