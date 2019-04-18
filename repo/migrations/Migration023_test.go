@@ -34,12 +34,12 @@ func TestMigration023(t *testing.T) {
 		databasePath = appSchema.DatabasePath()
 		schemaPath   = appSchema.DataPathJoin("repover")
 
-		//schemaSQL          = "pragma key = 'foobarbaz';"
+		schemaSQL          = "pragma key = 'foobarbaz';"
 		CreateTableChatSQL = "create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);"
 		insertChatSQL      = "insert into chat(messageID, peerID, subject, message, read, timestamp, outgoing) values(?,?,?,?,?,?,?);"
 		selectChatSQL      = "select messageID, timestamp from chat;"
 		setupSQL           = strings.Join([]string{
-			//schemaSQL,
+			schemaSQL,
 			CreateTableChatSQL,
 		}, " ")
 	)
@@ -93,7 +93,7 @@ func TestMigration023(t *testing.T) {
 
 	// execute migration up
 	m := migrations.Migration023{}
-	if err := m.Up(testRepoPath, "", true); err != nil {
+	if err := m.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -125,7 +125,7 @@ func TestMigration023(t *testing.T) {
 	chatRows.Close()
 
 	// execute migration down
-	if err := m.Down(testRepoPath, "", true); err != nil {
+	if err := m.Down(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
