@@ -15,6 +15,7 @@ const (
 	migration023EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
 )
 
+// Migration023WalletsConfig - used to hold the coin cfg
 type Migration023WalletsConfig struct {
 	BTC *migration023CoinConfig `json:"BTC"`
 	BCH *migration023CoinConfig `json:"BCH"`
@@ -36,8 +37,10 @@ type migration023CoinConfig struct {
 	WalletOptions    map[string]interface{} `json:"WalletOptions"`
 }
 
+// Migration023 - required migration struct
 type Migration023 struct{}
 
+// Up - upgrade the state
 func (Migration023) Up(repoPath, dbPassword string, testnet bool) error {
 	var (
 		configMap        = map[string]interface{}{}
@@ -146,6 +149,7 @@ func (Migration023) Up(repoPath, dbPassword string, testnet bool) error {
 	return nil
 }
 
+// Down - downgrade/restore the state
 func (Migration023) Down(repoPath, dbPassword string, testnet bool) error {
 	var (
 		configMap        = map[string]interface{}{}
