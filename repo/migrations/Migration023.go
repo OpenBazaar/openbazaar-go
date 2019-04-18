@@ -31,6 +31,7 @@ func (Migration023) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	if databasePassword != "" {
 		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
 		_, err := db.Exec(p)
@@ -64,6 +65,7 @@ func (Migration023) Down(repoPath, databasePassword string, testnetEnabled bool)
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	if databasePassword != "" {
 		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
 		_, err := db.Exec(p)
@@ -73,7 +75,7 @@ func (Migration023) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	if err := migrateTimestamp(db, func(in int64) int64 {
-		// convert from seconds to nanoseconds
+		// convert from nanoseconds to seconds
 		return time.Unix(0, in).Unix()
 	}); err != nil {
 		return err

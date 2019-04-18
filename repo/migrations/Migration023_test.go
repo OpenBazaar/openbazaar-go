@@ -48,6 +48,7 @@ func TestMigration023(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer db.Close()
 	if _, err = db.Exec(setupSQL); err != nil {
 		t.Fatal(err)
 	}
