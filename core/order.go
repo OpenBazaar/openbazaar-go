@@ -855,9 +855,6 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	mPrivKey := n.MasterPrivateKey
-	//if err != nil {
-	//	return err
-	//}
 	mECKey, err := mPrivKey.ECPrivKey()
 	if err != nil {
 		return err
@@ -1603,7 +1600,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 		return err
 	}
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute, true)
+	profileBytes, err := ipfs.ResolveThenCat(n.IpfsNode, ipnsPath, time.Minute, n.IPNSQuorumSize, true)
 	if err != nil {
 		return err
 	}
@@ -1665,9 +1662,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER
-	//if err != nil {
-	//	return contract, err
-	//}
 	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
 	if err != nil {
 		return contract, err

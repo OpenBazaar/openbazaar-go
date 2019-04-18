@@ -79,6 +79,7 @@ var fileLogFormat = logging.MustStringFormatter(
 
 var (
 	ErrNoGateways = errors.New("no gateway addresses configured")
+	apiRouterURI  string
 )
 
 type Start struct {
@@ -104,7 +105,6 @@ type Start struct {
 }
 
 func (x *Start) Execute(args []string) error {
-	ipfscore.DHTOption = constructDHTRouting
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -266,6 +266,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan ipns extra config:", err)
 		return err
 	}
+	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -396,6 +397,11 @@ func (x *Start) Execute(args []string) error {
 			"ipnsps": true,
 		},
 	}
+	if x.Regtest {
+		ncfg.Routing = constructDHTRouting
+	} else {
+		ncfg.Routing = constructRouting
+	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
@@ -424,8 +430,12 @@ func (x *Start) Execute(args []string) error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if _, ok := router.(*dht.IpfsDHT); ok {
-			dhtRouting = router.(*dht.IpfsDHT)
+		if r, ok := router.(*ipfs.CachingRouter); ok {
+			r.APIRouter().Start(torDialer)
+			dhtRouting, err = r.DHT()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if dhtRouting == nil {
@@ -599,7 +609,6 @@ func (x *Start) Execute(args []string) error {
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 		IpfsNode:                      nd,
 		DHT:                           dhtRouting,
 		MasterPrivateKey:              mPrivKey,
@@ -845,7 +854,19 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
 }
 
-const IpnsValidatorTag = "ipns"
+func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	dhtRouting, err := dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
+}
 
 func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	return dht.New(

@@ -176,7 +176,7 @@ func addConfigExtensions(repoRoot string) error {
 		}
 		ie = schema.IpnsExtraConfig{
 			DHTQuorumSize: 1,
-			FallbackAPI:   "https://gateway.ob1.io",
+			APIRouter:     "https://routing.api.openbazaar.org",
 		}
 
 		t = schema.TorConfig{}

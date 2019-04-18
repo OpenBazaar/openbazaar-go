@@ -27,6 +27,7 @@ type SpendRequest struct {
 	OrderID                string `json:"orderId"`
 	RequireAssociatedOrder bool   `json:"requireOrder"`
 	Wallet                 string `json:"wallet"`
+	SpendAll               bool   `json:"spendAll"`
 }
 
 type SpendResponse struct {
@@ -73,7 +74,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		feeLevel = wallet.NORMAL
 	}
 	amt, _ := new(big.Int).SetString(args.Amount, 10)
-	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID)
+	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:

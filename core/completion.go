@@ -208,9 +208,6 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 		mPrivKey := n.MasterPrivateKey
-		//if err != nil {
-		//	return err
-		//}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return err
@@ -361,9 +358,6 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		return err
 	}
 	mPrivKey := n.MasterPrivateKey
-	//if err != nil {
-	//	return err
-	//}
 	mECKey, err := mPrivKey.ECPrivKey()
 	if err != nil {
 		return err
@@ -401,9 +395,6 @@ func (n *OpenBazaarNode) SignOrderCompletion(contract *pb.RicardianContract) (*p
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER_COMPLETION
-	//if err != nil {
-	//	return contract, err
-	//}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrderFulfil)
 	if err != nil {
 		return contract, err

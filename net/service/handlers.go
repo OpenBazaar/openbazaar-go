@@ -619,9 +619,6 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		mPrivKey := service.node.MasterPrivateKey
-		//if err != nil {
-		//	return nil, err
-		//}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return nil, err
@@ -671,9 +668,6 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		mPrivKey := service.node.MasterPrivateKey
-		//if err != nil {
-		//	return nil, err
-		//}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return nil, err
@@ -798,9 +792,6 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		mPrivKey := service.node.MasterPrivateKey
-		//if err != nil {
-		//	return nil, err
-		//}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return nil, err

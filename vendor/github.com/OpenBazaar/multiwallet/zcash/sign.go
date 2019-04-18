@@ -163,6 +163,77 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 	return authoredTx.Tx, nil
 }
 
+func (w *ZCashWallet) buildSpendAllTx(addr btc.Address, feeLevel wi.FeeLevel) (*wire.MsgTx, error) {
+	tx := wire.NewMsgTx(1)
+
+	height, _ := w.ws.ChainTip()
+	utxos, err := w.db.Utxos().GetAll()
+	if err != nil {
+		return nil, err
+	}
+	coinMap := util.GatherCoins(height, utxos, w.ScriptToAddress, w.km.GetKeyForScript)
+
+	totalIn, inVals, additionalPrevScripts, additionalKeysByAddress := util.LoadAllInputs(tx, coinMap, w.params)
+
+	// outputs
+	script, err := zaddr.PayToAddrScript(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the fee
+	fee0 := w.GetFeePerByte(feeLevel)
+	feePerByte := fee0.Int64()
+	estimatedSize := EstimateSerializeSize(1, []*wire.TxOut{wire.NewTxOut(0, script)}, false, P2PKH)
+	fee := int64(estimatedSize) * feePerByte
+
+	// Check for dust output
+	if txrules.IsDustAmount(btc.Amount(totalIn-fee), len(script), txrules.DefaultRelayFeePerKb) {
+		return nil, wi.ErrorDustAmount
+	}
+
+	// Build the output
+	out := wire.NewTxOut(totalIn-fee, script)
+	tx.TxOut = append(tx.TxOut, out)
+
+	// BIP 69 sorting
+	txsort.InPlaceSort(tx)
+
+	// Sign
+	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
+		addrStr := addr.EncodeAddress()
+		wif, ok := additionalKeysByAddress[addrStr]
+		if !ok {
+			return nil, false, errors.New("key not found")
+		}
+		return wif.PrivKey, wif.CompressPubKey, nil
+	})
+	for i, txIn := range tx.TxIn {
+		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(prevOutScript, w.params)
+		if err != nil {
+			return nil, err
+		}
+		key, _, err := getKey(addrs[0])
+		if err != nil {
+			return nil, err
+		}
+		sig, err := rawTxInSignature(tx, i, prevOutScript, txscript.SigHashAll, key, inVals[txIn.PreviousOutPoint])
+		if err != nil {
+			return nil, errors.New("failed to sign transaction")
+		}
+		builder := txscript.NewScriptBuilder()
+		builder.AddData(sig)
+		builder.AddData(key.PubKey().SerializeCompressed())
+		script, err := builder.Script()
+		if err != nil {
+			return nil, err
+		}
+		txIn.SignatureScript = script
+	}
+	return tx, nil
+}
+
 func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, []btc.Amount, error) {
 
 	var targetAmount btc.Amount

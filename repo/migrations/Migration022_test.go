@@ -1,64 +1,28 @@
 package migrations_test
 
 import (
-	"encoding/json"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
-
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 const preMigration022Config = `{
-	"OtherConfigProperty11": [1, 2, 3],
-	"OtherConfigProperty21": "abc123",
-	"Wallets":{
-		"ETH": {
-			"API": [
-					"https://mainnet.infura.io"
-			],
-			"APITestnet": [
-					"https://rinkeby.infura.io"
-			]
-		}
-	}
+	"IpnsExtra": {
+		"DHTQuorumSize": 1,
+       		"FallbackAPI": "https://gateway.ob1.io"
+   	}
 }`
 
 const postMigration022Config = `{
-	"OtherConfigProperty11": [1, 2, 3],
-	"OtherConfigProperty21": "abc123",
-	"Wallets": {
-		"ETH": {
-			"Type": "API",
-			"API": [
-				"https://mainnet.infura.io"
-			],
-			"APITestnet": [
-				"https://rinkeby.infura.io"
-			],
-			"MaxFee": 200,
-			"FeeAPI": "",
-			"HighFeeDefault": 30,
-			"MediumFeeDefault": 15,
-			"LowFeeDefault": 7,
-			"TrustedPeer": "",
-			"WalletOptions": {
-				"RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
-				"RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
-				"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
-			}
-		}
-	}
-}`
+	"IpnsExtra": {
+		"APIRouter": "https://routing.api.openbazaar.org",
+		"DHTQuorumSize": 1
 
-func migration022AssertAPI(t *testing.T, actual interface{}, expected string) {
-	actualSlice := actual.([]interface{})
-	if len(actualSlice) != 1 || actualSlice[0] != expected {
-		t.Fatalf("incorrect api endpoint.\n\twanted: %s\n\tgot: %s\n", expected, actual)
-	}
-}
+   	}
+}`
 
 func TestMigration022(t *testing.T) {
 	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
@@ -82,7 +46,7 @@ func TestMigration022(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile(repoverPath, []byte("21"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(repoverPath, []byte("22"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -96,17 +60,6 @@ func TestMigration022(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	config := map[string]interface{}{}
-	if err = json.Unmarshal(configBytes, &config); err != nil {
-		t.Fatal(err)
-	}
-
-	w := config["Wallets"].(map[string]interface{})
-	eth := w["ETH"].(map[string]interface{})
-
-	migration022AssertAPI(t, eth["API"], "https://mainnet.infura.io")
-	migration022AssertAPI(t, eth["APITestnet"], "https://rinkeby.infura.io")
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration022Config), "") {
@@ -126,9 +79,9 @@ func TestMigration022(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config = map[string]interface{}{}
-	if err = json.Unmarshal(configBytes, &config); err != nil {
-		t.Fatal(err)
+	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(preMigration022Config), "") {
+		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Fatal("incorrect post-migration config")
 	}
 
 	assertCorrectRepoVer(t, repoverPath, "22")

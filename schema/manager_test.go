@@ -434,17 +434,23 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 
 	// First load the config and make sure the identity object is indeed set.
 
-	cfg, _ := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Error("config can not be loaded")
+	}
 	_, ok := cfg["Identity"]
 	if !ok {
-		t.Error("Identity object does not exist in config but should")
+		t.Error("identity object does not exist in config but should")
 	}
 
 	// Now clean and check again
 	if err := subject.CleanIdentityFromConfig(); err != nil {
 		t.Error(err)
 	}
-	cfg, _ = loadConfig()
+	cfg, err = loadConfig()
+	if err != nil {
+		t.Error("config can not be loaded")
+	}
 	_, ok = cfg["Identity"]
 	if ok {
 		t.Error("Identity object was not deleted from config")

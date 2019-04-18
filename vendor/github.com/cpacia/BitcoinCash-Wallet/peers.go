@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"fmt"
-
 	"github.com/btcsuite/btcd/addrmgr"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

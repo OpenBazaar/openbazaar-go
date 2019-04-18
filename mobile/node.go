@@ -64,6 +64,8 @@ type Node struct {
 	apiConfig      *apiSchema.APIConfig
 }
 
+var apiRouterURI string
+
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
@@ -85,7 +87,6 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 
 // NewNodeWithConfig create a new node using the configuration file from NewNode()
 func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*Node, error) {
-	ipfscore.DHTOption = constructClientDHTRouting
 	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
@@ -130,6 +131,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
+	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -180,6 +182,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 			"mplex":  true,
 			"ipnsps": true,
 		},
+		Routing: constructRouting,
 	}
 
 	// Mnemonic
@@ -257,7 +260,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
 		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
-		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -303,8 +305,11 @@ func (n *Node) Start() error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if _, ok := router.(*dht.IpfsDHT); ok {
-			dhtRouting = router.(*dht.IpfsDHT)
+		if r, ok := router.(*ipfs.CachingRouter); ok {
+			dhtRouting, err = r.DHT()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if dhtRouting == nil {
@@ -474,20 +479,22 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
 	}
 
-	//if err != nil {
-	//	return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
-	//}
-
 	// Create and return an API gateway
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
 }
 
-// constructClientDHTRouting create DHT routing
-func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	return dht.New(
+func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	dhtRouting, err := dht.New(
 		ctx, host,
 		dhtopts.Client(true),
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
+	apiRouter.Start(nil)
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
 }

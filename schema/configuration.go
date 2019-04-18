@@ -26,7 +26,7 @@ type TorConfig struct {
 
 type IpnsExtraConfig struct {
 	DHTQuorumSize int
-	FallbackAPI   string
+	APIRouter     string
 }
 
 type WalletsConfig struct {
@@ -349,16 +349,16 @@ func GetIPNSExtraConfig(cfgBytes []byte) (*IpnsExtraConfig, error) {
 	if !ok {
 		return nil, MalformedConfigError
 	}
-	fallbackAPI, ok := ieCfg["FallbackAPI"]
+	apiRouter, ok := ieCfg["APIRouter"]
 	if !ok {
 		return nil, MalformedConfigError
 	}
-	fallbackAPIStr, ok := fallbackAPI.(string)
+	apiRouterStr, ok := apiRouter.(string)
 	if !ok {
 		return nil, MalformedConfigError
 	}
 
-	return &IpnsExtraConfig{int(qsInt), fallbackAPIStr}, nil
+	return &IpnsExtraConfig{int(qsInt), apiRouterStr}, nil
 }
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {

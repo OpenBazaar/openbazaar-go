@@ -177,8 +177,8 @@ func TestGetIPNSExtraConfig(t *testing.T) {
 	if ipnsConfig.DHTQuorumSize != 1 {
 		t.Error("GetIPNSExtraConfig returned incorrect DHTQuorumSize")
 	}
-	if ipnsConfig.FallbackAPI != "https://gateway.ob1.io" {
-		t.Error("GetIPNSExtraConfig returned incorrect FallbackAPI")
+	if ipnsConfig.APIRouter != "https://routing.api.openbazaar.org" {
+		t.Error("GetIPNSExtraConfig returned incorrect APIRouter")
 	}
 }
 
@@ -294,7 +294,7 @@ func configFixture() []byte {
   },
   "IpnsExtra": {
     "DHTQuorumSize": 1,
-    "FallbackAPI": "https://gateway.ob1.io"
+    "APIRouter": "https://routing.api.openbazaar.org"
   },
   "JSON-API": {
     "AllowedIPs": [

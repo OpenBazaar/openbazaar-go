@@ -101,9 +101,6 @@ type OpenBazaarNode struct {
 	// Allow other nodes to push data to this node for storage
 	AcceptStoreRequests bool
 
-	// Last ditch API to find records that dropped out of the DHT
-	IPNSBackupAPI string
-
 	// RecordAgingNotifier is a worker that walks the cases datastore to
 	// notify the user as disputes age past certain thresholds
 	RecordAgingNotifier *recordAgingNotifier

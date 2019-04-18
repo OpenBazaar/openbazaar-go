@@ -257,7 +257,6 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			jsonpb.UnmarshalString(string(vendorContract), contract)
 		}
 		var slug string
-		//if contract != nil {
 		if len(contract.VendorListings) > 0 {
 			slug = contract.VendorListings[0].Slug
 			if contract.VendorListings[0].VendorID != nil {
@@ -282,7 +281,6 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 				total = n
 			}
 		}
-		//}
 
 		ret = append(ret, repo.Case{
 			CaseId:       caseID,
