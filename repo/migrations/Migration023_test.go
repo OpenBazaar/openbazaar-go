@@ -14,14 +14,51 @@ import (
 const preMigration023Config = `{
 	"OtherConfigProperty11": [1, 2, 3],
 	"OtherConfigProperty21": "abc123",
-	"Wallets":{
-		"ETH": {
-			"API": [
-					"https://mainnet.infura.io"
+	"Wallets": {
+	  "BTC":{
+	    "APIPool": [
+				"https://btc.api.openbazaar.org/api"
 			],
-			"APITestnet": [
-					"https://rinkeby.infura.io"
+			"APITestnetPool": [
+				"https://tbtc.api.openbazaar.org/api"
 			]
+	  },
+	  "BCH":{
+	    "APIPool": [
+				"https://bch.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbch.api.openbazaar.org/api"
+			]
+	  },
+	  "LTC":{
+	    "APIPool": [
+				"https://ltc.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tltc.api.openbazaar.org/api"
+			]
+	  },
+	  "ZEC":{
+	    "APIPool": [
+				"https://zec.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tzec.api.openbazaar.org/api"
+			]
+	  },
+		"ETH": {
+			"APIPool": [
+				"https://mainnet.infura.io"
+			],
+			"APITestnetPool": [
+				"https://rinkeby.infura.io"
+			],
+			"WalletOptions": {
+				"RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
+				"RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
+				"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
+			}
 		}
 	}
 }`
@@ -30,26 +67,51 @@ const postMigration023Config = `{
 	"OtherConfigProperty11": [1, 2, 3],
 	"OtherConfigProperty21": "abc123",
 	"Wallets": {
-		"ETH": {
-			"Type": "API",
-			"API": [
+	  "BCH":{
+	    "APIPool": [
+				"https://bch.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbch.api.openbazaar.org/api"
+			]
+	  },
+	  "BTC":{
+	    "APIPool": [
+				"https://btc.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbtc.api.openbazaar.org/api"
+			]
+	  },
+	  "ETH": {
+			"APIPool": [
 				"https://mainnet.infura.io"
 			],
-			"APITestnet": [
+			"APITestnetPool": [
 				"https://rinkeby.infura.io"
 			],
-			"MaxFee": 200,
-			"FeeAPI": "",
-			"HighFeeDefault": 30,
-			"MediumFeeDefault": 15,
-			"LowFeeDefault": 7,
-			"TrustedPeer": "",
 			"WalletOptions": {
 				"RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
 				"RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
 				"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
 			}
-		}
+		},	
+	  "LTC":{
+	    "APIPool": [
+				"https://ltc.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tltc.api.openbazaar.org/api"
+			]
+	  },
+	  "ZEC":{
+	    "APIPool": [
+				"https://zec.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tzec.api.openbazaar.org/api"
+			]
+	  }
 	}
 }`
 
@@ -82,7 +144,7 @@ func TestMigration023(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile(repoverPath, []byte("21"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(repoverPath, []byte("24"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -105,12 +167,13 @@ func TestMigration023(t *testing.T) {
 	w := config["Wallets"].(map[string]interface{})
 	eth := w["ETH"].(map[string]interface{})
 
-	migration023AssertAPI(t, eth["API"], "https://mainnet.infura.io")
-	migration023AssertAPI(t, eth["APITestnet"], "https://rinkeby.infura.io")
+	migration023AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	migration023AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration023Config), "") {
 		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Logf("expected: %s", re.ReplaceAllString(string(postMigration023Config), ""))
 		t.Fatal("incorrect post-migration config")
 	}
 
