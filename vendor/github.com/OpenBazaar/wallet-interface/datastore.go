@@ -2,11 +2,10 @@ package wallet
 
 import (
 	"bytes"
-	"time"
-
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"time"
 )
 
 type Coin interface {
