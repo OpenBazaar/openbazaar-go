@@ -1242,12 +1242,17 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		return nil, errors.New("chat message over max characters")
 	}
 
+	log.Infof("chat message is %s", chat.Message)
+
 	// Use correct timestamp
 	offline, _ := options.(bool)
+
 	var t time.Time
 	if !offline {
+		log.Debug("currently online")
 		t = time.Now()
 	} else {
+		log.Debug("currently online")
 		if chat.Timestamp == nil {
 			return nil, errors.New("invalid timestamp")
 		}

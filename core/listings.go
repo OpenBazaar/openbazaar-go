@@ -261,11 +261,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
   to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
-	err := validateListingSkus(listing)
-	if err != nil {
-		return err
-	}
-
 	// Grab current inventory
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
@@ -273,6 +268,9 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
+		if s.Quantity < 1 {
+			continue
+		}
 		err = n.Datastore.Inventory().Put(listing.Slug, i, s.Quantity)
 		if err != nil {
 			return err

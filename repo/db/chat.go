@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -47,7 +48,7 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		subject,
 		message,
 		readInt,
-		int(timestamp.Unix()),
+		int64(timestamp.UnixNano()),
 		outgoingInt,
 	)
 	if err != nil {
@@ -93,7 +94,7 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 		if outInt > 0 {
 			outgoing = true
 		}
-		timestamp := time.Unix(int64(ts), 0)
+		timestamp := time.Unix(0, int64(ts))
 		convo := repo.ChatConversation{
 			PeerId:    peerId,
 			Unread:    count,
@@ -145,7 +146,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 		if outgoingInt == 1 {
 			outgoing = true
 		}
-		timestamp := time.Unix(int64(timestampInt), 0)
+		timestamp := time.Unix(0, int64(timestampInt))
 		chatMessage := repo.ChatMessage{
 			PeerId:    pid,
 			MessageId: msgID,
