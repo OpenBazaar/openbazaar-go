@@ -71,10 +71,7 @@ var fileLogFormat = logging.MustStringFormatter(
 	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
-var (
-	ErrNoGateways = errors.New("no gateway addresses configured")
-	apiRouterURI  string
-)
+var ErrNoGateways = errors.New("no gateway addresses configured")
 
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
