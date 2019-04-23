@@ -8,7 +8,6 @@ import (
 	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	p2phost "gx/ipfs/QmYrWiWM4qtrnCeT3R14jY3ZZyirDNJgwK57q4qFYePgbd/go-libp2p-host"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
-	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 
@@ -22,13 +21,13 @@ var routerCacheURI string
 // which do not yet have an API to manage their configuration
 func UpdateIPFSGlobalProtocolVars(testnetEnable bool) {
 	if testnetEnable {
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-		bitswap.ProtocolBitswapOne = "/openbazaar/bitswap/testnet/1.0.0"
-		bitswap.ProtocolBitswapNoVers = "/openbazaar/bitswap/testnet"
+		bitswap.ProtocolBitswap = IPFSProtocolBitswapTestnetOneDotOne
+		bitswap.ProtocolBitswapOne = IPFSProtocolBitswapTestnetOne
+		bitswap.ProtocolBitswapNoVers = IPFSProtocolBitswapTestnetNoVers
 	} else {
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
-		bitswap.ProtocolBitswapOne = "/openbazaar/bitswap/1.0.0"
-		bitswap.ProtocolBitswapNoVers = "/openbazaar/bitswap"
+		bitswap.ProtocolBitswap = IPFSProtocolBitswapMainnetOneDotOne
+		bitswap.ProtocolBitswapOne = IPFSProtocolBitswapMainnetOne
+		bitswap.ProtocolBitswapNoVers = IPFSProtocolBitswapMainnetNoVers
 	}
 }
 
@@ -60,6 +59,10 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
+		dhtopts.Protocols(
+			IPFSProtocolKademliaMainnetOne,
+			IPFSProtocolDHTMainnetLegacy,
+		),
 	)
 	if err != nil {
 		return nil, err
@@ -74,18 +77,23 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batch
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
+		dhtopts.Protocols(
+			IPFSProtocolKademliaMainnetOne,
+			IPFSProtocolDHTMainnetLegacy,
+		),
 	)
 }
 
 func constructTestnetDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	var (
-		testnetDHT      = protocol.ID("/openbazaar/kad/testnet/1.0.0")
-		testnetApp      = protocol.ID("/openbazaar/app/testnet/1.0.0")
 		dhtRouting, err = dht.New(
 			ctx, host,
 			dhtopts.Datastore(dstore),
 			dhtopts.Validator(validator),
-			dhtopts.Protocols(testnetDHT, testnetApp),
+			dhtopts.Protocols(
+				IPFSProtocolKademliaTestnetOne,
+				IPFSProtocolAppTestnetOne,
+			),
 		)
 	)
 	if err != nil {

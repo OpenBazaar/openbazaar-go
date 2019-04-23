@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	inet "gx/ipfs/QmY3ArotKMKaL7YGfbQfyDrib6RVraLqZYWXZvVgZktBxp/go-libp2p-net"
-	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	ggio "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/io"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
@@ -102,7 +103,7 @@ func (ms *messageSender) prep() error {
 		return nil
 	}
 
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
+	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ipfs.IPFSProtocolAppMainnetOne)
 	if err != nil {
 		return err
 	}
