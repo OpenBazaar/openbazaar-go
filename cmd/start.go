@@ -21,7 +21,6 @@ import (
 	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 	libp2p "gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
 	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
-	dhtopts "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	config "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
@@ -29,7 +28,6 @@ import (
 	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	manet "gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -102,6 +100,7 @@ type Start struct {
 
 func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
+	ipfs.UpdateIPFSGlobalProtocolVars(x.Testnet || x.Regtest)
 
 	if x.Testnet && x.Regtest {
 		return errors.New("invalid combination of testnet and regtest modes")
@@ -292,19 +291,16 @@ func (x *Start) Execute(args []string) error {
 
 	// Setup testnet
 	if x.Testnet || x.Regtest {
+		// set testnet bootstrap addrs
 		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
+		// don't use pushnodes on testnet
 		dataSharing.PushTo = []string{}
-	} else {
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
