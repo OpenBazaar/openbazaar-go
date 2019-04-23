@@ -47,9 +47,9 @@ func PrepareIPFSConfig(r repo.Repo, routerAPIEndpoint string, testEnable, regtes
 	// regtest and test are never enabled together
 	ncfg.Routing = constructRouting
 	if regtestEnable {
-		ncfg.Routing = constructDHTRouting
+		ncfg.Routing = constructRegtestRouting
 	} else if testEnable {
-		ncfg.Routing = constructTestnetDHTRouting
+		ncfg.Routing = constructTestnetRouting
 	}
 	return ncfg
 }
@@ -72,7 +72,7 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	return cachingRouter, nil
 }
 
-func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	return dht.New(
 		ctx, host,
 		dhtopts.Datastore(dstore),
@@ -84,7 +84,7 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batch
 	)
 }
 
-func constructTestnetDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+func constructTestnetRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	var (
 		dhtRouting, err = dht.New(
 			ctx, host,
