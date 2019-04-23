@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	"io"
 	"io/ioutil"
 	"net"
@@ -105,6 +106,13 @@ type Start struct {
 }
 
 func (x *Start) Execute(args []string) error {
+
+	if x.Testnet || x.Regtest {
+		ipfscore.DHTOption = constructTestnetDHTRouting
+	} else {
+		ipfscore.DHTOption = constructDHTRouting
+	}
+
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -873,6 +881,17 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batch
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
+	)
+}
+
+func constructTestnetDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	testnetDHT := protocol.ID("/openbazaar/kad/testnet/1.0.0")
+	testnetApp := protocol.ID("/openbazaar/app/testnet/1.0.0")
+	return dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+		dhtopts.Protocols(testnetDHT, testnetApp),
 	)
 }
 
