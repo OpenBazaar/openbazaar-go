@@ -10,12 +10,27 @@ import (
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
+	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo"
 )
 
 var routerCacheURI string
+
+// UpdateIPFSGlobalProtocolVars is a hack to manage custom protocol strings
+// which do not yet have an API to manage their configuration
+func UpdateIPFSGlobalProtocolVars(testnetEnable bool) {
+	if testnetEnable {
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
+		bitswap.ProtocolBitswapOne = "/openbazaar/bitswap/testnet/1.0.0"
+		bitswap.ProtocolBitswapNoVers = "/openbazaar/bitswap/testnet"
+	} else {
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
+		bitswap.ProtocolBitswapOne = "/openbazaar/bitswap/1.0.0"
+		bitswap.ProtocolBitswapNoVers = "/openbazaar/bitswap"
+	}
+}
 
 // PrepareIPFSConfig builds the configuration options for the internal
 // IPFS node.
@@ -63,13 +78,15 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batch
 }
 
 func constructTestnetDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	testnetDHT := protocol.ID("/openbazaar/kad/testnet/1.0.0")
-	testnetApp := protocol.ID("/openbazaar/app/testnet/1.0.0")
-	dhtRouting, err := dht.New(
-		ctx, host,
-		dhtopts.Datastore(dstore),
-		dhtopts.Validator(validator),
-		dhtopts.Protocols(testnetDHT, testnetApp),
+	var (
+		testnetDHT      = protocol.ID("/openbazaar/kad/testnet/1.0.0")
+		testnetApp      = protocol.ID("/openbazaar/app/testnet/1.0.0")
+		dhtRouting, err = dht.New(
+			ctx, host,
+			dhtopts.Datastore(dstore),
+			dhtopts.Validator(validator),
+			dhtopts.Protocols(testnetDHT, testnetApp),
+		)
 	)
 	if err != nil {
 		return nil, err
