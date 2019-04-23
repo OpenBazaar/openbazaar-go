@@ -852,6 +852,7 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -908,6 +909,7 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -989,6 +991,7 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -3182,6 +3185,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	i.node.BanManager.AddBlockedId(pid)
+	i.node.Service.DisconnectFromPeer(pid)
 	SanitizedResponse(w, `{}`)
 }
 
