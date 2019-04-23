@@ -408,7 +408,11 @@ func (x *Start) Execute(args []string) error {
 	if x.Regtest {
 		ncfg.Routing = constructDHTRouting
 	} else {
-		ncfg.Routing = constructRouting
+		if x.Testnet {
+			ncfg.Routing = constructTestnetDHTRouting
+		} else {
+			ncfg.Routing = constructRouting
+		}
 	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
@@ -887,12 +891,18 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batch
 func constructTestnetDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
 	testnetDHT := protocol.ID("/openbazaar/kad/testnet/1.0.0")
 	testnetApp := protocol.ID("/openbazaar/app/testnet/1.0.0")
-	return dht.New(
+	dhtRouting, err := dht.New(
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 		dhtopts.Protocols(testnetDHT, testnetApp),
 	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests
