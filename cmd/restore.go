@@ -221,15 +221,7 @@ func (x *Restore) Execute(args []string) error {
 		libp2p.DefaultTransports = transportOptions
 	}
 
-	ncfg := &ipfscore.BuildCfg{
-		Repo:   r,
-		Online: true,
-		ExtraOpts: map[string]bool{
-			"mplex":  true,
-			"ipnsps": true,
-		},
-		Routing: constructRouting,
-	}
+	ncfg := ipfs.PrepareIPFSConfig(r, schema.IPFSCachingRouterDefaultURI, false, false)
 	fmt.Println("Starting node...")
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {

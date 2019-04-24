@@ -21,19 +21,13 @@ import (
 	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 	libp2p "gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
 	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
-	dhtopts "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	config "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
-	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
-	p2phost "gx/ipfs/QmYrWiWM4qtrnCeT3R14jY3ZZyirDNJgwK57q4qFYePgbd/go-libp2p-host"
 	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
-	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
-	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	manet "gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -77,10 +71,7 @@ var fileLogFormat = logging.MustStringFormatter(
 	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
-var (
-	ErrNoGateways = errors.New("no gateway addresses configured")
-	apiRouterURI  string
-)
+var ErrNoGateways = errors.New("no gateway addresses configured")
 
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
@@ -106,6 +97,7 @@ type Start struct {
 
 func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
+	ipfs.UpdateIPFSGlobalProtocolVars(x.Testnet || x.Regtest)
 
 	if x.Testnet && x.Regtest {
 		return errors.New("invalid combination of testnet and regtest modes")
@@ -266,7 +258,6 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan ipns extra config:", err)
 		return err
 	}
-	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -297,19 +288,16 @@ func (x *Start) Execute(args []string) error {
 
 	// Setup testnet
 	if x.Testnet || x.Regtest {
+		// set testnet bootstrap addrs
 		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
+		// don't use pushnodes on testnet
 		dataSharing.PushTo = []string{}
-	} else {
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -389,20 +377,7 @@ func (x *Start) Execute(args []string) error {
 		cfg.Swarm.DisableNatPortMap = true
 	}
 
-	ncfg := &ipfscore.BuildCfg{
-		Repo:   r,
-		Online: true,
-		ExtraOpts: map[string]bool{
-			"mplex":  true,
-			"ipnsps": true,
-		},
-	}
-	if x.Regtest {
-		ncfg.Routing = constructDHTRouting
-	} else {
-		ncfg.Routing = constructRouting
-	}
-
+	ncfg := ipfs.PrepareIPFSConfig(r, ipnsExtraConfig.APIRouter, x.Testnet, x.Regtest)
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error("create new ipfs node:", err)
@@ -852,28 +827,6 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	ml := logging.MultiLogger(apiFileFormatter)
 
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
-}
-
-func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	dhtRouting, err := dht.New(
-		ctx, host,
-		dhtopts.Datastore(dstore),
-		dhtopts.Validator(validator),
-	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
-	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
-}
-
-func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	return dht.New(
-		ctx, host,
-		dhtopts.Datastore(dstore),
-		dhtopts.Validator(validator),
-	)
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests

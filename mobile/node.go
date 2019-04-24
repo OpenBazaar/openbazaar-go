@@ -24,7 +24,6 @@ import (
 
 	ipfsconfig "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
-	bitswap "gx/ipfs/QmcSPuzpSbVLU6UHU4e5PwZpm4fHbCn5SbNR5ZNL6Mj63G/go-bitswap/network"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -36,6 +35,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
@@ -63,8 +63,6 @@ type Node struct {
 	ipfsConfig     *ipfscore.BuildCfg
 	apiConfig      *apiSchema.APIConfig
 }
-
-var apiRouterURI string
 
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
@@ -131,7 +129,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
-	apiRouterURI = ipnsExtraConfig.APIRouter
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -161,28 +158,16 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// Setup testnet
 	if config.Testnet {
+		// set testnet bootstrap addrs
 		testnetBootstrapAddrs, err := apiSchema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
+		// don't use pushnodes on testnet
 		dataSharing.PushTo = []string{}
-	} else {
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
-	}
-
-	ncfg := &ipfscore.BuildCfg{
-		Repo:   r,
-		Online: true,
-		ExtraOpts: map[string]bool{
-			"mplex":  true,
-			"ipnsps": true,
-		},
-		Routing: constructRouting,
 	}
 
 	// Mnemonic
@@ -266,7 +251,28 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, errors.New("no gateway addresses configured")
 	}
 
+	// override with mobile routing config
+	ignoredURI := ""
+	ncfg := ipfs.PrepareIPFSConfig(r, ignoredURI, config.Testnet, config.Testnet)
+	ncfg.Routing = constructMobileRouting
+
 	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+}
+
+func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	dhtRouting, err := dht.New(
+		ctx, host,
+		dhtopts.Client(true),
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
+	if err != nil {
+		return nil, err
+	}
+	apiRouter := ipfs.NewAPIRouter(schema.IPFSCachingRouterDefaultURI)
+	apiRouter.Start(nil)
+	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
+	return cachingRouter, nil
 }
 
 // startIPFSNode start the node
@@ -485,20 +491,4 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 
 	// Create and return an API gateway
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
-}
-
-func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	dhtRouting, err := dht.New(
-		ctx, host,
-		dhtopts.Client(true),
-		dhtopts.Datastore(dstore),
-		dhtopts.Validator(validator),
-	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := ipfs.NewAPIRouter(apiRouterURI)
-	apiRouter.Start(nil)
-	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
 }
