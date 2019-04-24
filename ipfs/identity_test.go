@@ -3,13 +3,13 @@ package ipfs
 import (
 	"bytes"
 	"encoding/hex"
-	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"testing"
 
 	"github.com/tyler-smith/go-bip39"
 )
 
-var keyHex = "08011260499228645d120d15b5008b1da0b9dba898df328001ea03c0be84a64c41d205ff1b8339a303cd8cf2945b66c89ac29fa90e79731d67000694284791af404eeb1f1b8339a303cd8cf2945b66c89ac29fa90e79731d67000694284791af404eeb1f"
+var keyHex = "08011240499228645d120d15b5008b1da0b9dba898df328001ea03c0be84a64c41d205ff1b8339a303cd8cf2945b66c89ac29fa90e79731d67000694284791af404eeb1f"
 
 func TestIdentityFromKey(t *testing.T) {
 	keyBytes, err := hex.DecodeString(keyHex)

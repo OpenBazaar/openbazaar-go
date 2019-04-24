@@ -1,12 +1,14 @@
 package core
 
 import (
+	"bytes"
 	"encoding/base64"
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"image" // load gif
 	_ "image/gif"
 	"image/jpeg" // load png
 	_ "image/png"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -16,8 +18,7 @@ import (
 	"strings"
 	"time"
 
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	"gx/ipfs/QmfB3oNXGGq9S4B2a9YeCajoATms3Zw2VvDm8fK7VeLSV8/go-unixfs/io"
+	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -147,23 +148,23 @@ func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (wi
 }
 
 // FetchAvatar - fetch image avatar from ipfs
-func (n *OpenBazaarNode) FetchAvatar(peerID string, size string, useCache bool) (io.DagReader, error) {
+func (n *OpenBazaarNode) FetchAvatar(peerID string, size string, useCache bool) (io.ReadSeeker, error) {
 	return n.FetchImage(peerID, "avatar", size, useCache)
 }
 
 // FetchHeader - fetch image header from ipfs
-func (n *OpenBazaarNode) FetchHeader(peerID string, size string, useCache bool) (io.DagReader, error) {
+func (n *OpenBazaarNode) FetchHeader(peerID string, size string, useCache bool) (io.ReadSeeker, error) {
 	return n.FetchImage(peerID, "header", size, useCache)
 }
 
 // FetchImage - fetch ipfs image
-func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string, useCache bool) (io.DagReader, error) {
+func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string, useCache bool) (io.ReadSeeker, error) {
 	query := "/" + peerID + "/images/" + size + "/" + imageType
-	b, err := n.IPNSResolveThenCat(ipath.FromString(query), time.Minute, useCache)
+	b, err := ipfs.ResolveThenCat(n.IpfsNode, ipath.FromString(query), time.Minute, n.IPNSQuorumSize, useCache)
 	if err != nil {
 		return nil, err
 	}
-	return io.NewBufDagReader(b), nil
+	return bytes.NewReader(b), nil
 }
 
 // GetBase64Image - fetch the image and return it as base64 encoded string

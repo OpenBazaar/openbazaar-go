@@ -8,8 +8,11 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
-	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"fmt"
+	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"io"
+
+	extra "github.com/agl/ed25519/extra25519"
 
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/nacl/box"
@@ -77,7 +80,13 @@ func encryptCurve25519(pubKey *libp2p.Ed25519PublicKey, plaintext []byte) ([]byt
 		return nil, err
 	}
 	// Convert recipient's key into curve25519
-	pk, err := pubKey.ToCurve25519()
+	rawBytes, err := pubKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	var raw [32]byte
+	copy(raw[:], rawBytes)
+	pk, err := pubkeyToCurve25519(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +99,7 @@ func encryptCurve25519(pubKey *libp2p.Ed25519PublicKey, plaintext []byte) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	for i := 0; i < 24; i++ {
-		nonce[i] = n[i]
-	}
+	copy(nonce[:], n)
 	ciphertext = box.Seal(ciphertext, plaintext, &nonce, pk, ephemPriv)
 
 	// Prepend the ephemeral public key
@@ -177,7 +184,13 @@ func Decrypt(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 }
 
 func decryptCurve25519(privKey *libp2p.Ed25519PrivateKey, ciphertext []byte) ([]byte, error) {
-	curve25519Privkey := privKey.ToCurve25519()
+	rawBytes, err := privKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	var raw [64]byte
+	copy(raw[:], rawBytes)
+	curve25519Privkey := privkeyToCurve25519(raw)
 	var plaintext []byte
 
 	n := ciphertext[:NonceBytes]
@@ -185,14 +198,10 @@ func decryptCurve25519(privKey *libp2p.Ed25519PrivateKey, ciphertext []byte) ([]
 	ct := ciphertext[NonceBytes+EphemeralPublicKeyBytes:]
 
 	var ephemPubkey [32]byte
-	for i := 0; i < 32; i++ {
-		ephemPubkey[i] = ephemPubkeyBytes[i]
-	}
+	copy(ephemPubkey[:], ephemPubkeyBytes)
 
 	var nonce [24]byte
-	for i := 0; i < 24; i++ {
-		nonce[i] = n[i]
-	}
+	copy(nonce[:], n)
 
 	plaintext, success := box.Open(plaintext, ct, &nonce, &ephemPubkey, curve25519Privkey)
 	if !success {
@@ -254,4 +263,19 @@ func decryptRSA(privKey *libp2p.RsaPrivateKey, ciphertext []byte) ([]byte, error
 	stream.XORKeyStream(ciphertext, ciphertext)
 	plaintext := ciphertext
 	return plaintext, nil
+}
+
+func privkeyToCurve25519(sk [64]byte) *[32]byte {
+	var skNew [32]byte
+	extra.PrivateKeyToCurve25519(&skNew, &sk)
+	return &skNew
+}
+
+func pubkeyToCurve25519(pk [32]byte) (*[32]byte, error) {
+	var pkNew [32]byte
+	success := extra.PublicKeyToCurve25519(&pkNew, &pk)
+	if !success {
+		return nil, fmt.Errorf("error converting ed25519 pubkey to curve25519 pubkey")
+	}
+	return &pkNew, nil
 }

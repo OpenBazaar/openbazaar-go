@@ -232,10 +232,6 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		}
 	}
 	defer stmt.Close()
-	if err != nil {
-		tx.Rollback()
-		return "", updated, err
-	}
 	tx.Commit()
 
 	var peerStm string

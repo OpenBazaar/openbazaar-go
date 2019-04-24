@@ -5,15 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-
-	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // NewOrderConfirmation - add order confirmation to the contract
@@ -138,9 +139,6 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 			return err
 		}
 		mPrivKey := n.MasterPrivateKey
-		if err != nil {
-			return err
-		}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return err
@@ -221,9 +219,6 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			return fmt.Errorf("decode buyer chaincode: %s", err.Error())
 		}
 		mPrivKey := n.MasterPrivateKey
-		if err != nil {
-			return fmt.Errorf("acquire wallet private key: %s", err.Error())
-		}
 		mECKey, err := mPrivKey.ECPrivKey()
 		if err != nil {
 			return fmt.Errorf("generate ec private key: %s", err.Error())
@@ -324,9 +319,6 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER_CONFIRMATION
-	if err != nil {
-		return contract, err
-	}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrderConf)
 	if err != nil {
 		return contract, err

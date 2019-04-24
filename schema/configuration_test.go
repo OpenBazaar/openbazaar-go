@@ -177,8 +177,8 @@ func TestGetIPNSExtraConfig(t *testing.T) {
 	if ipnsConfig.DHTQuorumSize != 1 {
 		t.Error("GetIPNSExtraConfig returned incorrect DHTQuorumSize")
 	}
-	if ipnsConfig.FallbackAPI != "https://gateway.ob1.io" {
-		t.Error("GetIPNSExtraConfig returned incorrect FallbackAPI")
+	if ipnsConfig.APIRouter != "https://routing.api.openbazaar.org" {
+		t.Error("GetIPNSExtraConfig returned incorrect APIRouter")
 	}
 }
 
@@ -294,7 +294,7 @@ func configFixture() []byte {
   },
   "IpnsExtra": {
     "DHTQuorumSize": 1,
-    "FallbackAPI": "https://gateway.ob1.io"
+    "APIRouter": "https://routing.api.openbazaar.org"
   },
   "JSON-API": {
     "AllowedIPs": [
@@ -413,7 +413,7 @@ func configFixture() []byte {
     "ETH": {
       "Type": "API",
       "API": [
-        "https://rinkeby.infura.io"
+        "https://mainnet.infura.io"
       ],
       "APITestnet": [
         "https://rinkeby.infura.io"
@@ -425,8 +425,8 @@ func configFixture() []byte {
       "LowFeeDefault": 7,
       "TrustedPeer": "",
       "WalletOptions": {
-        "RegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-        "RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+        "RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
+        "RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
         "RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
       }
     }

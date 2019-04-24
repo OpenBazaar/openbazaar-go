@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 
-	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 
 	"io/ioutil"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -47,7 +48,7 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 // FetchProfile - fetch peer's profile
 func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile, error) {
 	var pro pb.Profile
-	b, err := n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "profile.json")), time.Minute, useCache)
+	b, err := ipfs.ResolveThenCat(n.IpfsNode, ipnspath.FromString(path.Join(peerID, "profile.json")), time.Minute, n.IPNSQuorumSize, true)
 	if err != nil || len(b) == 0 {
 		return pro, err
 	}

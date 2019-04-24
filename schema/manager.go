@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -499,77 +499,28 @@ func MustDefaultConfig() *config.Config {
 		panic(err)
 	}
 
-	conf := &config.Config{
-		// Setup the node's default addresses.
-		// NOTE: two swarm listen addrs, one TCP, one UTP.
-		Addresses: config.Addresses{
-			Swarm: []string{
-				"/ip4/0.0.0.0/tcp/4001",
-				"/ip6/::/tcp/4001",
-				"/ip4/0.0.0.0/tcp/9005/ws",
-				"/ip6/::/tcp/9005/ws",
-			},
-			API:     []string{""},
-			Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
-		},
-
-		Datastore: config.Datastore{
-			StorageMax:         "10GB",
-			StorageGCWatermark: 90, // 90%
-			GCPeriod:           "1h",
-			BloomFilterSize:    0,
-			HashOnRead:         false,
-			Spec: map[string]interface{}{
-				"type": "mount",
-				"mounts": []interface{}{
-					map[string]interface{}{
-						"mountpoint": "/blocks",
-						"type":       "measure",
-						"prefix":     "flatfs.datastore",
-						"child": map[string]interface{}{
-							"type":      "flatfs",
-							"path":      "blocks",
-							"sync":      true,
-							"shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
-						},
-					},
-					map[string]interface{}{
-						"mountpoint": "/",
-						"type":       "measure",
-						"prefix":     "leveldb.datastore",
-						"child": map[string]interface{}{
-							"type":        "levelds",
-							"path":        "datastore",
-							"compression": "none",
-						},
-					},
-				},
-			},
-		},
-		Bootstrap: config.BootstrapPeerStrings(bootstrapPeers),
-		Discovery: config.Discovery{config.MDNS{
-			Enabled:  false,
-			Interval: 10,
-		}},
-
-		// Setup the node mount points
-		Mounts: config.Mounts{
-			IPFS: "/ipfs",
-			IPNS: "/ipns",
-		},
-
-		Ipns: config.Ipns{
-			ResolveCacheSize: 128,
-			RecordLifetime:   "168h",
-			RepublishPeriod:  "24h",
-		},
-
-		Gateway: config.Gateway{
-			RootRedirect: "",
-			Writable:     false,
-			PathPrefixes: []string{},
-		},
+	conf, err := config.Init(&dummyWriter{}, 4096)
+	if err != nil {
+		panic(err)
 	}
+	conf.Ipns.RecordLifetime = "168h"
+	conf.Ipns.RepublishPeriod = "24h"
+	conf.Discovery.MDNS.Enabled = false
+	conf.Addresses = config.Addresses{
+		Swarm: []string{
+			"/ip4/0.0.0.0/tcp/4001",
+			"/ip6/::/tcp/4001",
+			"/ip4/0.0.0.0/tcp/9005/ws",
+			"/ip6/::/tcp/9005/ws",
+		},
+		API:     []string{""},
+		Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
+	}
+	conf.Bootstrap = config.BootstrapPeerStrings(bootstrapPeers)
 
 	return conf
 }
+
+type dummyWriter struct{}
+
+func (d *dummyWriter) Write(p []byte) (n int, err error) { return 0, nil }

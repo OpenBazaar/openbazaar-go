@@ -1,7 +1,7 @@
 package core
 
 import (
-	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	_ "image/gif"
 	_ "image/png"
 	"io/ioutil"

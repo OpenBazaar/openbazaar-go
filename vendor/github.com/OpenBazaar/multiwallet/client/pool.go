@@ -3,10 +3,13 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/OpenBazaar/multiwallet/client/blockbook"
+	clientErr "github.com/OpenBazaar/multiwallet/client/errors"
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/btcsuite/btcutil"
 	"github.com/op/go-logging"
@@ -40,6 +43,10 @@ func (m *maxTryEnum) next() bool {
 	var now = m.attempts
 	m.attempts++
 	return now < m.max
+}
+
+func (m *maxTryEnum) isFinal() bool {
+	return m.attempts == m.max
 }
 
 // NewClientPool instantiates a new ClientPool object with the given server APIs
@@ -163,21 +170,38 @@ func (p *ClientPool) listenChans(ctx context.Context) {
 	}()
 }
 
-// executeRequest handles making the HTTP request with server rotation and retires. Only if all servers return an
-// error will this method return an error.
+// executeRequest handles making the HTTP request and responding with rotating the
+// pool and/or retrying requests. As all requests travel through this method, without
+// middleware intercepting error responses, all returned errors are checked to see if
+// they are Retryable and/or Fatal as defined by client/errors. These error properties
+// can be composed like client/errors.MakeFatal(client/errors.MakeRetryable(err)).
+// This approach should allow individual requests to define how the resulting error
+// should be handled upstream of the request.
 func (p *ClientPool) executeRequest(queryFunc func(c *blockbook.BlockBookClient) error) error {
+	var err error
 	for e := p.newMaximumTryEnumerator(); e.next(); {
 		var client = p.poolManager.AcquireCurrentWhenReady()
-		if err := queryFunc(client); err != nil {
-			Log.Infof("error executing wallet client request: %s", err.Error())
+		if err = queryFunc(client); err != nil {
 			p.poolManager.ReleaseCurrent()
-			p.FailAndCloseCurrentClient()
+			if clientErr.IsFatal(err) || e.isFinal() {
+				Log.Warningf("rotating server due to fatal or exhausted attempts")
+				p.FailAndCloseCurrentClient()
+			}
+			if !clientErr.IsRetryable(err) {
+				Log.Errorf("unretryable error: %s", err.Error())
+				return err
+			}
+			if !e.isFinal() {
+				Log.Warningf("retrying due to error: %s", err.Error())
+			}
+			continue
 		} else {
 			p.poolManager.ReleaseCurrent()
 			return nil
 		}
 	}
-	return errors.New("exhausted maximum attempts for request")
+	Log.Errorf("exhausted retry attempts, last error: %s", err.Error())
+	return fmt.Errorf("request failed: %s", err.Error())
 }
 
 // BlockNofity proxies the active client's block channel
@@ -190,6 +214,7 @@ func (p *ClientPool) Broadcast(tx []byte) (string, error) {
 	var (
 		txid      string
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) broadcasting transaction", c.EndpointURL().String())
 			r, err := c.Broadcast(tx)
 			if err != nil {
 				return err
@@ -208,9 +233,10 @@ func (p *ClientPool) EstimateFee(nBlocks int) (int, error) {
 	var (
 		fee       int
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) requesting fee estimate", c.EndpointURL().String())
 			r, err := c.EstimateFee(nBlocks)
 			if err != nil {
-				return err
+				return clientErr.MakeRetryable(err)
 			}
 			fee = r
 			return nil
@@ -226,9 +252,10 @@ func (p *ClientPool) GetBestBlock() (*model.Block, error) {
 	var (
 		block     *model.Block
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request best block info", c.EndpointURL().String())
 			r, err := c.GetBestBlock()
 			if err != nil {
-				return err
+				return clientErr.MakeRetryable(err)
 			}
 			block = r
 			return err
@@ -244,9 +271,10 @@ func (p *ClientPool) GetInfo() (*model.Info, error) {
 	var (
 		info      *model.Info
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request backend info", c.EndpointURL().String())
 			r, err := c.GetInfo()
 			if err != nil {
-				return err
+				return clientErr.MakeRetryable(err)
 			}
 			info = r
 			return nil
@@ -262,6 +290,7 @@ func (p *ClientPool) GetRawTransaction(txid string) ([]byte, error) {
 	var (
 		tx        []byte
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request transaction info, txid: %s", c.EndpointURL().String(), txid)
 			r, err := c.GetRawTransaction(txid)
 			if err != nil {
 				return err
@@ -279,6 +308,12 @@ func (p *ClientPool) GetTransactions(addrs []btcutil.Address) ([]model.Transacti
 	var (
 		txs       []model.Transaction
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			var addrStrings []string
+			for _, a := range addrs {
+				addrStrings = append(addrStrings, a.String())
+			}
+			Log.Debugf("(%s) request transactions for (%d) addrs", c.EndpointURL().String(), len(addrs))
+			Log.Debugf("\taddrs requested: %s", strings.Join(addrStrings, ","))
 			r, err := c.GetTransactions(addrs)
 			if err != nil {
 				return err
@@ -297,6 +332,7 @@ func (p *ClientPool) GetTransaction(txid string) (*model.Transaction, error) {
 	var (
 		tx        *model.Transaction
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			Log.Debugf("(%s) request transaction data, txid: %s", c.EndpointURL().String(), txid)
 			r, err := c.GetTransaction(txid)
 			if err != nil {
 				return err
@@ -315,6 +351,12 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 	var (
 		utxos     []model.Utxo
 		queryFunc = func(c *blockbook.BlockBookClient) error {
+			var addrStrings []string
+			for _, a := range addrs {
+				addrStrings = append(addrStrings, a.String())
+			}
+			Log.Debugf("(%s) request utxos for (%d) addrs", c.EndpointURL().String(), len(addrs))
+			Log.Debugf("\taddrs requested: %s", strings.Join(addrStrings, ","))
 			r, err := c.GetUtxos(addrs)
 			if err != nil {
 				return err

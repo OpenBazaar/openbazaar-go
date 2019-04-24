@@ -125,7 +125,7 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			username, password, ok := r.BasicAuth()
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
-			if !ok || username != wsh.username || strings.ToLower(password) != strings.ToLower(wsh.password) {
+			if !ok || username != wsh.username || !strings.EqualFold(password, wsh.password) {
 				wsh.logger.Error("refused websocket connection: invalid username and/or password")
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")

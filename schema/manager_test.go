@@ -18,6 +18,16 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
+func TestMain(m *testing.M) {
+	// The repo package usually installs the plugins
+	// on init() but the repo package isn't initialized
+	// here and it would be a circular import to import
+	// it. So we will install the plugin for the purposes
+	// of these tests.
+	ipfs.InstallDatabasePlugins()
+	os.Exit(m.Run())
+}
+
 func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	subject, err := NewSchemaManager()
 	if err != nil {
@@ -426,11 +436,11 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 
 	cfg, err := loadConfig()
 	if err != nil {
-		t.Error(err)
+		t.Error("config can not be loaded")
 	}
 	_, ok := cfg["Identity"]
 	if !ok {
-		t.Error("Identity object does not exist in config but should")
+		t.Error("identity object does not exist in config but should")
 	}
 
 	// Now clean and check again
@@ -439,7 +449,7 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 	}
 	cfg, err = loadConfig()
 	if err != nil {
-		t.Error(err)
+		t.Error("config can not be loaded")
 	}
 	_, ok = cfg["Identity"]
 	if ok {

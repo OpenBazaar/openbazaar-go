@@ -11,15 +11,15 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
-	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
-	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"strconv"
 	"strings"
 	"time"
 
-	ipfspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	ipfspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -792,9 +792,6 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	mPrivKey := n.MasterPrivateKey
-	if err != nil {
-		return err
-	}
 	mECKey, err := mPrivKey.ECPrivKey()
 	if err != nil {
 		return err
@@ -1321,11 +1318,11 @@ collectListings:
 		inv.Variant = selectedVariant
 		for _, o := range listingMap[item.ListingHash].Item.Options {
 			for _, checkOpt := range userOptions {
-				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
+				if strings.EqualFold(o.Name, checkOpt.Name) {
 					// var validVariant bool
 					validVariant := false
 					for _, v := range o.Variants {
-						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+						if strings.EqualFold(v.Name, checkOpt.Value) {
 							validVariant = true
 						}
 					}
@@ -1335,7 +1332,7 @@ collectListings:
 				}
 			check:
 				for i, lopt := range listingOptions {
-					if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
+					if strings.EqualFold(checkOpt.Name, lopt) {
 						listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
 						continue check
 					}
@@ -1385,7 +1382,7 @@ collectListings:
 				if option.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
 					var service *pb.Listing_ShippingOption_Service
 					for _, shippingService := range option.Services {
-						if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
+						if strings.EqualFold(shippingService.Name, item.ShippingOption.Service) {
 							service = shippingService
 						}
 					}
@@ -1496,7 +1493,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 		return err
 	}
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute, true)
+	profileBytes, err := ipfs.ResolveThenCat(n.IpfsNode, ipnsPath, time.Minute, n.IPNSQuorumSize, true)
 	if err != nil {
 		return err
 	}
@@ -1558,9 +1555,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER
-	if err != nil {
-		return contract, err
-	}
 	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
 	if err != nil {
 		return contract, err
@@ -1647,9 +1641,9 @@ func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (i
 	for _, s := range listing.Item.Options {
 	optionsLoop:
 		for _, o := range itemOptions {
-			if strings.ToLower(o.Name) == strings.ToLower(s.Name) {
+			if strings.EqualFold(o.Name, s.Name) {
 				for i, va := range s.Variants {
-					if strings.ToLower(va.Name) == strings.ToLower(o.Value) {
+					if strings.EqualFold(va.Name, o.Value) {
 						selected = append(selected, i)
 						break optionsLoop
 					}

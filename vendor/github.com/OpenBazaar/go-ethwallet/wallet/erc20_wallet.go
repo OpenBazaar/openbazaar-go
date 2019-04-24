@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
@@ -53,7 +52,7 @@ type ERC20Wallet struct {
 // GenTokenScriptHash - used to generate script hash for erc20 token as per
 // escrow smart contract
 func GenTokenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
-	ahash := sha3.NewKeccak256()
+	//ahash := sha3.NewKeccak256()
 	a := make([]byte, 4)
 	binary.BigEndian.PutUint32(a, script.Timeout)
 	arr := append(script.TxnID.Bytes(), append([]byte{script.Threshold},
@@ -61,10 +60,11 @@ func GenTokenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
 			append(script.Seller.Bytes(), append(script.Moderator.Bytes(),
 				append(script.MultisigAddress.Bytes(),
 					script.TokenAddress.Bytes()...)...)...)...)...)...)...)
-	ahash.Write(arr)
+	//ahash.Write(arr)
 	var retHash [32]byte
 
-	copy(retHash[:], ahash.Sum(nil)[:])
+	//copy(retHash[:], ahash.Sum(nil)[:])
+	copy(retHash[:], crypto.Keccak256(arr))
 	ahashStr := hexutil.Encode(retHash[:])
 
 	return retHash, ahashStr, nil
@@ -100,7 +100,7 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 	var regAddr interface{}
 	var ok bool
 	if regAddr, ok = cfg.Options["RegistryAddress"]; !ok {
-		log.Errorf("ethereum registry not found: %s", err.Error())
+		log.Errorf("ethereum registry not found: %s", cfg.Options["RegistryAddress"])
 		return nil, err
 	}
 
@@ -118,21 +118,21 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 
 	var name, symbol, deployAddrMain, deployAddrRopsten, deployAddrRinkeby interface{}
 	if name, ok = cfg.Options["Name"]; !ok {
-		log.Errorf("erc20 token name not found: %s", err.Error())
+		log.Errorf("erc20 token name not found: %s", cfg.Options["Name"])
 		return nil, err
 	}
 
 	token.name = name.(string)
 
 	if symbol, ok = cfg.Options["Symbol"]; !ok {
-		log.Errorf("erc20 token symbol not found: %s", err.Error())
+		log.Errorf("erc20 token symbol not found: %s", cfg.Options["Symbol"])
 		return nil, err
 	}
 
 	token.symbol = symbol.(string)
 
 	if deployAddrMain, ok = cfg.Options["MainNetAddress"]; !ok {
-		log.Errorf("erc20 token address not found: %s", err.Error())
+		log.Errorf("erc20 token address not found: %s", cfg.Options["MainNetAddress"])
 		return nil, err
 	}
 
@@ -664,9 +664,9 @@ func (wallet *ERC20Wallet) GenerateMultisigScript(keys []hd.ExtendedKey, thresho
 		return nil, nil, err
 	}
 
-	hash := sha3.NewKeccak256()
-	hash.Write(redeemScript)
-	addr := common.HexToAddress(hexutil.Encode(hash.Sum(nil)[:]))
+	//hash := sha3.NewKeccak256()
+	//hash.Write(redeemScript)
+	addr := common.HexToAddress(hexutil.Encode(crypto.Keccak256(redeemScript)))
 	retAddr := EthAddress{&addr}
 
 	scriptKey := append(addr.Bytes(), redeemScript...)

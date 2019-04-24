@@ -1,6 +1,7 @@
 package ipfs
 
 import (
+	"os"
 	"path"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestUnPinDir(t *testing.T) {
 		t.Error(err)
 	}
 
-	root, err := AddDirectory(n, path.Join("./", "root"))
+	root, err := AddDirectory(n, path.Join(os.TempDir(), "root"))
 	if err != nil {
 		t.Error(err)
 	}

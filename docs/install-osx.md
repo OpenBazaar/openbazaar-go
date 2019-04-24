@@ -12,9 +12,9 @@ brew install git
 ### Install Go
 These are some condensed steps which will get you started quickly, but we recommend following the installation steps at [https://golang.org/doc/install](https://golang.org/doc/install).
 
-Use brew to install Go 1.10:
+Use brew to install Go 1.11:
 ```
-brew install go@1.10
+brew install go@1.11
 ```
 
 Go may also be installed following the directions at [https://golang.org/doc/install](https://golang.org/doc/install).
@@ -56,7 +56,7 @@ It will use git to checkout the source code into `$GOPATH/src/github.com/OpenBaz
 
 Checkout a release version:
 ```
-git checkout v0.12.4
+git checkout v0.13.3
 ```
 
 Note: `go get` leaves the repo pointing at `master` which is a branch used for active development. Running OpenBazaar from `master` is NOT recommended. Check the [release versions](https://github.com/OpenBazaar/openbazaar-go/releases) for the available versions that you use in checkout.

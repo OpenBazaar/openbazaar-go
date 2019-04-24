@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nanmu42/etherscan-api"
+
 	"github.com/OpenBazaar/multiwallet/config"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -31,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
@@ -112,17 +113,17 @@ func DeserializePendingTxn(b []byte) (PendingTxn, error) {
 // GenScriptHash - used to generate script hash for eth as per
 // escrow smart contract
 func GenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
-	ahash := sha3.NewKeccak256()
+	//ahash := sha3.NewKeccak256()
 	a := make([]byte, 4)
 	binary.BigEndian.PutUint32(a, script.Timeout)
 	arr := append(script.TxnID.Bytes(), append([]byte{script.Threshold},
 		append(a[:], append(script.Buyer.Bytes(),
 			append(script.Seller.Bytes(), append(script.Moderator.Bytes(),
 				append(script.MultisigAddress.Bytes())...)...)...)...)...)...)
-	ahash.Write(arr)
+	//ahash.Write(arr)
 	var retHash [32]byte
 
-	copy(retHash[:], ahash.Sum(nil)[:])
+	copy(retHash[:], crypto.Keccak256(arr)[:]) // ahash.Sum(nil)[:])
 	ahashStr := hexutil.Encode(retHash[:])
 
 	return retHash, ahashStr, nil
@@ -215,8 +216,14 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	var regAddr interface{}
 	var ok bool
-	if regAddr, ok = cfg.Options["RegistryAddress"]; !ok {
-		log.Errorf("ethereum registry not found: %s", err.Error())
+	registryKey := "RegistryAddress"
+	if strings.Contains(cfg.ClientAPIs[0], "rinkeby") {
+		registryKey = "RinkebyRegistryAddress"
+	} else if strings.Contains(cfg.ClientAPIs[0], "ropsten") {
+		registryKey = "RopstenRegistryAddress"
+	}
+	if regAddr, ok = cfg.Options[registryKey]; !ok {
+		log.Errorf("ethereum registry not found: %s", cfg.Options[registryKey])
 		return nil, err
 	}
 
@@ -478,7 +485,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
 }
 
 // Spend - Send ether to an external wallet
-func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
+func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 
 	var hash common.Hash
 	var h *chainhash.Hash
@@ -537,7 +544,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			if rcpt != nil {
 				flag = true
 			}
-			if time.Since(start).Seconds() > 120 {
+			if time.Since(start).Seconds() > 140 {
 				flag = true
 			}
 			if err != nil {
@@ -702,14 +709,14 @@ func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address 
 		return nil, err
 	}
 
-	tx := types.Transaction{}
+	//tx := types.Transaction{}
 
-	err = tx.UnmarshalJSON(data)
-	if err != nil {
-		return nil, err
-	}
+	//err = tx.UnmarshalJSON(data)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	hash := tx.Hash()
+	hash := common.BytesToHash(data) // tx.Hash()
 
 	return chainhash.NewHashFromStr(hash.Hex()[2:])
 }
@@ -806,6 +813,8 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 	}
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
+	fmt.Println("11111-1  :", err)
+	fmt.Println(ver)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -846,9 +855,9 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 		return nil, nil, err
 	}
 
-	hash := sha3.NewKeccak256()
-	hash.Write(redeemScript)
-	addr := common.HexToAddress(hexutil.Encode(hash.Sum(nil)[:]))
+	//hash := sha3.NewKeccak256()
+	//hash.Write(redeemScript)
+	addr := common.HexToAddress(hexutil.Encode(crypto.Keccak256(redeemScript))) //hash.Sum(nil)[:]))
 	retAddr := EthAddress{&addr}
 
 	scriptKey := append(addr.Bytes(), redeemScript...)
@@ -1278,9 +1287,13 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
 	// TODO: etherscan api is being used
 	// when mainnet is activated we may need a way to set the
-	// url correctly
+	// url correctly - done 6 April 2019
 	hash := common.HexToHash(txid.String())
-	urlStr := fmt.Sprintf("https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", hash.String())
+	network := etherscan.Rinkby
+	if strings.Contains(wallet.client.url, "mainnet") {
+		network = etherscan.Mainnet
+	}
+	urlStr := fmt.Sprintf("https://%s.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", network, hash.String())
 	res, err := http.Get(urlStr)
 	if err != nil {
 		return 0, 0, err
@@ -1366,9 +1379,9 @@ func GenWallet() {
 	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 	fmt.Println(address) // 0x96216849c49358B10257cb55b28eA603c874b05E
 
-	hash := sha3.NewKeccak256()
-	hash.Write(publicKeyBytes[1:])
-	fmt.Println(hexutil.Encode(hash.Sum(nil)[12:])) // 0x96216849c49358b10257cb55b28ea603c874b05e
+	//hash := sha3.NewKeccak256()
+	//hash.Write(publicKeyBytes[1:])
+	fmt.Println(hexutil.Encode(crypto.Keccak256(publicKeyBytes)[12:])) // 0x96216849c49358b10257cb55b28ea603c874b05e
 
 	fmt.Println(util.IsValidAddress(address))
 
