@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
@@ -102,7 +103,7 @@ func (ms *messageSender) prep() error {
 		return nil
 	}
 
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
+	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ipfs.IPFSProtocolAppMainnetOne)
 	if err != nil {
 		return err
 	}

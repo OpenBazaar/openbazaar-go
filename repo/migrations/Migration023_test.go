@@ -17,34 +17,34 @@ const preMigration023Config = `{
 	"Wallets": {
 	  "BTC":{
 	    "APIPool": [
-				"https://btc.api.openbazaar.org/api"
+				"https://btc.blockbook.api.openbazaar.org/api"
 			],
 			"APITestnetPool": [
-				"https://tbtc.api.openbazaar.org/api"
+				"https://tbtc.blockbook.api.openbazaar.org/api"
 			]
 	  },
 	  "BCH":{
 	    "APIPool": [
-				"https://bch.api.openbazaar.org/api"
+				"https://bch.blockbook.api.openbazaar.org/api"
 			],
 			"APITestnetPool": [
-				"https://tbch.api.openbazaar.org/api"
+				"https://bch.blockbook.api.openbazaar.org/api"
 			]
 	  },
 	  "LTC":{
 	    "APIPool": [
-				"https://ltc.api.openbazaar.org/api"
+				"https://ltc.blockbook.api.openbazaar.org/api"
 			],
 			"APITestnetPool": [
-				"https://tltc.api.openbazaar.org/api"
+				"https://tltc.blockbook.api.openbazaar.org/api"
 			]
 	  },
 	  "ZEC":{
 	    "APIPool": [
-				"https://zec.api.openbazaar.org/api"
+				"https://zec.blockbook.api.openbazaar.org/api"
 			],
 			"APITestnetPool": [
-				"https://tzec.api.openbazaar.org/api"
+				"https://tzec.blockbook.api.openbazaar.org/api"
 			]
 	  },
 		"ETH": {
@@ -169,6 +169,26 @@ func TestMigration023(t *testing.T) {
 
 	migration023AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
 	migration023AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
+	
+	btc := w["BTC"].(map[string]interface{})
+
+	migration023AssertAPI(t, btc["APIPool"], "https://btc.api.openbazaar.org/api")
+	migration023AssertAPI(t, btc["APITestnetPool"], "https://tbtc.api.openbazaar.org/api")
+	
+	bch := w["BCH"].(map[string]interface{})
+
+	migration023AssertAPI(t, bch["APIPool"], "https://bch.api.openbazaar.org/api")
+	migration023AssertAPI(t, bch["APITestnetPool"], "https://tbch.api.openbazaar.org/api")
+	
+	ltc := w["LTC"].(map[string]interface{})
+
+	migration023AssertAPI(t, ltc["APIPool"], "https://ltc.api.openbazaar.org/api")
+	migration023AssertAPI(t, ltc["APITestnetPool"], "https://tltc.api.openbazaar.org/api")
+	
+	zec := w["ZEC"].(map[string]interface{})
+
+	migration023AssertAPI(t, zec["APIPool"], "https://zec.api.openbazaar.org/api")
+	migration023AssertAPI(t, zec["APITestnetPool"], "https://tzec.api.openbazaar.org/api")
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration023Config), "") {
@@ -193,6 +213,33 @@ func TestMigration023(t *testing.T) {
 	if err = json.Unmarshal(configBytes, &config); err != nil {
 		t.Fatal(err)
 	}
+	
+	w = config["Wallets"].(map[string]interface{})
+	eth = w["ETH"].(map[string]interface{})
+
+	migration023AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	migration023AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
+	
+	btc = w["BTC"].(map[string]interface{})
+
+	migration023AssertAPI(t, btc["APIPool"], "https://btc.blockbook.api.openbazaar.org/api")
+	migration023AssertAPI(t, btc["APITestnetPool"], "https://tbtc.blockbook.api.openbazaar.org/api")
+	
+	bch = w["BCH"].(map[string]interface{})
+
+	migration023AssertAPI(t, bch["APIPool"], "https://bch.blockbook.api.openbazaar.org/api")
+	migration023AssertAPI(t, bch["APITestnetPool"], "https://tbch.blockbook.api.openbazaar.org/api")
+	
+	ltc = w["LTC"].(map[string]interface{})
+
+	migration023AssertAPI(t, ltc["APIPool"], "https://ltc.blockbook.api.openbazaar.org/api")
+	migration023AssertAPI(t, ltc["APITestnetPool"], "https://tltc.blockbook.api.openbazaar.org/api")
+	
+	zec = w["ZEC"].(map[string]interface{})
+
+	migration023AssertAPI(t, zec["APIPool"], "https://zec.blockbook.api.openbazaar.org/api")
+	migration023AssertAPI(t, zec["APITestnetPool"], "https://tzec.blockbook.api.openbazaar.org/api")
+	
 
 	assertCorrectRepoVer(t, repoverPath, "23")
 }
