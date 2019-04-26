@@ -15,14 +15,24 @@ var (
 )
 
 type CachingRouter struct {
-	apiRouter *APIRouter
+	apiRouter    *APIRouter
+	tieredRouter routinghelpers.Tiered
 	routing.IpfsRouting
 	RecordValidator record.Validator
 }
 
 func NewCachingRouter(dht *dht.IpfsDHT, apiRouter *APIRouter) *CachingRouter {
+	tierd := routinghelpers.Tiered{
+		Routers: []routing.IpfsRouting{
+			dht,
+			apiRouter,
+		},
+		Validator: dht.Validator,
+	}
+
 	return &CachingRouter{
 		apiRouter:       apiRouter,
+		tieredRouter:    tierd,
 		IpfsRouting:     dht,
 		RecordValidator: dht.Validator,
 	}
@@ -41,30 +51,17 @@ func (r *CachingRouter) APIRouter() *APIRouter {
 }
 
 func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
-	// Write to the tiered router in the background then write to the caching
-	// router and return
-	go r.IpfsRouting.PutValue(ctx, key, value, opts...)
-	return r.apiRouter.PutValue(ctx, key, value, opts...)
+	return r.tieredRouter.PutValue(ctx, key, value, opts...)
 }
 
 func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
-	// First check the DHT router. If it's successful return the value otherwise
-	// continue on to check the other routers.
-	val, err := r.IpfsRouting.GetValue(ctx, key, opts...)
+	value, err := r.tieredRouter.GetValue(ctx, key, opts...)
 	if err == nil {
-		return val, r.apiRouter.PutValue(ctx, key, val, opts...)
+		go r.IpfsRouting.PutValue(ctx, key, value, opts...)
 	}
-
-	// Value miss; Check API router
-	return r.apiRouter.GetValue(ctx, key, opts...)
+	return value, err
 }
 
 func (r *CachingRouter) SearchValue(ctx context.Context, key string, opts ...ropts.Option) (<-chan []byte, error) {
-	return routinghelpers.Parallel{
-		Routers: []routing.IpfsRouting{
-			r.IpfsRouting,
-			r.apiRouter,
-		},
-		Validator: r.RecordValidator,
-	}.SearchValue(ctx, key, opts...)
+	return r.tieredRouter.SearchValue(ctx, key, opts...)
 }
