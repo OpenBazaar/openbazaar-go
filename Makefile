@@ -22,7 +22,7 @@ help:
 
 .PHONY: ios_framework
 ios_framework: ## Build iOS Framework for mobile
-	gomobile bind -target=ios -ldflags="-s -w" github.com/OpenBazaar/openbazaar-go/mobile
+	gomobile bind -target=ios/arm64,ios/amd64 -iosversion=10 -ldflags="-s -w" github.com/OpenBazaar/openbazaar-go/mobile
 
 .PHONY: android_framework
 android_framework: ## Build Android Framework for mobile
