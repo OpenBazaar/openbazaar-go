@@ -3,17 +3,18 @@ package routinghelpers
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 
 	ci "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ropts "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing/options"
 	pstore "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
 	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
-	multierror "gx/ipfs/QmfGQp6VVqdPCDyzEM6EGwMY74YPabTSEoQWHUxZuCSWj3/go-multierror"
+	"gx/ipfs/QmfGQp6VVqdPCDyzEM6EGwMY74YPabTSEoQWHUxZuCSWj3/go-multierror"
 )
 
 // Parallel operates on the slice of routers in parallel.
@@ -276,8 +277,11 @@ func (r Parallel) get(ctx context.Context, do func(routing.IpfsRouting) (interfa
 }
 
 func (r Parallel) forKey(key string) Parallel {
+	fmt.Println("Check support for key", key)
 	return r.filter(func(ri routing.IpfsRouting) bool {
-		return supportsKey(ri, key)
+		t := supportsKey(ri, key)
+		fmt.Println("key supported", key, t)
+		return t
 	})
 }
 
@@ -322,6 +326,7 @@ func (r Parallel) SearchValue(ctx context.Context, key string, opts ...ropts.Opt
 				continue
 			}
 
+			fmt.Println("new best parallel search val:", v)
 			best = v
 			select {
 			case valid <- v:

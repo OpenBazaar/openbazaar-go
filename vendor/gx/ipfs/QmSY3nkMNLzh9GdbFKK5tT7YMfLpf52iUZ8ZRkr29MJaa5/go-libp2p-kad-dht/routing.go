@@ -5,13 +5,14 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 
 	u "gx/ipfs/QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz/go-ipfs-util"
 	kb "gx/ipfs/QmSNE1XryoCMnZCbRaj1D23k6YKCaTQ386eJciu1pAfu8M/go-libp2p-kbucket"
 	pb "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/pb"
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	inet "gx/ipfs/QmY3ArotKMKaL7YGfbQfyDrib6RVraLqZYWXZvVgZktBxp/go-libp2p-net"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	pset "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer/peerset"
@@ -112,6 +113,8 @@ type RecvdVal struct {
 
 // GetValue searches for the value corresponding to given Key.
 func (dht *IpfsDHT) GetValue(ctx context.Context, key string, opts ...ropts.Option) (_ []byte, err error) {
+	fmt.Println("GETValue")
+	debug.PrintStack()
 	eip := logger.EventBegin(ctx, "GetValue")
 	defer func() {
 		eip.Append(loggableKey(key))
@@ -130,6 +133,7 @@ func (dht *IpfsDHT) GetValue(ctx context.Context, key string, opts ...ropts.Opti
 
 	responses, err := dht.SearchValue(ctx, key, opts...)
 	if err != nil {
+		fmt.Println("search value error:", err)
 		return nil, err
 	}
 	var best []byte
@@ -216,6 +220,7 @@ func (dht *IpfsDHT) SearchValue(ctx context.Context, key string, opts ...ropts.O
 
 				if len(vals) < maxVals {
 					vals = append(vals, v)
+					fmt.Println("len(vals):", len(vals))
 				}
 
 				if v.Val == nil {
@@ -228,16 +233,20 @@ func (dht *IpfsDHT) SearchValue(ctx context.Context, key string, opts ...ropts.O
 					}
 					sel, err := dht.Validator.Select(key, [][]byte{best.Val, v.Val})
 					if err != nil {
+						fmt.Println("error validating best value from DHT", err)
 						logger.Warning("Failed to select dht key: ", err)
 						continue
 					}
+					fmt.Println("Validate Selector:", sel)
 					if sel != 1 {
 						continue
 					}
 				}
+				fmt.Println("New best val", v)
 				best = &v
 				select {
 				case out <- v.Val:
+					fmt.Println("value consumed")
 				case <-ctx.Done():
 					return
 				}
@@ -272,6 +281,7 @@ func (dht *IpfsDHT) GetValues(ctx context.Context, key string, nvals int) (_ []R
 }
 
 func (dht *IpfsDHT) getValues(ctx context.Context, key string, nvals int) (<-chan RecvdVal, error) {
+	debug.PrintStack()
 	vals := make(chan RecvdVal, 1)
 
 	done := func(err error) (<-chan RecvdVal, error) {
@@ -304,7 +314,8 @@ func (dht *IpfsDHT) getValues(ctx context.Context, key string, nvals int) (<-cha
 	}
 
 	// get closest peers in the routing table
-	rtp := dht.routingTable.NearestPeers(kb.ConvertKey(key), AlphaValue)
+	ck := kb.ConvertKey(key)
+	rtp := dht.routingTable.NearestPeers(ck, AlphaValue)
 	logger.Debugf("peers in rt: %d %s", len(rtp), rtp)
 	if len(rtp) == 0 {
 		logger.Warning("No peers from routing table!")
@@ -323,6 +334,7 @@ func (dht *IpfsDHT) getValues(ctx context.Context, key string, nvals int) (<-cha
 		})
 
 		rec, peers, err := dht.getValueOrPeers(ctx, p, key)
+		fmt.Println("records:", rec, "peers:", peers, "err:", err)
 		switch err {
 		case routing.ErrNotFound:
 			// in this case, they responded with nothing,
@@ -343,6 +355,8 @@ func (dht *IpfsDHT) getValues(ctx context.Context, key string, nvals int) (<-cha
 		res := &dhtQueryResult{closerPeers: peers}
 
 		if rec.GetValue() != nil || err == errInvalidRecord {
+			fmt.Println("value found:", rec.GetValue())
+
 			rv := RecvdVal{
 				Val:  rec.GetValue(),
 				From: p,

@@ -2,19 +2,20 @@ package namesys
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
-	path "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
+	"gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
+	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht" // OpenBazaar: this is updated to OpenBazaar fork because of go-ipfs issue #5957
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
 	pb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	opts "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core/options/namesys"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	logging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log"
-	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht" // OpenBazaar: this is updated to OpenBazaar fork because of go-ipfs issue #5957
-	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
+	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 )
 
@@ -53,10 +54,10 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 	log.Debugf("RoutingResolver resolving %s", name)
 	cancel := func() {}
 
-	if options.DhtTimeout != 0 {
+	//if options.DhtTimeout != 0 {
 		// Resolution must complete within the timeout
-		ctx, cancel = context.WithTimeout(ctx, options.DhtTimeout)
-	}
+		//ctx, cancel = context.WithTimeout(ctx, options.DhtTimeout)
+	//}
 
 	name = strings.TrimPrefix(name, "/ipns/")
 	pid, err := peer.IDB58Decode(name)
@@ -73,14 +74,16 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 	// store before calling GetValue() on the DHT - the DHT will call the
 	// ipns validator, which in turn will get the public key from the peer
 	// store to verify the record signature
-	_, err = routing.GetPublicKey(r.routing, ctx, pid)
-	if err != nil {
-		log.Debugf("RoutingResolver: could not retrieve public key %s: %s\n", name, err)
-		out <- onceResult{err: err}
-		close(out)
-		cancel()
-		return out
-	}
+	//s := pid.String()
+	//log.Debugf("%s",s)
+	//_, err = routing.GetPublicKey(r.routing, ctx, pid)
+	//if err != nil {
+	//	log.Debugf("RoutingResolver: could not retrieve public key %s: %s\n", name, err)
+	//	out <- onceResult{err: err}
+	//	close(out)
+	//	cancel()
+	//	return out
+	//}
 
 	// Use the routing system to get the name.
 	// Note that the DHT will call the ipns validator when retrieving
@@ -97,6 +100,7 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 	}
 
 	go func() {
+		defer func () { fmt.Println("search finished")}()
 		defer cancel()
 		defer close(out)
 		for {
@@ -106,6 +110,7 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 					return
 				}
 
+				fmt.Println("Found search value:", val)
 				entry := new(pb.IpnsEntry)
 				err = proto.Unmarshal(val, entry)
 				if err != nil {
@@ -152,6 +157,7 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 
 				emitOnceResult(ctx, out, onceResult{value: p, ttl: ttl})
 			case <-ctx.Done():
+				fmt.Println("search value context cancelled")
 				return
 			}
 		}
