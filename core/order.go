@@ -110,7 +110,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		// Send to order vendor
 		merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil {
-			return processOfflineModeratedOrder(n, contract)
+			id, addr, amt, err := processOfflineModeratedOrder(n, contract)
+			return id, addr, amt, false, err
 		}
 		return processOnlineModeratedOrder(merchantResponse, n, contract)
 
@@ -145,7 +146,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Send to order vendor and request a payment address
 	merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 	if err != nil {
-		return processOfflineDirectOrder(n, wal, contract, payment)
+		id, addr, amount, err := processOfflineDirectOrder(n, wal, contract, payment)
+		return id, addr, amount, false, err
 	}
 	return processOnlineDirectOrder(merchantResponse, n, wal, contract)
 }
@@ -302,7 +304,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, *total, true, nil
 }
 
-func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, big.Int, bool, error) {
+func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, big.Int, error) {
 	// Vendor offline
 	// Change payment code to direct
 
@@ -315,7 +317,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	//fpb := wal.GetFeePerByte(wallet.NORMAL)
 	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
 	if f.Cmp(t) > 0 {
-		return "", "", *big.NewInt(0), false, errors.New("transaction fee too high for offline 2of2 multisig payment")
+		return "", "", *big.NewInt(0), errors.New("transaction fee too high for offline 2of2 multisig payment")
 	}
 	payment.Method = pb.Order_Payment_DIRECT
 
@@ -324,19 +326,19 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	chaincode := make([]byte, 32)
 	_, err := rand.Read(chaincode)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	payment.Address = addr.EncodeAddress()
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
@@ -344,25 +346,25 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 
 	err = wal.AddWatchedAddress(addr)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 
 	// Remove signature and resign
 	contract.Signatures = []*pb.Signature{contract.Signatures[0]}
 	contract, err = n.SignOrder(contract)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 
 	// Send using offline messaging
 	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
 	peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER,
@@ -370,22 +372,22 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	}
 	k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	err = n.SendOfflineMessage(peerID, &k, &m)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	//total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
-	return orderID, contract.BuyerOrder.Payment.Address, *total, false, err
+	return orderID, contract.BuyerOrder.Payment.Address, *total, err
 }
 
 func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, bool, error) {
@@ -426,17 +428,17 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, *total, true, nil
 }
 
-func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, bool, error) {
+func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, error) {
 	// Vendor offline
 	// Send using offline messaging
 	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
 	peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER,
@@ -444,19 +446,19 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 	}
 	k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	err = n.SendOfflineMessage(peerID, &k, &m)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *big.NewInt(0), err
 	}
 	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
-	return orderID, contract.BuyerOrder.Payment.Address, *total, false, err
+	return orderID, contract.BuyerOrder.Payment.Address, *total, err
 }
 
 func extractErrorMessage(m *pb.Message) error {

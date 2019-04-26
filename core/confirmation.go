@@ -189,7 +189,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
-		var outValue *big.Int
+		outValue := *big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
@@ -207,7 +207,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 					Value:         r.Value,
 				}
 				ins = append(ins, in)
-				outValue.Add(outValue, &r.Value)
+				outValue = *new(big.Int).Add(&outValue, &r.Value)
 			}
 		}
 
@@ -217,7 +217,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		var output = wallet.TransactionOutput{
 			Address: refundAddress,
-			Value:   *outValue,
+			Value:   outValue,
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)

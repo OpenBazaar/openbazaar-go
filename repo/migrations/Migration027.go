@@ -19,8 +19,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
-const migration027_ListingVersionForMarkupListings = 5
-
 type Migration027 struct{}
 
 type Migration027_ListingData struct {

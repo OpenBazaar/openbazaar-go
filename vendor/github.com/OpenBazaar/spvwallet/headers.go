@@ -9,9 +9,8 @@ import (
 	"math/big"
 	"path"
 	"sort"
-	"sync"
 	"strings"
-
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

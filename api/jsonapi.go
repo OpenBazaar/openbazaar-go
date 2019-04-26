@@ -3362,7 +3362,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
+	fmt.Fprintf(w, `{"estimatedFee": %s}`, (fee.String()))
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {

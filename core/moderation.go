@@ -166,7 +166,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		return fee, err
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
-		fixed := big.NewInt(0)
+		var fixed *big.Int
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
 			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Value, 10)
 		} else {

@@ -4,9 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/repo"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 func TestOpenBazaarSignedListings_GetSignedListingFromPath(t *testing.T) {
@@ -105,7 +104,7 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 
 	core.ApplyShippingOptions(listing)
 
-	if option.AdditionalItemPrice != 100 {
+	if option.AdditionalItemPrice.Value != "100" {
 		t.Error("Shipping options were not applied properly")
 	}
 }

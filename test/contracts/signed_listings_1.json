@@ -20,14 +20,22 @@
         "BTC",
         "BCH"
       ],
-      "pricingCurrency": "USD",
-      "escrowTimeoutHours": 1080,
-      "coinDivisibility": 100000000
+      "pricingCurrency": {
+        "code": "USD",
+        "divisibility": 2
+    },
+      "escrowTimeoutHours": 1080
     },
     "item": {
       "title": "EXAMPLE FILE 1",
       "description": "THIS IS A TEST FILE.",
-      "price": 1000,
+      "price": {
+        "currency": {
+                        "code": "USD",
+                        "divisibility": 2
+                    },
+        "value": "1000"
+    },
       "tags": [
       ],
       "images": [
@@ -80,7 +88,13 @@
             0
           ],
           "productID": "A",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -88,7 +102,13 @@
             1
           ],
           "productID": "B",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -96,7 +116,13 @@
             2
           ],
           "productID": "C",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -104,7 +130,13 @@
             0
           ],
           "productID": "D",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -112,7 +144,13 @@
             1
           ],
           "productID": "E",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -120,7 +158,13 @@
             2
           ],
           "productID": "F",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -128,7 +172,13 @@
             0
           ],
           "productID": "G",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -136,7 +186,13 @@
             1
           ],
           "productID": "H",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         },
         {
           "variantCombo": [
@@ -144,7 +200,13 @@
             2
           ],
           "productID": "I",
-          "surcharge": 100
+          "surcharge": {
+            "currency": {
+                            "code": "USD",
+                            "divisibility": 2
+                        },
+            "value": "100"
+        }
         }
       ]
     },
@@ -158,9 +220,21 @@
         "services": [
           {
             "name": "USPS",
-            "price": 100,
+            "price": {
+              "currency": {
+                              "code": "USD",
+                              "divisibility": 2
+                          },
+              "value": "100"
+          },
             "estimatedDelivery": "1-2 Days",
-            "additionalItemPrice": 100
+            "additionalItemPrice": {
+              "currency": {
+                              "code": "USD",
+                              "divisibility": 2
+                          },
+              "value": "100"
+          }
           }
         ]
       }
