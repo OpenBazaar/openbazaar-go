@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
@@ -29,9 +30,9 @@ func NewCachingRouter(dht *dht.IpfsDHT, apiRouter *APIRouter) *CachingRouter {
 	}
 
 	return &CachingRouter{
-		apiRouter:       apiRouter,
-		tieredRouter:    tierd,
-		IpfsRouting:     dht,
+		apiRouter:    apiRouter,
+		tieredRouter: tierd,
+		IpfsRouting:  dht,
 	}
 }
 
@@ -54,7 +55,11 @@ func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, 
 func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
 	value, err := r.tieredRouter.GetValue(ctx, key, opts...)
 	if err == nil {
-		go r.apiRouter.PutValue(ctx, key, value, opts...)
+		go func() {
+			if err := r.apiRouter.PutValue(ctx, key, value, opts...); err != nil {
+				log.Errorf("api cache put value (%s) error: %s", hex.EncodeToString([]byte(key)), err.Error())
+			}
+		}()
 	}
 	return value, err
 }
