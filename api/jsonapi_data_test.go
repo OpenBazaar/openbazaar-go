@@ -309,8 +309,8 @@ const moderatorValidJSON = `{
 	"fee": {
 		"feeType": "FIXED_PLUS_PERCENTAGE",
 		"fixedFee": {
-			"currencyCode": "USD",
-			"amount": 300
+			"currency": {code: "USD", divisibility: 8},
+			"amount": "300"
 		},
 		"percentage": 5
 	}
@@ -359,7 +359,7 @@ const walletBalanceJSONResponse = `{
 const spendJSON = `{
 	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"amount": 1700000,
+	"amount": "1700000",
 	"feeLevel": "NORMAL"
 }`
 
