@@ -962,7 +962,7 @@ func printSplashScreen(verbose bool) {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v" + core.VERSION)
+	log.Infof("\nOpenBazaar Server v%s", core.VERSION)
 	if !verbose {
 		fmt.Println("[Press Ctrl+C to exit]")
 	}
