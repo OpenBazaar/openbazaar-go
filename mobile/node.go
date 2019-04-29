@@ -269,7 +269,7 @@ func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Ba
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := ipfs.NewAPIRouter(schema.IPFSCachingRouterDefaultURI)
+	apiRouter := ipfs.NewAPIRouter(schema.IPFSCachingRouterDefaultURI, dhtRouting.Validator)
 	apiRouter.Start(nil)
 	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
 	return cachingRouter, nil
