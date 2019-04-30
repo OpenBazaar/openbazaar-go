@@ -15,6 +15,7 @@ import (
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ropts "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing/options"
 	pstore "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
+	record "gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 )
 
 var apiRouterHTTPClient = &http.Client{
@@ -32,13 +33,14 @@ var ErrNotStarted = errors.New("API router not started")
 // provides the features offerened by routing.ValueStore and marks the others as
 // unsupported.
 type APIRouter struct {
-	uri     string
-	started chan (struct{})
+	uri       string
+	started   chan (struct{})
+	validator record.Validator
 }
 
 // NewAPIRouter creates a new APIRouter backed by the given URI.
-func NewAPIRouter(uri string) APIRouter {
-	return APIRouter{uri: uri, started: make(chan (struct{}))}
+func NewAPIRouter(uri string, validator record.Validator) APIRouter {
+	return APIRouter{uri: uri, started: make(chan (struct{})), validator: validator}
 }
 
 func (r *APIRouter) Start(proxyDialer proxy.Dialer) {
@@ -79,7 +81,11 @@ func (r APIRouter) GetValue(ctx context.Context, key string, opts ...ropts.Optio
 	defer resp.Body.Close()
 
 	log.Debugf("read value from %s", path)
-	return ioutil.ReadAll(resp.Body)
+	value, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return value, r.validator.Validate(key, value)
 }
 
 // GetValues reads the value for the given key. The API does not return multiple
