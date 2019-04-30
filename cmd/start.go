@@ -425,7 +425,9 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
-	applyNewKey(repoPath)
+	if err := applyNewKey(repoPath); err != nil {
+		log.Errorf("ApplyNewKey: %s", err.Error())
+	}
 
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
