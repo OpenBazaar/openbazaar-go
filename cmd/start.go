@@ -3,8 +3,11 @@ package cmd
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmXSEqXLCzpCByJU4wqbJ37TcBEj77FKMUWUP1qLh56847/go-ipfs-ds-help"
+	"gx/ipfs/QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6/base32"
 	"io"
 	"io/ioutil"
 	"net"
@@ -21,14 +24,18 @@ import (
 	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 	libp2p "gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
 	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
+	ci "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	config "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
+	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	manet "gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
+
+	dhtpb "github.com/OpenBazaar/openbazaar-go/repo/migrations/helpers/Migration020"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -54,6 +61,7 @@ import (
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/namesys"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
@@ -417,6 +425,8 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
+	applyNewKey(repoPath)
+
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
@@ -700,6 +710,146 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 	}
 
+	return nil
+}
+
+func applyNewKey(repoPath string) error {
+	// Open the repo
+	r, err := fsrepo.Open(repoPath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	// Load the config
+	cfg, err := r.Config()
+	if err != nil {
+		return err
+	}
+
+	// Open our OpenBazaar db and grab the identity key
+	var databaseFilePath string
+	databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
+	db, err := sql.Open("sqlite3", databaseFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("select value from config where key=?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	var identityKey []byte
+	err = stmt.QueryRow("identityKey").Scan(&identityKey)
+	if err != nil {
+		return err
+	}
+	identity, err := ipfs.IdentityFromKey(identityKey)
+	if err != nil {
+		return err
+	}
+
+	// Set our key in IPFS config
+	cfg.Identity = identity
+
+	// Migrate record(s)
+	ks := r.Keystore()
+	keys, err := ks.List()
+	if err != nil {
+		return err
+	}
+
+	dstore := r.Datastore()
+
+	sk, err := myKey(r)
+	if err != nil {
+		return err
+	}
+
+	err = applyForKey(dstore, sk)
+	if err != nil {
+		return err
+	}
+
+	for _, keyName := range keys {
+		k, err := ks.Get(keyName)
+		if err != nil {
+			return err
+		}
+		err = applyForKey(dstore, k)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func myKey(r ipfsrepo.Repo) (ci.PrivKey, error) {
+	cfg, err := r.Config()
+	if err != nil {
+		return nil, err
+	}
+
+	sk, err := cfg.Identity.DecodePrivateKey("passphrase todo!")
+	if err != nil {
+		return nil, err
+	}
+
+	pid, err := peer.IDFromPrivateKey(sk)
+	if err != nil {
+		return nil, err
+	}
+	idCfg, err := peer.IDB58Decode(cfg.Identity.PeerID)
+	if err != nil {
+		return nil, err
+	}
+
+	if pid != idCfg {
+		return nil, fmt.Errorf(
+			"private key in config does not match id: %s != %s",
+			pid,
+			idCfg,
+		)
+	}
+	return sk, nil
+}
+
+func IPNSKeysForID(id peer.ID) (name, ipns string) {
+	namekey := "/pk/" + string(id)
+	ipnskey := "/ipns/" + string(id)
+
+	return namekey, ipnskey
+}
+
+func applyForKey(dstore ds.Datastore, k ci.PrivKey) error {
+	id, err := peer.IDFromPrivateKey(k)
+	if err != nil {
+		return fmt.Errorf("invalid peer ID: %s", err)
+	}
+	_, ipns := IPNSKeysForID(id)
+	recordbytes, err := dstore.Get(dshelp.NewKeyFromBinary([]byte(ipns)))
+	if err == ds.ErrNotFound {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("datastore error: %s", err)
+	}
+
+	dhtrec := new(dhtpb.Migration020RecordOldFormat)
+	err = proto.Unmarshal(recordbytes, dhtrec)
+	if err != nil {
+		return fmt.Errorf("failed to decode DHT record: %s", err)
+	}
+
+	val := dhtrec.GetValue()
+	newkey := ds.NewKey("/ipns/" + base32.RawStdEncoding.EncodeToString([]byte(id)))
+	err = dstore.Put(newkey, val)
+	if err != nil {
+		return fmt.Errorf("failed to write new IPNS record: %s", err)
+	}
 	return nil
 }
 
