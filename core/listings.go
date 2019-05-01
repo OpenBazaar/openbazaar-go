@@ -381,6 +381,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 	if err != nil {
 		return err
 	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -1152,11 +1153,18 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 			return errors.New("percent discount cannot be over 100 percent")
 		}
 		n, _ := new(big.Int).SetString(listing.Item.Price.Value, 10)
-		discount0, _ := new(big.Int).SetString(coupon.GetPriceDiscount().Value, 10)
-		if n.Cmp(discount0) < 0 {
-			return errors.New("price discount cannot be greater than the item price")
+		discountVal := coupon.GetPriceDiscount()
+		flag := false
+		if discountVal != nil {
+			discount0, _ := new(big.Int).SetString(discountVal.Value, 10)
+			if n.Cmp(discount0) < 0 {
+				return errors.New("price discount cannot be greater than the item price")
+			}
+			if n.Cmp(discount0) == 0 {
+				flag = true
+			}
 		}
-		if coupon.GetPercentDiscount() == 0 && n.Cmp(discount0) == 0 {
+		if coupon.GetPercentDiscount() == 0 && flag {
 			return errors.New("coupons must have at least one positive discount value")
 		}
 	}

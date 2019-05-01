@@ -331,24 +331,24 @@ const walletAddressJSONResponse = `{
 
 const walletBalanceJSONResponse = `{
     "TBCH": {
-        "confirmed": 0,
+        "confirmed": "0",
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TBTC": {
-        "confirmed": 0,
+        "confirmed": "0",
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TLTC": {
-        "confirmed": 0,
+        "confirmed": "0",
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TZEC": {
-        "confirmed": 0,
+        "confirmed": "0",
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     }
 }`
 

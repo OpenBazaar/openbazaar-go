@@ -18,8 +18,10 @@ func PaymentCoinForContract(contract *pb.RicardianContract) string {
 func CoinTypeForContract(contract *pb.RicardianContract) string {
 	coinType := ""
 
-	if len(contract.VendorListings) > 0 {
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Metadata.PricingCurrency != nil {
 		coinType = contract.VendorListings[0].Metadata.PricingCurrency.Code
+	} else if contract.BuyerOrder.Payment.Amount != nil {
+		coinType = contract.BuyerOrder.Payment.Amount.Currency.Code
 	}
 
 	return coinType

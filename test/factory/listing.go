@@ -87,7 +87,13 @@ func NewListing(slug string) *pb.Listing {
 				},
 			},
 		},
-		Coupons: []*pb.Listing_Coupon{},
+		Coupons: []*pb.Listing_Coupon{
+			{
+				Title:    "sample coupon",
+				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5},
+			},
+		},
 	}
 }
 
@@ -98,7 +104,7 @@ func NewCryptoListing(slug string) *pb.Listing {
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
 	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "ETH", Divisibility: 8}
-	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{}
+	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil

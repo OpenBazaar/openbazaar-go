@@ -169,7 +169,6 @@ func TestMessageSignsURLChars(t *testing.T) {
 }
 
 func TestListingsAcceptedCurrencies(t *testing.T) {
-	fmt.Println("listing json: ", jsonFor(t, factory.NewListing("ron-swanson-tshirt")))
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
 	})
@@ -200,8 +199,6 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Println("resp obj : ", respObj)
 
 	if len(respObj) != 1 {
 		t.Fatal("Listings should contain exactly 1 listing")
@@ -324,8 +321,6 @@ func TestListings(t *testing.T) {
 func TestCryptoListings(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
 	updatedListing := *listing
-
-	fmt.Println("crypto listing : ", jsonFor(t, listing))
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
@@ -467,6 +462,7 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
 	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
+
 }
 
 func TestMarketRatePrice(t *testing.T) {
@@ -579,7 +575,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
-	//sale.Contract.BuyerOrder.Payment.Coin = "ZEC"
+	sale.Contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}}
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err

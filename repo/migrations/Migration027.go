@@ -63,10 +63,8 @@ type Migration027_ListingData struct {
 		} `json:"services,omitempty"`
 	} `json:"shippingOptions,omitempty"`
 	Coupons []struct {
-		Title    string `json:"title,omitempty"`
-		Discount struct {
-			Price uint64 `json:"priceDiscount,omitempty"`
-		} `json:"discount,omitempty"`
+		Title string `json:"title,omitempty"`
+		Price uint64 `json:"priceDiscount,omitempty"`
 	} `json:"coupons,omitempty"`
 }
 
@@ -180,7 +178,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 						{
 							sl.Listing.Coupons[i].Discount.(*pb.Listing_Coupon_PriceDiscount).PriceDiscount = &pb.CurrencyValue{
 								Currency: sl.Listing.Metadata.PricingCurrency,
-								Value:    strconv.FormatUint(coupon.Discount.Price, 10),
+								Value:    strconv.FormatUint(coupon.Price, 10),
 							}
 						}
 					}
