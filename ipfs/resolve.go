@@ -36,8 +36,10 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, us
 				if err != nil {
 					return
 				}
-				if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
-					log.Error("Error putting IPNS record to datastore: %s", err.Error())
+				if n.Identity != p {
+					if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
+						log.Error("Error putting IPNS record to datastore: %s", err.Error())
+					}
 				}
 			}()
 			return pth.Segments()[1], nil
@@ -53,8 +55,10 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, us
 		return pth.Segments()[1], nil
 	}
 	// Resolving succeeded. Update the cache.
-	if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
-		log.Error("Error putting IPNS record to datastore: %s", err.Error())
+	if n.Identity != p {
+		if err := putToDatastore(n.Repo.Datastore(), p, pth); err != nil {
+			log.Error("Error putting IPNS record to datastore: %s", err.Error())
+		}
 	}
 	return pth.Segments()[1], nil
 }

@@ -427,6 +427,7 @@ func (x *Start) Execute(args []string) error {
 	err = proto.Unmarshal(ival, ourIpnsRecord)
 	if err != nil {
 		log.Error("unmarshal record value", err)
+		nd.Repo.Datastore().Delete(ipnskey)
 	}
 
 	// Wallet
