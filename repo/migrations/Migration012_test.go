@@ -243,7 +243,7 @@ func testMigration012_assertListingMigratedCorrectly(t *testing.T, listingBefore
 	if expectedListing.Item.Description != actualListing.Item.Description {
 		t.Fatal("Expected:", expectedListing.Item.Description, "\nGot:", actualListing.Item.Description)
 	}
-	if expectedListing.Item.Price != actualListing.Item.Price {
+	if expectedListing.Item.Price.GetValue() != actualListing.Item.Price.GetValue() {
 		t.Fatal("Expected:", expectedListing.Item.Price, "\nGot:", actualListing.Item.Price)
 	}
 	if expectedListing.Item.Grams != actualListing.Item.Grams {
@@ -605,8 +605,10 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 }
 
 var testMigraion012_listingFixtureHashes = map[string]string{
-	"slug-4": "QmXC26R4PNnArmVssrviaA4WGxP1zzmx8y2AiybF6hQpRM",
-	"slug-5": "QmaEUP6zWvZkrWAbVAvcxRiV5Fou8jQnHc4nmarAUVLoQr",
+	//"slug-4": "QmXC26R4PNnArmVssrviaA4WGxP1zzmx8y2AiybF6hQpRM",
+	"slug-4": "QmZgikDe6fHwJE9p8Wr67EovPsjcB8JBxq3hj19r2rXF1V",
+	//"slug-5": "QmaEUP6zWvZkrWAbVAvcxRiV5Fou8jQnHc4nmarAUVLoQr",
+	"slug-5": "QmNUSvxBYjs727mH34LVXRvXCFomoU2hHhRbK8aP5RrTuQ",
 }
 
 var testMigration012_configFixture = `{

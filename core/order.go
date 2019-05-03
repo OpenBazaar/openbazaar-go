@@ -990,7 +990,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 				}
 				if id.B58String() == vendorCoupon.GetHash() {
 					discount0 := vendorCoupon.GetPriceDiscount()
-					discount, _ := new(big.Int).SetString(discount0.Value, 10)
+					discount := big.NewInt(0)
+					if discount0 != nil {
+						discount, _ = new(big.Int).SetString(discount0.Value, 10)
+					}
 					if discount.Cmp(big.NewInt(0)) > 0 {
 						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code,
 							l.Metadata.PricingCurrency.Code, *discount)
@@ -999,9 +1002,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 						}
 						//itemTotal -= satoshis
 						itemTotal = *new(big.Int).Sub(&itemTotal, &satoshis)
-					} else if discount := vendorCoupon.GetPercentDiscount(); discount > 0 {
-						d, _ := new(big.Float).Mul(big.NewFloat(float64(discount)), big.NewFloat(0.01)).Int(nil)
-						itemTotal = *new(big.Int).Sub(&itemTotal, d) // uint64((float32(itemTotal) * (discount / 100)))
+					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
+						d := new(big.Float).Mul(big.NewFloat(float64(discountF)), big.NewFloat(0.01)) //.Int(nil)
+						totalDiscount, _ := new(big.Float).Mul(d, new(big.Float).SetInt(&itemTotal)).Int(nil)
+						itemTotal = *new(big.Int).Sub(&itemTotal, totalDiscount) // uint64((float32(itemTotal) * (discount / 100)))
 					}
 				}
 			}
@@ -1010,8 +1014,9 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		for _, tax := range l.Taxes {
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
-					t, _ := new(big.Float).Mul(big.NewFloat(float64(tax.Percentage)), big.NewFloat(0.01)).Int(nil)
-					itemTotal = *new(big.Int).Add(&itemTotal, t) //uint64((float32(itemTotal) * (tax.Percentage / 100)))
+					t := new(big.Float).Mul(big.NewFloat(float64(tax.Percentage)), big.NewFloat(0.01)) // .Int(nil)
+					totalTax, _ := new(big.Float).Mul(t, new(big.Float).SetInt(&itemTotal)).Int(nil)
+					itemTotal = *new(big.Int).Add(&itemTotal, totalTax) //uint64((float32(itemTotal) * (tax.Percentage / 100)))
 					break
 				}
 			}
@@ -1129,22 +1134,44 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		return *big.NewInt(0), nil
 	}
 
+	/*
+		if len(is) == 1 {
+			shippingTotal = is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100
+			if is[0].quantity > 1 {
+				if is[0].version == 1 {
+					shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
+				} else if is[0].version >= 2 {
+					shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
+				} else {
+					return 0, errors.New("unknown listing version")
+				}
+			}
+			return shippingTotal, nil
+		}
+	*/
+
 	if len(is) == 1 {
-		s := int64((((1 + is[0].shippingTaxPercentage) * 100) + .5) / 100)
-		shippingTotal = *new(big.Int).Mul(&is[0].primary, big.NewInt(s))
+		s := int64(((1 + is[0].shippingTaxPercentage) * 100) + .5) // / 100)
+		shippingTotalPrimary := new(big.Int).Mul(&is[0].primary, big.NewInt(s))
+		stp, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary)).Int(nil)
+		shippingTotal = *stp
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				//shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
-				s := int64((((1 + is[0].shippingTaxPercentage) * 100) + .5) / 100)
-				t := new(big.Int).Mul(&is[0].primary, big.NewInt(s))
-				t1 := new(big.Int).Mul(t, big.NewInt(int64(is[0].quantity-1)))
-				shippingTotal = *new(big.Int).Add(&shippingTotal, t1)
+				//s := int64((((1 + is[0].shippingTaxPercentage) * 100) + .5) / 100)
+				//t := new(big.Int).Mul(&is[0].primary, big.NewInt(s))
+				t1 := new(big.Int).Mul(stp, big.NewInt(int64(is[0].quantity-1)))
+				shippingTotal = *new(big.Int).Add(stp, t1)
 			} else if is[0].version >= 2 {
 				//shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
-				s := int64((((1 + is[0].shippingTaxPercentage) * 100) + .5) / 100)
-				t := new(big.Int).Mul(&is[0].secondary, big.NewInt(s))
-				t1 := new(big.Int).Mul(t, big.NewInt(int64(is[0].quantity-1)))
-				shippingTotal = *new(big.Int).Add(&shippingTotal, t1)
+				//s := int64((((1 + is[0].shippingTaxPercentage) * 100) + .5) / 100)
+				//t := new(big.Int).Mul(&is[0].secondary, big.NewInt(s))
+
+				shippingTotalSecondary := new(big.Int).Mul(&is[0].secondary, big.NewInt(s))
+				sts, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary)).Int(nil)
+
+				t1 := new(big.Int).Mul(sts, big.NewInt(int64(is[0].quantity-1)))
+				shippingTotal = *new(big.Int).Add(stp, t1)
 
 			} else {
 				return *big.NewInt(0), errors.New("unknown listing version")
@@ -1161,19 +1188,22 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			i = x
 		}
 		//shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * s.quantity
-		s1 := int64((((1 + s.shippingTaxPercentage) * 100) + .5) / 100)
-		t := new(big.Int).Mul(&s.secondary, big.NewInt(s1))
-		t1 := new(big.Int).Mul(t, big.NewInt(int64(s.quantity)))
-		shippingTotal = *new(big.Int).Add(&shippingTotal, t1)
+		s0 := int64(((1 + s.shippingTaxPercentage) * 100) + .5)
+		shippingTotalSec := new(big.Int).Mul(&s.secondary, big.NewInt(s0))
+		sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSec)).Int(nil)
+		shippingTotal0 := new(big.Int).Mul(sts0, big.NewInt(int64(s.quantity)))
+		shippingTotal = *new(big.Int).Add(&shippingTotal, shippingTotal0)
 	}
 	//shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
-	s := int64((((1 + is[i].shippingTaxPercentage) * 100) + .5) / 100)
-	t := new(big.Int).Mul(&is[i].primary, big.NewInt(s))
-	shippingTotal = *new(big.Int).Sub(&shippingTotal, t)
+	sp := int64(((1 + is[i].shippingTaxPercentage) * 100) + .5)
+	shippingTotalPrimary0 := new(big.Int).Mul(&is[i].primary, big.NewInt(sp))
+	stp0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary0)).Int(nil)
+	shippingTotal = *new(big.Int).Sub(&shippingTotal, stp0)
+
 	//shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
-	//s = int64((((1 + is[i].shippingTaxPercentage) * 100) + .5) / 100)
-	t = new(big.Int).Mul(&is[i].secondary, big.NewInt(s))
-	shippingTotal = *new(big.Int).Add(&shippingTotal, t)
+	shippingTotalSecondary0 := new(big.Int).Mul(&is[i].secondary, big.NewInt(sp))
+	sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary0)).Int(nil)
+	shippingTotal = *new(big.Int).Add(&shippingTotal, sts0)
 
 	return shippingTotal, nil
 }

@@ -178,11 +178,11 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon"}
 	contract.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract)
+	total1, err := node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total.Int64() != 70000 {
+	if total1.Int64() != 70000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -311,7 +311,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 						{
 							Name:                "Standard shipping",
 							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "25000"},
-							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "1000"},
+							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "10000"},
 						},
 					},
 				},

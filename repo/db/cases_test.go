@@ -281,8 +281,8 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	if string(buyerErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(buyerErrors))
 	}
-	if string(buyerOuts) != `[{"hash":"hash1","value":5}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":5}]`, string(buyerOuts))
+	if string(buyerOuts) != `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"value":"5"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"value":"5"}}]`, string(buyerOuts))
 	}
 }
 
@@ -339,8 +339,8 @@ func TestUpdateVendorInfo(t *testing.T) {
 	if string(vendorErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(vendorErrors))
 	}
-	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":11}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":11}]`, string(vendorOuts))
+	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":{"currency":{"code":"BTC","divisibility":8},"value":"11"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":{"currency":{"code":"BTC","divisibility":8},"value":"11"}}]`, string(vendorOuts))
 	}
 }
 
@@ -495,7 +495,8 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedBuyerOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value != expectedBuyerOutpoints[i].Value {
+		if o.Value.GetValue() != expectedBuyerOutpoints[i].Value.GetValue() ||
+			o.Value.GetCurrency().Code != expectedBuyerOutpoints[i].Value.GetCurrency().Code {
 			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedBuyerOutpoints[i].Value)
 		}
 	}
@@ -1052,17 +1053,14 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
 		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
-		//paymentCoin, err := repo.NewCurrencyCode(test.paymentCoin)
-		//if err != nil {
-		//	t.Fatal(err)
-		//}
+		paymentCoin := repo.CurrencyCode(test.paymentCoin) //repo.NewCurrencyCode(test.paymentCoin)
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
-			//PaymentCoin:      &paymentCoin,
+			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)

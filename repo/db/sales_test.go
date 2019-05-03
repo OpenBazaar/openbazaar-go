@@ -64,6 +64,9 @@ func TestPutSale(t *testing.T) {
 
 	contract := factory.NewContract()
 	//contract.BuyerOrder.Payment.Coin = "BTC"
+	contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{
+		Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+	}
 
 	err = saldb.Put("orderID", *contract, 0, false)
 	if err != nil {
@@ -126,8 +129,9 @@ func TestPutSale(t *testing.T) {
 	//if paymentCoin != contract.BuyerOrder.Payment.Coin {
 	//	t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.Coin, paymentCoin)
 	//}
-	if coinType != "" {
-		t.Errorf(`Expected empty string got %s`, coinType)
+	// if coinType != "" {
+	if coinType != "BTC" {
+		t.Errorf(`Expected %s string got %s`, paymentCoin, coinType)
 	}
 }
 
@@ -753,7 +757,9 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
-		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{
+			Currency: &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8},
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -783,7 +789,10 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		//contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Metadata.PricingCurrency = &pb.CurrencyDefinition{
+			Code:         testCoin,
+			Divisibility: 8,
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {

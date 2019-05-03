@@ -878,6 +878,9 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
 		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{
+			Currency: &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8},
+		}
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -910,7 +913,10 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		//contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Metadata.PricingCurrency = &pb.CurrencyDefinition{
+			Code:         testCoin,
+			Divisibility: 8,
+		}
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
