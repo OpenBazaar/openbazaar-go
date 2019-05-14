@@ -124,7 +124,7 @@ func (Migration018) Up(repoPath string, dbPassword string, testnet bool) error {
 		return fmt.Errorf("bumping repover to 19: %s", err.Error())
 	}
 	if err := writeIPFSVer(repoPath, 7); err != nil {
-		return fmt.Errorf("bumping repover to 19: %s", err.Error())
+		return fmt.Errorf("bumping ipfs repover to 7: %s", err.Error())
 	}
 	return nil
 }
@@ -228,10 +228,10 @@ func (Migration018) Down(repoPath string, dbPassword string, testnet bool) error
 	}
 	f.Close()
 	if err := writeRepoVer(repoPath, 18); err != nil {
-		return fmt.Errorf("downgrading repover to 18: %s", err.Error())
+		return fmt.Errorf("reducing repover to 18: %s", err.Error())
 	}
 	if err := writeIPFSVer(repoPath, 6); err != nil {
-		return fmt.Errorf("bumping repover to 19: %s", err.Error())
+		return fmt.Errorf("reducing ipfs ver to 6: %s", err.Error())
 	}
 	return nil
 }

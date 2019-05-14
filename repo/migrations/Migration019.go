@@ -73,7 +73,7 @@ func (Migration019) Up(repoPath string, dbPassword string, testnet bool) error {
 	}
 
 	if err := writeRepoVer(repoPath, 20); err != nil {
-		return fmt.Errorf("bumping repover to 19: %s", err.Error())
+		return fmt.Errorf("bumping repover to 20: %s", err.Error())
 	}
 	return nil
 }
