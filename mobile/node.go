@@ -97,6 +97,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 
+	ipfs.UpdateIPFSGlobalProtocolVars(config.Testnet)
+
 	// Logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
