@@ -3806,7 +3806,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(retBytes))
 }
 
-func (i *jsonAPIHandler) ResolveIPNS(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
 	_, peerID := path.Split(r.URL.Path)
 
 	pid, err := peer.IDB58Decode(peerID)
