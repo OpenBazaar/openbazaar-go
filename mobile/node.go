@@ -89,6 +89,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 
+	ipfs.UpdateIPFSGlobalProtocolVars(config.Testnet)
+
 	// Logging
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
