@@ -1,259 +1,119 @@
 package migrations
 
 import (
-	"encoding/json"
-	"errors"
+	"database/sql"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path"
+	"time"
 )
 
-const (
-	migration023EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
-	migration023EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
-	migration023EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
-)
-
-// Migration023WalletsConfig - used to hold the coin cfg
-type Migration023WalletsConfig struct {
-	BTC *migration023CoinConfig `json:"BTC"`
-	BCH *migration023CoinConfig `json:"BCH"`
-	LTC *migration023CoinConfig `json:"LTC"`
-	ZEC *migration023CoinConfig `json:"ZEC"`
-	ETH *migration023CoinConfig `json:"ETH"`
+type Migration023_ChatMessage struct {
+	MessageId string
+	PeerId    string
+	Subject   string
+	Message   string
+	Read      bool
+	Outgoing  bool
+	Timestamp time.Time
 }
 
-type migration023CoinConfig struct {
-	Type             string                 `json:"Type"`
-	APIPool          []string               `json:"API"`
-	APITestnetPool   []string               `json:"APITestnet"`
-	MaxFee           uint64                 `json:"MaxFee"`
-	FeeAPI           string                 `json:"FeeAPI"`
-	HighFeeDefault   uint64                 `json:"HighFeeDefault"`
-	MediumFeeDefault uint64                 `json:"MediumFeeDefault"`
-	LowFeeDefault    uint64                 `json:"LowFeeDefault"`
-	TrustedPeer      string                 `json:"TrustedPeer"`
-	WalletOptions    map[string]interface{} `json:"WalletOptions"`
-}
-
-// Migration023 - required migration struct
 type Migration023 struct{}
 
-// Up - upgrade the state
-func (Migration023) Up(repoPath, dbPassword string, testnet bool) error {
-	var (
-		configMap        = map[string]interface{}{}
-		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
-	)
+func (Migration023) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+	var databaseFilePath string
+	if testnetEnabled {
+		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
+	}
+
+	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
-		return fmt.Errorf("reading config: %s", err.Error())
+		return err
+	}
+	defer db.Close()
+	if databasePassword != "" {
+		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
+		_, err := db.Exec(p)
+		if err != nil {
+			return err
+		}
 	}
 
-	if err = json.Unmarshal(configBytes, &configMap); err != nil {
-		return fmt.Errorf("unmarshal config: %s", err.Error())
+	if err := migrateTimestamp(db, func(in int64) int64 {
+		// convert from seconds to nanoseconds
+		return time.Unix(in, 0).UnixNano()
+	}); err != nil {
+		return err
 	}
 
-	c, ok := configMap["Wallets"]
-	if !ok {
-		return errors.New("invalid config: missing key Wallets")
-	}
-
-	walletCfg, ok := c.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid key Wallets")
-	}
-
-	btc, ok := walletCfg["BTC"]
-	if !ok {
-		return errors.New("invalid config: missing BTC Wallet")
-	}
-
-	btcWalletCfg, ok := btc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BTC Wallet")
-	}
-
-	btcWalletCfg["APIPool"] = []string{"https://btc.api.openbazaar.org/api"}
-	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.api.openbazaar.org/api"}
-
-	bch, ok := walletCfg["BCH"]
-	if !ok {
-		return errors.New("invalid config: missing BCH Wallet")
-	}
-
-	bchWalletCfg, ok := bch.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BCH Wallet")
-	}
-
-	bchWalletCfg["APIPool"] = []string{"https://bch.api.openbazaar.org/api"}
-	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.api.openbazaar.org/api"}
-
-	ltc, ok := walletCfg["LTC"]
-	if !ok {
-		return errors.New("invalid config: missing LTC Wallet")
-	}
-
-	ltcWalletCfg, ok := ltc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid LTC Wallet")
-	}
-
-	ltcWalletCfg["APIPool"] = []string{"https://ltc.api.openbazaar.org/api"}
-	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.api.openbazaar.org/api"}
-
-	zec, ok := walletCfg["ZEC"]
-	if !ok {
-		return errors.New("invalid config: missing ZEC Wallet")
-	}
-
-	zecWalletCfg, ok := zec.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ZEC Wallet")
-	}
-
-	zecWalletCfg["APIPool"] = []string{"https://zec.api.openbazaar.org/api"}
-	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.api.openbazaar.org/api"}
-
-	eth, ok := walletCfg["ETH"]
-	if !ok {
-		return errors.New("invalid config: missing ETH Wallet")
-	}
-
-	ethWalletCfg, ok := eth.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ETH Wallet")
-	}
-
-	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
-	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
-	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        migration023EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": migration023EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": migration023EthereumRegistryAddressRopsten,
-	}
-
-	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
-	if err != nil {
-		return fmt.Errorf("marshal migrated config: %s", err.Error())
-	}
-
-	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
-		return fmt.Errorf("writing migrated config: %s", err.Error())
-	}
-
-	if err := writeRepoVer(repoPath, 24); err != nil {
-		return fmt.Errorf("bumping repover to 24: %s", err.Error())
+	if err := writeRepoVer(repoPath, 23); err != nil {
+		return fmt.Errorf("bumping repover to 18: %s", err.Error())
 	}
 	return nil
 }
 
-// Down - downgrade/restore the state
-func (Migration023) Down(repoPath, dbPassword string, testnet bool) error {
-	var (
-		configMap        = map[string]interface{}{}
-		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
+func (Migration023) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+	var databaseFilePath string
+	if testnetEnabled {
+		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
+	}
+
+	db, err := sql.Open("sqlite3", databaseFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	if databasePassword != "" {
+		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
+		_, err := db.Exec(p)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := migrateTimestamp(db, func(in int64) int64 {
+		// convert from nanoseconds to seconds
+		return time.Unix(0, in).Unix()
+	}); err != nil {
+		return err
+	}
+
+	if err := writeRepoVer(repoPath, 22); err != nil {
+		return fmt.Errorf("dropping repover to 22: %s", err.Error())
+	}
+	return nil
+}
+
+func migrateTimestamp(db *sql.DB, migrate func(int64) int64) error {
+	const (
+		selectChatSQL = "select messageID, timestamp from chat;"
+		updateChatSQL = "update chat set timestamp=? where messageID=?;"
 	)
+
+	chatRows, err := db.Query(selectChatSQL)
 	if err != nil {
-		return fmt.Errorf("reading config: %s", err.Error())
+		return fmt.Errorf("query chat: %s", err.Error())
 	}
 
-	if err = json.Unmarshal(configBytes, &configMap); err != nil {
-		return fmt.Errorf("unmarshal config: %s", err.Error())
+	var updates = make(map[string]int64)
+	for chatRows.Next() {
+		var (
+			messageID string
+			timestamp int64
+		)
+		if err := chatRows.Scan(&messageID, &timestamp); err != nil {
+			return fmt.Errorf("unexpected error scanning message (%s): %s", messageID, err.Error())
+		}
+		updates[messageID] = migrate(timestamp)
 	}
-
-	c, ok := configMap["Wallets"]
-	if !ok {
-		return errors.New("invalid config: missing key Wallets")
-	}
-
-	walletCfg, ok := c.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid key Wallets")
-	}
-
-	btc, ok := walletCfg["BTC"]
-	if !ok {
-		return errors.New("invalid config: missing BTC Wallet")
-	}
-
-	btcWalletCfg, ok := btc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BTC Wallet")
-	}
-
-	btcWalletCfg["APIPool"] = []string{"https://btc.blockbook.api.openbazaar.org/api"}
-	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.blockbook.api.openbazaar.org/api"}
-
-	bch, ok := walletCfg["BCH"]
-	if !ok {
-		return errors.New("invalid config: missing BCH Wallet")
-	}
-
-	bchWalletCfg, ok := bch.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BCH Wallet")
-	}
-
-	bchWalletCfg["APIPool"] = []string{"https://bch.blockbook.api.openbazaar.org/api"}
-	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.blockbook.api.openbazaar.org/api"}
-
-	ltc, ok := walletCfg["LTC"]
-	if !ok {
-		return errors.New("invalid config: missing LTC Wallet")
-	}
-
-	ltcWalletCfg, ok := ltc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid LTC Wallet")
-	}
-
-	ltcWalletCfg["APIPool"] = []string{"https://ltc.blockbook.api.openbazaar.org/api"}
-	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.blockbook.api.openbazaar.org/api"}
-
-	zec, ok := walletCfg["ZEC"]
-	if !ok {
-		return errors.New("invalid config: missing ZEC Wallet")
-	}
-
-	zecWalletCfg, ok := zec.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ZEC Wallet")
-	}
-
-	zecWalletCfg["APIPool"] = []string{"https://zec.blockbook.api.openbazaar.org/api"}
-	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.blockbook.api.openbazaar.org/api"}
-
-	eth, ok := walletCfg["ETH"]
-	if !ok {
-		return errors.New("invalid config: missing ETH Wallet")
-	}
-
-	ethWalletCfg, ok := eth.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ETH Wallet")
-	}
-
-	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
-	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
-	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        migration023EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": migration023EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": migration023EthereumRegistryAddressRopsten,
-	}
-
-	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
-	if err != nil {
-		return fmt.Errorf("marshal migrated config: %s", err.Error())
-	}
-
-	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
-		return fmt.Errorf("writing migrated config: %s", err.Error())
-	}
-
-	if err := writeRepoVer(repoPath, 23); err != nil {
-		return fmt.Errorf("dropping repover to 23: %s", err.Error())
+	chatRows.Close()
+	for id, newTime := range updates {
+		if _, err := db.Exec(updateChatSQL, newTime, id); err != nil {
+			return fmt.Errorf("updating record (%s): %s", id, err.Error())
+		}
 	}
 	return nil
 }
