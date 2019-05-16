@@ -83,7 +83,7 @@ func (Migration017) Down(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	if err := writeRepoVer(repoPath, 17); err != nil {
-		return fmt.Errorf("dropping repover to 16: %s", err.Error())
+		return fmt.Errorf("dropping repover to 17: %s", err.Error())
 	}
 	return nil
 }
