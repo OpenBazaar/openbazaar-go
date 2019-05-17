@@ -57,19 +57,18 @@ func (service *OpenBazaarService) WaitForReady() {
 	<-service.node.DHT.BootstrapChan
 }
 
-func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
+func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) {
 	log.Debugf("Disconnecting from %s", p.Pretty())
 	service.senderlk.Lock()
 	defer service.senderlk.Unlock()
 	ms, ok := service.sender[p]
 	if !ok {
-		return nil
+		return
 	}
 	if ms != nil && ms.s != nil {
 		ms.s.Close()
 	}
 	delete(service.sender, p)
-	return nil
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
