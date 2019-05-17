@@ -3806,6 +3806,27 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(retBytes))
 }
 
+func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
+	_, peerID := path.Split(r.URL.Path)
+
+	pid, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
+	defer cancel()
+
+	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, "/ipns/"+pid.String())
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, hex.EncodeToString(ipnsEntryBytes))
+}
+
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var settings repo.SMTPSettings
