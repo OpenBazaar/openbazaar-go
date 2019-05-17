@@ -4202,7 +4202,6 @@ func (i *jsonAPIHandler) POSTSendOrderMessage(w http.ResponseWriter, r *http.Req
 	}
 
 	SanitizedResponse(w, "")
-	return
 }
 
 // GETScanOfflineMessages - used to manually trigger offline message scan
@@ -4212,5 +4211,4 @@ func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.R
 		lastManualScan = time.Now()
 	}
 	SanitizedResponse(w, "")
-	return
 }
