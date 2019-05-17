@@ -11,14 +11,17 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
+// OrderMessagesDB - represents the order_messages table
 type OrderMessagesDB struct {
 	modelStore
 }
 
+// NewOrderMessageStore - return new OrderMessagesDB
 func NewOrderMessageStore(db *sql.DB, lock *sync.Mutex) repo.OrderMessageStore {
 	return &OrderMessagesDB{modelStore{db, lock}}
 }
 
+// Put - insert record into the order_messages
 func (o *OrderMessagesDB) Put(orderID string, mType pb.Message_MessageType, peerID string, msg pb.Message) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
@@ -50,7 +53,7 @@ func (o *OrderMessagesDB) Put(orderID string, mType pb.Message_MessageType, peer
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
-			return fmt.Errorf("order_message put fail: %s\nand rollback failed: %s\n", err.Error(), rErr.Error())
+			return fmt.Errorf("order_message put fail: %s and rollback failed: %s", err.Error(), rErr.Error())
 		}
 		return err
 	}

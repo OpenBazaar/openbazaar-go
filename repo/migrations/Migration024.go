@@ -9,13 +9,18 @@ import (
 )
 
 const (
-	AM06_messagesCreateSQL = "create table order_messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
-	AM06_upVer             = "25"
-	AM06_downVer           = "24"
+	// AM06MessagesCreateSQL - the order_messages create sql
+	AM06MessagesCreateSQL = "create table order_messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	// AM06UpVer - set the repo Up version
+	AM06UpVer             = "25"
+	// AM06DownVer - set the repo Down version
+	AM06DownVer           = "24"
 )
 
+// AM06 - local migration struct
 type AM06 struct{}
 
+// Migration024 - migration struct
 type Migration024 struct {
 	AM06
 }
@@ -49,7 +54,7 @@ func createOrderMessages(repoPath, databasePassword, rVer string, testnetEnabled
 	if err != nil {
 		return err
 	}
-	if _, err = tx.Exec(AM06_messagesCreateSQL); err != nil {
+	if _, err = tx.Exec(AM06MessagesCreateSQL); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -65,11 +70,12 @@ func createOrderMessages(repoPath, databasePassword, rVer string, testnetEnabled
 	return nil
 }
 
+// Up - the migration Up code
 func (AM06) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	fmt.Println("in am06 up")
-	return createOrderMessages(repoPath, databasePassword, AM06_upVer, testnetEnabled)
+	return createOrderMessages(repoPath, databasePassword, AM06UpVer, testnetEnabled)
 }
 
+// Down - the migration Down code
 func (AM06) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	return createOrderMessages(repoPath, databasePassword, AM06_downVer, testnetEnabled)
+	return createOrderMessages(repoPath, databasePassword, AM06DownVer, testnetEnabled)
 }

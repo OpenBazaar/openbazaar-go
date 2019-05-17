@@ -185,6 +185,7 @@ func (d *SQLiteDatastore) ModeratedStores() repo.ModeratedStore {
 	return d.moderatedStores
 }
 
+// OrderMessages - return the orderMessages datastore
 func (d *SQLiteDatastore) OrderMessages() repo.OrderMessageStore {
 	return d.orderMessages
 }

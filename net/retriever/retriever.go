@@ -118,6 +118,7 @@ func (m *MessageRetriever) Run() {
 	}
 }
 
+// RunOnce - used to fetch messages only once
 func (m *MessageRetriever) RunOnce() {
 	go m.fetchPointers(true)
 	go m.fetchPointers(false)
