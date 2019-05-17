@@ -63,11 +63,14 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
+var lastManualScan time.Time
+
 func newJSONAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
 	}
+	lastManualScan = time.Now().Add(time.Duration(-10) * time.Minute)
 	i := &jsonAPIHandler{
 		config: JSONAPIConfig{
 			Enabled:       config.Enabled,
@@ -4149,4 +4152,65 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponseM(w, out, new(pb.SignedPost))
+}
+
+// POSTSendOrderMessage - used to manually send an order message
+func (i *jsonAPIHandler) POSTSendOrderMessage(w http.ResponseWriter, r *http.Request) {
+	type sendRequest struct {
+		OrderID     string `json:"orderID"`
+		MessageType int32  `json:"messageType"`
+	}
+
+	var args sendRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&args)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if args.OrderID == "" {
+		ErrorResponse(w, http.StatusBadRequest, core.ErrOrderNotFound.Error())
+		return
+	}
+
+	if args.MessageType <= 0 {
+		ErrorResponse(w, http.StatusBadRequest, "invalid order message type")
+		return
+	}
+
+	msg, peerID, err := i.node.Datastore.OrderMessages().
+		GetByOrderIDType(args.OrderID, pb.Message_MessageType(args.MessageType))
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "order message not found")
+		return
+	}
+
+	p, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "invalid peer id")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = i.node.Service.SendMessage(ctx, p, msg)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "order message not sent")
+		return
+	}
+
+	SanitizedResponse(w, "")
+	return
+}
+
+// GETScanOfflineMessages - used to manually trigger offline message scan
+func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.Request) {
+	if time.Since(lastManualScan).Minutes() > 10 {
+		i.node.MessageRetriever.RunOnce()
+		lastManualScan = time.Now()
+	}
+	SanitizedResponse(w, "")
+	return
 }

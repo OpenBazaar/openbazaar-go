@@ -276,6 +276,9 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 		Payload:     pbAny,
 	}
 
+	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
+	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER, peerID, m)
+
 	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
 		return resp, err
@@ -302,6 +305,9 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	if err != nil {
 		return err
 	}
+	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
+	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_CONFIRMATION, peerID, m)
+
 	return n.sendMessage(peerID, &k, m)
 }
 
@@ -324,6 +330,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 		}
 		kp = &k
 	}
+	n.Datastore.OrderMessages().Put(orderID, pb.Message_ORDER_CANCEL, peerID, m)
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -349,6 +356,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 		}
 		kp = &k
 	}
+	n.Datastore.OrderMessages().Put(rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, m)
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -379,6 +387,8 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 		MessageType: pb.Message_ORDER_FULFILLMENT,
 		Payload:     a,
 	}
+	orderID0, _ := n.CalcOrderID(fulfillmentMessage.BuyerOrder)
+	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_FULFILLMENT, peerID, m)
 	return n.sendMessage(peerID, k, m)
 }
 
@@ -395,6 +405,8 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	if err != nil {
 		return err
 	}
+	orderID0, _ := n.CalcOrderID(completionMessage.BuyerOrder)
+	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_COMPLETION, peerID, m)
 	return n.sendMessage(peerID, k, m)
 }
 

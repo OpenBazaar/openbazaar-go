@@ -305,6 +305,7 @@ func InitializeDatabaseSQL(encryptionPassword string) string {
 		CreateTableCouponsSQL,
 		CreateIndexCouponsSQL,
 		CreateTableModeratedStoresSQL,
+		CreateOrderMessagesSQL,
 	}
 	return strings.Join(initializeStatement, " ")
 }

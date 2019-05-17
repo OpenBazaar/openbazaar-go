@@ -118,6 +118,11 @@ func (m *MessageRetriever) Run() {
 	}
 }
 
+func (m *MessageRetriever) RunOnce() {
+	go m.fetchPointers(true)
+	go m.fetchPointers(false)
+}
+
 func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
