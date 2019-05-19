@@ -297,7 +297,7 @@ func (n *OpenBazaarNode) retryableSeedStoreToPeer(pid peer.ID, graphHash string,
 		}
 		err := n.SendStore(pid.Pretty(), graph)
 		if err != nil {
-			if retryTimeout > 60*time.Second {
+			if retryTimeout > 8*time.Second {
 				log.Errorf("error pushing to peer %s: %s", pid.Pretty(), err.Error())
 				return
 			}
