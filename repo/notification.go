@@ -39,7 +39,7 @@ type Notifier interface {
 func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification {
 	return &Notification{
 		ID:           n.GetID(),
-		CreatedAt:    createdAt.UTC(),
+		CreatedAt:    NewAPITime(createdAt.UTC()),
 		IsRead:       isRead,
 		NotifierData: n,
 		NotifierType: n.GetType(),
@@ -55,7 +55,7 @@ func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification
 // serializations to match in the Notifications Datastore
 type Notification struct {
 	ID           string           `json:"-"`
-	CreatedAt    time.Time        `json:"timestamp"`
+	CreatedAt    *APITime         `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData Notifier         `json:"notification"`
 	NotifierType NotificationType `json:"-"`
@@ -77,7 +77,7 @@ func (n *Notification) Data() ([]byte, error)          { return json.MarshalInde
 func (n *Notification) WebsocketData() ([]byte, error) { return n.Data() }
 
 type notificationTransporter struct {
-	CreatedAt    time.Time        `json:"timestamp"`
+	CreatedAt    *APITime         `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData json.RawMessage  `json:"notification"`
 	NotifierType NotificationType `json:"type"`
