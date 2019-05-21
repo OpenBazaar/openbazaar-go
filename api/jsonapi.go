@@ -3272,12 +3272,12 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type response struct {
-		Txid               string    `json:"txid"`
-		Amount             int64     `json:"amount"`
-		ConfirmedBalance   int64     `json:"confirmedBalance"`
-		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
-		Timestamp          time.Time `json:"timestamp"`
-		Memo               string    `json:"memo"`
+		Txid               string        `json:"txid"`
+		Amount             int64         `json:"amount"`
+		ConfirmedBalance   int64         `json:"confirmedBalance"`
+		UnconfirmedBalance int64         `json:"unconfirmedBalance"`
+		Timestamp          *repo.APITime `json:"timestamp"`
+		Memo               string        `json:"memo"`
 	}
 	confirmed, unconfirmed := wal.Balance()
 	txn, err := wal.GetTransaction(*newTxid)
@@ -3285,12 +3285,13 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	t := repo.APITime(txn.Timestamp)
 	resp := &response{
 		Txid:               newTxid.String(),
 		ConfirmedBalance:   confirmed,
 		UnconfirmedBalance: unconfirmed,
 		Amount:             -(txn.Value),
-		Timestamp:          txn.Timestamp,
+		Timestamp:          &t,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),
 	}
 	ser, err := json.MarshalIndent(resp, "", "    ")
