@@ -9,12 +9,14 @@ import (
 )
 
 const (
-	// AM06MessagesCreateSQL - the order_messages create sql
-	AM06MessagesCreateSQL = "create table order_messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	// AM06MessagesCreateSQL - the messages create sql
+	AM06MessagesCreateSQL       = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	AM06CreateIndexMessagesSQL1 = "create index index_messages1 on messages (messageID);"
+	AM06CreateIndexMessagesSQL2 = "create index index_messages2 on messages (orderID, message_type);"
 	// AM06UpVer - set the repo Up version
-	AM06UpVer             = "25"
+	AM06UpVer = "25"
 	// AM06DownVer - set the repo Down version
-	AM06DownVer           = "24"
+	AM06DownVer = "24"
 )
 
 // AM06 - local migration struct
@@ -25,8 +27,7 @@ type Migration024 struct {
 	AM06
 }
 
-func createOrderMessages(repoPath, databasePassword, rVer string, testnetEnabled bool) error {
-	fmt.Println("in create order messages")
+func createMessages(repoPath, databasePassword, rVer string, testnetEnabled bool) error {
 	var (
 		databaseFilePath    string
 		repoVersionFilePath = path.Join(repoPath, "repover")
@@ -58,6 +59,14 @@ func createOrderMessages(repoPath, databasePassword, rVer string, testnetEnabled
 		tx.Rollback()
 		return err
 	}
+	if _, err = tx.Exec(AM06CreateIndexMessagesSQL1); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if _, err = tx.Exec(AM06CreateIndexMessagesSQL2); err != nil {
+		tx.Rollback()
+		return err
+	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
@@ -72,10 +81,10 @@ func createOrderMessages(repoPath, databasePassword, rVer string, testnetEnabled
 
 // Up - the migration Up code
 func (AM06) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	return createOrderMessages(repoPath, databasePassword, AM06UpVer, testnetEnabled)
+	return createMessages(repoPath, databasePassword, AM06UpVer, testnetEnabled)
 }
 
 // Down - the migration Down code
 func (AM06) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	return createOrderMessages(repoPath, databasePassword, AM06DownVer, testnetEnabled)
+	return createMessages(repoPath, databasePassword, AM06DownVer, testnetEnabled)
 }

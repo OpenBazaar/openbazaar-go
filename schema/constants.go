@@ -36,7 +36,9 @@ const (
 	CreateTableCouponsSQL                   = "create table coupons (slug text, code text, hash text);"
 	CreateIndexCouponsSQL                   = "create index index_coupons on coupons (slug);"
 	CreateTableModeratedStoresSQL           = "create table moderatedstores (peerID text primary key not null);"
-	CreateOrderMessagesSQL                  = "create table order_messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	CreateMessagesSQL                       = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	CreateIndexMessagesSQL1                 = "create index index_messages1 on messages (messageID);"
+	CreateIndexMessagesSQL2                 = "create index index_messages2 on messages (orderID, message_type);"
 	// End SQL Statements
 
 	// Configuration defaults

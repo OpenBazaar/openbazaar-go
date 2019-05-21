@@ -13,7 +13,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-func buildNewOrderMessageStore() (repo.OrderMessageStore, func(), error) {
+func buildNewMessageStore() (repo.MessageStore, func(), error) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -28,12 +28,12 @@ func buildNewOrderMessageStore() (repo.OrderMessageStore, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return db.NewOrderMessageStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
+	return db.NewMessageStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
-func TestOrderMessageDB_Put(t *testing.T) {
+func TestMessageDB_Put(t *testing.T) {
 	var (
-		messagesdb, teardown, err = buildNewOrderMessageStore()
+		messagesdb, teardown, err = buildNewMessageStore()
 		orderID                   = "orderID1"
 		mType                     = pb.Message_ORDER
 		payload                   = "sample message"
@@ -49,7 +49,7 @@ func TestOrderMessageDB_Put(t *testing.T) {
 		Payload:     &any.Any{Value: []byte(payload)},
 	}
 
-	err = messagesdb.Put(orderID, mType, peerID, msg)
+	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg)
 	if err != nil {
 		t.Error(err)
 	}

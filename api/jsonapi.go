@@ -70,7 +70,6 @@ func newJSONAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
 	}
-	lastManualScan = time.Now().Add(time.Duration(-10) * time.Minute)
 	i := &jsonAPIHandler{
 		config: JSONAPIConfig{
 			Enabled:       config.Enabled,
@@ -1478,7 +1477,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if profile.PeerID != peerID {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
+			ErrorResponse(w, http.StatusNotFound, "incorrect peer id")
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
@@ -1887,7 +1886,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{b}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 					} else {
 						type wsResp struct {
 							ID     string `json:"id"`
@@ -1898,7 +1897,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{data}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: data}
 					}
 				}(p)
 			}
@@ -2822,7 +2821,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 					}
 
 					pro, err := i.node.FetchProfile(pid, useCache)
@@ -2847,7 +2846,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("error Marshalling to JSON")
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{b}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 				}(p)
 			}
 		}()
@@ -3597,7 +3596,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 				}
 				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
@@ -3636,7 +3635,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("error marshalling rating")
 					return
 				}
-				i.node.Broadcast <- repo.PremarshalledNotifier{b}
+				i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 			}(r)
 		}
 	}
@@ -4155,10 +4154,10 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 }
 
 // POSTSendOrderMessage - used to manually send an order message
-func (i *jsonAPIHandler) POSTSendOrderMessage(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.Request) {
 	type sendRequest struct {
 		OrderID     string `json:"orderID"`
-		MessageType int32  `json:"messageType"`
+		MessageType string `json:"messageType"`
 	}
 
 	var args sendRequest
@@ -4174,13 +4173,16 @@ func (i *jsonAPIHandler) POSTSendOrderMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if args.MessageType <= 0 {
+	var msgType int32
+	var ok bool
+
+	if msgType, ok = pb.Message_MessageType_value[args.MessageType]; !ok {
 		ErrorResponse(w, http.StatusBadRequest, "invalid order message type")
 		return
 	}
 
-	msg, peerID, err := i.node.Datastore.OrderMessages().
-		GetByOrderIDType(args.OrderID, pb.Message_MessageType(args.MessageType))
+	msg, peerID, err := i.node.Datastore.Messages().
+		GetByOrderIDType(args.OrderID, pb.Message_MessageType(msgType))
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, "order message not found")
 		return

@@ -2,14 +2,14 @@ package core
 
 import (
 	"errors"
+	"fmt"
+	"sync"
+	"time"
 
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
-
-	"sync"
-	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -277,7 +277,9 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 	}
 
 	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
-	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
+		orderID0, pb.Message_ORDER, peerID, m)
 
 	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
@@ -306,7 +308,9 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 		return err
 	}
 	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
-	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_CONFIRMATION, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
+		orderID0, pb.Message_ORDER_CONFIRMATION, peerID, m)
 
 	return n.sendMessage(peerID, &k, m)
 }
@@ -330,7 +334,9 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 		}
 		kp = &k
 	}
-	n.Datastore.OrderMessages().Put(orderID, pb.Message_ORDER_CANCEL, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
+		orderID, pb.Message_ORDER_CANCEL, peerID, m)
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -356,7 +362,9 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 		}
 		kp = &k
 	}
-	n.Datastore.OrderMessages().Put(rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
+		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, m)
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -388,7 +396,9 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 		Payload:     a,
 	}
 	orderID0, _ := n.CalcOrderID(fulfillmentMessage.BuyerOrder)
-	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_FULFILLMENT, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
+		orderID0, pb.Message_ORDER_FULFILLMENT, peerID, m)
 	return n.sendMessage(peerID, k, m)
 }
 
@@ -406,7 +416,9 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 		return err
 	}
 	orderID0, _ := n.CalcOrderID(completionMessage.BuyerOrder)
-	n.Datastore.OrderMessages().Put(orderID0, pb.Message_ORDER_COMPLETION, peerID, m)
+	n.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
+		orderID0, pb.Message_ORDER_COMPLETION, peerID, m)
 	return n.sendMessage(peerID, k, m)
 }
 
