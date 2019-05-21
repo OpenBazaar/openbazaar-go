@@ -2867,18 +2867,18 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	}
 	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
-		Txid          string    `json:"txid"`
-		Value         int64     `json:"value"`
-		Address       string    `json:"address"`
-		Status        string    `json:"status"`
-		ErrorMessage  string    `json:"errorMessage"`
-		Memo          string    `json:"memo"`
-		Timestamp     time.Time `json:"timestamp"`
-		Confirmations int32     `json:"confirmations"`
-		Height        int32     `json:"height"`
-		OrderID       string    `json:"orderId"`
-		Thumbnail     string    `json:"thumbnail"`
-		CanBumpFee    bool      `json:"canBumpFee"`
+		Txid          string        `json:"txid"`
+		Value         int64         `json:"value"`
+		Address       string        `json:"address"`
+		Status        string        `json:"status"`
+		ErrorMessage  string        `json:"errorMessage"`
+		Memo          string        `json:"memo"`
+		Timestamp     *repo.APITime `json:"timestamp"`
+		Confirmations int32         `json:"confirmations"`
+		Height        int32         `json:"height"`
+		OrderID       string        `json:"orderId"`
+		Thumbnail     string        `json:"thumbnail"`
+		CanBumpFee    bool          `json:"canBumpFee"`
 	}
 	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
 	if err != nil {
@@ -2902,7 +2902,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		tx := Tx{
 			Txid:          t.Txid,
 			Value:         t.Value,
-			Timestamp:     t.Timestamp,
+			Timestamp:     repo.NewAPITime(t.Timestamp),
 			Confirmations: int32(t.Confirmations),
 			Height:        t.Height,
 			Status:        string(t.Status),
