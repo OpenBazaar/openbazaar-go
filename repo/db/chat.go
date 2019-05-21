@@ -101,7 +101,7 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 		if outInt > 0 {
 			outgoing = true
 		}
-		timestamp := time.Unix(0, ts)
+		timestamp := repo.NewAPITime(time.Unix(0, ts))
 		convo := repo.ChatConversation{
 			PeerId:    peerId,
 			Unread:    count,
@@ -142,7 +142,6 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 			message      string
 			readInt      int
 			timestampInt int64
-			timestamp    time.Time
 			outgoingInt  int
 		)
 		if err := rows.Scan(&msgID, &pid, &message, &readInt, &timestampInt, &outgoingInt); err != nil {
@@ -156,7 +155,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 		if outgoingInt == 1 {
 			outgoing = true
 		}
-		timestamp = time.Unix(0, timestampInt)
+		timestamp := repo.NewAPITime(time.Unix(0, timestampInt))
 		chatMessage := repo.ChatMessage{
 			PeerId:    pid,
 			MessageId: msgID,

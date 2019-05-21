@@ -38,8 +38,8 @@ func TestAPITimeUnmarshalJSONSupportsRFC3339(t *testing.T) {
 		t.Logf("output: %s", string(marshaledExample))
 		t.Fatal(err)
 	}
-	if !when.Equal(time.Time(actual)) {
-		t.Errorf("expected (%s) to equal (%s), but did not when using format (%s)", time.Time(actual), when, format)
+	if !when.Equal(actual.Time) {
+		t.Errorf("expected (%s) to equal (%s), but did not when using format (%s)", actual.Time, when, format)
 	}
 }
 
@@ -55,13 +55,13 @@ func TestAPITimeUnmarshalJSONSupportsRFC3339Nano(t *testing.T) {
 		t.Logf("output: %s", string(marshaledExample))
 		t.Fatal(err)
 	}
-	if !when.Equal(time.Time(actual)) {
-		t.Errorf("expected (%s) to equal (%s), but did not when using format (%s)", time.Time(actual), when, format)
+	if !when.Equal(actual.Time) {
+		t.Errorf("expected (%s) to equal (%s), but did not when using format (%s)", actual.Time, when, format)
 	}
 }
 
 func TestAPITimeMarshalIsReciprocal(t *testing.T) {
-	var when = repo.APITime(time.Now())
+	var when = repo.NewAPITime(time.Now())
 	subjectBytes, err := json.Marshal(&when)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestAPITimeMarshalIsReciprocal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !time.Time(when).Equal(time.Time(actual)) {
+	if !when.Equal(actual.Time) {
 		t.Errorf("expected (%s) to equal (%s), but did not", actual, when)
 	}
 }
