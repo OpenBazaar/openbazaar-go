@@ -6,6 +6,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-func NewAPITime(t time.Time) repo.APITime {
-	return repo.APITime(t)
+func NewAPITime(t time.Time) *repo.APITime {
+	return repo.NewAPITime(t)
 }

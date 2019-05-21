@@ -498,6 +498,6 @@ func TestChatDB_DeterministicNanosecondOrdering_Issue1545(t *testing.T) {
 			t.Fatalf("expected the messages to return in decending timestamp order, but were not")
 			t.Logf("\tmessages recieved: %+v", messages)
 		}
-		latestTime = m.Timestamp
+		latestTime = m.Timestamp.Time
 	}
 }
