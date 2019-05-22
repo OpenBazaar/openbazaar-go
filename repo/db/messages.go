@@ -22,7 +22,7 @@ func NewMessageStore(db *sql.DB, lock *sync.Mutex) repo.MessageStore {
 }
 
 // Put - insert record into the messages
-func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg pb.Message) error {
+func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
@@ -36,7 +36,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		return err
 	}
 
-	msg0, err := json.Marshal(msg)
+	msg0, err := msg.MarshalJSON()
 	if err != nil {
 		fmt.Println("err marshaling : ", err)
 	}
@@ -62,7 +62,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 }
 
 // GetByOrderIDType returns the message for the specified order and message type
-func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*pb.Message, string, error) {
+func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
@@ -79,10 +79,10 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 		return nil, "", err
 	}
 
-	msg := new(pb.Message)
+	msg := new(repo.Message)
 
 	if len(msg0) > 0 {
-		err = json.Unmarshal(msg0, msg)
+		err = msg.UnmarshalJSON(msg0)
 		if err != nil {
 			return nil, "", err
 		}
@@ -92,7 +92,7 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 }
 
 // GetByMessageIDType returns the message for the specified message id
-func (o *MessagesDB) GetByMessageIDType(messageID string) (*pb.Message, string, error) {
+func (o *MessagesDB) GetByMessageIDType(messageID string) (*repo.Message, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
@@ -109,7 +109,7 @@ func (o *MessagesDB) GetByMessageIDType(messageID string) (*pb.Message, string, 
 		return nil, "", err
 	}
 
-	msg := new(pb.Message)
+	msg := new(repo.Message)
 
 	if len(msg0) > 0 {
 		err = json.Unmarshal(msg0, msg)

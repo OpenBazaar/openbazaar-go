@@ -44,9 +44,11 @@ func TestMessageDB_Put(t *testing.T) {
 	}
 	defer teardown()
 
-	msg := pb.Message{
-		MessageType: mType,
-		Payload:     &any.Any{Value: []byte(payload)},
+	msg := repo.Message{
+		Msg: pb.Message{
+			MessageType: mType,
+			Payload:     &any.Any{Value: []byte(payload)},
+		},
 	}
 
 	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg)
@@ -55,13 +57,13 @@ func TestMessageDB_Put(t *testing.T) {
 	}
 
 	retMsg, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
-	if err != nil {
+	if err != nil || retMsg == nil {
 		t.Error(err)
 	}
 
-	fmt.Println(string(retMsg.Payload.Value), "  ", peer)
+	fmt.Println(string(retMsg.GetPayload().Value), "  ", peer)
 
-	if !(string(retMsg.Payload.Value) == payload) {
+	if !(string(retMsg.GetPayload().Value) == payload) {
 		t.Error("incorrect payload")
 	}
 
