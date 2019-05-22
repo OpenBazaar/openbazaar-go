@@ -13,6 +13,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -279,7 +280,7 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
-		orderID0, pb.Message_ORDER, peerID, m)
+		orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
 
 	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
@@ -310,7 +311,7 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	orderID0, _ := n.CalcOrderID(contract.BuyerOrder)
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
-		orderID0, pb.Message_ORDER_CONFIRMATION, peerID, m)
+		orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
 
 	return n.sendMessage(peerID, &k, m)
 }
@@ -336,7 +337,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 	}
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
-		orderID, pb.Message_ORDER_CANCEL, peerID, m)
+		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m})
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -364,7 +365,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 	}
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
-		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, m)
+		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m})
 	return n.sendMessage(peerID, kp, m)
 }
 
@@ -398,7 +399,7 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 	orderID0, _ := n.CalcOrderID(fulfillmentMessage.BuyerOrder)
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
-		orderID0, pb.Message_ORDER_FULFILLMENT, peerID, m)
+		orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
 	return n.sendMessage(peerID, k, m)
 }
 
@@ -418,7 +419,7 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	orderID0, _ := n.CalcOrderID(completionMessage.BuyerOrder)
 	n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
-		orderID0, pb.Message_ORDER_COMPLETION, peerID, m)
+		orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
 	return n.sendMessage(peerID, k, m)
 }
 

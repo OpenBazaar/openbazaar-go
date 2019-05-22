@@ -4183,7 +4183,7 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 
 	msg, peerID, err := i.node.Datastore.Messages().
 		GetByOrderIDType(args.OrderID, pb.Message_MessageType(msgType))
-	if err != nil {
+	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
 		ErrorResponse(w, http.StatusBadRequest, "order message not found")
 		return
 	}
@@ -4197,7 +4197,7 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = i.node.Service.SendMessage(ctx, p, msg)
+	err = i.node.Service.SendMessage(ctx, p, &msg.Msg)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, "order message not sent")
 		return
