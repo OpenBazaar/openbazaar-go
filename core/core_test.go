@@ -42,3 +42,26 @@ func TestEmojiToHTML(t *testing.T) {
 		t.Errorf("expected processed string to be %s, but was %s", text, recovered)
 	}
 }
+
+func TestToHtmlEntities(t *testing.T) {
+	tests := []struct {
+		slug     string
+		expected string
+	}{
+		{
+			"This_listing_is_💩💩",
+			"This_listing_is_&#x1F4A9;&#x1F4A9;",
+		},
+		{
+			"slug-with$-no_#emojis",
+			"slug-with$-no_#emojis",
+		},
+	}
+
+	for i, test := range tests {
+		transformed := core.ToHtmlEntities(test.slug)
+		if transformed != test.expected {
+			t.Errorf("Test %d failed. Expected %s got %s", i, test.expected, transformed)
+		}
+	}
+}
