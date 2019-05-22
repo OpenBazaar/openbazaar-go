@@ -1,7 +1,6 @@
 package repo_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/any"
@@ -34,9 +33,6 @@ func TestMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	//fmt.Println(retRepoMsg.GetMessageType())
-	//fmt.Println(retRepoMsg.GetPayload())
 
 	if retRepoMsg.GetMessageType() != pb.Message_ORDER {
 		t.Error("wrong msg type")

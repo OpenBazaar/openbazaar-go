@@ -3,7 +3,6 @@ package repo
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/golang/protobuf/ptypes/any"
 
@@ -17,12 +16,10 @@ type Message struct {
 }
 
 func (m *Message) MarshalJSON() ([]byte, error) {
-	fmt.Println("in marshal json")
 	return json.Marshal(m.Msg)
 }
 
 func (m *Message) UnmarshalJSON(b []byte) error {
-	fmt.Println("in unmarshal json")
 	return json.Unmarshal(b, &m.Msg)
 }
 
