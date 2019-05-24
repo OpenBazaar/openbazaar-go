@@ -79,19 +79,24 @@ const (
 )
 
 // Purchase - add ricardian contract
-func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount big.Int, vendorOnline bool, err error) {
-	contract, err := n.createContractWithOrder(data)
-	if err != nil {
-		return "", "", *big.NewInt(0), false, err
-	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(data.PaymentCoin)
-	if err != nil {
-		return "", "", *big.NewInt(0), false, err
-	}
-
+func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount repo.CurrencyValue, vendorOnline bool, err error) {
 	currency := &pb.CurrencyDefinition{
 		Code:         data.PaymentCoin,
 		Divisibility: n.getDivisibility(data.PaymentCoin),
+	}
+	retCurrency := &repo.CurrencyValue{}
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
+	if err != nil {
+		return "", "", *retCurrency, false, err
+	}
+	retCurrency.Currency = defn
+	contract, err := n.createContractWithOrder(data)
+	if err != nil {
+		return "", "", *retCurrency, false, err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(data.PaymentCoin)
+	if err != nil {
+		return "", "", *retCurrency, false, err
 	}
 
 	// Add payment data and send to vendor
@@ -99,21 +104,24 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
-			return "", "", *big.NewInt(0), false, err
+			return "", "", *retCurrency, false, err
 		}
 
 		contract, err = n.SignOrder(contract)
 		if err != nil {
-			return "", "", *big.NewInt(0), false, err
+			return "", "", *retCurrency, false, err
 		}
 
 		// Send to order vendor
 		merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil {
 			id, addr, amt, err := processOfflineModeratedOrder(n, contract)
-			return id, addr, amt, false, err
+			retCurrency.Amount = &amt
+			return id, addr, *retCurrency, false, err
 		}
-		return processOnlineModeratedOrder(merchantResponse, n, contract)
+		id, addr, amt, f, err := processOnlineModeratedOrder(merchantResponse, n, contract)
+		retCurrency.Amount = &amt
+		return id, addr, *retCurrency, f, err
 
 	}
 	// Direct payment
@@ -128,7 +136,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *retCurrency, false, err
 	}
 
 	payment.Amount = &pb.CurrencyValue{
@@ -140,16 +148,19 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	} // total
 	contract, err = n.SignOrder(contract)
 	if err != nil {
-		return "", "", *big.NewInt(0), false, err
+		return "", "", *retCurrency, false, err
 	}
 
 	// Send to order vendor and request a payment address
 	merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 	if err != nil {
 		id, addr, amount, err := processOfflineDirectOrder(n, wal, contract, payment)
-		return id, addr, amount, false, err
+		retCurrency.Amount = &amount
+		return id, addr, *retCurrency, false, err
 	}
-	return processOnlineDirectOrder(merchantResponse, n, wal, contract)
+	id, addr, amt, f, err := processOnlineDirectOrder(merchantResponse, n, wal, contract)
+	retCurrency.Amount = &amt
+	return id, addr, *retCurrency, f, err
 }
 
 func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contract *pb.RicardianContract, wal wallet.Wallet) (*pb.RicardianContract, error) {
@@ -789,13 +800,18 @@ func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 }
 
 func (n *OpenBazaarNode) getDivisibility(code string) uint32 {
-	if code == "ETH" {
-		return 18
-	} else if code == "USD" {
-		return 2
-	} else {
-		return 8
+	dict := repo.LoadCurrencyDefinitions()
+	defn, err := dict.Lookup(code)
+	if err != nil {
+		return 0
 	}
+	return uint32(defn.Divisibility)
+}
+
+// GetCurrencyDefinition - return the currency defn for a coin
+func (n *OpenBazaarNode) GetCurrencyDefinition(code string) (*repo.CurrencyDefinition, error) {
+	dict := repo.LoadCurrencyDefinitions()
+	return dict.Lookup(code)
 }
 
 // EstimateOrderTotal - returns order total in satoshi/wei

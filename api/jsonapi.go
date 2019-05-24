@@ -593,12 +593,12 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type purchaseReturn struct {
-		PaymentAddress string `json:"paymentAddress"`
-		Amount         string `json:"amount"`
-		VendorOnline   bool   `json:"vendorOnline"`
-		OrderID        string `json:"orderId"`
+		PaymentAddress string             `json:"paymentAddress"`
+		Amount         repo.CurrencyValue `json:"amount"`
+		VendorOnline   bool               `json:"vendorOnline"`
+		OrderID        string             `json:"orderId"`
 	}
-	ret := purchaseReturn{paymentAddr, amount.String(), online, orderID}
+	ret := purchaseReturn{paymentAddr, amount, online, orderID}
 	b, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -704,18 +704,19 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   string `json:"confirmed"`
-		Unconfirmed string `json:"unconfirmed"`
-		Height      uint32 `json:"height"`
+		Confirmed   repo.CurrencyValue `json:"confirmed"`
+		Unconfirmed repo.CurrencyValue `json:"unconfirmed"`
+		Height      uint32             `json:"height"`
 	}
 	if coinType == "balance" {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
 			height, _ := wal.ChainTip()
+			defn, _ := repo.LoadCurrencyDefinitions().Lookup(ct.CurrencyCode())
 			confirmed, unconfirmed := wal.Balance()
 			ret[ct.CurrencyCode()] = balance{
-				Confirmed:   confirmed.Value.String(),
-				Unconfirmed: unconfirmed.Value.String(),
+				Confirmed:   repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
+				Unconfirmed: repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
 				Height:      height,
 			}
 		}
@@ -734,9 +735,10 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	height, _ := wal.ChainTip()
 	confirmed, unconfirmed := wal.Balance()
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(coinType)
 	bal := balance{
-		Confirmed:   confirmed.Value.String(),
-		Unconfirmed: unconfirmed.Value.String(),
+		Confirmed:   repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
+		Unconfirmed: repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
 		Height:      height,
 	}
 	out, err := json.MarshalIndent(bal, "", "    ")
@@ -3289,24 +3291,27 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type response struct {
-		Txid               string    `json:"txid"`
-		Amount             string    `json:"amount"`
-		ConfirmedBalance   string    `json:"confirmedBalance"`
-		UnconfirmedBalance string    `json:"unconfirmedBalance"`
-		Timestamp          time.Time `json:"timestamp"`
-		Memo               string    `json:"memo"`
+		Txid               string             `json:"txid"`
+		Amount             repo.CurrencyValue `json:"amount"`
+		ConfirmedBalance   repo.CurrencyValue `json:"confirmedBalance"`
+		UnconfirmedBalance repo.CurrencyValue `json:"unconfirmedBalance"`
+		Timestamp          time.Time          `json:"timestamp"`
+		Memo               string             `json:"memo"`
 	}
 	confirmed, unconfirmed := wal.Balance()
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
 	txn, err := wal.GetTransaction(*newTxid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
+	amt0.Amount = new(big.Int).Mod(amt0.Amount, big.NewInt(-1))
 	resp := &response{
 		Txid:               newTxid.String(),
-		ConfirmedBalance:   confirmed.Value.String(),
-		UnconfirmedBalance: unconfirmed.Value.String(),
-		Amount:             "-" + txn.Value,
+		ConfirmedBalance:   repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
+		UnconfirmedBalance: repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
+		Amount:             *amt0,
 		Timestamp:          txn.Timestamp,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),
 	}
@@ -3320,6 +3325,10 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
+
+	type response struct {
+		Fee repo.CurrencyValue `json:"estimatedFee"`
+	}
 
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
@@ -3362,15 +3371,25 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %s}`, (fee.String()))
+
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	resp := &response{
+		Fee: repo.CurrencyValue{Currency: defn, Amount: &fee},
+	}
+	ser, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ser))
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type fees struct {
-		Priority string `json:"priority"`
-		Normal   string `json:"normal"`
-		Economic string `json:"economic"`
+		Priority repo.CurrencyValue `json:"priority"`
+		Normal   repo.CurrencyValue `json:"normal"`
+		Economic repo.CurrencyValue `json:"economic"`
 	}
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
@@ -3378,7 +3397,12 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
-			ret[ct.CurrencyCode()] = fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
+			defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+			ret[ct.CurrencyCode()] = fees{
+				Priority: repo.CurrencyValue{Currency: defn, Amount: &priority},
+				Normal:   repo.CurrencyValue{Currency: defn, Amount: &normal},
+				Economic: repo.CurrencyValue{Currency: defn, Amount: &economic},
+			}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -3396,7 +3420,12 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
-	f := fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	f := fees{
+		Priority: repo.CurrencyValue{Currency: defn, Amount: &priority},
+		Normal:   repo.CurrencyValue{Currency: defn, Amount: &normal},
+		Economic: repo.CurrencyValue{Currency: defn, Amount: &economic},
+	}
 	out, err := json.MarshalIndent(f, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

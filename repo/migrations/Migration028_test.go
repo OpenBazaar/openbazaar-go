@@ -11,7 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-const preMigration023Config = `{
+const preAM01Config = `{
 	"OtherConfigProperty11": [1, 2, 3],
 	"OtherConfigProperty21": "abc123",
 	"Wallets": {
@@ -63,7 +63,7 @@ const preMigration023Config = `{
 	}
 }`
 
-const postMigration023Config = `{
+const postAM01Config = `{
 	"OtherConfigProperty11": [1, 2, 3],
 	"OtherConfigProperty21": "abc123",
 	"Wallets": {
@@ -115,14 +115,14 @@ const postMigration023Config = `{
 	}
 }`
 
-func migration023AssertAPI(t *testing.T, actual interface{}, expected string) {
+func AM01AssertAPI(t *testing.T, actual interface{}, expected string) {
 	actualSlice := actual.([]interface{})
 	if len(actualSlice) != 1 || actualSlice[0] != expected {
 		t.Fatalf("incorrect api endpoint.\n\twanted: %s\n\tgot: %s\n", expected, actual)
 	}
 }
 
-func TestMigration023(t *testing.T) {
+func TestAM01(t *testing.T) {
 	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -140,15 +140,15 @@ func TestMigration023(t *testing.T) {
 		configPath  = testRepo.DataPathJoin("config")
 		repoverPath = testRepo.DataPathJoin("repover")
 	)
-	if err = ioutil.WriteFile(configPath, []byte(preMigration023Config), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(configPath, []byte(preAM01Config), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = ioutil.WriteFile(repoverPath, []byte("24"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(repoverPath, []byte("29"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	var m migrations.Migration023
+	var m migrations.Migration028
 	err = m.Up(testRepo.DataPath(), "", true)
 	if err != nil {
 		t.Fatal(err)
@@ -167,37 +167,37 @@ func TestMigration023(t *testing.T) {
 	w := config["Wallets"].(map[string]interface{})
 	eth := w["ETH"].(map[string]interface{})
 
-	migration023AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
-	migration023AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
+	AM01AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	AM01AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
 
 	btc := w["BTC"].(map[string]interface{})
 
-	migration023AssertAPI(t, btc["APIPool"], "https://btc.api.openbazaar.org/api")
-	migration023AssertAPI(t, btc["APITestnetPool"], "https://tbtc.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APIPool"], "https://btc.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APITestnetPool"], "https://tbtc.api.openbazaar.org/api")
 
 	bch := w["BCH"].(map[string]interface{})
 
-	migration023AssertAPI(t, bch["APIPool"], "https://bch.api.openbazaar.org/api")
-	migration023AssertAPI(t, bch["APITestnetPool"], "https://tbch.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APIPool"], "https://bch.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APITestnetPool"], "https://tbch.api.openbazaar.org/api")
 
 	ltc := w["LTC"].(map[string]interface{})
 
-	migration023AssertAPI(t, ltc["APIPool"], "https://ltc.api.openbazaar.org/api")
-	migration023AssertAPI(t, ltc["APITestnetPool"], "https://tltc.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APIPool"], "https://ltc.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APITestnetPool"], "https://tltc.api.openbazaar.org/api")
 
 	zec := w["ZEC"].(map[string]interface{})
 
-	migration023AssertAPI(t, zec["APIPool"], "https://zec.api.openbazaar.org/api")
-	migration023AssertAPI(t, zec["APITestnetPool"], "https://tzec.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APIPool"], "https://zec.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APITestnetPool"], "https://tzec.api.openbazaar.org/api")
 
 	var re = regexp.MustCompile(`\s`)
-	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration023Config), "") {
+	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postAM01Config), "") {
 		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
-		t.Logf("expected: %s", re.ReplaceAllString(string(postMigration023Config), ""))
+		t.Logf("expected: %s", re.ReplaceAllString(string(postAM01Config), ""))
 		t.Fatal("incorrect post-migration config")
 	}
 
-	assertCorrectRepoVer(t, repoverPath, "24")
+	assertCorrectRepoVer(t, repoverPath, "29")
 
 	err = m.Down(testRepo.DataPath(), "", true)
 	if err != nil {
@@ -217,28 +217,28 @@ func TestMigration023(t *testing.T) {
 	w = config["Wallets"].(map[string]interface{})
 	eth = w["ETH"].(map[string]interface{})
 
-	migration023AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
-	migration023AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
+	AM01AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	AM01AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
 
 	btc = w["BTC"].(map[string]interface{})
 
-	migration023AssertAPI(t, btc["APIPool"], "https://btc.blockbook.api.openbazaar.org/api")
-	migration023AssertAPI(t, btc["APITestnetPool"], "https://tbtc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APIPool"], "https://btc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APITestnetPool"], "https://tbtc.blockbook.api.openbazaar.org/api")
 
 	bch = w["BCH"].(map[string]interface{})
 
-	migration023AssertAPI(t, bch["APIPool"], "https://bch.blockbook.api.openbazaar.org/api")
-	migration023AssertAPI(t, bch["APITestnetPool"], "https://tbch.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APIPool"], "https://bch.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APITestnetPool"], "https://tbch.blockbook.api.openbazaar.org/api")
 
 	ltc = w["LTC"].(map[string]interface{})
 
-	migration023AssertAPI(t, ltc["APIPool"], "https://ltc.blockbook.api.openbazaar.org/api")
-	migration023AssertAPI(t, ltc["APITestnetPool"], "https://tltc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APIPool"], "https://ltc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APITestnetPool"], "https://tltc.blockbook.api.openbazaar.org/api")
 
 	zec = w["ZEC"].(map[string]interface{})
 
-	migration023AssertAPI(t, zec["APIPool"], "https://zec.blockbook.api.openbazaar.org/api")
-	migration023AssertAPI(t, zec["APITestnetPool"], "https://tzec.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APIPool"], "https://zec.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APITestnetPool"], "https://tzec.blockbook.api.openbazaar.org/api")
 
-	assertCorrectRepoVer(t, repoverPath, "23")
+	assertCorrectRepoVer(t, repoverPath, "28")
 }

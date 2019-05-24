@@ -28,7 +28,7 @@ import (
 
 const (
 	// ListingVersion - current listing version
-	ListingVersion = 4
+	ListingVersion = 5
 	// TitleMaxCharacters - max size for title
 	TitleMaxCharacters = 140
 	// ShortDescriptionLength - min length for description
@@ -70,9 +70,9 @@ const (
 )
 
 type price struct {
-	CurrencyCode string  `json:"currencyCode"`
-	Amount       string  `json:"amount"`
-	Modifier     float32 `json:"modifier"`
+	CurrencyCode string             `json:"currencyCode"`
+	Amount       repo.CurrencyValue `json:"amount"`
+	Modifier     float32            `json:"modifier"`
 }
 type thumbnail struct {
 	Tiny   string `json:"tiny"`
@@ -504,6 +504,9 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		}
 	}
 
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrency.Code)
+	amt, _ := new(big.Int).SetString(listing.Listing.Item.Price.Value, 10)
+
 	ld := ListingData{
 		Hash:         listingHash,
 		Slug:         listing.Listing.Slug,
@@ -516,7 +519,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
 		Price: price{
 			CurrencyCode: listing.Listing.Metadata.PricingCurrency.Code,
-			Amount:       listing.Listing.Item.Price.Value,
+			Amount:       repo.CurrencyValue{Currency: defn, Amount: amt},
 			Modifier:     listing.Listing.Metadata.PriceModifier,
 		},
 		ShipsTo:            shipsTo,

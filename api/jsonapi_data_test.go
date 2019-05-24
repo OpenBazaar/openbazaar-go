@@ -331,24 +331,88 @@ const walletAddressJSONResponse = `{
 
 const walletBalanceJSONResponse = `{
     "TBCH": {
-        "confirmed": "0",
+        "confirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TBCH",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Bitcoin Cash"
+            }
+        },
         "height": 0,
-        "unconfirmed": "0"
+        "unconfirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TBCH",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Bitcoin Cash"
+            }
+        }
     },
     "TBTC": {
-        "confirmed": "0",
+        "confirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TBTC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Bitcoin"
+            }
+        },
         "height": 0,
-        "unconfirmed": "0"
+        "unconfirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TBTC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Bitcoin"
+            }
+        }
     },
     "TLTC": {
-        "confirmed": "0",
+        "confirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TLTC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Litecoin"
+            }
+        },
         "height": 0,
-        "unconfirmed": "0"
+        "unconfirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TLTC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Litecoin"
+            }
+        }
     },
     "TZEC": {
-        "confirmed": "0",
+        "confirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TZEC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Zcash"
+            }
+        },
         "height": 0,
-        "unconfirmed": "0"
+        "unconfirmed": {
+            "Amount": 0,
+            "Currency": {
+                "Code": "TZEC",
+                "CurrencyType": "crypto",
+                "Divisibility": 8,
+                "Name": "Zcash"
+            }
+        }
     }
 }`
 
@@ -359,7 +423,14 @@ const walletBalanceJSONResponse = `{
 const spendJSON = `{
 	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"amount": "1700000",
+	"amount": {
+        "Amount": 1700000,
+        "Currency": {
+            "Code": "BTC",
+            "CurrencyType": "crypto",
+            "Divisibility": 8
+        }
+    },
 	"feeLevel": "NORMAL"
 }`
 

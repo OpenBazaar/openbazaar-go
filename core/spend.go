@@ -20,25 +20,25 @@ const DefaultCurrencyDivisibility uint32 = 8
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
-	Address                string `json:"address"`
-	Amount                 string `json:"amount"`
-	FeeLevel               string `json:"feeLevel"`
-	Memo                   string `json:"memo"`
-	OrderID                string `json:"orderId"`
-	RequireAssociatedOrder bool   `json:"requireOrder"`
-	Wallet                 string `json:"wallet"`
-	SpendAll               bool   `json:"spendAll"`
+	Address                string             `json:"address"`
+	Amount                 repo.CurrencyValue `json:"amount"`
+	FeeLevel               string             `json:"feeLevel"`
+	Memo                   string             `json:"memo"`
+	OrderID                string             `json:"orderId"`
+	RequireAssociatedOrder bool               `json:"requireOrder"`
+	Wallet                 string             `json:"wallet"`
+	SpendAll               bool               `json:"spendAll"`
 }
 
 type SpendResponse struct {
-	Amount             string    `json:"amount"`
-	ConfirmedBalance   string    `json:"confirmedBalance"`
-	Memo               string    `json:"memo"`
-	OrderID            string    `json:"orderId"`
-	Timestamp          time.Time `json:"timestamp"`
-	Txid               string    `json:"txid"`
-	UnconfirmedBalance string    `json:"unconfirmedBalance"`
-	PeerID             string    `json:"-"`
+	Amount             repo.CurrencyValue `json:"amount"`
+	ConfirmedBalance   string             `json:"confirmedBalance"`
+	Memo               string             `json:"memo"`
+	OrderID            string             `json:"orderId"`
+	Timestamp          time.Time          `json:"timestamp"`
+	Txid               string             `json:"txid"`
+	UnconfirmedBalance string             `json:"unconfirmedBalance"`
+	PeerID             string             `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
@@ -73,7 +73,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	amt, _ := new(big.Int).SetString(args.Amount, 10)
+	amt := args.Amount.Amount //new(big.Int).SetString(args.Amount, 10)
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
@@ -128,11 +128,15 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	confirmed, unconfirmed := wal.Balance()
 
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
+	amt0.Amount = new(big.Int).Mod(amt0.Amount, big.NewInt(-1))
+
 	return &SpendResponse{
 		Txid:               txid.String(),
 		ConfirmedBalance:   confirmed.Value.String(),
 		UnconfirmedBalance: unconfirmed.Value.String(),
-		Amount:             "-" + txn.Value,
+		Amount:             *amt0,
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,

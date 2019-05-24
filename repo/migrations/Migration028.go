@@ -10,38 +10,22 @@ import (
 )
 
 const (
-	migration028EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
-	migration028EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
-	migration028EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+	am01EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
+	am01EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
+	am01EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+	am01UpVersion                      = 29
+	am01DownVersion                    = 28
 )
 
-// Migration028WalletsConfig - used to hold the coin cfg
-type Migration028WalletsConfig struct {
-	BTC *migration028CoinConfig `json:"BTC"`
-	BCH *migration028CoinConfig `json:"BCH"`
-	LTC *migration028CoinConfig `json:"LTC"`
-	ZEC *migration028CoinConfig `json:"ZEC"`
-	ETH *migration028CoinConfig `json:"ETH"`
-}
+// am01 - required migration struct
+type am01 struct{}
 
-type migration028CoinConfig struct {
-	Type             string                 `json:"Type"`
-	APIPool          []string               `json:"API"`
-	APITestnetPool   []string               `json:"APITestnet"`
-	MaxFee           uint64                 `json:"MaxFee"`
-	FeeAPI           string                 `json:"FeeAPI"`
-	HighFeeDefault   uint64                 `json:"HighFeeDefault"`
-	MediumFeeDefault uint64                 `json:"MediumFeeDefault"`
-	LowFeeDefault    uint64                 `json:"LowFeeDefault"`
-	TrustedPeer      string                 `json:"TrustedPeer"`
-	WalletOptions    map[string]interface{} `json:"WalletOptions"`
+type Migration028 struct {
+	am01
 }
-
-// Migration028 - required migration struct
-type Migration028 struct{}
 
 // Up - upgrade the state
-func (Migration028) Up(repoPath, dbPassword string, testnet bool) error {
+func (am01) Up(repoPath, dbPassword string, testnet bool) error {
 	var (
 		configMap        = map[string]interface{}{}
 		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
@@ -129,9 +113,9 @@ func (Migration028) Up(repoPath, dbPassword string, testnet bool) error {
 	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
 	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
 	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        migration028EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": migration028EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": migration028EthereumRegistryAddressRopsten,
+		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
 	}
 
 	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
@@ -143,14 +127,14 @@ func (Migration028) Up(repoPath, dbPassword string, testnet bool) error {
 		return fmt.Errorf("writing migrated config: %s", err.Error())
 	}
 
-	if err := writeRepoVer(repoPath, 29); err != nil {
-		return fmt.Errorf("bumping repover to 29: %s", err.Error())
+	if err := writeRepoVer(repoPath, am01UpVersion); err != nil {
+		return fmt.Errorf("bumping repover to %d: %s", am01UpVersion, err.Error())
 	}
 	return nil
 }
 
 // Down - downgrade/restore the state
-func (Migration028) Down(repoPath, dbPassword string, testnet bool) error {
+func (am01) Down(repoPath, dbPassword string, testnet bool) error {
 	var (
 		configMap        = map[string]interface{}{}
 		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
@@ -238,9 +222,9 @@ func (Migration028) Down(repoPath, dbPassword string, testnet bool) error {
 	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
 	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
 	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        migration028EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": migration028EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": migration028EthereumRegistryAddressRopsten,
+		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
 	}
 
 	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
@@ -252,8 +236,8 @@ func (Migration028) Down(repoPath, dbPassword string, testnet bool) error {
 		return fmt.Errorf("writing migrated config: %s", err.Error())
 	}
 
-	if err := writeRepoVer(repoPath, 28); err != nil {
-		return fmt.Errorf("dropping repover to 28: %s", err.Error())
+	if err := writeRepoVer(repoPath, am01DownVersion); err != nil {
+		return fmt.Errorf("dropping repover to %d: %s", am01DownVersion, err.Error())
 	}
 	return nil
 }
