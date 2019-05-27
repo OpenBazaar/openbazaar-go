@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -24,6 +25,39 @@ var (
 type CurrencyValue struct {
 	Amount   *big.Int
 	Currency *CurrencyDefinition
+}
+
+func (c *CurrencyValue) MarshalJSON() ([]byte, error) {
+	type currencyJson struct {
+		Amount   string             `json:"amount"`
+		Currency CurrencyDefinition `json:"currency"`
+	}
+
+	c0 := currencyJson{
+		Amount:   c.Amount.String(),
+		Currency: *c.Currency,
+	}
+
+	return json.Marshal(c0)
+
+}
+
+func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
+	type currencyJson struct {
+		Amount   string             `json:"amount"`
+		Currency CurrencyDefinition `json:"currency"`
+	}
+
+	var c0 currencyJson
+
+	err := json.Unmarshal(b, &c0)
+
+	if err == nil {
+		c.Amount, _ = new(big.Int).SetString(c0.Amount, 10)
+		c.Currency, err = LoadCurrencyDefinitions().Lookup(c0.Currency.Code.String())
+	}
+
+	return err
 }
 
 // NewCurrencyValueFromInt is a convenience function which converts an int64
