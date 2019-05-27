@@ -875,6 +875,7 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -931,6 +932,7 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -1012,6 +1014,7 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			blockedIds = append(blockedIds, id)
+			i.node.Service.DisconnectFromPeer(id)
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
@@ -3205,6 +3208,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	i.node.BanManager.AddBlockedId(pid)
+	i.node.Service.DisconnectFromPeer(pid)
 	SanitizedResponse(w, `{}`)
 }
 
@@ -3850,6 +3854,27 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	}
 	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
 	fmt.Fprint(w, string(retBytes))
+}
+
+func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
+	_, peerID := path.Split(r.URL.Path)
+
+	pid, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
+	defer cancel()
+
+	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, "/ipns/"+pid.String())
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, hex.EncodeToString(ipnsEntryBytes))
 }
 
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
