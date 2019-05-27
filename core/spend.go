@@ -32,12 +32,12 @@ type SpendRequest struct {
 
 type SpendResponse struct {
 	Amount             repo.CurrencyValue `json:"amount"`
-	ConfirmedBalance   string             `json:"confirmedBalance"`
+	ConfirmedBalance   repo.CurrencyValue `json:"confirmedBalance"`
 	Memo               string             `json:"memo"`
 	OrderID            string             `json:"orderId"`
 	Timestamp          time.Time          `json:"timestamp"`
 	Txid               string             `json:"txid"`
-	UnconfirmedBalance string             `json:"unconfirmedBalance"`
+	UnconfirmedBalance repo.CurrencyValue `json:"unconfirmedBalance"`
 	PeerID             string             `json:"-"`
 }
 
@@ -130,12 +130,15 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
 	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
-	amt0.Amount = new(big.Int).Mod(amt0.Amount, big.NewInt(-1))
+	amt0.Amount = new(big.Int).Mul(amt0.Amount, big.NewInt(-1))
+
+	conf0, _ := repo.NewCurrencyValue(confirmed.Value.String(), defn)
+	uconf0, _ := repo.NewCurrencyValue(unconfirmed.Value.String(), defn)
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   confirmed.Value.String(),
-		UnconfirmedBalance: unconfirmed.Value.String(),
+		ConfirmedBalance:   *conf0,
+		UnconfirmedBalance: *uconf0,
 		Amount:             *amt0,
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
