@@ -2890,18 +2890,18 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	}
 	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
-		Txid          string    `json:"txid"`
-		Value         string    `json:"value"`
-		Address       string    `json:"address"`
-		Status        string    `json:"status"`
-		ErrorMessage  string    `json:"errorMessage"`
-		Memo          string    `json:"memo"`
-		Timestamp     time.Time `json:"timestamp"`
-		Confirmations int32     `json:"confirmations"`
-		Height        int32     `json:"height"`
-		OrderID       string    `json:"orderId"`
-		Thumbnail     string    `json:"thumbnail"`
-		CanBumpFee    bool      `json:"canBumpFee"`
+		Txid          string        `json:"txid"`
+		Value         string        `json:"value"`
+		Address       string        `json:"address"`
+		Status        string        `json:"status"`
+		ErrorMessage  string        `json:"errorMessage"`
+		Memo          string        `json:"memo"`
+		Timestamp     *repo.APITime `json:"timestamp"`
+		Confirmations int32         `json:"confirmations"`
+		Height        int32         `json:"height"`
+		OrderID       string        `json:"orderId"`
+		Thumbnail     string        `json:"thumbnail"`
+		CanBumpFee    bool          `json:"canBumpFee"`
 	}
 	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
 	if err != nil {
@@ -2925,7 +2925,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		tx := Tx{
 			Txid:          t.Txid,
 			Value:         t.Value,
-			Timestamp:     t.Timestamp,
+			Timestamp:     repo.NewAPITime(t.Timestamp),
 			Confirmations: int32(t.Confirmations),
 			Height:        t.Height,
 			Status:        string(t.Status),
@@ -3299,7 +3299,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		Amount             repo.CurrencyValue `json:"amount"`
 		ConfirmedBalance   repo.CurrencyValue `json:"confirmedBalance"`
 		UnconfirmedBalance repo.CurrencyValue `json:"unconfirmedBalance"`
-		Timestamp          time.Time          `json:"timestamp"`
+		Timestamp          *repo.APITime      `json:"timestamp"`
 		Memo               string             `json:"memo"`
 	}
 	confirmed, unconfirmed := wal.Balance()
@@ -3311,12 +3311,14 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
 	amt0.Amount = new(big.Int).Mod(amt0.Amount, big.NewInt(-1))
+
+	t := repo.NewAPITime(txn.Timestamp)
 	resp := &response{
 		Txid:               newTxid.String(),
 		ConfirmedBalance:   repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
 		UnconfirmedBalance: repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
 		Amount:             *amt0,
-		Timestamp:          txn.Timestamp,
+		Timestamp:          t,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),
 	}
 	ser, err := json.MarshalIndent(resp, "", "    ")

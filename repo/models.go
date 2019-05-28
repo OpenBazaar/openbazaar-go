@@ -53,20 +53,6 @@ type Coupon struct {
 	Hash string
 }
 
-type GroupChatMessage struct {
-	PeerIds []string `json:"peerIds"`
-	Subject string   `json:"subject"`
-	Message string   `json:"message"`
-}
-
-type ChatConversation struct {
-	PeerId    string    `json:"peerId"`
-	Unread    int       `json:"unread"`
-	Last      string    `json:"lastMessage"`
-	Timestamp time.Time `json:"timestamp"`
-	Outgoing  bool      `json:"outgoing"`
-}
-
 type Metadata struct {
 	Txid       string
 	Address    string

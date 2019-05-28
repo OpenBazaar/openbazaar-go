@@ -1340,12 +1340,12 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	}
 
 	// Push to websocket
-	n := repo.ChatMessage{
+	n := repo.ChatMessageNotification{
 		MessageId: chat.MessageId,
 		PeerId:    p.Pretty(),
 		Subject:   chat.Subject,
 		Message:   chat.Message,
-		Timestamp: t,
+		Timestamp: repo.NewAPITime(t),
 	}
 	service.broadcast <- n
 	log.Debugf("received CHAT message from %s", p.Pretty())

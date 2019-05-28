@@ -39,7 +39,7 @@ type Notifier interface {
 func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification {
 	return &Notification{
 		ID:           n.GetID(),
-		CreatedAt:    createdAt.UTC(),
+		CreatedAt:    NewAPITime(createdAt.UTC()),
 		IsRead:       isRead,
 		NotifierData: n,
 		NotifierType: n.GetType(),
@@ -55,7 +55,7 @@ func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification
 // serializations to match in the Notifications Datastore
 type Notification struct {
 	ID           string           `json:"-"`
-	CreatedAt    time.Time        `json:"timestamp"`
+	CreatedAt    *APITime         `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData Notifier         `json:"notification"`
 	NotifierType NotificationType `json:"-"`
@@ -77,7 +77,7 @@ func (n *Notification) Data() ([]byte, error)          { return json.MarshalInde
 func (n *Notification) WebsocketData() ([]byte, error) { return n.Data() }
 
 type notificationTransporter struct {
-	CreatedAt    time.Time        `json:"timestamp"`
+	CreatedAt    *APITime         `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData json.RawMessage  `json:"notification"`
 	NotifierType NotificationType `json:"type"`
@@ -804,21 +804,16 @@ func (n StatusNotification) GetID() string                               { retur
 func (n StatusNotification) GetType() NotificationType                   { return NotifierTypeStatusUpdateNotification }
 func (n StatusNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
-type ChatMessage struct {
-	MessageId string    `json:"messageId"`
-	PeerId    string    `json:"peerId"`
-	Subject   string    `json:"subject"`
-	Message   string    `json:"message"`
-	Read      bool      `json:"read"`
-	Outgoing  bool      `json:"outgoing"`
-	Timestamp time.Time `json:"timestamp"`
-}
+// ChatMessageNotification handles serialization of ChatMessages for notifications
+type ChatMessageNotification ChatMessage
 
-func (n ChatMessage) Data() ([]byte, error)                       { return json.MarshalIndent(messageWrapper{n}, "", "    ") }
-func (n ChatMessage) WebsocketData() ([]byte, error)              { return n.Data() }
-func (n ChatMessage) GetID() string                               { return "" } // Not persisted, ID is ignored
-func (n ChatMessage) GetType() NotificationType                   { return NotifierTypeChatMessage }
-func (n ChatMessage) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
+func (n ChatMessageNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(messageWrapper{n}, "", "    ")
+}
+func (n ChatMessageNotification) WebsocketData() ([]byte, error)              { return n.Data() }
+func (n ChatMessageNotification) GetID() string                               { return "" } // Not persisted, ID is ignored
+func (n ChatMessageNotification) GetType() NotificationType                   { return NotifierTypeChatMessage }
+func (n ChatMessageNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 type ChatRead struct {
 	MessageId string `json:"messageId"`
