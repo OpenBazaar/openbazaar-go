@@ -98,7 +98,7 @@ func TestMigration023(t *testing.T) {
 	}
 
 	// assert repo version updated
-	if err = appSchema.VerifySchemaVersion("23"); err != nil {
+	if err = appSchema.VerifySchemaVersion("24"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -130,7 +130,7 @@ func TestMigration023(t *testing.T) {
 	}
 
 	// assert repo version reverted
-	if err = appSchema.VerifySchemaVersion("22"); err != nil {
+	if err = appSchema.VerifySchemaVersion("23"); err != nil {
 		t.Fatal(err)
 	}
 
