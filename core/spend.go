@@ -20,25 +20,25 @@ const DefaultCurrencyDivisibility uint32 = 8
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
-	Address                string             `json:"address"`
-	Amount                 repo.CurrencyValue `json:"amount"`
-	FeeLevel               string             `json:"feeLevel"`
-	Memo                   string             `json:"memo"`
-	OrderID                string             `json:"orderId"`
-	RequireAssociatedOrder bool               `json:"requireOrder"`
-	Wallet                 string             `json:"wallet"`
-	SpendAll               bool               `json:"spendAll"`
+	Address                string              `json:"address"`
+	Amount                 *repo.CurrencyValue `json:"amount"`
+	FeeLevel               string              `json:"feeLevel"`
+	Memo                   string              `json:"memo"`
+	OrderID                string              `json:"orderId"`
+	RequireAssociatedOrder bool                `json:"requireOrder"`
+	Wallet                 string              `json:"wallet"`
+	SpendAll               bool                `json:"spendAll"`
 }
 
 type SpendResponse struct {
-	Amount             repo.CurrencyValue `json:"amount"`
-	ConfirmedBalance   repo.CurrencyValue `json:"confirmedBalance"`
-	Memo               string             `json:"memo"`
-	OrderID            string             `json:"orderId"`
-	Timestamp          time.Time          `json:"timestamp"`
-	Txid               string             `json:"txid"`
-	UnconfirmedBalance repo.CurrencyValue `json:"unconfirmedBalance"`
-	PeerID             string             `json:"-"`
+	Amount             *repo.CurrencyValue `json:"amount"`
+	ConfirmedBalance   *repo.CurrencyValue `json:"confirmedBalance"`
+	Memo               string              `json:"memo"`
+	OrderID            string              `json:"orderId"`
+	Timestamp          time.Time           `json:"timestamp"`
+	Txid               string              `json:"txid"`
+	UnconfirmedBalance *repo.CurrencyValue `json:"unconfirmedBalance"`
+	PeerID             string              `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
@@ -137,9 +137,9 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   *conf0,
-		UnconfirmedBalance: *uconf0,
-		Amount:             *amt0,
+		ConfirmedBalance:   conf0,
+		UnconfirmedBalance: uconf0,
+		Amount:             amt0,
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,

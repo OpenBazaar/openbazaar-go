@@ -27,7 +27,7 @@ type CurrencyValue struct {
 	Currency *CurrencyDefinition
 }
 
-func (c CurrencyValue) MarshalJSON() ([]byte, error) {
+func (c *CurrencyValue) MarshalJSON() ([]byte, error) {
 	fmt.Println("in curr val marshal json")
 	type currencyJson struct {
 		Amount   string             `json:"amount"`

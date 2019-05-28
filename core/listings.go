@@ -70,9 +70,9 @@ const (
 )
 
 type price struct {
-	CurrencyCode string             `json:"currencyCode"`
-	Amount       repo.CurrencyValue `json:"amount"`
-	Modifier     float32            `json:"modifier"`
+	CurrencyCode string              `json:"currencyCode"`
+	Amount       *repo.CurrencyValue `json:"amount"`
+	Modifier     float32             `json:"modifier"`
 }
 type thumbnail struct {
 	Tiny   string `json:"tiny"`
@@ -519,7 +519,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
 		Price: price{
 			CurrencyCode: listing.Listing.Metadata.PricingCurrency.Code,
-			Amount:       repo.CurrencyValue{Currency: defn, Amount: amt},
+			Amount:       &repo.CurrencyValue{Currency: defn, Amount: amt},
 			Modifier:     listing.Listing.Metadata.PriceModifier,
 		},
 		ShipsTo:            shipsTo,

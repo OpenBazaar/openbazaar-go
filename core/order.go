@@ -79,7 +79,7 @@ const (
 )
 
 // Purchase - add ricardian contract
-func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount repo.CurrencyValue, vendorOnline bool, err error) {
+func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
 	currency := &pb.CurrencyDefinition{
 		Code:         data.PaymentCoin,
 		Divisibility: n.getDivisibility(data.PaymentCoin),
@@ -87,16 +87,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	retCurrency := &repo.CurrencyValue{}
 	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
 	if err != nil {
-		return "", "", *retCurrency, false, err
+		return "", "", retCurrency, false, err
 	}
 	retCurrency.Currency = defn
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
-		return "", "", *retCurrency, false, err
+		return "", "", retCurrency, false, err
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(data.PaymentCoin)
 	if err != nil {
-		return "", "", *retCurrency, false, err
+		return "", "", retCurrency, false, err
 	}
 
 	// Add payment data and send to vendor
@@ -104,12 +104,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
-			return "", "", *retCurrency, false, err
+			return "", "", retCurrency, false, err
 		}
 
 		contract, err = n.SignOrder(contract)
 		if err != nil {
-			return "", "", *retCurrency, false, err
+			return "", "", retCurrency, false, err
 		}
 
 		// Send to order vendor
@@ -117,11 +117,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			id, addr, amt, err := processOfflineModeratedOrder(n, contract)
 			retCurrency.Amount = &amt
-			return id, addr, *retCurrency, false, err
+			return id, addr, retCurrency, false, err
 		}
 		id, addr, amt, f, err := processOnlineModeratedOrder(merchantResponse, n, contract)
 		retCurrency.Amount = &amt
-		return id, addr, *retCurrency, f, err
+		return id, addr, retCurrency, f, err
 
 	}
 	// Direct payment
@@ -136,7 +136,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
-		return "", "", *retCurrency, false, err
+		return "", "", retCurrency, false, err
 	}
 
 	payment.Amount = &pb.CurrencyValue{
@@ -148,7 +148,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	} // total
 	contract, err = n.SignOrder(contract)
 	if err != nil {
-		return "", "", *retCurrency, false, err
+		return "", "", retCurrency, false, err
 	}
 
 	// Send to order vendor and request a payment address
@@ -156,11 +156,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	if err != nil {
 		id, addr, amount, err := processOfflineDirectOrder(n, wal, contract, payment)
 		retCurrency.Amount = &amount
-		return id, addr, *retCurrency, false, err
+		return id, addr, retCurrency, false, err
 	}
 	id, addr, amt, f, err := processOnlineDirectOrder(merchantResponse, n, wal, contract)
 	retCurrency.Amount = &amt
-	return id, addr, *retCurrency, f, err
+	return id, addr, retCurrency, f, err
 }
 
 func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contract *pb.RicardianContract, wal wallet.Wallet) (*pb.RicardianContract, error) {
