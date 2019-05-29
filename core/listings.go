@@ -228,7 +228,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		code := coupon.GetDiscountCode()
 		_, err := mh.FromB58String(hash)
 		if err != nil {
-			couponMH, err := EncodeMultihash([]byte(code))
+			couponMH, err := ipfs.EncodeMultihash([]byte(code))
 			if err != nil {
 				return sl, err
 			}

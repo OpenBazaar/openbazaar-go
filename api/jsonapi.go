@@ -1767,7 +1767,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
-			id, err := core.ExtractIDFromPointer(p)
+			id, err := ipfs.ExtractIDFromPointer(p)
 			if err != nil {
 				continue
 			}
@@ -1853,7 +1853,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			foundMu := sync.Mutex{}
 			for p := range peerChan {
 				go func(pi ps.PeerInfo) {
-					pid, err := core.ExtractIDFromPointer(pi)
+					pid, err := ipfs.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
