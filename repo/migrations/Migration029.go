@@ -90,7 +90,7 @@ func (Migration029) Up(repoPath, databasePassword string, testnetEnabled bool) e
 }
 
 func (Migration029) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	// Down migration is a no-op (outsie of updating the version)
+	// Down migration is a no-op (outside of updating the version)
 	// We can't calculate the old style hash format anymore.
 	return writeRepoVer(repoPath, 29)
 }

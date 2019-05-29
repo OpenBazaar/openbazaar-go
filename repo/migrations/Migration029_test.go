@@ -27,18 +27,22 @@ func TestMigration029(t *testing.T) {
 	defer testRepo.DestroySchemaDirectories()
 
 	var (
-		repoverPath         = testRepo.DataPathJoin("repover")
-		listingIndexPath    = testRepo.DataPathJoin("root", "listings.json")
-		testListingSlug     = "Migration029_test_listing"
-		testListingPath     = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
-		expectedListingHash = "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
-	)
+		repoverPath      = testRepo.DataPathJoin("repover")
+		listingIndexPath = testRepo.DataPathJoin("root", "listings.json")
+		testListingSlug  = "Migration029_test_listing"
+		testListingPath  = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
 
-	listing := factory.NewListing(testListingSlug)
-	m := jsonpb.Marshaler{
-		Indent:       "    ",
-		EmitDefaults: true,
-	}
+		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
+		// If the default hashing algorithm changes at any point in the future you can expect this
+		// test to fail and it will need to be updated to maintain the functionality of this migration.
+		expectedListingHash = "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
+
+		listing = factory.NewListing(testListingSlug)
+		m       = jsonpb.Marshaler{
+			Indent:       "    ",
+			EmitDefaults: true,
+		}
+	)
 
 	f, err := os.Create(testListingPath)
 	if err != nil {
@@ -72,6 +76,7 @@ func TestMigration029(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// See comment above on expectedListingHash
 	if listingIndex[0].Hash != expectedListingHash {
 		t.Errorf("Expected listing hash %s got %s", expectedListingHash, listingIndex[0].Hash)
 	}
