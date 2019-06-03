@@ -52,6 +52,7 @@ const (
 	BootstrapNodeDefault_LeMarcheSerpette = "/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K"
 	BootstrapNodeDefault_BrixtonVillage   = "/ip4/139.59.174.197/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM"
 	BootstrapNodeDefault_Johari           = "/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg"
+	BootstrapNodeRelay_1                  = "/ip4/138.68.10.227/tcp/4001/ipfs/QmWUdwXW3bTXS19MtMjmfpnRYgssmbJCwnq8Lf9vjZwDii"
 
 	IPFSCachingRouterDefaultURI = "https://routing.api.openbazaar.org"
 	// End Configuration defaults
@@ -70,6 +71,7 @@ var (
 		BootstrapNodeDefault_LeMarcheSerpette,
 		BootstrapNodeDefault_BrixtonVillage,
 		BootstrapNodeDefault_Johari,
+		BootstrapNodeRelay_1,
 	}
 	BootstrapAddressesTestnet = []string{
 		BootstrapNodeTestnet_BrooklynFlea,
