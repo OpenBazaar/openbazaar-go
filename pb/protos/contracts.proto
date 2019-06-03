@@ -22,11 +22,13 @@ message RicardianContract {
 message CurrencyDefinition {
     string      code = 1;
     uint32 divisibility = 2;
+    string name = 3;
+    string currencyType = 4;
 }
 
 message CurrencyValue {
     CurrencyDefinition currency = 1;
-    string        value = 2;
+    string        amount = 2;
 }
 
 message Listing {

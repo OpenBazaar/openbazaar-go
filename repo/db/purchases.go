@@ -78,7 +78,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		int(state),
 		readInt,
 		int(contract.BuyerOrder.Timestamp.Seconds),
-		contract.BuyerOrder.Payment.Amount.Value,
+		contract.BuyerOrder.Payment.Amount.Amount,
 		contract.VendorListings[0].Item.Images[0].Tiny,
 		contract.VendorListings[0].VendorID.PeerID,
 		handle,

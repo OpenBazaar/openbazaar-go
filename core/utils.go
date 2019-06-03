@@ -82,11 +82,11 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	for _, r := range records {
 		record, ok := payments[r.Txid]
 		if ok {
-			n, _ := new(big.Int).SetString(record.Value.Value, 10)
+			n, _ := new(big.Int).SetString(record.Value.Amount, 10)
 			sum := new(big.Int).Add(n, &r.Value)
 			record.Value = &pb.CurrencyValue{
 				Currency: record.Value.Currency,
-				Value:    sum.String(),
+				Amount:   sum.String(),
 			}
 			payments[r.Txid] = record
 		} else {
@@ -94,7 +94,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			tx.Txid = r.Txid
 			tx.Value = &pb.CurrencyValue{
 				Currency: contract.BuyerOrder.Payment.Amount.Currency,
-				Value:    r.Value.String(),
+				Amount:   r.Value.String(),
 			} // r.Value
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
@@ -122,13 +122,13 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		// For multisig we can use the outgoing from the payment address
 		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
-				val, _ := new(big.Int).SetString(rec.Value.Value, 10)
+				val, _ := new(big.Int).SetString(rec.Value.Amount, 10)
 				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
 					refundRecord.Value = &pb.CurrencyValue{
 						Currency: rec.Value.Currency,
-						Value:    "-" + rec.Value.Value,
+						Amount:   "-" + rec.Value.Amount,
 					} //-rec.Value
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height

@@ -332,85 +332,85 @@ const walletAddressJSONResponse = `{
 const walletBalanceJSONResponse = `{
     "TBCH": {
         "confirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TBCH",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Bitcoin Cash"
+            "amount": "0",
+            "currency": {
+                "code": "TBCH",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Bitcoin Cash"
             }
         },
         "height": 0,
         "unconfirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TBCH",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Bitcoin Cash"
+            "amount": "0",
+            "currency": {
+                "code": "TBCH",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Bitcoin Cash"
             }
         }
     },
     "TBTC": {
         "confirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TBTC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Bitcoin"
+            "amount": "0",
+            "currency": {
+                "code": "TBTC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Bitcoin"
             }
         },
         "height": 0,
         "unconfirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TBTC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Bitcoin"
+            "amount": "0",
+            "currency": {
+                "code": "TBTC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Bitcoin"
             }
         }
     },
     "TLTC": {
         "confirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TLTC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Litecoin"
+            "amount": "0",
+            "currency": {
+                "code": "TLTC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Litecoin"
             }
         },
         "height": 0,
         "unconfirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TLTC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Litecoin"
+            "amount": "0",
+            "currency": {
+                "code": "TLTC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Litecoin"
             }
         }
     },
     "TZEC": {
         "confirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TZEC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Zcash"
+            "amount": "0",
+            "currency": {
+                "code": "TZEC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Zcash"
             }
         },
         "height": 0,
         "unconfirmed": {
-            "Amount": 0,
-            "Currency": {
-                "Code": "TZEC",
-                "CurrencyType": "crypto",
-                "Divisibility": 8,
-                "Name": "Zcash"
+            "amount": "0",
+            "currency": {
+                "code": "TZEC",
+                "currencyType": "crypto",
+                "divisibility": 8,
+                "name": "Zcash"
             }
         }
     }
@@ -424,11 +424,11 @@ const spendJSON = `{
 	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
 	"amount": {
-        "Amount": 1700000,
-        "Currency": {
-            "Code": "BTC",
-            "CurrencyType": "crypto",
-            "Divisibility": 8
+        "amount": "1700000",
+        "currency": {
+            "code": "BTC",
+            "currencyType": "crypto",
+            "civisibility": 8
         }
     },
 	"feeLevel": "NORMAL"

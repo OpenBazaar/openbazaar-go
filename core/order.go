@@ -80,16 +80,19 @@ const (
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
-	currency := &pb.CurrencyDefinition{
-		Code:         data.PaymentCoin,
-		Divisibility: n.getDivisibility(data.PaymentCoin),
-	}
+
 	retCurrency := &repo.CurrencyValue{}
 	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
 	if err != nil {
 		return "", "", retCurrency, false, err
 	}
 	retCurrency.Currency = defn
+	currency := &pb.CurrencyDefinition{
+		Code:         data.PaymentCoin,
+		Divisibility: n.getDivisibility(data.PaymentCoin),
+		Name:         defn.Name,
+		CurrencyType: defn.CurrencyType,
+	}
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", retCurrency, false, err
@@ -142,9 +145,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	payment.Amount = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{
 			Code:         data.PaymentCoin,
-			Divisibility: n.getDivisibility(data.PaymentCoin),
+			Divisibility: uint32(defn.Divisibility),
+			Name:         defn.Name,
+			CurrencyType: defn.CurrencyType,
 		},
-		Value: total.String(),
+		Amount: total.String(),
 	} // total
 	contract, err = n.SignOrder(contract)
 	if err != nil {
@@ -201,12 +206,15 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	if err != nil {
 		return nil, err
 	}
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
 	payment.Amount = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{
 			Code:         data.PaymentCoin,
-			Divisibility: n.getDivisibility(data.PaymentCoin),
+			Divisibility: uint32(defn.Divisibility),
+			Name:         defn.Name,
+			CurrencyType: defn.CurrencyType,
 		},
-		Value: total.String(),
+		Amount: total.String(),
 	} // total
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
 	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
@@ -257,9 +265,11 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	contract.BuyerOrder.RefundFee = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{
 			Code:         data.PaymentCoin,
-			Divisibility: n.getDivisibility(data.PaymentCoin),
+			Divisibility: uint32(defn.Divisibility),
+			Name:         defn.Name,
+			CurrencyType: defn.CurrencyType,
 		},
-		Value: fee.String(),
+		Amount: fee.String(),
 	}
 
 	err = wal.AddWatchedAddress(addr)
@@ -311,7 +321,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, *total, true, nil
 }
 
@@ -319,7 +329,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	// Vendor offline
 	// Change payment code to direct
 
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
 	//if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
 	f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
@@ -435,7 +445,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, *total, true, nil
 }
 
@@ -468,7 +478,7 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 		return "", "", *big.NewInt(0), err
 	}
 	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+	total, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 	return orderID, contract.BuyerOrder.Payment.Address, *total, err
 }
 
@@ -956,7 +966,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 			//satoshis += uint64(float32(satoshis) * l.Metadata.PriceModifier / 100.0)
 			itemQuantity = 1
 		} else {
-			p, _ := new(big.Int).SetString(l.Item.Price.Value, 10)
+			p, _ := new(big.Int).SetString(l.Item.Price.Amount, 10)
 			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code, l.Metadata.PricingCurrency.Code, *p)
 		}
 		if err != nil {
@@ -971,7 +981,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		for i, sku := range l.Item.Skus {
 			if selectedSku == i {
 				skuExists = true
-				surcharge0, _ := new(big.Int).SetString(sku.Surcharge.Value, 10)
+				surcharge0, _ := new(big.Int).SetString(sku.Surcharge.Amount, 10)
 				surcharge := new(big.Int).Abs(surcharge0)
 				if surcharge.Cmp(big.NewInt(0)) != 0 {
 					//surcharge := uint64(sku.Surcharge)
@@ -1008,7 +1018,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 					discount0 := vendorCoupon.GetPriceDiscount()
 					discount := big.NewInt(0)
 					if discount0 != nil {
-						discount, _ = new(big.Int).SetString(discount0.Value, 10)
+						discount, _ = new(big.Int).SetString(discount0.Amount, 10)
 					}
 					if discount.Cmp(big.NewInt(0)) > 0 {
 						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code,
@@ -1104,7 +1114,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if !ok {
 			return *big.NewInt(0), errors.New("shipping service not found in listing")
 		}
-		servicePrice, _ := new(big.Int).SetString(service.Price.Value, 10)
+		servicePrice, _ := new(big.Int).SetString(service.Price.Amount, 10)
 		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code,
 			listing.Metadata.PricingCurrency.Code, *servicePrice)
 		if err != nil {
@@ -1114,7 +1124,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		var secondarySatoshi big.Int
 		serviceAddlItemPrice := big.NewInt(0)
 		if service.AdditionalItemPrice != nil {
-			serviceAddlItemPrice, _ = new(big.Int).SetString(service.AdditionalItemPrice.Value, 10)
+			serviceAddlItemPrice, _ = new(big.Int).SetString(service.AdditionalItemPrice.Amount, 10)
 		}
 		if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
 			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Amount.Currency.Code,

@@ -105,7 +105,7 @@ func TestPutSale(t *testing.T) {
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
 	}
-	if total != contract.BuyerOrder.Payment.Amount.Value {
+	if total != contract.BuyerOrder.Payment.Amount.Amount {
 		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.Amount, total)
 	}
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {

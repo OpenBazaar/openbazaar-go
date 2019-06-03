@@ -24,7 +24,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 				Version:            2,
 			},
 			Item: &pb.Listing_Item{
-				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "100000"},
+				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -34,8 +34,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
 							Name:                "Standard shipping",
-							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "25000"},
-							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "10000"},
+							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},
@@ -104,7 +104,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "50000"},
+			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "50000"},
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -134,7 +134,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "-50000"},
+			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "-50000"},
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -195,7 +195,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		{
 			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
 			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "6000"}},
+			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "6000"}},
 		},
 	}
 
@@ -300,7 +300,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 				PricingCurrency:    &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 			},
 			Item: &pb.Listing_Item{
-				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "100000"},
+				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -310,8 +310,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
 							Name:                "Standard shipping",
-							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "25000"},
-							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "10000"},
+							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},

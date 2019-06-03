@@ -28,15 +28,29 @@ type CurrencyValue struct {
 }
 
 func (c *CurrencyValue) MarshalJSON() ([]byte, error) {
-	fmt.Println("in curr val marshal json")
 	type currencyJson struct {
 		Amount   string             `json:"amount"`
 		Currency CurrencyDefinition `json:"currency"`
 	}
 
 	c0 := currencyJson{
-		Amount:   c.Amount.String(),
-		Currency: *c.Currency,
+		Amount:   "0",
+		Currency: CurrencyDefinition{},
+		//Amount:   c.Amount.String(),
+		//Currency: *c.Currency,
+	}
+
+	if c.Amount != nil {
+		c0.Amount = c.Amount.String()
+	}
+
+	if c.Currency != nil {
+		c0.Currency = CurrencyDefinition{
+			Code:         c.Currency.Code,
+			Divisibility: c.Currency.Divisibility,
+			Name:         c.Currency.Name,
+			CurrencyType: c.Currency.CurrencyType,
+		}
 	}
 
 	return json.Marshal(c0)

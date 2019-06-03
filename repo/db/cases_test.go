@@ -236,7 +236,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 			Index: 0,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "5",
+				Amount:   "5",
 			}}}
 		contract = factory.NewContract()
 	)
@@ -295,7 +295,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 			Index: 1,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "11",
+				Amount:   "11",
 			}}}
 	)
 	if err != nil {
@@ -353,14 +353,14 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 			Index: 0,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "5",
+				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "11",
+				Amount:   "11",
 			}}}
 	)
 	if err != nil {
@@ -440,14 +440,14 @@ func TestGetByCaseID(t *testing.T) {
 			Index: 0,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
-				Value:    "5",
+				Amount:   "5",
 			}}}
 		expectedVendorOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
-				Value:    "11",
+				Amount:   "11",
 			}}}
 	)
 	if err != nil {
@@ -495,7 +495,7 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedBuyerOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value.GetValue() != expectedBuyerOutpoints[i].Value.GetValue() ||
+		if o.Value.GetAmount() != expectedBuyerOutpoints[i].Value.GetAmount() ||
 			o.Value.GetCurrency().Code != expectedBuyerOutpoints[i].Value.GetCurrency().Code {
 			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedBuyerOutpoints[i].Value)
 		}
@@ -531,14 +531,14 @@ func TestMarkAsClosed(t *testing.T) {
 			Index: 0,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "5",
+				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "11",
+				Amount:   "11",
 			}}}
 	)
 	if err != nil {
@@ -585,14 +585,14 @@ func TestCasesDB_GetAll(t *testing.T) {
 			Index: 0,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "5",
+				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
 			Value: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Value:    "11",
+				Amount:   "11",
 			}}}
 	)
 	if err != nil {
@@ -724,7 +724,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			Payment: &pb.Order_Payment{
 				Amount: &pb.CurrencyValue{
 					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-					Value:    "10",
+					Amount:   "10",
 				},
 				Method:  pb.Order_Payment_DIRECT,
 				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
@@ -883,7 +883,7 @@ func TestGetDisputesForDisputeExpiryAllowsMissingContracts(t *testing.T) {
 			Payment: &pb.Order_Payment{
 				Amount: &pb.CurrencyValue{
 					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-					Value:    "10",
+					Amount:   "10",
 				},
 				Method:  pb.Order_Payment_DIRECT,
 				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",

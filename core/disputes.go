@@ -76,7 +76,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 		o.Index = r.Index
 		o.Value = &pb.CurrencyValue{
 			Currency: contract.BuyerOrder.Payment.Amount.Currency,
-			Value:    r.Value.String(),
+			Amount:   r.Value.String(),
 		}
 		outpoints = append(outpoints, o)
 	}
@@ -337,7 +337,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o.Index = r.Index
 			o.Value = &pb.CurrencyValue{
 				Currency: myContract.BuyerOrder.Payment.Amount.Currency,
-				Value:    r.Value.String(),
+				Amount:   r.Value.String(),
 			} //uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
@@ -397,7 +397,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o.Index = r.Index
 			o.Value = &pb.CurrencyValue{
 				Currency: myContract.BuyerOrder.Payment.Amount.Currency,
-				Value:    r.Value.String(),
+				Amount:   r.Value.String(),
 			} //uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
@@ -519,7 +519,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Calculate total out value
 	totalOut := big.NewInt(0)
 	for _, o := range outpoints {
-		n, _ := new(big.Int).SetString(o.Value.Value, 10)
+		n, _ := new(big.Int).SetString(o.Value.Amount, 10)
 		totalOut.Add(totalOut, n)
 	}
 
@@ -594,7 +594,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(o.Value.Value, 10)
+		n, _ := new(big.Int).SetString(o.Value.Amount, 10)
 		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
@@ -694,7 +694,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
 			Amount: &pb.CurrencyValue{
 				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
-				Value:    amt.String(),
+				Amount:   amt.String(),
 			},
 		}
 	}
@@ -709,7 +709,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
 			Amount: &pb.CurrencyValue{
 				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
-				Value:    amt.String(),
+				Amount:   amt.String(),
 			},
 		}
 	}
@@ -724,7 +724,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
 			Amount: &pb.CurrencyValue{
 				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
-				Value:    amt.String(),
+				Amount:   amt.String(),
 			},
 		}
 	}
@@ -1040,7 +1040,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(o.Value.Value, 10)
+		n, _ := new(big.Int).SetString(o.Value.Amount, 10)
 		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
@@ -1065,7 +1065,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.Amount.Value, 10)
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.Amount.Amount, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   *n,
@@ -1078,7 +1078,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.Amount.Value, 10)
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.Amount.Amount, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   *n,
@@ -1091,7 +1091,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.Amount.Value, 10)
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.Amount.Amount, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   *n,

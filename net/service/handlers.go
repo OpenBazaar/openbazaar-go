@@ -332,7 +332,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -375,7 +375,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -680,7 +680,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
@@ -804,7 +804,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err

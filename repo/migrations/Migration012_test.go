@@ -243,7 +243,7 @@ func testMigration012_assertListingMigratedCorrectly(t *testing.T, listingBefore
 	if expectedListing.Item.Description != actualListing.Item.Description {
 		t.Fatal("Expected:", expectedListing.Item.Description, "\nGot:", actualListing.Item.Description)
 	}
-	if expectedListing.Item.Price.GetValue() != actualListing.Item.Price.GetValue() {
+	if expectedListing.Item.Price.GetAmount() != actualListing.Item.Price.GetAmount() {
 		t.Fatal("Expected:", expectedListing.Item.Price, "\nGot:", actualListing.Item.Price)
 	}
 	if expectedListing.Item.Grams != actualListing.Item.Grams {
@@ -571,7 +571,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 4",
 			Description: "test",
-			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Value: "999"},
+			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,
@@ -593,7 +593,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 5",
 			Description: "test",
-			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Value: "999"},
+			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,

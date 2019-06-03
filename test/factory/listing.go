@@ -6,6 +6,18 @@ import (
 )
 
 func NewListing(slug string) *pb.Listing {
+	coupons := []*pb.Listing_Coupon{}
+	sampleCoupon := new(pb.Listing_Coupon)
+	sampleCoupon.Title = "sample coupon"
+	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PriceDiscount{
+		PriceDiscount: &pb.CurrencyValue{
+			Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+			Amount:   "5000",
+		},
+	}
+	coupons = append(coupons, sampleCoupon)
 	return &pb.Listing{
 		Slug:               slug,
 		TermsAndConditions: "Sample Terms and Conditions",
@@ -13,7 +25,7 @@ func NewListing(slug string) *pb.Listing {
 		Metadata: &pb.Listing_Metadata{
 			Version:            1,
 			AcceptedCurrencies: []string{"TBTC"},
-			PricingCurrency:    &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+			PricingCurrency:    &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
 			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
 			Format:             pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
@@ -21,13 +33,13 @@ func NewListing(slug string) *pb.Listing {
 		Item: &pb.Listing_Item{
 			Skus: []*pb.Listing_Item_Sku{
 				{
-					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "0"},
+					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
 					Quantity:     12,
 					ProductID:    "1",
 					VariantCombo: []uint32{0, 0},
 				},
 				{
-					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "0"},
+					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
 					Quantity:     44,
 					ProductID:    "2",
 					VariantCombo: []uint32{0, 1},
@@ -56,8 +68,8 @@ func NewListing(slug string) *pb.Listing {
 			Nsfw:        false,
 			Description: "Example item",
 			Price: &pb.CurrencyValue{
-				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-				Value:    "100",
+				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
+				Amount:   "100",
 			},
 			ProcessingTime: "3 days",
 			Categories:     []string{"tshirts"},
@@ -81,19 +93,14 @@ func NewListing(slug string) *pb.Listing {
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
 						Name:              "standard",
-						Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "20"},
+						Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
 						EstimatedDelivery: "3 days",
 					},
 				},
 			},
 		},
-		Coupons: []*pb.Listing_Coupon{
-			{
-				Title:    "sample coupon",
-				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
-				Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5},
-			},
-		},
+
+		Coupons: coupons,
 	}
 }
 
@@ -104,13 +111,13 @@ func NewCryptoListing(slug string) *pb.Listing {
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
 	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "ETH", Divisibility: 8}
-	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Divisibility: 8}
+	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil
 	listing.Item.Price = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-		Value:    "0",
+		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+		Amount:   "0",
 	}
 	listing.Coupons = nil
 	return listing
@@ -126,7 +133,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",
-					Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Value: "20"},
+					Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
 					EstimatedDelivery: "3 days",
 				},
 			},

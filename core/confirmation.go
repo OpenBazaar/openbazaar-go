@@ -90,7 +90,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		}
 		oc.RequestedAmount = &pb.CurrencyValue{
 			Currency: contract.BuyerOrder.Payment.Amount.Currency,
-			Value:    val.String(),
+			Amount:   val.String(),
 		}
 	} else {
 		oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
@@ -237,7 +237,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
@@ -268,7 +268,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.OrderID != orderID {
 		return errors.New("vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.RequestedAmount.Value != contract.BuyerOrder.Payment.Amount.Value {
+	if contract.VendorOrderConfirmation.RequestedAmount.Amount != contract.BuyerOrder.Payment.Amount.Amount {
 		return errors.New("vendor requested an amount different from what we calculated")
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)

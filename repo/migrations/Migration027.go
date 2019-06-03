@@ -133,7 +133,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 		sl.Listing.Item.Price = &pb.CurrencyValue{
 			Currency: sl.Listing.Metadata.PricingCurrency,
-			Value:    strconv.FormatUint(listingAbstract.Price.Amount, 10),
+			Amount:   strconv.FormatUint(listingAbstract.Price.Amount, 10),
 		}
 
 		for _, sku := range listingAbstract.Item.Skus {
@@ -143,7 +143,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				}
 				sl.Listing.Item.Skus[j].Surcharge = &pb.CurrencyValue{
 					Currency: sl.Listing.Metadata.PricingCurrency,
-					Value:    strconv.FormatInt(sku.Surcharge, 10),
+					Amount:   strconv.FormatInt(sku.Surcharge, 10),
 				}
 			}
 		}
@@ -160,7 +160,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 						}
 						sl.Listing.ShippingOptions[i].Services[j].Price = &pb.CurrencyValue{
 							Currency: sl.Listing.Metadata.PricingCurrency,
-							Value:    strconv.FormatUint(ser.Price, 10),
+							Amount:   strconv.FormatUint(ser.Price, 10),
 						}
 					}
 				}
@@ -178,7 +178,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 						{
 							sl.Listing.Coupons[i].Discount.(*pb.Listing_Coupon_PriceDiscount).PriceDiscount = &pb.CurrencyValue{
 								Currency: sl.Listing.Metadata.PricingCurrency,
-								Value:    strconv.FormatUint(coupon.Price, 10),
+								Amount:   strconv.FormatUint(coupon.Price, 10),
 							}
 						}
 					}

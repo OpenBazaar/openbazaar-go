@@ -444,8 +444,8 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 	physicalListing := factory.NewListing("physical")
 
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
+	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
+	//runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
@@ -461,6 +461,12 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
+	/*[]*pb.Listing_Coupon{}
+	sampleCoupon := new(pb.Listing_Coupon)
+	sampleCoupon.Title = "sample coupon"
+	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
+	*/
 	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
 
 }
@@ -468,7 +474,7 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.Price = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Value: "1"}
+	listing.Item.Price = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "1"}
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},

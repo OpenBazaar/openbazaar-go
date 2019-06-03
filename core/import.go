@@ -172,7 +172,7 @@ listingLoop:
 				}
 				listing.Item.Price = &pb.CurrencyValue{
 					Currency: listing.Metadata.PricingCurrency,
-					Value:    f.Mul(f, big.NewInt(100)).String(),
+					Amount:   f.Mul(f, big.NewInt(100)).String(),
 				} // uint64(f * 100)
 			} else {
 				//listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -183,7 +183,7 @@ listingLoop:
 				}
 				listing.Item.Price = &pb.CurrencyValue{
 					Currency: listing.Metadata.PricingCurrency,
-					Value:    f.String(),
+					Amount:   f.String(),
 				}
 			}
 			pos, ok = fields["nsfw"]
@@ -312,7 +312,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(f * 100)).String(),
+							Amount:   big.NewInt(int64(f * 100)).String(),
 						} // uint64(f * 100)
 					} else {
 						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -323,7 +323,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(price0)).String(),
+							Amount:   big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -349,7 +349,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(f * 100)).String(),
+							Amount:   big.NewInt(int64(f * 100)).String(),
 						} // uint64(f * 100)
 					} else {
 						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -360,7 +360,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(price0)).String(),
+							Amount:   big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -386,7 +386,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(f * 100)).String(),
+							Amount:   big.NewInt(int64(f * 100)).String(),
 						} // uint64(f * 100)
 					} else {
 						//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -397,7 +397,7 @@ listingLoop:
 						}
 						service.Price = &pb.CurrencyValue{
 							Currency: listing.Metadata.PricingCurrency,
-							Value:    big.NewInt(int64(price0)).String(),
+							Amount:   big.NewInt(int64(price0)).String(),
 						}
 					}
 					so.Services = append(so.Services, service)
@@ -457,7 +457,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(f * 100)).String(),
+								Amount:   big.NewInt(int64(f * 100)).String(),
 							} // uint64(f * 100)
 						} else {
 							//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -468,7 +468,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(price0)).String(),
+								Amount:   big.NewInt(int64(price0)).String(),
 							}
 						}
 						so.Services = append(so.Services, service)
@@ -494,7 +494,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(f * 100)).String(),
+								Amount:   big.NewInt(int64(f * 100)).String(),
 							} // uint64(f * 100)
 						} else {
 							//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -505,7 +505,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(price0)).String(),
+								Amount:   big.NewInt(int64(price0)).String(),
 							}
 						}
 						so.Services = append(so.Services, service)
@@ -531,7 +531,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(f * 100)).String(),
+								Amount:   big.NewInt(int64(f * 100)).String(),
 							} // uint64(f * 100)
 						} else {
 							//service.Price, err = strconv.ParseUint(record[pos], 10, 64)
@@ -542,7 +542,7 @@ listingLoop:
 							}
 							service.Price = &pb.CurrencyValue{
 								Currency: listing.Metadata.PricingCurrency,
-								Value:    big.NewInt(int64(price0)).String(),
+								Amount:   big.NewInt(int64(price0)).String(),
 							}
 						}
 						so.Services = append(so.Services, service)
