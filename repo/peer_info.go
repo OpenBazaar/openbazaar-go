@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -44,22 +45,67 @@ type PeerKeychain struct {
 
 // PeerInfo represents a signed identity on OpenBazaar
 type PeerInfo struct {
-	protobufPeerID   string
+	protobufPeerID string
+	peerHashMemo   string
+
 	handle           string
 	keychain         *PeerKeychain
 	bitcoinSignature []byte
 }
 
-func (p *PeerInfo) Handle() string           { return p.handle }
-func (p *PeerInfo) BitcoinSignature() []byte { return p.bitcoinSignature }
-func (p *PeerInfo) BitcoinKey() []byte       { return p.keychain.bitcoin }
-func (p *PeerInfo) IdentityKeyBytes() []byte { return p.keychain.identity }
+func (p *PeerInfo) String() string {
+	return fmt.Sprintf("&PeerInfo{protobufPeerID:%s handle:%s bitcoinSignature:%v keychain: &PeerKeychain{bitcoin:%v identity:%v}}", p.protobufPeerID, p.handle, p.bitcoinSignature, p.keychain.bitcoin, p.keychain.identity)
+}
+
+func (p *PeerInfo) Handle() string { return p.handle }
+func (p *PeerInfo) BitcoinSignature() []byte {
+	var sig = make([]byte, len(p.bitcoinSignature))
+	copy(sig, p.bitcoinSignature)
+	return sig
+}
+func (p *PeerInfo) BitcoinKey() []byte {
+	var key = make([]byte, len(p.keychain.bitcoin))
+	copy(key, p.keychain.bitcoin)
+	return key
+}
+func (p *PeerInfo) IdentityKeyBytes() []byte {
+	var key = make([]byte, len(p.keychain.identity))
+	copy(key, p.keychain.identity)
+	return key
+}
 func (p *PeerInfo) IdentityKey() (ipfs.PubKey, error) {
 	key, err := crypto.UnmarshalPublicKey(p.IdentityKeyBytes())
 	if err != nil {
 		return nil, fmt.Errorf("reading: %s", err)
 	}
 	return key.(ipfs.PubKey), nil
+}
+
+func (p *PeerInfo) Equal(other *PeerInfo) bool {
+	if !bytes.Equal(p.IdentityKeyBytes(), other.IdentityKeyBytes()) {
+		return false
+	}
+	if !bytes.Equal(p.BitcoinKey(), other.BitcoinKey()) {
+		return false
+	}
+	if !bytes.Equal(p.BitcoinSignature(), other.BitcoinSignature()) {
+		return false
+	}
+	if p.handle != other.handle {
+		return false
+	}
+	tHash, err := p.Hash()
+	if err != nil {
+		return false
+	}
+	oHash, err := other.Hash()
+	if err != nil {
+		return false
+	}
+	if tHash != oHash {
+		return false
+	}
+	return true
 }
 
 func (p *PeerInfo) Valid() (result bool, errs []error) {
@@ -83,6 +129,10 @@ func (p *PeerInfo) Valid() (result bool, errs []error) {
 
 // Hash returns the public hash based on the PeerKeychain.Identity key material
 func (p *PeerInfo) Hash() (string, error) {
+	if p.peerHashMemo != "" {
+		return p.peerHashMemo, nil
+	}
+
 	key, err := p.IdentityKey()
 	if err != nil {
 		return "", err
@@ -91,5 +141,21 @@ func (p *PeerInfo) Hash() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return id.Pretty(), nil
+	p.peerHashMemo = id.Pretty()
+	return p.peerHashMemo, nil
+}
+
+func (p *PeerInfo) Protobuf() *pb.ID {
+	peerHash, err := p.Hash()
+	if err != nil && p.protobufPeerID != "" {
+		peerHash = p.protobufPeerID
+	}
+	return &pb.ID{
+		PeerID: peerHash,
+		Handle: p.handle,
+		Pubkeys: &pb.ID_Pubkeys{
+			Bitcoin:  p.BitcoinKey(),
+			Identity: p.IdentityKeyBytes(),
+		},
+	}
 }

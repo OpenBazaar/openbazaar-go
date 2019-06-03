@@ -11,33 +11,44 @@ import (
 func TestPeerInfoFromProtobuf(t *testing.T) {
 	var (
 		validFixture = factory.MustNewValidPeerIDProtobuf()
-		actual, err  = repo.NewPeerInfoFromProtobuf(validFixture)
+		subject, err = repo.NewPeerInfoFromProtobuf(validFixture)
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if hash, err := actual.Hash(); err == nil && hash != validFixture.PeerID {
+	if hash, err := subject.Hash(); err == nil && hash != validFixture.PeerID {
 		t.Errorf("expected Hash() to be (%s), but was (%s)", validFixture.PeerID, hash)
 		if err != nil {
 			t.Logf("error from Hash(): %s", err)
 		}
 	}
 
-	if actual.Handle() != validFixture.Handle {
-		t.Errorf("expected Handle() to be (%s), but was (%s)", validFixture.Handle, actual.Handle())
+	if subject.Handle() != validFixture.Handle {
+		t.Errorf("expected Handle() to be (%s), but was (%s)", validFixture.Handle, subject.Handle())
 	}
 
-	if !bytes.Equal(actual.BitcoinSignature(), validFixture.BitcoinSig) {
-		t.Errorf("expected BitcoinSignature() to be (%s), but was (%s)", validFixture.BitcoinSig, actual.BitcoinSignature())
+	if !bytes.Equal(subject.BitcoinSignature(), validFixture.BitcoinSig) {
+		t.Errorf("expected BitcoinSignature() to be (%s), but was (%s)", validFixture.BitcoinSig, subject.BitcoinSignature())
 	}
 
-	if !bytes.Equal(actual.BitcoinKey(), validFixture.Pubkeys.Bitcoin) {
-		t.Errorf("expected BitcoinKey() to be (%s), but was (%s)", validFixture.Pubkeys.Bitcoin, actual.BitcoinKey())
+	if !bytes.Equal(subject.BitcoinKey(), validFixture.Pubkeys.Bitcoin) {
+		t.Errorf("expected BitcoinKey() to be (%s), but was (%s)", validFixture.Pubkeys.Bitcoin, subject.BitcoinKey())
 	}
 
-	if !bytes.Equal(actual.IdentityKeyBytes(), validFixture.Pubkeys.Identity) {
-		t.Errorf("expected IdentityKey() to be (%s), but was (%s)", validFixture.Pubkeys.Identity, actual.IdentityKeyBytes())
+	if !bytes.Equal(subject.IdentityKeyBytes(), validFixture.Pubkeys.Identity) {
+		t.Errorf("expected IdentityKey() to be (%s), but was (%s)", validFixture.Pubkeys.Identity, subject.IdentityKeyBytes())
+	}
+
+	newProto := subject.Protobuf()
+	duplicateSubject, err := repo.NewPeerInfoFromProtobuf(newProto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !subject.Equal(duplicateSubject) {
+		t.Error("expected Protobuf() to produce recipricol of NewPeerInfoFromProtobuf, but did not")
+		t.Logf("\texpected: %+v\n", subject)
+		t.Logf("\tactual: %+v\n", duplicateSubject)
 	}
 }
 
