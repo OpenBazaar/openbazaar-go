@@ -69,7 +69,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 	// Node config
 	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
-		AuthenticationToken: "",
+		AuthenticationToken: authenticationToken,
 		Testnet:             testnet,
 		UserAgent:           userAgent,
 		WalletTrustedPeer:   walletTrustedPeer,
