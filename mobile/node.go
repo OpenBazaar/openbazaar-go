@@ -16,6 +16,7 @@ import (
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -51,6 +52,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -65,7 +67,7 @@ type Node struct {
 }
 
 // NewNode create the configuration file for a new node
-func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
+func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string, profile bool) *Node {
 	// Node config
 	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
@@ -73,6 +75,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 		Testnet:             testnet,
 		UserAgent:           userAgent,
 		WalletTrustedPeer:   walletTrustedPeer,
+		Profile:             profile,
 	}
 
 	// Use Mobile struct to carry config data
@@ -301,6 +304,15 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 // Start start openbazaard (OpenBazaar daemon)
 func (n *Node) Start() error {
+	if n.config.Profile {
+		go func() {
+			listenAddr := net.JoinHostPort("", "6060")
+			profileRedirect := http.RedirectHandler("/debug/pprof",
+				http.StatusSeeOther)
+			http.Handle("/", profileRedirect)
+			log.Errorf("%v", http.ListenAndServe(listenAddr, nil))
+		}()
+	}
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err

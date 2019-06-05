@@ -35,4 +35,7 @@ type NodeConfig struct {
 
 	// The coin to use
 	CoinType wallet.CoinType
+
+	// Run the pprof profiler on port 6060
+	Profile bool
 }
