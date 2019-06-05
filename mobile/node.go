@@ -196,6 +196,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		// don't use pushnodes on testnet
 		dataSharing.PushTo = []string{}
 	}
+	dataSharing.PushTo = []string{"QmWUdwXW3bTXS19MtMjmfpnRYgssmbJCwnq8Lf9vjZwDii", "QmcXwJePGLsP1x7gTXLE51BmE7peUKe2eQuR5LGbmasekt"}
 
 	// Mnemonic
 	mn, err := sqliteDB.Config().GetMnemonic()
