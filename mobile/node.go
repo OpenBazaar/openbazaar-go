@@ -182,6 +182,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	cfg.Identity = identity
 	cfg.Swarm.DisableNatPortMap = true
+	cfg.Swarm.EnableAutoRelay = false
+	cfg.Swarm.EnableAutoNATService = false
 
 	// Setup testnet
 	if config.Testnet {
