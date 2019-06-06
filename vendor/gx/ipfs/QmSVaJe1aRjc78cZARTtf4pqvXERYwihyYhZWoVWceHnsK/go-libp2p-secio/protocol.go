@@ -159,8 +159,8 @@ func (s *secureSession) runHandshakeSync() error {
 	proposeOut.Ciphers = SupportedCiphers
 	proposeOut.Hashes = SupportedHashes
 
-	// log.Debugf("1.0 Propose: nonce:%s exchanges:%s ciphers:%s hashes:%s",
-	// 	nonceOut, SupportedExchanges, SupportedCiphers, SupportedHashes)
+	log.Debugf("1.0 Propose: nonce:%s exchanges:%s ciphers:%s hashes:%s",
+		nonceOut, SupportedExchanges, SupportedCiphers, SupportedHashes)
 
 	// Marshal our propose packet
 	proposeOutBytes, err := proto.Marshal(proposeOut)
@@ -181,8 +181,8 @@ func (s *secureSession) runHandshakeSync() error {
 		return err
 	}
 
-	// log.Debugf("1.0.1 Propose recv: nonce:%s exchanges:%s ciphers:%s hashes:%s",
-	// 	proposeIn.GetRand(), proposeIn.GetExchanges(), proposeIn.GetCiphers(), proposeIn.GetHashes())
+	log.Debugf("1.0.1 Propose recv: nonce:%s exchanges:%s ciphers:%s hashes:%s",
+		proposeIn.GetRand(), proposeIn.GetExchanges(), proposeIn.GetCiphers(), proposeIn.GetHashes())
 
 	// =============================================================================
 	// step 1.1 Identify -- get identity from their key
@@ -263,8 +263,8 @@ func (s *secureSession) runHandshakeSync() error {
 	s.remote.cipherT = s.local.cipherT
 	s.remote.hashT = s.local.hashT
 
-	// log.Debugf("1.2 selection: exchange:%s cipher:%s hash:%s",
-	// 	s.local.curveT, s.local.cipherT, s.local.hashT)
+	log.Debugf("1.2 selection: exchange:%s cipher:%s hash:%s",
+		s.local.curveT, s.local.cipherT, s.local.hashT)
 
 	// =============================================================================
 	// step 2. Exchange -- exchange (signed) ephemeral keys. verify signatures.
@@ -283,7 +283,7 @@ func (s *secureSession) runHandshakeSync() error {
 	selectionOut.Write(s.local.ephemeralPubKey)
 	selectionOutBytes := selectionOut.Bytes()
 
-	// log.Debugf("2.0 exchange: %v", selectionOutBytes)
+	log.Debugf("2.0 exchange: %v", selectionOutBytes)
 	exchangeOut := new(pb.Exchange)
 	exchangeOut.Epubkey = s.local.ephemeralPubKey
 	exchangeOut.Signature, err = s.localKey.Sign(selectionOutBytes)
@@ -321,20 +321,20 @@ func (s *secureSession) runHandshakeSync() error {
 	selectionIn.Write(proposeOutBytes)
 	selectionIn.Write(s.remote.ephemeralPubKey)
 	selectionInBytes := selectionIn.Bytes()
-	// log.Debugf("2.0.1 exchange recv: %v", selectionInBytes)
+	log.Debugf("2.0.1 exchange recv: %v", selectionInBytes)
 
 	// u.POut("Remote Peer Identified as %s\n", s.remote)
 	sigOK, err := s.remote.permanentPubKey.Verify(selectionInBytes, exchangeIn.GetSignature())
 	if err != nil {
-		// log.Error("2.1 Verify: failed: %s", err)
+		log.Error("2.1 Verify: failed: %s", err)
 		return err
 	}
 
 	if !sigOK {
-		// log.Error("2.1 Verify: failed: %s", ErrBadSig)
+		log.Error("2.1 Verify: failed: %s", ErrBadSig)
 		return ErrBadSig
 	}
-	// log.Debugf("2.1 Verify: signature verified.")
+	log.Debugf("2.1 Verify: signature verified.")
 
 	// =============================================================================
 	// step 2.2. Keys -- generate keys for mac + encryption
@@ -361,8 +361,8 @@ func (s *secureSession) runHandshakeSync() error {
 	s.local.keys = k1
 	s.remote.keys = k2
 
-	// log.Debug("2.2 keys:\n\tshared: %v\n\tk1: %v\n\tk2: %v",
-	// 	s.sharedSecret, s.local.keys, s.remote.keys)
+	log.Debug("2.2 keys:\n\tshared: %v\n\tk1: %v\n\tk2: %v",
+		s.sharedSecret, s.local.keys, s.remote.keys)
 
 	// =============================================================================
 	// step 2.3. MAC + Cipher -- prepare MAC + cipher
@@ -375,7 +375,7 @@ func (s *secureSession) runHandshakeSync() error {
 		return err
 	}
 
-	// log.Debug("2.3 mac + cipher.")
+	log.Debug("2.3 mac + cipher.")
 
 	// =============================================================================
 	// step 3. Finish -- send expected message to verify encryption works (send local nonce)
@@ -385,7 +385,7 @@ func (s *secureSession) runHandshakeSync() error {
 	r := NewETMReader(s.insecure, s.remote.cipher, s.remote.mac)
 	s.ReadWriteCloser = msgio.Combine(w, r).(msgio.ReadWriteCloser)
 
-	// log.Debug("3.0 finish. sending: %v", proposeIn.GetRand())
+	log.Debug("3.0 finish. sending: %v", proposeIn.GetRand())
 
 	// send their Nonce and receive ours
 	nonceOut2, err := readWriteMsg(s.ReadWriteCloser, proposeIn.GetRand())
@@ -394,7 +394,7 @@ func (s *secureSession) runHandshakeSync() error {
 	}
 	defer s.ReleaseMsg(nonceOut2)
 
-	// log.Debug("3.0 finish.\n\texpect: %v\n\tactual: %v", nonceOut, nonceOut2)
+	log.Debug("3.0 finish.\n\texpect: %v\n\tactual: %v", nonceOut, nonceOut2)
 	if !bytes.Equal(nonceOut, nonceOut2) {
 		return fmt.Errorf("Failed to read our encrypted nonce: %s != %s", nonceOut2, nonceOut)
 	}

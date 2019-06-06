@@ -3,6 +3,7 @@ package ipfs
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 
@@ -13,8 +14,6 @@ import (
 
 var log = logging.MustGetLogger("ipfs")
 
-var pubErr = errors.New(`name publish failed`)
-
 // Publish a signed IPNS record to our Peer ID
 func Publish(n *core.IpfsNode, hash string) error {
 	err := n.Namesys.Publish(context.Background(), n.PrivateKey, ipath.FromString("/ipfs/"+hash))
@@ -22,6 +21,6 @@ func Publish(n *core.IpfsNode, hash string) error {
 		log.Infof("Published %s to IPNS", hash)
 		return nil
 	} else {
-		return pubErr
+		return fmt.Errorf("name publish failed: %s", err)
 	}
 }
