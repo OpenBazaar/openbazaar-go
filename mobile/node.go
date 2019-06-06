@@ -4,17 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
-	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
-	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
-	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
-	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
-	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
-	p2phost "gx/ipfs/QmYrWiWM4qtrnCeT3R14jY3ZZyirDNJgwK57q4qFYePgbd/go-libp2p-host"
-	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
-	"gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
-	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -22,8 +11,20 @@ import (
 	"path/filepath"
 	"time"
 
+	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
+	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
+	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
+	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	ipfsconfig "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
+	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	p2phost "gx/ipfs/QmYrWiWM4qtrnCeT3R14jY3ZZyirDNJgwK57q4qFYePgbd/go-libp2p-host"
+	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
+	"gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
+	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
+	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
+	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -49,6 +50,7 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -64,12 +66,19 @@ type Node struct {
 	apiConfig      *apiSchema.APIConfig
 }
 
+var (
+	fileLogFormat = logging.MustStringFormatter(
+		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+	)
+	mainLoggingBackend logging.Backend
+)
+
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
 	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
-		AuthenticationToken: "",
+		AuthenticationToken: authenticationToken,
 		Testnet:             testnet,
 		UserAgent:           userAgent,
 		WalletTrustedPeer:   walletTrustedPeer,
@@ -92,9 +101,25 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ipfs.UpdateIPFSGlobalProtocolVars(config.Testnet)
 
 	// Logging
-	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(logger)
+	ipfsLog := &lumberjack.Logger{
+		Filename:   path.Join(config.RepoPath, "logs", "ipfs.log"),
+		MaxSize:    5, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	ipfslogging.LdJSONFormatter()
+	ipfslogging.Output(ipfsLog)()
+
+	obLog := &lumberjack.Logger{
+		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
+		MaxSize:    5, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	obFileBackend := logging.NewLogBackend(obLog, "", 0)
+	obFileBackendFormatted := logging.NewBackendFormatter(obFileBackend, fileLogFormat)
+	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted)
+	logging.SetLevel(logging.INFO, "")
 
 	migrations.WalletCoinType = config.CoinType
 
@@ -197,7 +222,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		DB:                   sqliteDB.DB(),
 		Params:               &params,
 		RepoPath:             config.RepoPath,
-		Logger:               logger,
+		Logger:               mainLoggingBackend,
 		WalletCreationDate:   creationDate,
 		Mnemonic:             mn,
 		DisableExchangeRates: config.DisableExchangerates,
@@ -488,5 +513,5 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	}
 
 	// Create and return an API gateway
-	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
+	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
 }
