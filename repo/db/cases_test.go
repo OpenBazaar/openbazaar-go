@@ -281,8 +281,8 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	if string(buyerErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(buyerErrors))
 	}
-	if string(buyerOuts) != `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"value":"5"}}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"value":"5"}}]`, string(buyerOuts))
+	if string(buyerOuts) != `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]`, string(buyerOuts))
 	}
 }
 
@@ -339,8 +339,8 @@ func TestUpdateVendorInfo(t *testing.T) {
 	if string(vendorErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(vendorErrors))
 	}
-	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":{"currency":{"code":"BTC","divisibility":8},"value":"11"}}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":{"currency":{"code":"BTC","divisibility":8},"value":"11"}}]`, string(vendorOuts))
+	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]`, string(vendorOuts))
 	}
 }
 

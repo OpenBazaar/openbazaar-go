@@ -474,7 +474,7 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.Price = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "1"}
+	listing.Item.Price = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},

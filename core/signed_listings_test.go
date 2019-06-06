@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -103,6 +104,7 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 	option := listing.Listing.ShippingOptions[0].Services[0]
 
 	core.ApplyShippingOptions(listing)
+	fmt.Println("nnnnn   :", option.AdditionalItemPrice.Amount)
 
 	if option.AdditionalItemPrice.Amount != "100" {
 		t.Error("Shipping options were not applied properly")

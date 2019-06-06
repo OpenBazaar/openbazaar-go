@@ -34,7 +34,7 @@
                         "code": "USD",
                         "divisibility": 2
                     },
-        "value": "1000"
+        "amount": "1000"
     },
       "tags": [
       ],
@@ -93,7 +93,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -107,7 +107,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -121,7 +121,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -135,7 +135,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -149,7 +149,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -163,7 +163,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -177,7 +177,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -191,7 +191,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         },
         {
@@ -205,7 +205,7 @@
                             "code": "USD",
                             "divisibility": 2
                         },
-            "value": "100"
+            "amount": "100"
         }
         }
       ]
@@ -225,7 +225,7 @@
                               "code": "USD",
                               "divisibility": 2
                           },
-              "value": "100"
+              "amount": "100"
           },
             "estimatedDelivery": "1-2 Days",
             "additionalItemPrice": {
@@ -233,7 +233,7 @@
                               "code": "USD",
                               "divisibility": 2
                           },
-              "value": "100"
+              "amount": "100"
           }
           }
         ]

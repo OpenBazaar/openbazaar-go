@@ -66,10 +66,10 @@ func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
 	var c0 currencyJson
 
 	err := json.Unmarshal(b, &c0)
-
 	if err == nil {
 		c.Amount, _ = new(big.Int).SetString(c0.Amount, 10)
-		c.Currency, err = LoadCurrencyDefinitions().Lookup(c0.Currency.Code.String())
+		//c.Currency, err = LoadCurrencyDefinitions().Lookup(c0.Currency.Code.String())
+		c.Currency = &c0.Currency
 	}
 
 	return err

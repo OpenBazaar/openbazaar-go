@@ -10,13 +10,13 @@ func NewListing(slug string) *pb.Listing {
 	sampleCoupon := new(pb.Listing_Coupon)
 	sampleCoupon.Title = "sample coupon"
 	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
-	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
-	sampleCoupon.Discount = &pb.Listing_Coupon_PriceDiscount{
-		PriceDiscount: &pb.CurrencyValue{
-			Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-			Amount:   "5000",
-		},
-	}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5.0}
+	// sampleCoupon.Discount = &pb.Listing_Coupon_PriceDiscount{
+	// 	PriceDiscount: &pb.CurrencyValue{
+	// 		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+	// 		Amount:   "50",
+	// 	},
+	// }
 	coupons = append(coupons, sampleCoupon)
 	return &pb.Listing{
 		Slug:               slug,
@@ -26,7 +26,7 @@ func NewListing(slug string) *pb.Listing {
 			Version:            1,
 			AcceptedCurrencies: []string{"TBTC"},
 			PricingCurrency:    &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
+			Expiry:             &timestamp.Timestamp{Seconds: 3147483647},
 			Format:             pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 		},
@@ -69,7 +69,7 @@ func NewListing(slug string) *pb.Listing {
 			Description: "Example item",
 			Price: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-				Amount:   "100",
+				Amount:   "2000",
 			},
 			ProcessingTime: "3 days",
 			Categories:     []string{"tshirts"},
