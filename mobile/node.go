@@ -182,6 +182,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	cfg.Identity = identity
 	cfg.Swarm.DisableNatPortMap = true
+	cfg.Swarm.EnableAutoRelay = true
+	cfg.Swarm.EnableAutoNATService = false
 
 	// Setup testnet
 	if config.Testnet {
@@ -195,6 +197,10 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 		// don't use pushnodes on testnet
 		dataSharing.PushTo = []string{}
+	}
+	cfg.Bootstrap = []string{
+		"/ip6/2a03:b0c0:1:d0::b:d001/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM",
+		"/ip4/206.189.224.90/tcp/4001/ipfs/Qmb8i7uy6rk47hNorNLMVRMer4Nv9YWRhzZrWVqnvk5mSk",
 	}
 
 	// Mnemonic

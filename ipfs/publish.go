@@ -2,7 +2,6 @@ package ipfs
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
