@@ -3809,6 +3809,26 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
 	_, peerID := path.Split(r.URL.Path)
+	if len(peerID) == 0 {
+		ErrorResponse(w, http.StatusBadRequest, "peer id argument required")
+		return
+	}
+
+	if i.node.IpfsNode.Identity.Pretty() == peerID {
+		//ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(datastore.NewKey(core.KeyCachePrefix + peerID))
+		peer, err := peer.IDB58Decode(peerID)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("decoding peer id: %s", err))
+			return
+		}
+		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(peer))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
+			return
+		}
+		SanitizedResponse(w, hex.EncodeToString(ipnsBytes))
+		return
+	}
 
 	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
