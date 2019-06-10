@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
+	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -3838,6 +3839,12 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
 	defer cancel()
+
+	_, err = routing.GetPublicKey(i.node.IpfsNode.Routing, ctx, pid)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, "/ipns/"+pid.String())
 	if err != nil {
