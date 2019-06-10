@@ -181,7 +181,19 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 	cfg.Identity = identity
-	cfg.Swarm.DisableNatPortMap = true
+	cfg.Swarm.DisableNatPortMap = false
+	cfg.Swarm.EnableAutoRelay = true
+	cfg.Swarm.EnableAutoNATService = false
+
+	// Temporary override of bootstrap nodes
+	cfg.Bootstrap = []string{
+		"/ip6/2604:a880:2:d0::219d:9001/tcp/4001/ipfs/QmWUdwXW3bTXS19MtMjmfpnRYgssmbJCwnq8Lf9vjZwDii",
+		"/ip6/2604:a880:400:d1::c1d:2001/tcp/4001/ipfs/QmcXwJePGLsP1x7gTXLE51BmE7peUKe2eQuR5LGbmasekt",
+		"/ip6/2604:a880:400:d1::99a:8001/tcp/4001/ipfs/Qmb8i7uy6rk47hNorNLMVRMer4Nv9YWRhzZrWVqnvk5mSk",
+		"/ip4/138.68.10.227/tcp/4001/ipfs/QmWUdwXW3bTXS19MtMjmfpnRYgssmbJCwnq8Lf9vjZwDii",
+		"/ip4/157.230.59.219/tcp/4001/ipfs/QmcXwJePGLsP1x7gTXLE51BmE7peUKe2eQuR5LGbmasekt",
+		"/ip4/206.189.224.90/tcp/4001/ipfs/Qmb8i7uy6rk47hNorNLMVRMer4Nv9YWRhzZrWVqnvk5mSk",
+	}
 
 	// Setup testnet
 	if config.Testnet {
