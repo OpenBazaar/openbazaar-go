@@ -179,7 +179,6 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	if outgoing {
 		outgoingInt = 1
 	}
-	var err error
 	if messageId != "" {
 		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 and timestamp<=(select timestamp from chat where messageID=?) limit 1"
 		rows, err := c.db.Query(stm, peerID, subject, outgoingInt, messageId)
@@ -217,12 +216,14 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 			return "", updated, fmt.Errorf("commit tx: %s", err)
 		}
 	} else {
-		var peerStm string
+		var (
+			peerStm string
+			stm     = "select messageID from chat where subject=?" + peerStm + " and outgoing=? and read=0 limit 1"
+		)
 		if peerID != "" {
 			peerStm = " and peerID=?"
 		}
 
-		stm := "select messageID from chat where subject=?" + peerStm + " and outgoing=? and read=0 limit 1"
 		var rows *sql.Rows
 		var err error
 		if peerID != "" {
