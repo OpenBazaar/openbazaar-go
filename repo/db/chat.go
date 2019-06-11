@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -178,8 +179,6 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	if outgoing {
 		outgoingInt = 1
 	}
-	var stmt *sql.Stmt
-	var tx *sql.Tx
 	var err error
 	if messageId != "" {
 		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 and timestamp<=(select timestamp from chat where messageID=?) limit 1"
@@ -191,17 +190,31 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 			updated = true
 		}
 		rows.Close()
+		var tx *sql.Tx
 		tx, err = c.db.Begin()
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("create tx: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("create tx: %s", err)
 		}
+		var stmt *sql.Stmt
 		stmt, err = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("prepare chat update: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("prepare chat update: %s", err)
 		}
 		_, err = stmt.Exec(peerID, subject, outgoingInt, messageId)
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("update chat record: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("update chat record: %s", err)
+		}
+		if err := tx.Commit(); err != nil {
+			return "", updated, fmt.Errorf("commit tx: %s", err)
 		}
 	} else {
 		var peerStm string
@@ -224,13 +237,21 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 			updated = true
 		}
 		rows.Close()
+		var tx *sql.Tx
 		tx, err = c.db.Begin()
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("create tx: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("create tx: %s", err)
 		}
+		var stmt *sql.Stmt
 		stmt, err = tx.Prepare("update chat set read=1 where subject=?" + peerStm + " and outgoing=?")
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("prepare chat update: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("prepare chat update: %s", err)
 		}
 		if peerID != "" {
 			_, err = stmt.Exec(subject, peerID, outgoingInt)
@@ -238,16 +259,15 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 			_, err = stmt.Exec(subject, outgoingInt)
 		}
 		if err != nil {
-			return "", updated, err
+			if rErr := tx.Rollback(); rErr != nil {
+				return "", updated, fmt.Errorf("update chat record: %s (w rollback error: %s)", err, rErr)
+			}
+			return "", updated, fmt.Errorf("update chat record: %s", err)
+		}
+		if err := tx.Commit(); err != nil {
+			return "", updated, fmt.Errorf("commit tx: %s", err)
 		}
 	}
-	defer stmt.Close()
-	if err != nil {
-		tx.Rollback()
-		return "", updated, err
-	}
-	tx.Commit()
-
 	var peerStm string
 
 	if peerID != "" {
