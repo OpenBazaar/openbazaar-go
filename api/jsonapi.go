@@ -26,7 +26,9 @@ import (
 	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
+	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
@@ -3815,18 +3817,12 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if i.node.IpfsNode.Identity.Pretty() == peerID {
-		//ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(datastore.NewKey(core.KeyCachePrefix + peerID))
-		peer, err := peer.IDB58Decode(peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("decoding peer id: %s", err))
-			return
-		}
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(peer))
+		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
 			return
 		}
-		SanitizedResponse(w, hex.EncodeToString(ipnsBytes))
+		fmt.Fprint(w, hex.EncodeToString(ipnsBytes))
 		return
 	}
 
@@ -3839,13 +3835,24 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
 	defer cancel()
 
-	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, "/ipns/"+pid.String())
+	_, err = routing.GetPublicKey(i.node.IpfsNode.Routing, ctx, pid)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	SanitizedResponse(w, hex.EncodeToString(ipnsEntryBytes))
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*600)
+	defer cancel()
+
+	ipnsKey := ipns.RecordKey(pid)
+
+	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, ipnsKey)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	fmt.Fprint(w, hex.EncodeToString(ipnsEntryBytes))
 }
 
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
