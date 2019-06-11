@@ -212,15 +212,6 @@ func RenderJSONOrStringError(w http.ResponseWriter, errorCode int, err error) {
 	ErrorResponse(w, http.StatusInternalServerError, errStr)
 }
 
-func UnsanitizedJSONResponse(w http.ResponseWriter, response interface{}) {
-	b, err := json.MarshalIndent(response, "", "    ")
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshal json error: %s", err))
-		return
-	}
-	fmt.Fprint(w, string(b))
-}
-
 func SanitizedResponse(w http.ResponseWriter, response string) {
 	ret, err := SanitizeJSON([]byte(response))
 	if err != nil {
@@ -3840,7 +3831,13 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)
-		UnsanitizedJSONResponse(w, response)
+		b, err := json.MarshalIndent(response, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshal json error: %s", err))
+			return
+		}
+
+		SanitizedResponse(w, string(b))
 		return
 	}
 
@@ -3867,7 +3864,13 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response.Record.Hex = hex.EncodeToString(ipnsBytes)
-	UnsanitizedJSONResponse(w, response)
+	b, err := json.MarshalIndent(response, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshal json error: %s", err))
+		return
+	}
+
+	SanitizedResponse(w, string(b))
 }
 
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
