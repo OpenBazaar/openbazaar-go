@@ -1478,7 +1478,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if profile.PeerID != peerID {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
+			ErrorResponse(w, http.StatusNotFound, "invalid profile: peer id mismatch on found profile")
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
