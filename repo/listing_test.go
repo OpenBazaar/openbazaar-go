@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -64,7 +65,36 @@ func TestListingVersion(t *testing.T) {
 			continue
 		}
 		if l.Metadata.Version != e.expectedResponse {
-			t.Errorf("expected example (%s) to have version response (%d), but instead was (%d)", e.fixtureName, e.expectedResponse, l.Metadata.Version)
+			t.Errorf("expected example (%s) to have version response (%+v), but instead was (%+v)", e.fixtureName, e.expectedResponse, l.Metadata.Version)
 		}
+	}
+}
+
+func TestListingFromProtobuf(t *testing.T) {
+	var (
+		subject     = factory.NewListing("slug")
+		actual, err = repo.NewListingFromProtobuf(subject)
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if subject.Slug != actual.Slug {
+		t.Errorf("expected slug to be (%s), but was (%s)", subject.Slug, actual.Slug)
+	}
+	if subject.TermsAndConditions != actual.TermsAndConditions {
+		t.Errorf("expected terms/conditions to be (%s), but was (%s)", subject.TermsAndConditions, actual.TermsAndConditions)
+	}
+	if subject.RefundPolicy != actual.RefundPolicy {
+		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.RefundPolicy, actual.RefundPolicy)
+	}
+	if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
+		t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
+		if err != nil {
+			t.Logf("hash had an error: %s", err)
+		}
+	}
+	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
+		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
 	}
 }

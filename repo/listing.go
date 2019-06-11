@@ -3,7 +3,22 @@ package repo
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
+
+func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
+	var vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
+	if err != nil {
+		return nil, fmt.Errorf("new peer info: %s", err)
+	}
+	return &Listing{
+		Slug:               l.Slug,
+		TermsAndConditions: l.TermsAndConditions,
+		RefundPolicy:       l.RefundPolicy,
+		Vendor:             vendorInfo,
+	}, nil
+}
 
 type IndividualListingContainer struct {
 	Listing `json:"listing"`
@@ -12,9 +27,13 @@ type IndividualListingContainer struct {
 // Listing represents a trade offer which can be accepted by another
 // party on the OpenBazaar network
 type Listing struct {
-	Metadata ListingMetadata `json:"metadata"`
+	Slug               string //`json:"slug"`
+	TermsAndConditions string //`json:"termsAndConditions"`
+	RefundPolicy       string //`json:"refundPolicy"`
+
+	Vendor   *PeerInfo       //`json:"vendorID"`
+	Metadata ListingMetadata //`json:"metadata"`
 	//Hash               string    `json:"hash"`
-	//Slug               string    `json:"slug"`
 	//Title              string    `json:"title"`
 	//Categories         []string  `json:"categories"`
 	//NSFW               bool      `json:"nsfw"`
