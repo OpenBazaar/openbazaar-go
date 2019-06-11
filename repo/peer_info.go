@@ -11,7 +11,10 @@ import (
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 )
 
-var ErrInvalidInlinePeerID = errors.New("inline hash does not match produced hash")
+var (
+	ErrInvalidInlinePeerID = errors.New("inline hash does not match produced hash")
+	ErrPeerInfoIsNil       = errors.New("peer info is nil")
+)
 
 func init() {
 	peer.AdvancedEnableInlining = false
@@ -59,6 +62,9 @@ func (p *PeerInfo) String() string {
 
 func (p *PeerInfo) Handle() string { return p.handle }
 func (p *PeerInfo) BitcoinSignature() []byte {
+	if p == nil {
+		return nil
+	}
 	var sig = make([]byte, len(p.bitcoinSignature))
 	copy(sig, p.bitcoinSignature)
 	return sig
@@ -76,12 +82,15 @@ func (p *PeerInfo) IdentityKeyBytes() []byte {
 func (p *PeerInfo) IdentityKey() (ipfs.PubKey, error) {
 	key, err := crypto.UnmarshalPublicKey(p.IdentityKeyBytes())
 	if err != nil {
-		return nil, fmt.Errorf("reading: %s", err)
+		return nil, fmt.Errorf("unmarshaling identity key bytes: %s", err)
 	}
 	return key.(ipfs.PubKey), nil
 }
 
 func (p *PeerInfo) Equal(other *PeerInfo) bool {
+	if p == nil || other == nil {
+		return false
+	}
 	if !bytes.Equal(p.IdentityKeyBytes(), other.IdentityKeyBytes()) {
 		return false
 	}
@@ -109,6 +118,9 @@ func (p *PeerInfo) Equal(other *PeerInfo) bool {
 }
 
 func (p *PeerInfo) Valid() (result bool, errs []error) {
+	if p == nil {
+		return false, []error{ErrPeerInfoIsNil}
+	}
 	result = true
 	errs = make([]error, 0)
 	if p.protobufPeerID != "" {
@@ -129,6 +141,9 @@ func (p *PeerInfo) Valid() (result bool, errs []error) {
 
 // Hash returns the public hash based on the PeerKeychain.Identity key material
 func (p *PeerInfo) Hash() (string, error) {
+	if p == nil {
+		return "", ErrPeerInfoIsNil
+	}
 	if p.peerHashMemo != "" {
 		return p.peerHashMemo, nil
 	}

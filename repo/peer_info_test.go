@@ -105,3 +105,22 @@ func TestPeerInfoValid(t *testing.T) {
 		t.Logf("errors: %+v", errs)
 	}
 }
+
+func TestNilPeerInfo(t *testing.T) {
+	var nilPeer *repo.PeerInfo
+	if nilPeer.Equal(nilPeer) {
+		t.Errorf("expected nil *PeerInfo.Equal() to be false, but was not")
+	}
+
+	if isValid, _ := nilPeer.Valid(); isValid {
+		t.Errorf("expected nil *PeerInfo to be invalid, but was valid")
+	}
+
+	h, err := nilPeer.Hash()
+	if h != "" {
+		t.Errorf("expected nil *PeerInfo.Hash() to be empty, but was not")
+	}
+	if err != repo.ErrPeerInfoIsNil {
+		t.Errorf("expected nil *PeerInfo.Hash() respond with the appropriate error, but did not")
+	}
+}
