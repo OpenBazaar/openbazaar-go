@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
-	"gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -24,9 +22,11 @@ import (
 	"time"
 
 	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
+	files "gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
+	iface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
@@ -210,6 +210,15 @@ func RenderJSONOrStringError(w http.ResponseWriter, errorCode int, err error) {
 	}
 
 	ErrorResponse(w, http.StatusInternalServerError, errStr)
+}
+
+func UnsanitizedJSONResponse(w http.ResponseWriter, response interface{}) {
+	b, err := json.MarshalIndent(response, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshal json error: %s", err))
+		return
+	}
+	fmt.Fprint(w, string(b))
 }
 
 func SanitizedResponse(w http.ResponseWriter, response string) {
@@ -3816,13 +3825,22 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	type respType struct {
+		PeerID string `json:"peerid"`
+		Record struct {
+			Hex string `json:"hex"`
+		} `json:"record"`
+	}
+	var response = respType{PeerID: peerID}
+
 	if i.node.IpfsNode.Identity.Pretty() == peerID {
 		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
 			return
 		}
-		fmt.Fprint(w, hex.EncodeToString(ipnsBytes))
+		response.Record.Hex = hex.EncodeToString(ipnsBytes)
+		UnsanitizedJSONResponse(w, response)
 		return
 	}
 
@@ -3833,26 +3851,23 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
-	defer cancel()
-
 	_, err = routing.GetPublicKey(i.node.IpfsNode.Routing, ctx, pid)
+	cancel()
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*600)
-	defer cancel()
-
-	ipnsKey := ipns.RecordKey(pid)
-
-	ipnsEntryBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, ipnsKey)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*180)
+	ipnsBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, ipns.RecordKey(pid))
+	cancel()
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	fmt.Fprint(w, hex.EncodeToString(ipnsEntryBytes))
+	response.Record.Hex = hex.EncodeToString(ipnsBytes)
+	UnsanitizedJSONResponse(w, response)
 }
 
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
