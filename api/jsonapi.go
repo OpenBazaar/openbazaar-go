@@ -3811,9 +3811,8 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
 	_, peerID := path.Split(r.URL.Path)
-	if len(peerID) == 0 {
-		ErrorResponse(w, http.StatusBadRequest, "peer id argument required")
-		return
+	if len(peerID) == 0 || peerID == "resolveipns" {
+		peerID = i.node.IpfsNode.Identity.Pretty()
 	}
 
 	type respType struct {
