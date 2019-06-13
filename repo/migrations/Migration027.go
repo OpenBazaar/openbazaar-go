@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -11,6 +12,7 @@ import (
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -24,6 +26,7 @@ type Migration027 struct{}
 type Migration027_ListingData struct {
 	Hash         string   `json:"hash"`
 	Slug         string   `json:"slug"`
+	VendorID     *pb.ID   `json:"vendorID"`
 	Title        string   `json:"title"`
 	Categories   []string `json:"categories"`
 	NSFW         bool     `json:"nsfw"`
@@ -68,6 +71,16 @@ type Migration027_ListingData struct {
 	} `json:"coupons,omitempty"`
 }
 
+type Migration027_SignedListingData struct {
+	Listing   Migration027_ListingData `json:"listing"`
+	Hash      string                   `json:"hash"`
+	Signature []byte                   `json:"signature"`
+}
+
+func (m *Migration027_SignedListingData) Reset()         { *m = Migration027_SignedListingData{} }
+func (m *Migration027_SignedListingData) String() string { return proto.CompactTextString(m) }
+func (*Migration027_SignedListingData) ProtoMessage()    {}
+
 func Migration027_GetIdentityKey(repoPath, databasePassword string, testnetEnabled bool) ([]byte, error) {
 	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
 	if err != nil {
@@ -86,6 +99,7 @@ func Migration027_GetIdentityKey(repoPath, databasePassword string, testnetEnabl
 }
 
 func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+	fmt.Println("in mig 27 up ")
 	listingsIndexFilePath := path.Join(repoPath, "root", "listings.json")
 
 	// Find all crypto listings
@@ -93,6 +107,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		// Finish early if no listings are found
 		return writeRepoVer(repoPath, 28)
 	}
+	fmt.Println("file is :", listingsIndexFilePath)
 	listingsIndexJSONBytes, err := ioutil.ReadFile(listingsIndexFilePath)
 	if err != nil {
 		return err
@@ -100,6 +115,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 	var listingsIndex []*Migration027_ListingData
 	err = json.Unmarshal(listingsIndexJSONBytes, &listingsIndex)
+	fmt.Println("after unmarshal listing : ", err)
 	if err != nil {
 		return err
 	}
@@ -116,31 +132,54 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Check each crypto listing for markup
 	var markupListings []*pb.SignedListing
 	for _, listingAbstract := range cryptoListings {
+		spew.Dump(listingAbstract)
 		listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listingAbstract.Slug))
 		if err != nil {
 			return err
 		}
 		sl := new(pb.SignedListing)
-		err = jsonpb.UnmarshalString(string(listingJSONBytes), sl)
+		temp := new(Migration027_SignedListingData)
+		err = jsonpb.UnmarshalString(string(listingJSONBytes), temp)
 		if err != nil {
 			return err
 		}
 
-		sl.Listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
-			Code:         listingAbstract.Price.CurrencyCode,
-			Divisibility: 8,
-		}
+		sl.Listing = new(pb.Listing)
+		sl.Listing.Metadata = new(pb.Listing_Metadata)
+		sl.Listing.Item = new(pb.Listing_Item)
+
+		sl.Listing.Slug = listingAbstract.Slug
+		/*
+			sl.Listing.VendorID = &pb.ID{
+				PeerID:     listingAbstract.VendorID.PeerID,
+				Handle:     listingAbstract.VendorID.Handle,
+				BitcoinSig: listingAbstract.VendorID.BitcoinSig,
+				Pubkeys: &pb.ID_Pubkeys{
+					Identity: listingAbstract.VendorID.Pubkeys.Identity,
+					Bitcoin:  listingAbstract.VendorID.Pubkeys.Bitcoin,
+				},
+			}
+			sl.Listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
+				Code:         listingAbstract.Price.CurrencyCode,
+				Divisibility: 8,
+			}
+		*/
 
 		sl.Listing.Item.Price = &pb.CurrencyValue{
 			Currency: sl.Listing.Metadata.PricingCurrency,
 			Amount:   strconv.FormatUint(listingAbstract.Price.Amount, 10),
 		}
 
+		if len(listingAbstract.Item.Skus) > 0 {
+			sl.Listing.Item.Skus = make([]*pb.Listing_Item_Sku, len(listingAbstract.Item.Skus))
+		}
+
 		for _, sku := range listingAbstract.Item.Skus {
-			for j, s := range sl.Listing.Item.Skus {
+			for j, s := range temp.Listing.Item.Skus {
 				if s.ProductID != sku.ProductID {
 					continue
 				}
+				sl.Listing.Item.Skus[j] = new(pb.Listing_Item_Sku)
 				sl.Listing.Item.Skus[j].Surcharge = &pb.CurrencyValue{
 					Currency: sl.Listing.Metadata.PricingCurrency,
 					Amount:   strconv.FormatInt(sku.Surcharge, 10),
@@ -148,12 +187,20 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			}
 		}
 
+		if len(listingAbstract.ShippingOptions) > 0 {
+			sl.Listing.ShippingOptions = make([]*pb.Listing_ShippingOption, len(listingAbstract.ShippingOptions))
+		}
+
 		for _, so := range listingAbstract.ShippingOptions {
-			for i, so1 := range sl.Listing.ShippingOptions {
+			for i, so1 := range temp.Listing.ShippingOptions {
 				if so.Name != so1.Name {
 					continue
 				}
+				sl.Listing.ShippingOptions[i] = new(pb.Listing_ShippingOption)
 				for _, ser := range so.Services {
+					if len(so.Services) > 0 {
+						sl.Listing.ShippingOptions[i].Services = make([]*pb.Listing_ShippingOption_Service, len(so.Services))
+					}
 					for j, ser0 := range sl.Listing.ShippingOptions[i].Services {
 						if ser.Name != ser0.Name {
 							continue
