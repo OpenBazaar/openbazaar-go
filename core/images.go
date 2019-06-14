@@ -3,9 +3,12 @@ package core
 import (
 	"bytes"
 	"encoding/base64"
-	"image"
-	_ "image/gif"
-	jpeg "image/jpeg"
+	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	"image" // load gif
+	"image/draw"
+	"image/gif"
+	_ "image/gif" // load png
+	"image/jpeg"
 	_ "image/png"
 	"io"
 	"io/ioutil"
@@ -65,58 +68,153 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*pb.Profile_Im
 	return imageHashes, nil
 }
 
-// SetProductImages - use the original image ina base64 string format and generate tiny,
+// SetProductImages - use the original image in a base64 string format and generate tiny,
 // small, medium and large images for the product
 func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*pb.Profile_Image, error) {
 	return n.resizeImage(base64ImageData, filename, 120, 120)
 }
 
-func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth, baseHeight int) (*pb.Profile_Image, error) {
-	img, err := decodeImageData(base64ImageData)
-	if err != nil {
-		return nil, err
-	}
-
-	imgPath := path.Join(n.RepoPath, "root", "images")
-
-	t, err := n.addResizedImage(img, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename))
-	if err != nil {
-		return nil, err
-	}
-	s, err := n.addResizedImage(img, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename))
-	if err != nil {
-		return nil, err
-	}
-	m, err := n.addResizedImage(img, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename))
-	if err != nil {
-		return nil, err
-	}
-	l, err := n.addResizedImage(img, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename))
-	if err != nil {
-		return nil, err
-	}
-	o, err := n.addImage(img, path.Join(imgPath, "original", filename))
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.Profile_Image{Tiny: t, Small: s, Medium: m, Large: l, Original: o}, nil
+func base64ToReader(base64ImageData string) io.Reader {
+	return base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 }
 
-func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, error) {
+func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth, baseHeight uint) (*pb.Profile_Image, error) {
+	imgPath := path.Join(n.RepoPath, "root", "images")
+
+	imgType, err := decodeImageType(base64ImageData)
+	if err != nil {
+		return nil, err
+	}
+
+	if imgType == "gif" {
+		reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
+		imgGif, err := gif.DecodeAll(reader)
+		if err != nil {
+			return nil, err
+		}
+		reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
+		imgCfg, err := gif.DecodeConfig(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		t, err := n.addResizedGif(imgGif, &imgCfg, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		s, err := n.addResizedGif(imgGif, &imgCfg, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		m, err := n.addResizedGif(imgGif, &imgCfg, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		l, err := n.addResizedGif(imgGif, &imgCfg, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add original file
+		out, err := os.Create(path.Join(imgPath, "original", filename))
+		if err != nil {
+			return nil, err
+		}
+
+		// Write to file
+		err = gif.EncodeAll(out, imgGif)
+		if err != nil {
+			return nil, err
+		}
+
+		out.Close()
+		if err != nil {
+			return nil, err
+		}
+		o, err := ipfs.AddFile(n.IpfsNode, path.Join(imgPath, "original", filename))
+		if err != nil {
+			return nil, err
+		}
+		return &pb.Profile_Image{Tiny: t, Small: s, Medium: m, Large: l, Original: o}, nil
+	} else {
+		img, imgCfg, err := decodeImageData(base64ImageData)
+		if err != nil {
+			return nil, err
+		}
+
+		t, err := n.addResizedImage(img, imgCfg, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		s, err := n.addResizedImage(img, imgCfg, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		m, err := n.addResizedImage(img, imgCfg, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		l, err := n.addResizedImage(img, imgCfg, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		o, err := n.addImage(img, path.Join(imgPath, "original", filename), imgType)
+		if err != nil {
+			return nil, err
+		}
+		return &pb.Profile_Image{Tiny: t, Small: s, Medium: m, Large: l, Original: o}, nil
+	}
+	return nil, err
+}
+
+func (n *OpenBazaarNode) addImage(img image.Image, imgPath string, imgType string) (string, error) {
 	out, err := os.Create(imgPath)
 	if err != nil {
 		return "", err
 	}
-	jpeg.Encode(out, img, nil)
+	err = jpeg.Encode(out, img, nil)
+	if err != nil {
+		return "", err
+	}
+	out.Close()
+	if err != nil {
+		return "", err
+	}
+	return ipfs.AddFile(n.IpfsNode, imgPath)
+}
+
+func (n *OpenBazaarNode) addResizedGif(imgGif *gif.GIF, imgCfg *image.Config, w, h uint, imgPath string, imgType string) (string, error) {
+
+	width, height := uint(imgCfg.Width), uint(imgCfg.Height)
+	if w <= uint(width) && h <= uint(height) {
+		width, height = getImageAttributes(w, h, uint(imgCfg.Width), uint(imgCfg.Height))
+	}
+
+	for index, img := range imgGif.Image {
+		resized := resize.Resize(width, height, img, resize.Lanczos3)
+		rect := image.Rect(0, 0, int(width), int(height))
+		img := image.NewPaletted(rect, img.Palette)
+		draw.Draw(img, img.Rect, resized, rect.Min, draw.Over)
+		imgGif.Image[index] = img
+	}
+	out, err := os.Create(imgPath)
+	if err != nil {
+		return "", err
+	}
+
+	err = gif.EncodeAll(out, imgGif)
+	if err != nil {
+		return "", err
+	}
+
 	out.Close()
 	return ipfs.AddFile(n.IpfsNode, imgPath)
 }
 
-func (n *OpenBazaarNode) addResizedImage(img image.Image, w, h int, imgPath string) (string, error) {
-	width, height := getImageAttributes(w, h, img.Bounds().Max.X, img.Bounds().Max.Y)
-	newImg := imaging.Resize(img, width, height, imaging.Lanczos)
-	return n.addImage(newImg, imgPath)
+func (n *OpenBazaarNode) addResizedImage(img image.Image, imgCfg *image.Config, w, h uint, imgPath string, imgType string) (string, error) {
+	width, height := getImageAttributes(w, h, uint(imgCfg.Width), uint(imgCfg.Height))
+	newImg := resize.Resize(width, height, img, resize.Lanczos3)
+	return n.addImage(newImg, imgPath, imgType)
 }
 
 func decodeImageData(base64ImageData string) (image.Image, error) {
