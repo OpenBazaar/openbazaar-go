@@ -8,12 +8,14 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 
@@ -71,10 +73,108 @@ type Migration027_ListingData struct {
 	} `json:"coupons,omitempty"`
 }
 
+type mig27Listing struct {
+	Slug               string                         `json:"slug,omitempty"`
+	VendorID           *pb.ID                         `json:"vendorID,omitempty"`
+	Metadata           *mig27Listing_Metadata         `json:"metadata,omitempty"`
+	Item               *mig27Listing_Item             `json:"item,omitempty"`
+	ShippingOptions    []*mig27Listing_ShippingOption `json:"shippingOptions,omitempty"`
+	Taxes              []*mig27Listing_Tax            `json:"taxes,omitempty"`
+	Coupons            []*mig27Listing_Coupon         `json:"coupons,omitempty"`
+	Moderators         []string                       `json:"moderators,omitempty"`
+	TermsAndConditions string                         `json:"termsAndConditions,omitempty"`
+	RefundPolicy       string
+}
+
+type mig27Listing_Metadata struct {
+	Version            uint32   `json:"version,omitempty"`
+	ContractType       string   `json:"contractType,omitempty"`
+	Format             string   `json:"format,omitempty"`
+	Expiry             string   `json:"expiry,omitempty"`
+	AcceptedCurrencies []string `json:"acceptedCurrencies,omitempty"`
+	PricingCurrency    string   `json:"pricingCurrency,omitempty"`
+	Language           string   `json:"language,omitempty"`
+	EscrowTimeoutHours uint32   `json:"escrowTimeoutHours,omitempty"`
+	CoinType           string   `json:"coinType,omitempty"`
+	CoinDivisibility   uint32   `json:"coinDivisibility,omitempty"`
+	PriceModifier      float32  `json:"priceModifier,omitempty"`
+}
+
+type mig27Listing_Item struct {
+	Title          string                    `json:"title,omitempty"`
+	Description    string                    `json:"description,omitempty"`
+	ProcessingTime string                    `json:"processingTime,omitempty"`
+	Price          uint64                    `json:"price,omitempty"`
+	Nsfw           bool                      `json:"nsfw,omitempty"`
+	Tags           []string                  `json:"tags,omitempty"`
+	Images         []*pb.Listing_Item_Image  `json:"images,omitempty"`
+	Categories     []string                  `json:"categories,omitempty"`
+	Grams          float32                   `json:"grams,omitempty"`
+	Condition      string                    `json:"condition,omitempty"`
+	Options        []*pb.Listing_Item_Option `json:"options,omitempty"`
+	Skus           []*mig27Listing_Item_Sku  `json:"skus,omitempty"`
+}
+
+type mig27Listing_Item_Option struct {
+	Name        string                            `json:"name,omitempty"`
+	Description string                            `json:"description,omitempty"`
+	Variants    []*pb.Listing_Item_Option_Variant `json:"variants,omitempty"`
+}
+
+type mig27Listing_Item_Option_Variant struct {
+	Name  string                 `json:"name,omitempty"`
+	Image *pb.Listing_Item_Image `json:"image,omitempty"`
+}
+
+type mig27Listing_Item_Sku struct {
+	VariantCombo []uint32 `json:"variantCombo,omitempty"`
+	ProductID    string   `json:"productID,omitempty"`
+	Surcharge    int64    `json:"surcharge,omitempty"`
+	Quantity     int64    `json:"quantity,omitempty"`
+}
+
+type mig27Listing_Item_Image struct {
+	Filename string `json:"filename,omitempty"`
+	Original string `json:"original,omitempty"`
+	Large    string `json:"large,omitempty"`
+	Medium   string `json:"medium,omitempty"`
+	Small    string `json:"small,omitempty"`
+	Tiny     string `json:"tiny,omitempty"`
+}
+
+type mig27Listing_ShippingOption struct {
+	Name     string                                 `json:"name,omitempty"`
+	Type     string                                 `json:"type,omitempty"`
+	Regions  []string                               `json:"regions,omitempty"`
+	Services []*mig27Listing_ShippingOption_Service `json:"services,omitempty"`
+}
+
+type mig27Listing_ShippingOption_Service struct {
+	Name                string `json:"name,omitempty"`
+	Price               uint64 `json:"price,omitempty"`
+	EstimatedDelivery   string `json:"estimatedDelivery,omitempty"`
+	AdditionalItemPrice uint64 `json:"additionalItemPrice,omitempty"`
+}
+
+type mig27Listing_Tax struct {
+	TaxType     string   `json:"taxType,omitempty"`
+	TaxRegions  []string `json:"taxRegions,omitempty"`
+	TaxShipping bool     `json:"taxShipping,omitempty"`
+	Percentage  float32  `json:"percentage,omitempty"`
+}
+
+type mig27Listing_Coupon struct {
+	PercentDiscount float32 `json:"percentDiscount,omitempty"`
+	PriceDiscount   uint64  `json:"priceDiscount,omitempty"`
+	Title           string  `json:"title"`
+	DiscountCode    string  `json:"discountCode"`
+	Hash            string  `json:"hash"`
+}
+
 type Migration027_SignedListingData struct {
-	Listing   Migration027_ListingData `json:"listing"`
-	Hash      string                   `json:"hash"`
-	Signature []byte                   `json:"signature"`
+	Listing   *mig27Listing `json:"listing"`
+	Hash      string        `json:"hash"`
+	Signature []byte        `json:"signature"`
 }
 
 func (m *Migration027_SignedListingData) Reset()         { *m = Migration027_SignedListingData{} }
@@ -132,106 +232,231 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Check each crypto listing for markup
 	var markupListings []*pb.SignedListing
 	for _, listingAbstract := range cryptoListings {
+		fmt.Println("listing is :")
 		spew.Dump(listingAbstract)
+		fmt.Println("file path is : ", migration027_listingFilePath(repoPath, listingAbstract.Slug))
 		listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listingAbstract.Slug))
 		if err != nil {
 			return err
 		}
 		sl := new(pb.SignedListing)
-		temp := new(Migration027_SignedListingData)
-		err = jsonpb.UnmarshalString(string(listingJSONBytes), temp)
+		var temp Migration027_SignedListingData
+		//err = jsonpb.UnmarshalString(string(listingJSONBytes), &temp)
+		err = json.Unmarshal(listingJSONBytes, &temp)
 		if err != nil {
 			return err
 		}
+		fmt.Println("lets see ******************")
+		spew.Dump(temp)
+
+		if temp.Listing.Metadata.Version > 4 {
+			continue
+		}
+
+		templisting := temp.Listing
+		sl.Hash = temp.Hash
+		sl.Signature = temp.Signature
 
 		sl.Listing = new(pb.Listing)
 		sl.Listing.Metadata = new(pb.Listing_Metadata)
 		sl.Listing.Item = new(pb.Listing_Item)
 
 		sl.Listing.Slug = listingAbstract.Slug
+		sl.Listing.VendorID = templisting.VendorID
+		sl.Listing.Moderators = templisting.Moderators
+		sl.Listing.RefundPolicy = templisting.RefundPolicy
+		sl.Listing.TermsAndConditions = templisting.TermsAndConditions
+
+		sl.Listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
+			Code:         templisting.Metadata.PricingCurrency,
+			Divisibility: 8,
+		}
+
+		sl.Listing.Metadata.Version = 5
+
+		sl.Listing.Metadata.ContractType = pb.Listing_Metadata_ContractType(
+			pb.Listing_Metadata_ContractType_value[templisting.Metadata.ContractType],
+		)
+
+		sl.Listing.Metadata.Format = pb.Listing_Metadata_Format(
+			pb.Listing_Metadata_Format_value[templisting.Metadata.Format],
+		)
+
+		t, _ := time.Parse(time.RFC3339Nano, templisting.Metadata.Expiry)
+		sl.Listing.Metadata.Expiry = &timestamp.Timestamp{
+			Seconds: int64(t.Unix()),
+			Nanos:   int32(t.Nanosecond()),
+		}
+		sl.Listing.Metadata.AcceptedCurrencies = templisting.Metadata.AcceptedCurrencies
+		sl.Listing.Metadata.EscrowTimeoutHours = templisting.Metadata.EscrowTimeoutHours
+		sl.Listing.Metadata.Language = templisting.Metadata.Language
+		sl.Listing.Metadata.PriceModifier = templisting.Metadata.PriceModifier
+
 		/*
-			sl.Listing.VendorID = &pb.ID{
-				PeerID:     listingAbstract.VendorID.PeerID,
-				Handle:     listingAbstract.VendorID.Handle,
-				BitcoinSig: listingAbstract.VendorID.BitcoinSig,
-				Pubkeys: &pb.ID_Pubkeys{
-					Identity: listingAbstract.VendorID.Pubkeys.Identity,
-					Bitcoin:  listingAbstract.VendorID.Pubkeys.Bitcoin,
-				},
-			}
-			sl.Listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
-				Code:         listingAbstract.Price.CurrencyCode,
-				Divisibility: 8,
-			}
+			Title                string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+			Description          string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+			ProcessingTime       string                 `protobuf:"bytes,3,opt,name=processingTime,proto3" json:"processingTime,omitempty"`
+			Price                *CurrencyValue         `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
+			Nsfw                 bool                   `protobuf:"varint,5,opt,name=nsfw,proto3" json:"nsfw,omitempty"`
+			Tags                 []string               `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
+			Images               []*Listing_Item_Image  `protobuf:"bytes,7,rep,name=images,proto3" json:"images,omitempty"`
+			Categories           []string               `protobuf:"bytes,8,rep,name=categories,proto3" json:"categories,omitempty"`
+			Grams                float32                `protobuf:"fixed32,9,opt,name=grams,proto3" json:"grams,omitempty"`
+			Condition            string                 `protobuf:"bytes,10,opt,name=condition,proto3" json:"condition,omitempty"`
+			Options              []*Listing_Item_Option `protobuf:"bytes,11,rep,name=options,proto3" json:"options,omitempty"`
+			Skus                 []*Listing_Item_Sku
 		*/
+
+		sl.Listing.Item.Title = templisting.Item.Title
+		sl.Listing.Item.Description = templisting.Item.Description
+		sl.Listing.Item.ProcessingTime = templisting.Item.ProcessingTime
 
 		sl.Listing.Item.Price = &pb.CurrencyValue{
 			Currency: sl.Listing.Metadata.PricingCurrency,
 			Amount:   strconv.FormatUint(listingAbstract.Price.Amount, 10),
 		}
 
-		if len(listingAbstract.Item.Skus) > 0 {
-			sl.Listing.Item.Skus = make([]*pb.Listing_Item_Sku, len(listingAbstract.Item.Skus))
-		}
+		sl.Listing.Item.Nsfw = templisting.Item.Nsfw
+		sl.Listing.Item.Tags = templisting.Item.Tags
+		sl.Listing.Item.Images = templisting.Item.Images
+		sl.Listing.Item.Categories = templisting.Item.Categories
+		sl.Listing.Item.Grams = templisting.Item.Grams
+		sl.Listing.Item.Condition = templisting.Item.Condition
+		sl.Listing.Item.Options = templisting.Item.Options
 
-		for _, sku := range listingAbstract.Item.Skus {
-			for j, s := range temp.Listing.Item.Skus {
-				if s.ProductID != sku.ProductID {
-					continue
-				}
-				sl.Listing.Item.Skus[j] = new(pb.Listing_Item_Sku)
-				sl.Listing.Item.Skus[j].Surcharge = &pb.CurrencyValue{
+		skus := []*pb.Listing_Item_Sku{}
+		for _, s := range templisting.Item.Skus {
+			sku := &pb.Listing_Item_Sku{
+				VariantCombo: s.VariantCombo,
+				ProductID:    s.ProductID,
+				Quantity:     s.Quantity,
+				Surcharge: &pb.CurrencyValue{
 					Currency: sl.Listing.Metadata.PricingCurrency,
-					Amount:   strconv.FormatInt(sku.Surcharge, 10),
-				}
+					Amount:   strconv.FormatInt(s.Surcharge, 10),
+				},
 			}
+			skus = append(skus, sku)
 		}
+		sl.Listing.Item.Skus = skus
 
-		if len(listingAbstract.ShippingOptions) > 0 {
-			sl.Listing.ShippingOptions = make([]*pb.Listing_ShippingOption, len(listingAbstract.ShippingOptions))
-		}
-
-		for _, so := range listingAbstract.ShippingOptions {
-			for i, so1 := range temp.Listing.ShippingOptions {
-				if so.Name != so1.Name {
-					continue
-				}
-				sl.Listing.ShippingOptions[i] = new(pb.Listing_ShippingOption)
-				for _, ser := range so.Services {
-					if len(so.Services) > 0 {
-						sl.Listing.ShippingOptions[i].Services = make([]*pb.Listing_ShippingOption_Service, len(so.Services))
-					}
-					for j, ser0 := range sl.Listing.ShippingOptions[i].Services {
-						if ser.Name != ser0.Name {
-							continue
-						}
-						sl.Listing.ShippingOptions[i].Services[j].Price = &pb.CurrencyValue{
-							Currency: sl.Listing.Metadata.PricingCurrency,
-							Amount:   strconv.FormatUint(ser.Price, 10),
-						}
-					}
-				}
+		shippingOptions := []*pb.Listing_ShippingOption{}
+		for _, s := range templisting.ShippingOptions {
+			regions := []pb.CountryCode{}
+			for _, r := range s.Regions {
+				region := pb.CountryCode(
+					pb.CountryCode_value[r],
+				)
+				regions = append(regions, region)
 			}
+			sers := []*pb.Listing_ShippingOption_Service{}
+			for _, s := range s.Services {
+				ser := &pb.Listing_ShippingOption_Service{
+					Name: s.Name,
+					Price: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrency,
+						Amount:   strconv.FormatUint(s.Price, 10),
+					},
+					EstimatedDelivery: s.EstimatedDelivery,
+					AdditionalItemPrice: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrency,
+						Amount:   strconv.FormatUint(s.AdditionalItemPrice, 10),
+					},
+				}
+				sers = append(sers, ser)
+			}
+			shippingOption := &pb.Listing_ShippingOption{
+				Name: s.Name,
+				Type: pb.Listing_ShippingOption_ShippingType(
+					pb.Listing_ShippingOption_ShippingType_value[s.Type],
+				),
+				Regions:  regions,
+				Services: sers,
+			}
+			shippingOptions = append(shippingOptions, shippingOption)
 		}
 
-		for _, coupon := range listingAbstract.Coupons {
-			for i, c0 := range sl.Listing.Coupons {
-				if coupon.Title != c0.Title {
-					continue
+		sl.Listing.ShippingOptions = shippingOptions
+
+		taxes := []*pb.Listing_Tax{}
+
+		for _, t := range templisting.Taxes {
+			regions := []pb.CountryCode{}
+			for _, r := range t.TaxRegions {
+				region := pb.CountryCode(
+					pb.CountryCode_value[r],
+				)
+				regions = append(regions, region)
+			}
+			tax := &pb.Listing_Tax{
+				TaxType:     t.TaxType,
+				TaxRegions:  regions,
+				TaxShipping: t.TaxShipping,
+				Percentage:  t.Percentage,
+			}
+			taxes = append(taxes, tax)
+		}
+
+		sl.Listing.Taxes = taxes
+
+		coupons := []*pb.Listing_Coupon{}
+
+		for _, c := range templisting.Coupons {
+			//discount := pb.Listing_Coupon_Discount
+			coupon := &pb.Listing_Coupon{
+				Title: c.Title,
+				//Code:  c.Code,
+			}
+			if c.PriceDiscount == 0 {
+				disc := &pb.Listing_Coupon_PercentDiscount{
+					PercentDiscount: c.PercentDiscount,
 				}
-				if c0.Discount != nil {
-					switch c0.Discount.(type) {
-					case *pb.Listing_Coupon_PriceDiscount:
-						{
-							sl.Listing.Coupons[i].Discount.(*pb.Listing_Coupon_PriceDiscount).PriceDiscount = &pb.CurrencyValue{
-								Currency: sl.Listing.Metadata.PricingCurrency,
-								Amount:   strconv.FormatUint(coupon.Price, 10),
+				coupon.Discount = disc
+			} else {
+				disc := &pb.Listing_Coupon_PriceDiscount{
+					PriceDiscount: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrency,
+						Amount:   strconv.FormatUint(c.PriceDiscount, 10),
+					},
+				}
+				coupon.Discount = disc
+			}
+			if c.DiscountCode == "" {
+				code := &pb.Listing_Coupon_Hash{
+					Hash: c.Hash,
+				}
+				coupon.Code = code
+			} else {
+				code := &pb.Listing_Coupon_DiscountCode{
+					DiscountCode: c.DiscountCode,
+				}
+				coupon.Code = code
+			}
+
+			coupons = append(coupons, coupon)
+		}
+
+		sl.Listing.Coupons = coupons
+
+		/*
+			for _, coupon := range listingAbstract.Coupons {
+				for i, c0 := range sl.Listing.Coupons {
+					if coupon.Title != c0.Title {
+						continue
+					}
+					if c0.Discount != nil {
+						switch c0.Discount.(type) {
+						case *pb.Listing_Coupon_PriceDiscount:
+							{
+								sl.Listing.Coupons[i].Discount.(*pb.Listing_Coupon_PriceDiscount).PriceDiscount = &pb.CurrencyValue{
+									Currency: sl.Listing.Metadata.PricingCurrency,
+									Amount:   strconv.FormatUint(coupon.Price, 10),
+								}
 							}
 						}
 					}
 				}
 			}
-		}
+		*/
 
 		markupListings = append(markupListings, sl)
 
