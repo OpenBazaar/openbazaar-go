@@ -25,10 +25,42 @@ import (
 
 type Migration027 struct{}
 
+/*
+type price struct {
+	CurrencyCode string              `json:"currencyCode"`
+	Amount       *repo.CurrencyValue `json:"amount"`
+	Modifier     float32             `json:"modifier"`
+}
+type thumbnail struct {
+	Tiny   string `json:"tiny"`
+	Small  string `json:"small"`
+	Medium string `json:"medium"`
+}
+
+type ListingData struct {
+	Hash               string    `json:"hash"`
+	Slug               string    `json:"slug"`
+	Title              string    `json:"title"`
+	Categories         []string  `json:"categories"`
+	NSFW               bool      `json:"nsfw"`
+	ContractType       string    `json:"contractType"`
+	Description        string    `json:"description"`
+	Thumbnail          thumbnail `json:"thumbnail"`
+	Price              price     `json:"price"`
+	ShipsTo            []string  `json:"shipsTo"`
+	FreeShipping       []string  `json:"freeShipping"`
+	Language           string    `json:"language"`
+	AverageRating      float32   `json:"averageRating"`
+	RatingCount        uint32    `json:"ratingCount"`
+	ModeratorIDs       []string  `json:"moderators"`
+	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
+	CoinType           string    `json:"coinType"`
+}
+*/
+
 type Migration027_ListingData struct {
 	Hash         string   `json:"hash"`
 	Slug         string   `json:"slug"`
-	VendorID     *pb.ID   `json:"vendorID"`
 	Title        string   `json:"title"`
 	Categories   []string `json:"categories"`
 	NSFW         bool     `json:"nsfw"`
@@ -39,11 +71,6 @@ type Migration027_ListingData struct {
 		Small  string `json:"small"`
 		Medium string `json:"medium"`
 	} `json:"thumbnail"`
-	Price struct {
-		CurrencyCode string  `json:"currencyCode"`
-		Amount       uint64  `json:"amount"`
-		Modifier     float32 `json:"modifier"`
-	} `json:"price"`
 	ShipsTo            []string `json:"shipsTo"`
 	FreeShipping       []string `json:"freeShipping"`
 	Language           string   `json:"language"`
@@ -52,25 +79,6 @@ type Migration027_ListingData struct {
 	ModeratorIDs       []string `json:"moderators"`
 	AcceptedCurrencies []string `json:"acceptedCurrencies"`
 	CoinType           string   `json:"coinType"`
-	Item               struct {
-		Price uint64 `json:"price"`
-		Skus  []struct {
-			ProductID string `json:"productID,omitempty"`
-			Surcharge int64  `json:"surcharge,omitempty"`
-		} `json:"skus,omitempty"`
-	} `json:"item"`
-	ShippingOptions []struct {
-		Name     string `json:"name,omitempty"`
-		Services []struct {
-			Name       string `json:"name,omitempty"`
-			Price      uint64 `json:"price,omitempty"`
-			AddlnPrice uint64 `json:"additionalItemPrice,omitempty"`
-		} `json:"services,omitempty"`
-	} `json:"shippingOptions,omitempty"`
-	Coupons []struct {
-		Title string `json:"title,omitempty"`
-		Price uint64 `json:"priceDiscount,omitempty"`
-	} `json:"coupons,omitempty"`
 }
 
 type mig27Listing struct {
@@ -313,7 +321,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 		sl.Listing.Item.Price = &pb.CurrencyValue{
 			Currency: sl.Listing.Metadata.PricingCurrency,
-			Amount:   strconv.FormatUint(listingAbstract.Price.Amount, 10),
+			Amount:   strconv.FormatUint(templisting.Item.Price, 10),
 		}
 
 		sl.Listing.Item.Nsfw = templisting.Item.Nsfw
