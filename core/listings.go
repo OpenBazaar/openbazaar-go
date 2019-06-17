@@ -251,8 +251,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	// Sign listing
 	spew.Dump(listing)
 
-	fmt.Println("******************************************************************************")
-	//fmt.Println(listing)
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		return sl, err
@@ -953,6 +951,7 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 			return fmt.Errorf("accepted currency is longer than the max of %d characters", WordMaxCharacters)
 		}
 	}
+
 
 	// Item
 	if listing.Item.Title == "" {

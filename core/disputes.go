@@ -614,9 +614,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
 	for role, output := range outMap {
-		outPercentage := new(big.Int).Quo(&output.Value, totalOut)  //float64(output.Value) / float64(totalOut)
-		outputShareOfFee := new(big.Int).Mul(outPercentage, &txFee) // outPercentage * float64(txFee)
-		val := new(big.Int).Sub(&output.Value, outputShareOfFee)    //output.Value - int64(outputShareOfFee)
+		outPercentage := new(big.Float).Quo(new(big.Float).SetInt(&output.Value), new(big.Float).SetInt(totalOut)) //float64(output.Value) / float64(totalOut)
+		outputShareOfFee := new(big.Float).Mul(outPercentage, new(big.Float).SetInt(&txFee))                       // outPercentage * float64(txFee)
+		valF := new(big.Float).Sub(new(big.Float).SetInt(&output.Value), outputShareOfFee)                         //output.Value - int64(outputShareOfFee)
+		val, _ := valF.Int(nil)
 		if !wal.IsDust(*val) {
 			o := wallet.TransactionOutput{
 				Value:   *val,
@@ -684,9 +685,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
 	if _, ok := outMap["buyer"]; ok {
-		f := new(big.Int).Quo(buyerValue, totalOut)
-		outputShareOfFee := new(big.Int).Mul(f, &txFee)       //(float64(buyerValue) / float64(totalOut)) * float64(txFee)
-		amt := new(big.Int).Sub(buyerValue, outputShareOfFee) //int64(buyerValue) - int64(outputShareOfFee)
+		f := new(big.Float).Quo(new(big.Float).SetInt(buyerValue), new(big.Float).SetInt(totalOut))
+		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee)) //(float64(buyerValue) / float64(totalOut)) * float64(txFee)
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
+		amt := new(big.Int).Sub(buyerValue, outputShareOfFeeInt) //int64(buyerValue) - int64(outputShareOfFee)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)
 		}
@@ -699,9 +701,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		}
 	}
 	if _, ok := outMap["vendor"]; ok {
-		f := new(big.Int).Quo(vendorValue, totalOut)
-		outputShareOfFee := new(big.Int).Mul(f, &txFee)
-		amt := new(big.Int).Sub(vendorValue, outputShareOfFee)
+		f := new(big.Float).Quo(new(big.Float).SetInt(vendorValue), new(big.Float).SetInt(totalOut))
+		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee)) //(float64(buyerValue) / float64(totalOut)) * float64(txFee)
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
+		amt := new(big.Int).Sub(vendorValue, outputShareOfFeeInt) //int64(vendorValue) - int64(outputShareOfFee)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)
 		}
@@ -714,9 +717,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		}
 	}
 	if _, ok := outMap["moderator"]; ok {
-		f := new(big.Int).Quo(&modValue, totalOut)
-		outputShareOfFee := new(big.Int).Mul(f, &txFee)
-		amt := new(big.Int).Sub(&modValue, outputShareOfFee)
+		f := new(big.Float).Quo(new(big.Float).SetInt(&modValue), new(big.Float).SetInt(totalOut))
+		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee)) //(float64(buyerValue) / float64(totalOut)) * float64(txFee)
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
+		amt := new(big.Int).Sub(&modValue, outputShareOfFeeInt) //int64(modValue) - int64(outputShareOfFee)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)
 		}

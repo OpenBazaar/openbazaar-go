@@ -63,7 +63,8 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         slug = listing_json["slug"]
         listing_json["moderators"] = [moderatorId]
         listing_json["metadata"]["escrowTimeoutHours"] = 1
@@ -233,7 +234,7 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
                 raise TestFailure("RefundDirectTest - FAIL: Alice failed to receive the multisig payout")
