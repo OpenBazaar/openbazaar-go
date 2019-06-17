@@ -3,8 +3,10 @@ package core
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"image" // load gif
+	"image/color/palette"
 	"image/draw"
 	"image/gif"
 	_ "image/gif" // load png
@@ -25,7 +27,8 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/disintegration/imaging"
+	"github.com/discordapp/lilliput"
+	"github.com/nfnt/resize"
 )
 
 // SetAvatarImages - set avatar image from the base64 encoded image string
@@ -98,19 +101,19 @@ func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth
 			return nil, err
 		}
 
-		t, err := n.addResizedGif(imgGif, &imgCfg, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename), imgType)
+		t, err := n.addResizedGif(base64ImageData, &imgCfg, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename), imgType)
 		if err != nil {
 			return nil, err
 		}
-		s, err := n.addResizedGif(imgGif, &imgCfg, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename), imgType)
+		s, err := n.addResizedGif(base64ImageData, &imgCfg, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename), imgType)
 		if err != nil {
 			return nil, err
 		}
-		m, err := n.addResizedGif(imgGif, &imgCfg, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename), imgType)
+		m, err := n.addResizedGif(base64ImageData, &imgCfg, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename), imgType)
 		if err != nil {
 			return nil, err
 		}
-		l, err := n.addResizedGif(imgGif, &imgCfg, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename), imgType)
+		l, err := n.addResizedGif(base64ImageData, &imgCfg, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename), imgType)
 		if err != nil {
 			return nil, err
 		}
@@ -183,28 +186,62 @@ func (n *OpenBazaarNode) addImage(img image.Image, imgPath string, imgType strin
 	return ipfs.AddFile(n.IpfsNode, imgPath)
 }
 
-func (n *OpenBazaarNode) addResizedGif(imgGif *gif.GIF, imgCfg *image.Config, w, h uint, imgPath string, imgType string) (string, error) {
+func ImageToPaletted(img image.Image) *image.Paletted {
+	b := img.Bounds()
+	pm := image.NewPaletted(b, palette.Plan9)
+	draw.FloydSteinberg.Draw(pm, b, img, image.ZP)
+	return pm
+}
 
-	width, height := uint(imgCfg.Width), uint(imgCfg.Height)
-	if w <= uint(width) && h <= uint(height) {
-		width, height = getImageAttributes(w, h, uint(imgCfg.Width), uint(imgCfg.Height))
+func ProcessImage(img image.Image) image.Image {
+	return resize.Resize(250, 0, img, resize.NearestNeighbor)
+}
+
+func (n *OpenBazaarNode) addResizedGif(base64data string, imgCfg *image.Config, w, h uint, imgPath string, imgType string) (string, error) {
+
+	width, height := getImageAttributes(w, h, uint(imgCfg.Width), uint(imgCfg.Height))
+
+	inputBuf, _ := base64.StdEncoding.DecodeString(base64data)
+	decoder, err := lilliput.NewDecoder(inputBuf)
+	// this error reflects very basic checks,
+	// mostly just for the magic bytes of the file to match known image formats
+	if err != nil {
+		fmt.Printf("error decoding image, %s\n", err)
+		os.Exit(1)
+	}
+	defer decoder.Close()
+
+	// get ready to resize image,
+	// using 8192x8192 maximum resize buffer size
+	ops := lilliput.NewImageOps(8192)
+	defer ops.Close()
+
+	// create a buffer to store the output image, 50MB in this case
+	outputImg := make([]byte, 50*1024*1024)
+
+	opts := &lilliput.ImageOptions{
+		FileType:     ".gif",
+		Width:        int(width),
+		Height:       int(height),
+		ResizeMethod: lilliput.ImageOpsResize,
 	}
 
-	for index, img := range imgGif.Image {
-		resized := resize.Resize(width, height, img, resize.Lanczos3)
-		rect := image.Rect(0, 0, int(width), int(height))
-		img := image.NewPaletted(rect, img.Palette)
-		draw.Draw(img, img.Rect, resized, rect.Min, draw.Over)
-		imgGif.Image[index] = img
+	// resize and transcode image
+	outputImg, err = ops.Transform(decoder, opts, outputImg)
+	if err != nil {
+		fmt.Printf("error transforming image, %s\n", err)
+		os.Exit(1)
 	}
+
 	out, err := os.Create(imgPath)
 	if err != nil {
 		return "", err
 	}
 
-	err = gif.EncodeAll(out, imgGif)
+	err = ioutil.WriteFile(imgPath, outputImg, 0400)
 	if err != nil {
-		return "", err
+		fmt.Printf("error writing out resized image, %s\n", err)
+		os.Exit(1)
 	}
 
 	out.Close()
