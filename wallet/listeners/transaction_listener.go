@@ -55,6 +55,8 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
+	log.Info("Transaction received", cb.Txid, cb.Height)
+
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {

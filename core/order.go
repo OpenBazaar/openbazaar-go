@@ -1311,6 +1311,9 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 }
 
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {
+	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(pricingCurrency) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(pricingCurrency) {
+		return amount, nil
+	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingCurrency)
 	if err != nil {
 		return *big.NewInt(0), err
