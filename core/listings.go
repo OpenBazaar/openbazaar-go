@@ -948,6 +948,7 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 		}
 	}
 
+
 	// Item
 	if listing.Item.Title == "" {
 		return errors.New("listing must have a title")

@@ -84,7 +84,7 @@ func (id ID) MatchesPublicKey(pk ic.PubKey) bool {
 // ExtractPublicKey attempts to extract the public key from an ID
 //
 // This method returns ErrNoPublicKey if the peer ID looks valid but it can't extract
-// the public key.
+// the public key.PATH
 func (id ID) ExtractPublicKey() (ic.PubKey, error) {
 	decoded, err := mh.Decode([]byte(id))
 	if err != nil {
