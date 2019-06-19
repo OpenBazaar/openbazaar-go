@@ -10,22 +10,32 @@ import (
 )
 
 var (
-	m026_up_create_sales   = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total text, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
-	m026_down_create_sales = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
-	m026_temp_sales        = "ALTER TABLE sales RENAME TO temp_sales;"
-	m026_insert_sales      = "INSERT INTO sales SELECT orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, needsSync, lastDisputeTimeoutNotifiedAt, coinType, paymentCoin FROM temp_sales;"
-	m026_drop_temp_sales   = "DROP TABLE temp_sales;"
+	am03_up_create_utxos   = "create table utxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, coin text);"
+	am03_down_create_utxos = "create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, coin text);"
+	am03_temp_utxos        = "ALTER TABLE utxos RENAME TO temp_utxos;"
+	am03_insert_utxos      = "INSERT INTO utxos SELECT outpoint, value, height, scriptPubKey, watchOnly, coin FROM temp_utxos;"
+	am03_drop_temp_utxos   = "DROP TABLE temp_utxos;"
 
-	m026_up_create_purchases   = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total text, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
-	m026_down_create_purchases = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
-	m026_temp_purchases        = "ALTER TABLE purchases RENAME TO temp_purchases;"
-	m026_insert_purchases      = "INSERT INTO purchases SELECT orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt, disputedAt, coinType, paymentCoin FROM temp_purchases;"
-	m026_drop_temp_purchases   = "DROP TABLE temp_purchases;"
+	am03_up_create_stxos   = "create table stxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
+	am03_down_create_stxos = "create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
+	am03_temp_stxos        = "ALTER TABLE stxos RENAME TO temp_stxos;"
+	am03_insert_stxos      = "INSERT INTO stxos SELECT outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid, coin FROM temp_stxos;"
+	am03_drop_temp_stxos   = "DROP TABLE temp_stxos;"
+
+	am03_up_create_txns   = "create table txns (txid text primary key not null, value text, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
+	am03_down_create_txns = "create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
+	am03_temp_txns        = "ALTER TABLE txns RENAME TO temp_txns;"
+	am03_insert_txns      = "INSERT INTO txns SELECT txid, value, height, timestamp, watchOnly, tx, coin FROM temp_txns;"
+	am03_drop_temp_txns   = "DROP TABLE temp_txns;"
 )
 
-type Migration026 struct{}
+type Migration026 struct {
+	AM03
+}
 
-func (Migration026) Up(repoPath string, dbPassword string, testnet bool) error {
+type AM03 struct{}
+
+func (AM03) Up(repoPath string, dbPassword string, testnet bool) error {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -42,14 +52,18 @@ func (Migration026) Up(repoPath string, dbPassword string, testnet bool) error {
 	}
 
 	upSequence := strings.Join([]string{
-		m026_temp_sales,
-		m026_up_create_sales,
-		m026_insert_sales,
-		m026_drop_temp_sales,
-		m026_temp_purchases,
-		m026_up_create_purchases,
-		m026_insert_purchases,
-		m026_drop_temp_purchases,
+		am03_temp_utxos,
+		am03_up_create_utxos,
+		am03_insert_utxos,
+		am03_drop_temp_utxos,
+		am03_temp_stxos,
+		am03_up_create_stxos,
+		am03_insert_stxos,
+		am03_drop_temp_stxos,
+		am03_temp_txns,
+		am03_up_create_txns,
+		am03_insert_txns,
+		am03_drop_temp_txns,
 	}, " ")
 
 	tx, err := db.Begin()
@@ -75,7 +89,7 @@ func (Migration026) Up(repoPath string, dbPassword string, testnet bool) error {
 	return nil
 }
 
-func (Migration026) Down(repoPath string, dbPassword string, testnet bool) error {
+func (AM03) Down(repoPath string, dbPassword string, testnet bool) error {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -91,14 +105,18 @@ func (Migration026) Down(repoPath string, dbPassword string, testnet bool) error
 		db.Exec(p)
 	}
 	downSequence := strings.Join([]string{
-		m026_temp_sales,
-		m026_down_create_sales,
-		m026_insert_sales,
-		m026_drop_temp_sales,
-		m026_temp_purchases,
-		m026_down_create_purchases,
-		m026_insert_purchases,
-		m026_drop_temp_purchases,
+		am03_temp_utxos,
+		am03_down_create_utxos,
+		am03_insert_utxos,
+		am03_drop_temp_utxos,
+		am03_temp_stxos,
+		am03_down_create_stxos,
+		am03_insert_stxos,
+		am03_drop_temp_stxos,
+		am03_temp_txns,
+		am03_down_create_txns,
+		am03_insert_txns,
+		am03_drop_temp_txns,
 	}, " ")
 
 	tx, err := db.Begin()

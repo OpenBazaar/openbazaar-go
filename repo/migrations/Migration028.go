@@ -1,243 +1,132 @@
 package migrations
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
+	"database/sql"
 	"os"
 	"path"
+	"strings"
+
+	_ "github.com/mutecomm/go-sqlcipher"
 )
 
-const (
-	am01EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
-	am01EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
-	am01EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
-	am01UpVersion                      = 29
-	am01DownVersion                    = 28
-)
+var (
+	AM02_up_create_sales   = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total text, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+	AM02_down_create_sales = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+	AM02_temp_sales        = "ALTER TABLE sales RENAME TO temp_sales;"
+	AM02_insert_sales      = "INSERT INTO sales SELECT orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, needsSync, lastDisputeTimeoutNotifiedAt, coinType, paymentCoin FROM temp_sales;"
+	AM02_drop_temp_sales   = "DROP TABLE temp_sales;"
 
-// am01 - required migration struct
-type am01 struct{}
+	AM02_up_create_purchases   = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total text, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+	AM02_down_create_purchases = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+	AM02_temp_purchases        = "ALTER TABLE purchases RENAME TO temp_purchases;"
+	AM02_insert_purchases      = "INSERT INTO purchases SELECT orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt, disputedAt, coinType, paymentCoin FROM temp_purchases;"
+	AM02_drop_temp_purchases   = "DROP TABLE temp_purchases;"
+)
 
 type Migration028 struct {
-	am01
+	AM02
 }
 
-// Up - upgrade the state
-func (am01) Up(repoPath, dbPassword string, testnet bool) error {
-	var (
-		configMap        = map[string]interface{}{}
-		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
-	)
+type AM02 struct{}
+
+var AM02UpVer = "29"
+var AM02DownVer = "28"
+
+func (AM02) Up(repoPath string, dbPassword string, testnet bool) error {
+	var dbPath string
+	if testnet {
+		dbPath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
+	}
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return fmt.Errorf("reading config: %s", err.Error())
+		return err
+	}
+	if dbPassword != "" {
+		p := "pragma key='" + dbPassword + "';"
+		db.Exec(p)
 	}
 
-	if err = json.Unmarshal(configBytes, &configMap); err != nil {
-		return fmt.Errorf("unmarshal config: %s", err.Error())
-	}
+	upSequence := strings.Join([]string{
+		AM02_temp_sales,
+		AM02_up_create_sales,
+		AM02_insert_sales,
+		AM02_drop_temp_sales,
+		AM02_temp_purchases,
+		AM02_up_create_purchases,
+		AM02_insert_purchases,
+		AM02_drop_temp_purchases,
+	}, " ")
 
-	c, ok := configMap["Wallets"]
-	if !ok {
-		return errors.New("invalid config: missing key Wallets")
-	}
-
-	walletCfg, ok := c.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid key Wallets")
-	}
-
-	btc, ok := walletCfg["BTC"]
-	if !ok {
-		return errors.New("invalid config: missing BTC Wallet")
-	}
-
-	btcWalletCfg, ok := btc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BTC Wallet")
-	}
-
-	btcWalletCfg["APIPool"] = []string{"https://btc.api.openbazaar.org/api"}
-	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.api.openbazaar.org/api"}
-
-	bch, ok := walletCfg["BCH"]
-	if !ok {
-		return errors.New("invalid config: missing BCH Wallet")
-	}
-
-	bchWalletCfg, ok := bch.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BCH Wallet")
-	}
-
-	bchWalletCfg["APIPool"] = []string{"https://bch.api.openbazaar.org/api"}
-	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.api.openbazaar.org/api"}
-
-	ltc, ok := walletCfg["LTC"]
-	if !ok {
-		return errors.New("invalid config: missing LTC Wallet")
-	}
-
-	ltcWalletCfg, ok := ltc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid LTC Wallet")
-	}
-
-	ltcWalletCfg["APIPool"] = []string{"https://ltc.api.openbazaar.org/api"}
-	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.api.openbazaar.org/api"}
-
-	zec, ok := walletCfg["ZEC"]
-	if !ok {
-		return errors.New("invalid config: missing ZEC Wallet")
-	}
-
-	zecWalletCfg, ok := zec.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ZEC Wallet")
-	}
-
-	zecWalletCfg["APIPool"] = []string{"https://zec.api.openbazaar.org/api"}
-	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.api.openbazaar.org/api"}
-
-	eth, ok := walletCfg["ETH"]
-	if !ok {
-		return errors.New("invalid config: missing ETH Wallet")
-	}
-
-	ethWalletCfg, ok := eth.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ETH Wallet")
-	}
-
-	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
-	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
-	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
-	}
-
-	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
+	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("marshal migrated config: %s", err.Error())
+		return err
 	}
-
-	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
-		return fmt.Errorf("writing migrated config: %s", err.Error())
+	if _, err = tx.Exec(upSequence); err != nil {
+		tx.Rollback()
+		return err
 	}
-
-	if err := writeRepoVer(repoPath, am01UpVersion); err != nil {
-		return fmt.Errorf("bumping repover to %d: %s", am01UpVersion, err.Error())
+	if err = tx.Commit(); err != nil {
+		return err
 	}
+	f1, err := os.Create(path.Join(repoPath, "repover"))
+	if err != nil {
+		return err
+	}
+	_, err = f1.Write([]byte(AM02UpVer))
+	if err != nil {
+		return err
+	}
+	f1.Close()
 	return nil
 }
 
-// Down - downgrade/restore the state
-func (am01) Down(repoPath, dbPassword string, testnet bool) error {
-	var (
-		configMap        = map[string]interface{}{}
-		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
-	)
+func (AM02) Down(repoPath string, dbPassword string, testnet bool) error {
+	var dbPath string
+	if testnet {
+		dbPath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
+	}
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return fmt.Errorf("reading config: %s", err.Error())
+		return err
 	}
-
-	if err = json.Unmarshal(configBytes, &configMap); err != nil {
-		return fmt.Errorf("unmarshal config: %s", err.Error())
+	if dbPassword != "" {
+		p := "pragma key='" + dbPassword + "';"
+		db.Exec(p)
 	}
+	downSequence := strings.Join([]string{
+		AM02_temp_sales,
+		AM02_down_create_sales,
+		AM02_insert_sales,
+		AM02_drop_temp_sales,
+		AM02_temp_purchases,
+		AM02_down_create_purchases,
+		AM02_insert_purchases,
+		AM02_drop_temp_purchases,
+	}, " ")
 
-	c, ok := configMap["Wallets"]
-	if !ok {
-		return errors.New("invalid config: missing key Wallets")
-	}
-
-	walletCfg, ok := c.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid key Wallets")
-	}
-
-	btc, ok := walletCfg["BTC"]
-	if !ok {
-		return errors.New("invalid config: missing BTC Wallet")
-	}
-
-	btcWalletCfg, ok := btc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BTC Wallet")
-	}
-
-	btcWalletCfg["APIPool"] = []string{"https://btc.blockbook.api.openbazaar.org/api"}
-	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.blockbook.api.openbazaar.org/api"}
-
-	bch, ok := walletCfg["BCH"]
-	if !ok {
-		return errors.New("invalid config: missing BCH Wallet")
-	}
-
-	bchWalletCfg, ok := bch.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid BCH Wallet")
-	}
-
-	bchWalletCfg["APIPool"] = []string{"https://bch.blockbook.api.openbazaar.org/api"}
-	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.blockbook.api.openbazaar.org/api"}
-
-	ltc, ok := walletCfg["LTC"]
-	if !ok {
-		return errors.New("invalid config: missing LTC Wallet")
-	}
-
-	ltcWalletCfg, ok := ltc.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid LTC Wallet")
-	}
-
-	ltcWalletCfg["APIPool"] = []string{"https://ltc.blockbook.api.openbazaar.org/api"}
-	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.blockbook.api.openbazaar.org/api"}
-
-	zec, ok := walletCfg["ZEC"]
-	if !ok {
-		return errors.New("invalid config: missing ZEC Wallet")
-	}
-
-	zecWalletCfg, ok := zec.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ZEC Wallet")
-	}
-
-	zecWalletCfg["APIPool"] = []string{"https://zec.blockbook.api.openbazaar.org/api"}
-	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.blockbook.api.openbazaar.org/api"}
-
-	eth, ok := walletCfg["ETH"]
-	if !ok {
-		return errors.New("invalid config: missing ETH Wallet")
-	}
-
-	ethWalletCfg, ok := eth.(map[string]interface{})
-	if !ok {
-		return errors.New("invalid config: invalid ETH Wallet")
-	}
-
-	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
-	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
-	ethWalletCfg["WalletOptions"] = map[string]interface{}{
-		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
-		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
-		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
-	}
-
-	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
+	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("marshal migrated config: %s", err.Error())
+		return err
 	}
-
-	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
-		return fmt.Errorf("writing migrated config: %s", err.Error())
+	if _, err = tx.Exec(downSequence); err != nil {
+		tx.Rollback()
+		return err
 	}
-
-	if err := writeRepoVer(repoPath, am01DownVersion); err != nil {
-		return fmt.Errorf("dropping repover to %d: %s", am01DownVersion, err.Error())
+	if err = tx.Commit(); err != nil {
+		return err
 	}
+	f1, err := os.Create(path.Join(repoPath, "repover"))
+	if err != nil {
+		return err
+	}
+	_, err = f1.Write([]byte(AM02DownVer))
+	if err != nil {
+		return err
+	}
+	f1.Close()
 	return nil
 }

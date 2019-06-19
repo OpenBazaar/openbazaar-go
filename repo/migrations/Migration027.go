@@ -25,12 +25,13 @@ import (
 
 type Migration027 struct{}
 
-/*
-type price struct {
-	CurrencyCode string              `json:"currencyCode"`
-	Amount       *repo.CurrencyValue `json:"amount"`
-	Modifier     float32             `json:"modifier"`
+type price0 struct {
+	CurrencyCode string            `json:"currencyCode"`
+	Amount       *pb.CurrencyValue `json:"amount"`
+	Modifier     float32           `json:"modifier"`
 }
+
+/*
 type thumbnail struct {
 	Tiny   string `json:"tiny"`
 	Small  string `json:"small"`
@@ -58,6 +59,11 @@ type ListingData struct {
 }
 */
 
+type Migration027_filterListing struct {
+	Hash string `json:"hash"`
+	Slug string `json:"slug"`
+}
+
 type Migration027_ListingData struct {
 	Hash         string   `json:"hash"`
 	Slug         string   `json:"slug"`
@@ -71,6 +77,10 @@ type Migration027_ListingData struct {
 		Small  string `json:"small"`
 		Medium string `json:"medium"`
 	} `json:"thumbnail"`
+	Price struct {
+		CurrencyCode string  `json:"currencyCode"`
+		Modifier     float32 `json:"modifier"`
+	} `json:"price"`
 	ShipsTo            []string `json:"shipsTo"`
 	FreeShipping       []string `json:"freeShipping"`
 	Language           string   `json:"language"`
@@ -81,6 +91,29 @@ type Migration027_ListingData struct {
 	CoinType           string   `json:"coinType"`
 }
 
+type Migration027_ListingDatav5 struct {
+	Hash         string   `json:"hash"`
+	Slug         string   `json:"slug"`
+	Title        string   `json:"title"`
+	Categories   []string `json:"categories"`
+	NSFW         bool     `json:"nsfw"`
+	ContractType string   `json:"contractType"`
+	Description  string   `json:"description"`
+	Thumbnail    struct {
+		Tiny   string `json:"tiny"`
+		Small  string `json:"small"`
+		Medium string `json:"medium"`
+	} `json:"thumbnail"`
+	Price              price0   `json:"price"`
+	ShipsTo            []string `json:"shipsTo"`
+	FreeShipping       []string `json:"freeShipping"`
+	Language           string   `json:"language"`
+	AverageRating      float32  `json:"averageRating"`
+	RatingCount        uint32   `json:"ratingCount"`
+	ModeratorIDs       []string `json:"moderators"`
+	AcceptedCurrencies []string `json:"acceptedCurrencies"`
+	CoinType           string   `json:"coinType"`
+}
 type mig27Listing struct {
 	Slug               string                         `json:"slug,omitempty"`
 	VendorID           *pb.ID                         `json:"vendorID,omitempty"`
@@ -123,6 +156,7 @@ type mig27Listing_Item struct {
 	Skus           []*mig27Listing_Item_Sku  `json:"skus,omitempty"`
 }
 
+/*
 type mig27Listing_Item_Option struct {
 	Name        string                            `json:"name,omitempty"`
 	Description string                            `json:"description,omitempty"`
@@ -133,6 +167,7 @@ type mig27Listing_Item_Option_Variant struct {
 	Name  string                 `json:"name,omitempty"`
 	Image *pb.Listing_Item_Image `json:"image,omitempty"`
 }
+*/
 
 type mig27Listing_Item_Sku struct {
 	VariantCombo []uint32 `json:"variantCombo,omitempty"`
@@ -141,6 +176,7 @@ type mig27Listing_Item_Sku struct {
 	Quantity     int64    `json:"quantity,omitempty"`
 }
 
+/*
 type mig27Listing_Item_Image struct {
 	Filename string `json:"filename,omitempty"`
 	Original string `json:"original,omitempty"`
@@ -149,6 +185,7 @@ type mig27Listing_Item_Image struct {
 	Small    string `json:"small,omitempty"`
 	Tiny     string `json:"tiny,omitempty"`
 }
+*/
 
 type mig27Listing_ShippingOption struct {
 	Name     string                                 `json:"name,omitempty"`
@@ -183,6 +220,21 @@ type Migration027_SignedListingData struct {
 	Listing   *mig27Listing `json:"listing"`
 	Hash      string        `json:"hash"`
 	Signature []byte        `json:"signature"`
+}
+
+type mig27ListingFilter struct {
+	Slug     string                       `json:"slug,omitempty"`
+	Metadata *mig27Listing_MetadataFilter `json:"metadata,omitempty"`
+}
+
+type mig27Listing_MetadataFilter struct {
+	Version uint32 `json:"version,omitempty"`
+}
+
+type Migration027_SignedListingDataFilter struct {
+	Listing   *mig27ListingFilter `json:"listing"`
+	Hash      string              `json:"hash"`
+	Signature []byte              `json:"signature"`
 }
 
 func (m *Migration027_SignedListingData) Reset()         { *m = Migration027_SignedListingData{} }
@@ -221,14 +273,16 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 
-	var listingsIndex []*Migration027_ListingData
+	var listingsIndex []interface{}
 	err = json.Unmarshal(listingsIndexJSONBytes, &listingsIndex)
 	fmt.Println("after unmarshal listing : ", err)
 	if err != nil {
 		return err
 	}
 
-	var cryptoListings []*Migration027_ListingData
+	var cryptoListings []interface{}
+	indexv5 := []Migration027_ListingDatav5{}
+	//indexBytes0 := []byte{}
 
 	cryptoListings = append(cryptoListings, listingsIndex...)
 
@@ -242,24 +296,38 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	for _, listingAbstract := range cryptoListings {
 		fmt.Println("listing is :")
 		spew.Dump(listingAbstract)
-		fmt.Println("file path is : ", migration027_listingFilePath(repoPath, listingAbstract.Slug))
-		listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listingAbstract.Slug))
+		//listing0 := listingAbstract.(Migration027_filterListing)
+		listSlug := (listingAbstract.(map[string]interface{})["slug"]).(string)
+		fmt.Println("file path is : ", migration027_listingFilePath(repoPath, listSlug))
+		listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listSlug))
 		if err != nil {
 			return err
 		}
 		sl := new(pb.SignedListing)
+		var filter Migration027_SignedListingDataFilter
 		var temp Migration027_SignedListingData
 		//err = jsonpb.UnmarshalString(string(listingJSONBytes), &temp)
+
+		err = json.Unmarshal(listingJSONBytes, &filter)
+		if err != nil {
+			return err
+		}
+
+		if filter.Listing.Metadata.Version > 4 {
+			b, _ := json.Marshal(listingAbstract)
+			//indexBytes0 = append(indexBytes0, b...)
+			var n Migration027_ListingDatav5
+			json.Unmarshal(b, &n)
+			indexv5 = append(indexv5, n)
+			continue
+		}
+
 		err = json.Unmarshal(listingJSONBytes, &temp)
 		if err != nil {
 			return err
 		}
 		fmt.Println("lets see ******************")
 		spew.Dump(temp)
-
-		if temp.Listing.Metadata.Version > 4 {
-			continue
-		}
 
 		templisting := temp.Listing
 		sl.Hash = temp.Hash
@@ -269,7 +337,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		sl.Listing.Metadata = new(pb.Listing_Metadata)
 		sl.Listing.Item = new(pb.Listing_Item)
 
-		sl.Listing.Slug = listingAbstract.Slug
+		sl.Listing.Slug = listSlug
 		sl.Listing.VendorID = templisting.VendorID
 		sl.Listing.Moderators = templisting.Moderators
 		sl.Listing.RefundPolicy = templisting.RefundPolicy
@@ -292,7 +360,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 		t, _ := time.Parse(time.RFC3339Nano, templisting.Metadata.Expiry)
 		sl.Listing.Metadata.Expiry = &timestamp.Timestamp{
-			Seconds: int64(t.Unix()),
+			Seconds: t.Unix(),
 			Nanos:   int32(t.Nanosecond()),
 		}
 		sl.Listing.Metadata.AcceptedCurrencies = templisting.Metadata.AcceptedCurrencies
@@ -519,6 +587,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Update each listing to have the latest version number and resave
 	// Save the new hashes for each changed listing so we can update the index.
 	hashes := make(map[string]string)
+	amounts := make(map[string]*pb.CurrencyValue)
 
 	privKey, err := crypto.UnmarshalPrivateKey(identityKey)
 	if err != nil {
@@ -558,6 +627,8 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			return err
 		}
 		hashes[sl.Listing.Slug] = h
+		amounts[sl.Listing.Slug] = sl.Listing.Item.Price
+
 	}
 
 	// Update listing index
@@ -572,7 +643,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 
-	for i, l := range index {
+	for _, l := range index {
 		h, ok := hashes[l.Slug]
 
 		// Not one of the changed listings
@@ -580,8 +651,29 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			continue
 		}
 
-		l.Hash = h
-		index[i] = l
+		a := amounts[l.Slug]
+
+		newListing := Migration027_ListingDatav5{
+			Hash:               h,
+			Slug:               l.Slug,
+			Title:              l.Title,
+			Categories:         l.Categories,
+			NSFW:               l.NSFW,
+			ContractType:       l.ContractType,
+			Description:        l.Description,
+			Thumbnail:          l.Thumbnail,
+			Price:              price0{CurrencyCode: l.Price.CurrencyCode, Modifier: l.Price.Modifier, Amount: a},
+			ShipsTo:            l.ShipsTo,
+			FreeShipping:       l.FreeShipping,
+			Language:           l.Language,
+			AverageRating:      l.AverageRating,
+			RatingCount:        l.RatingCount,
+			ModeratorIDs:       l.ModeratorIDs,
+			AcceptedCurrencies: l.AcceptedCurrencies,
+			CoinType:           l.CoinType,
+		}
+
+		indexv5 = append(indexv5, newListing)
 	}
 
 	// Write it back to file
@@ -591,7 +683,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 	defer ifile.Close()
 
-	j, jerr := json.MarshalIndent(index, "", "    ")
+	j, jerr := json.MarshalIndent(indexv5, "", "    ")
 	if jerr != nil {
 		return jerr
 	}

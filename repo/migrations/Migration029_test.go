@@ -2,17 +2,127 @@ package migrations_test
 
 import (
 	"encoding/json"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-func TestMigration029(t *testing.T) {
+const preAM01Config = `{
+	"OtherConfigProperty11": [1, 2, 3],
+	"OtherConfigProperty21": "abc123",
+	"Wallets": {
+	  "BTC":{
+	    "APIPool": [
+				"https://btc.blockbook.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbtc.blockbook.api.openbazaar.org/api"
+			]
+	  },
+	  "BCH":{
+	    "APIPool": [
+				"https://bch.blockbook.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://bch.blockbook.api.openbazaar.org/api"
+			]
+	  },
+	  "LTC":{
+	    "APIPool": [
+				"https://ltc.blockbook.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tltc.blockbook.api.openbazaar.org/api"
+			]
+	  },
+	  "ZEC":{
+	    "APIPool": [
+				"https://zec.blockbook.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tzec.blockbook.api.openbazaar.org/api"
+			]
+	  },
+		"ETH": {
+			"APIPool": [
+				"https://mainnet.infura.io"
+			],
+			"APITestnetPool": [
+				"https://rinkeby.infura.io"
+			],
+			"WalletOptions": {
+				"RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
+				"RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
+				"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
+			}
+		}
+	}
+}`
+
+const postAM01Config = `{
+	"OtherConfigProperty11": [1, 2, 3],
+	"OtherConfigProperty21": "abc123",
+	"Wallets": {
+	  "BCH":{
+	    "APIPool": [
+				"https://bch.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbch.api.openbazaar.org/api"
+			]
+	  },
+	  "BTC":{
+	    "APIPool": [
+				"https://btc.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tbtc.api.openbazaar.org/api"
+			]
+	  },
+	  "ETH": {
+			"APIPool": [
+				"https://mainnet.infura.io"
+			],
+			"APITestnetPool": [
+				"https://rinkeby.infura.io"
+			],
+			"WalletOptions": {
+				"RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
+				"RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
+				"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
+			}
+		},
+	  "LTC":{
+	    "APIPool": [
+				"https://ltc.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tltc.api.openbazaar.org/api"
+			]
+	  },
+	  "ZEC":{
+	    "APIPool": [
+				"https://zec.api.openbazaar.org/api"
+			],
+			"APITestnetPool": [
+				"https://tzec.api.openbazaar.org/api"
+			]
+	  }
+	}
+}`
+
+func AM01AssertAPI(t *testing.T, actual interface{}, expected string) {
+	actualSlice := actual.([]interface{})
+	if len(actualSlice) != 1 || actualSlice[0] != expected {
+		t.Fatalf("incorrect api endpoint.\n\twanted: %s\n\tgot: %s\n", expected, actual)
+	}
+}
+
+func TestAM01(t *testing.T) {
 	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -27,116 +137,108 @@ func TestMigration029(t *testing.T) {
 	defer testRepo.DestroySchemaDirectories()
 
 	var (
-		repoverPath      = testRepo.DataPathJoin("repover")
-		listingIndexPath = testRepo.DataPathJoin("root", "listings.json")
-		testListingSlug  = "Migration029_test_listing"
-		testListingPath  = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
-
-		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
-		// If the default hashing algorithm changes at any point in the future you can expect this
-		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
-
-		listing = factory.NewListing(testListingSlug)
-		m       = jsonpb.Marshaler{
-			Indent:       "    ",
-			EmitDefaults: true,
-		}
+		configPath  = testRepo.DataPathJoin("config")
+		repoverPath = testRepo.DataPathJoin("repover")
 	)
+	if err = ioutil.WriteFile(configPath, []byte(preAM01Config), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 
-	f, err := os.Create(testListingPath)
+	if err = ioutil.WriteFile(repoverPath, []byte("29"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	var m migrations.Migration029
+	err = m.Up(testRepo.DataPath(), "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.Marshal(f, listing); err != nil {
-		t.Fatal(err)
-	}
 
-	index := []*migrations.Migration029_ListingData{extractListingData(listing)}
-	indexJSON, err := json.MarshalIndent(&index, "", "    ")
+	configBytes, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(listingIndexPath, indexJSON, os.ModePerm); err != nil {
+	config := map[string]interface{}{}
+	if err = json.Unmarshal(configBytes, &config); err != nil {
 		t.Fatal(err)
 	}
 
-	var migration migrations.Migration029
-	if err := migration.Up(testRepo.DataPath(), "", true); err != nil {
-		t.Fatal(err)
-	}
+	w := config["Wallets"].(map[string]interface{})
+	eth := w["ETH"].(map[string]interface{})
 
-	var listingIndex []migrations.Migration029_ListingData
-	listingsJSON, err := ioutil.ReadFile(listingIndexPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = json.Unmarshal(listingsJSON, &listingIndex); err != nil {
-		t.Fatal(err)
-	}
+	AM01AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	AM01AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
 
-	// See comment above on expectedListingHash
-	if listingIndex[0].Hash != expectedListingHash {
-		t.Errorf("Expected listing hash %s got %s", expectedListingHash, listingIndex[0].Hash)
+	btc := w["BTC"].(map[string]interface{})
+
+	AM01AssertAPI(t, btc["APIPool"], "https://btc.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APITestnetPool"], "https://tbtc.api.openbazaar.org/api")
+
+	bch := w["BCH"].(map[string]interface{})
+
+	AM01AssertAPI(t, bch["APIPool"], "https://bch.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APITestnetPool"], "https://tbch.api.openbazaar.org/api")
+
+	ltc := w["LTC"].(map[string]interface{})
+
+	AM01AssertAPI(t, ltc["APIPool"], "https://ltc.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APITestnetPool"], "https://tltc.api.openbazaar.org/api")
+
+	zec := w["ZEC"].(map[string]interface{})
+
+	AM01AssertAPI(t, zec["APIPool"], "https://zec.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APITestnetPool"], "https://tzec.api.openbazaar.org/api")
+
+	var re = regexp.MustCompile(`\s`)
+	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postAM01Config), "") {
+		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Logf("expected: %s", re.ReplaceAllString(string(postAM01Config), ""))
+		t.Fatal("incorrect post-migration config")
 	}
 
 	assertCorrectRepoVer(t, repoverPath, "30")
 
-	if err := migration.Down(testRepo.DataPath(), "", true); err != nil {
+	err = m.Down(testRepo.DataPath(), "", true)
+	if err != nil {
 		t.Fatal(err)
 	}
 
+	configBytes, err = ioutil.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config = map[string]interface{}{}
+	if err = json.Unmarshal(configBytes, &config); err != nil {
+		t.Fatal(err)
+	}
+
+	w = config["Wallets"].(map[string]interface{})
+	eth = w["ETH"].(map[string]interface{})
+
+	AM01AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
+	AM01AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
+
+	btc = w["BTC"].(map[string]interface{})
+
+	AM01AssertAPI(t, btc["APIPool"], "https://btc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, btc["APITestnetPool"], "https://tbtc.blockbook.api.openbazaar.org/api")
+
+	bch = w["BCH"].(map[string]interface{})
+
+	AM01AssertAPI(t, bch["APIPool"], "https://bch.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, bch["APITestnetPool"], "https://tbch.blockbook.api.openbazaar.org/api")
+
+	ltc = w["LTC"].(map[string]interface{})
+
+	AM01AssertAPI(t, ltc["APIPool"], "https://ltc.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, ltc["APITestnetPool"], "https://tltc.blockbook.api.openbazaar.org/api")
+
+	zec = w["ZEC"].(map[string]interface{})
+
+	AM01AssertAPI(t, zec["APIPool"], "https://zec.blockbook.api.openbazaar.org/api")
+	AM01AssertAPI(t, zec["APITestnetPool"], "https://tzec.blockbook.api.openbazaar.org/api")
+
 	assertCorrectRepoVer(t, repoverPath, "29")
-}
-
-func extractListingData(listing *pb.Listing) *migrations.Migration029_ListingData {
-	descriptionLength := len(listing.Item.Description)
-
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
-		}
-		return false
-	}
-
-	var shipsTo []string
-	var freeShipping []string
-	for _, shippingOption := range listing.ShippingOptions {
-		for _, region := range shippingOption.Regions {
-			if !contains(shipsTo, region.String()) {
-				shipsTo = append(shipsTo, region.String())
-			}
-			for _, service := range shippingOption.Services {
-				if service.Price == 0 && !contains(freeShipping, region.String()) {
-					freeShipping = append(freeShipping, region.String())
-				}
-			}
-		}
-	}
-
-	ld := &migrations.Migration029_ListingData{
-		Hash:         "aabbcc",
-		Slug:         listing.Slug,
-		Title:        listing.Item.Title,
-		Categories:   listing.Item.Categories,
-		NSFW:         listing.Item.Nsfw,
-		CoinType:     listing.Metadata.CoinType,
-		ContractType: listing.Metadata.ContractType.String(),
-		Description:  listing.Item.Description[:descriptionLength],
-		Thumbnail:    migrations.Migration029_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
-		Price: migrations.Migration029_Price{
-			CurrencyCode: listing.Metadata.PricingCurrency,
-			Amount:       listing.Item.Price,
-			Modifier:     listing.Metadata.PriceModifier,
-		},
-		ShipsTo:            shipsTo,
-		FreeShipping:       freeShipping,
-		Language:           listing.Metadata.Language,
-		ModeratorIDs:       listing.Moderators,
-		AcceptedCurrencies: listing.Metadata.AcceptedCurrencies,
-	}
-	return ld
 }

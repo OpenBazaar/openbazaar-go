@@ -2,138 +2,197 @@ package migrations
 
 import (
 	"database/sql"
-	"os"
-	"path"
-	"strings"
-
-	_ "github.com/mutecomm/go-sqlcipher"
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"time"
 )
 
-var (
-	m025_up_create_utxos   = "create table utxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, coin text);"
-	m025_down_create_utxos = "create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, coin text);"
-	m025_temp_utxos        = "ALTER TABLE utxos RENAME TO temp_utxos;"
-	m025_insert_utxos      = "INSERT INTO utxos SELECT outpoint, value, height, scriptPubKey, watchOnly, coin FROM temp_utxos;"
-	m025_drop_temp_utxos   = "DROP TABLE temp_utxos;"
-
-	m025_up_create_stxos   = "create table stxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
-	m025_down_create_stxos = "create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
-	m025_temp_stxos        = "ALTER TABLE stxos RENAME TO temp_stxos;"
-	m025_insert_stxos      = "INSERT INTO stxos SELECT outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid, coin FROM temp_stxos;"
-	m025_drop_temp_stxos   = "DROP TABLE temp_stxos;"
-
-	m025_up_create_txns   = "create table txns (txid text primary key not null, value text, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
-	m025_down_create_txns = "create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
-	m025_temp_txns        = "ALTER TABLE txns RENAME TO temp_txns;"
-	m025_insert_txns      = "INSERT INTO txns SELECT txid, value, height, timestamp, watchOnly, tx, coin FROM temp_txns;"
-	m025_drop_temp_txns   = "DROP TABLE temp_txns;"
-)
-
-type Migration025 struct{}
-
-func (Migration025) Up(repoPath string, dbPassword string, testnet bool) error {
-	var dbPath string
-	if testnet {
-		dbPath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	if dbPassword != "" {
-		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
-	}
-
-	upSequence := strings.Join([]string{
-		m025_temp_utxos,
-		m025_up_create_utxos,
-		m025_insert_utxos,
-		m025_drop_temp_utxos,
-		m025_temp_stxos,
-		m025_up_create_stxos,
-		m025_insert_stxos,
-		m025_drop_temp_stxos,
-		m025_temp_txns,
-		m025_up_create_txns,
-		m025_insert_txns,
-		m025_drop_temp_txns,
-	}, " ")
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	if _, err = tx.Exec(upSequence); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	f1, err := os.Create(path.Join(repoPath, "repover"))
-	if err != nil {
-		return err
-	}
-	_, err = f1.Write([]byte("26"))
-	if err != nil {
-		return err
-	}
-	f1.Close()
-	return nil
+type Migration025 struct {
+	AM01
 }
 
-func (Migration025) Down(repoPath string, dbPassword string, testnet bool) error {
-	var dbPath string
-	if testnet {
-		dbPath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	if dbPassword != "" {
-		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
-	}
-	downSequence := strings.Join([]string{
-		m025_temp_utxos,
-		m025_down_create_utxos,
-		m025_insert_utxos,
-		m025_drop_temp_utxos,
-		m025_temp_stxos,
-		m025_down_create_stxos,
-		m025_insert_stxos,
-		m025_drop_temp_stxos,
-		m025_temp_txns,
-		m025_down_create_txns,
-		m025_insert_txns,
-		m025_drop_temp_txns,
-	}, " ")
+// AM01 migrates the listing and order data to use higher precision.
+type AM01 struct{}
 
-	tx, err := db.Begin()
+var AM01UpVer = 26
+var AM01DownVer = 25
+
+type AM01_TransactionRecord_beforeMigration struct {
+	Txid      string
+	Index     uint32
+	Value     int64
+	Address   string
+	Spent     bool
+	Timestamp time.Time
+}
+
+type AM01_TransactionRecord_afterMigration struct {
+	Txid      string
+	Index     uint32
+	Value     big.Int
+	Address   string
+	Spent     bool
+	Timestamp time.Time
+}
+
+type AM01_record struct {
+	orderID                string
+	coin                   string
+	unmigratedTransactions []AM01_TransactionRecord_beforeMigration
+	migratedTransactions   []AM01_TransactionRecord_afterMigration
+}
+
+func (AM01) Up(repoPath string, dbPassword string, testnet bool) (err error) {
+	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening db: %s", err.Error())
 	}
-	if _, err = tx.Exec(downSequence); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	f1, err := os.Create(path.Join(repoPath, "repover"))
+	saleMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("get sales rows: %s", err.Error())
 	}
-	_, err = f1.Write([]byte("25"))
+	purchaseMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("get purchase rows: %s", err.Error())
 	}
-	f1.Close()
+
+	if err := withTransaction(db, func(tx *sql.Tx) error {
+		err := AM01_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, false)
+		if err != nil {
+			return fmt.Errorf("update sales: %s", err.Error())
+		}
+		err = AM01_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, false)
+		if err != nil {
+			return fmt.Errorf("update purchases: %s", err.Error())
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("migrating up: %s", err.Error())
+	}
+
+	return writeRepoVer(repoPath, AM01UpVer)
+}
+
+func (AM01) Down(repoPath string, dbPassword string, testnet bool) (err error) {
+	db, err := OpenDB(repoPath, dbPassword, testnet)
+	if err != nil {
+		return fmt.Errorf("opening db: %s", err.Error())
+	}
+	saleMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", true)
+	if err != nil {
+		return fmt.Errorf("get sales rows: %s", err.Error())
+	}
+	purchaseMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", true)
+	if err != nil {
+		return fmt.Errorf("get purchase rows: %s", err.Error())
+	}
+
+	if err := withTransaction(db, func(tx *sql.Tx) error {
+		err := AM01_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, true)
+		if err != nil {
+			return fmt.Errorf("update sales: %s", err.Error())
+		}
+		err = AM01_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, true)
+		if err != nil {
+			return fmt.Errorf("update purchases: %s", err.Error())
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("migrating down: %s", err.Error())
+	}
+
+	return writeRepoVer(repoPath, AM01DownVer)
+}
+
+func AM01_extractRecords(db *sql.DB, query string, migrateDown bool) ([]AM01_record, error) {
+	var (
+		results   = make([]AM01_record, 0)
+		rows, err = db.Query(query)
+	)
+	if err != nil {
+		return nil, fmt.Errorf("selecting rows: %s", err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			serializedTransactions sql.NullString
+			r                      = AM01_record{}
+		)
+		if err := rows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
+			return nil, fmt.Errorf("scanning rows: %s", err.Error())
+		}
+		if !serializedTransactions.Valid {
+			continue
+		}
+		if migrateDown {
+			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.migratedTransactions); err != nil {
+				return nil, fmt.Errorf("unmarshal migrated transactions: %s", err.Error())
+			}
+		} else {
+			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.unmigratedTransactions); err != nil {
+				return nil, fmt.Errorf("unmarshal unmigrated transactions: %s", err.Error())
+			}
+		}
+		results = append(results, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %s", err.Error())
+	}
+	return results, nil
+}
+
+func AM01_updateRecords(tx *sql.Tx, records []AM01_record, query string, testMode bool, migrateDown bool) error {
+	var update, err = tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("prepare update statement: %s", err.Error())
+	}
+	defer update.Close()
+	for _, beforeRecord := range records {
+
+		if migrateDown {
+			var migratedTransactionRecords = make([]AM01_TransactionRecord_beforeMigration, 0)
+			for _, beforeTx := range beforeRecord.migratedTransactions {
+				var migratedRecord = AM01_TransactionRecord_beforeMigration{
+					Txid:      beforeTx.Txid,
+					Index:     beforeTx.Index,
+					Value:     beforeTx.Value.Int64(),
+					Spent:     beforeTx.Spent,
+					Timestamp: beforeTx.Timestamp,
+					Address:   beforeTx.Address,
+				}
+				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
+			}
+			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
+			if err != nil {
+				return fmt.Errorf("marshal transactions: %s", err.Error())
+			}
+			if _, err := update.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
+				return fmt.Errorf("updating record: %s", err.Error())
+			}
+		} else {
+			var migratedTransactionRecords = make([]AM01_TransactionRecord_afterMigration, 0)
+			for _, beforeTx := range beforeRecord.unmigratedTransactions {
+				n := big.NewInt(beforeTx.Value)
+				var migratedRecord = AM01_TransactionRecord_afterMigration{
+					Txid:      beforeTx.Txid,
+					Index:     beforeTx.Index,
+					Value:     *n,
+					Spent:     beforeTx.Spent,
+					Timestamp: beforeTx.Timestamp,
+					Address:   beforeTx.Address,
+				}
+				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
+			}
+			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
+			if err != nil {
+				return fmt.Errorf("marhsal transactions: %s", err.Error())
+			}
+			if _, err := update.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
+				return fmt.Errorf("updating record: %s", err.Error())
+			}
+		}
+
+	}
 	return nil
 }

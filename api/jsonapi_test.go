@@ -443,11 +443,11 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	physicalListing := factory.NewListing("physical")
 
-	listing := factory.NewCryptoListing("crypto")
+	//listing := factory.NewCryptoListing("crypto")
 	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 	//runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
-	listing = factory.NewCryptoListing("crypto")
+	listing := factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
 	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
 

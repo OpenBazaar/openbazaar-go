@@ -10,25 +10,17 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 )
 
-var stmt = `PRAGMA key = 'letmein';
-				create table sales (orderID text primary key not null,
-					contract blob, state integer, read integer,
-					timestamp integer, total integer, thumbnail text,
-					buyerID text, buyerHandle text, title text,
-					shippingName text, shippingAddress text,
-					paymentAddr text, funded integer, transactions blob,
-					needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0,
-					coinType not null default '', paymentCoin not null default '');
-				create table purchases (orderID text primary key not null,
-					contract blob, state integer, read integer,
-					timestamp integer, total integer, thumbnail text,
-					vendorID text, vendorHandle text, title text,
-					shippingName text, shippingAddress text, paymentAddr text,
-					funded integer, transactions blob,
-					lastDisputeTimeoutNotifiedAt integer not null default 0,
-					lastDisputeExpiryNotifiedAt integer not null default 0,
-					disputedAt integer not null default 0, coinType not null default '',
-					paymentCoin not null default '');`
+var stm = `PRAGMA key = 'letmein';
+				create table utxos (outpoint text primary key not null,
+					value integer, height integer, scriptPubKey text,
+					watchOnly integer, coin text);
+				create table stxos (outpoint text primary key not null,
+					value integer, height integer, scriptPubKey text,
+					watchOnly integer, spendHeight integer, spendTxid text,
+					coin text);
+				create table txns (txid text primary key not null,
+					value integer, height integer, timestamp integer,
+					watchOnly integer, tx blob, coin text);`
 
 func TestMigration026(t *testing.T) {
 	var dbPath string
@@ -38,13 +30,18 @@ func TestMigration026(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	db.Exec(stmt)
-	_, err = db.Exec("INSERT INTO sales (orderID, total) values (?,?)", "asdf", 3)
+	db.Exec(stm)
+	_, err = db.Exec("INSERT INTO utxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	_, err = db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3)
+	_, err = db.Exec("INSERT INTO stxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_, err = db.Exec("INSERT INTO txns (txid, value, height, timestamp, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, 234, 1, "TBTC")
 	if err != nil {
 		t.Error(err)
 		return
@@ -55,20 +52,30 @@ func TestMigration026(t *testing.T) {
 		t.Error(err)
 	}
 
-	var orderID string
-	var total string
-	var total1 int
+	var outpoint string
+	var value string
+	var height int
+	var scriptPubKey string
+	var watchOnlyInt int
+	var value1 int
 
-	r := db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
+	r := db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
 
-	if err := r.Scan(&orderID, &total); err != nil || total != "3" {
+	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
 		t.Error(err)
 		return
 	}
 
-	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
+	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
 
-	if err := r.Scan(&orderID, &total); err != nil || total != "3" {
+	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
+		t.Error(err)
+		return
+	}
+
+	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
+
+	if err := r.Scan(&outpoint, &value, &height, &watchOnlyInt); err != nil || value != "3" {
 		t.Error(err)
 		return
 	}
@@ -86,17 +93,23 @@ func TestMigration026(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
 
-	r = db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
-
-	if err := r.Scan(&orderID, &total1); err != nil || total1 != 3 {
+	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
 		t.Error(err)
 		return
 	}
 
-	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
+	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
 
-	if err := r.Scan(&orderID, &total1); err != nil || total1 != 3 {
+	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
+		t.Error(err)
+		return
+	}
+
+	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
+
+	if err := r.Scan(&outpoint, &value1, &height, &watchOnlyInt); err != nil || value1 != 3 {
 		t.Error(err)
 		return
 	}
