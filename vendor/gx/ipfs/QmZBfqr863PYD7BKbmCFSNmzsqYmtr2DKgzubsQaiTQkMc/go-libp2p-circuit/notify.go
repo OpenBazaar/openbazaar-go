@@ -37,7 +37,7 @@ func (n *RelayNotifiee) Connected(s inet.Network, c inet.Conn) {
 
 		canhop, err := n.Relay().CanHop(ctx, id)
 		if err != nil {
-			log.Debugf("Error testing relay hop: %s", err.Error())
+			log.Debugf("Error testing relay hop on peer %s: %s", id, err.Error())
 			return
 		}
 

@@ -2,9 +2,6 @@ package multiaddr
 
 // You **MUST** register your multicodecs with
 // https://github.com/multiformats/multicodec before adding them here.
-//
-// TODO: Use a single source of truth for all multicodecs instead of
-// distributing them like this...
 const (
 	P_IP4               = 0x0004
 	P_TCP               = 0x0006
@@ -23,7 +20,8 @@ const (
 	P_HTTPS             = 0x01BB
 	P_ONION             = 0x01BC // also for backwards compatibility
 	P_ONION3            = 0x01BD
-	P_GARLIC64          = 0x01CA
+	P_GARLIC64          = 0x01BE
+	P_GARLIC32          = 0x01BF
 	P_P2P_WEBRTC_DIRECT = 0x0114
 )
 
@@ -104,6 +102,13 @@ var (
 		Size:       LengthPrefixedVarSize,
 		Transcoder: TranscoderGarlic64,
 	}
+	protoGARLIC32 = Protocol{
+		Name:       "garlic32",
+		Code:       P_GARLIC32,
+		VCode:      CodeToVarint(P_GARLIC32),
+		Size:       LengthPrefixedVarSize,
+		Transcoder: TranscoderGarlic32,
+	}
 	protoUTP = Protocol{
 		Name:  "utp",
 		Code:  P_UTP,
@@ -163,6 +168,7 @@ func init() {
 		protoONION2,
 		protoONION3,
 		protoGARLIC64,
+		protoGARLIC32,
 		protoUTP,
 		protoUDT,
 		protoQUIC,

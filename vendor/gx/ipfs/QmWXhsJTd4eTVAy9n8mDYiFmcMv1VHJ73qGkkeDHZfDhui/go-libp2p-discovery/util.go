@@ -14,12 +14,14 @@ var log = logging.Logger("discovery")
 func FindPeers(ctx context.Context, d Discoverer, ns string, limit int) ([]pstore.PeerInfo, error) {
 	res := make([]pstore.PeerInfo, 0, limit)
 
+	log.Debugf("discovering on %s", ns)
 	ch, err := d.FindPeers(ctx, ns, Limit(limit))
 	if err != nil {
 		return nil, err
 	}
 
 	for pi := range ch {
+		log.Debugf("discovered peer on %s", ns)
 		res = append(res, pi)
 	}
 

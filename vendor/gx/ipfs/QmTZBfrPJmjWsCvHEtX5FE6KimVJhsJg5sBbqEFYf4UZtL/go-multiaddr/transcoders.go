@@ -10,8 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
+	mh "github.com/multiformats/go-multihash"
 )
 
 type Transcoder interface {
@@ -213,13 +212,14 @@ func onion3BtS(b []byte) (string, error) {
 	return str, nil
 }
 
-var TranscoderGarlic64 = NewTranscoderFromFunctions(garlic64StB, garlic64BtS, garlicValidate)
+var TranscoderGarlic64 = NewTranscoderFromFunctions(garlic64StB, garlic64BtS, garlic64Validate)
 
 // i2p uses an alternate character set for base64 addresses. This returns an appropriate encoder.
 var garlicBase64Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-~")
 
 func garlic64StB(s string) ([]byte, error) {
-	// i2p base64 address
+	// i2p base64 address will be between 516 and 616 characters long, depending on
+	// certificate type
 	if len(s) < 516 || len(s) > 616 {
 		return nil, fmt.Errorf("failed to parse garlic addr: %s not an i2p base64 address. len: %d\n", s, len(s))
 	}
@@ -232,70 +232,80 @@ func garlic64StB(s string) ([]byte, error) {
 }
 
 func garlic64BtS(b []byte) (string, error) {
-	if len(b) < 386 {
-		return "", fmt.Errorf("failed to validate garlic addr: %s not an i2p base64 address. len: %d\n", b, len(b))
+	if err := garlic64Validate(b); err != nil {
+		return "", err
 	}
 	addr := garlicBase64Encoding.EncodeToString(b)
 	return addr, nil
 }
 
-func garlicValidate(b []byte) error {
+func garlic64Validate(b []byte) error {
+	// A garlic64 address will always be greater than 386 bytes long when encoded.
 	if len(b) < 386 {
 		return fmt.Errorf("failed to validate garlic addr: %s not an i2p base64 address. len: %d\n", b, len(b))
 	}
 	return nil
 }
 
-var TranscoderP2P = NewTranscoderFromFunctions(p2pStB, p2pBtS, p2pVal)
+var TranscoderGarlic32 = NewTranscoderFromFunctions(garlic32StB, garlic32BtS, garlic32Validate)
 
-// OpenBazaar: this function has been updated to parse CIDs as well as PeerIDs
-func p2pStB(s string) ([]byte, error) {
-	if len(s) == 46 && (s[:2] == "Qm" || s[:4] == "12D3") {
-		m, err := mh.FromB58String(s)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
-		}
-		size := CodeToVarint(len(m))
-		b := append(size, m...)
-		return b, nil
-	} else {
-		id, err := cid.Decode(s)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
-		}
-		return id.Bytes(), nil
+var garlicBase32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+
+func garlic32StB(s string) ([]byte, error) {
+	// an i2p base32 address with a length of greater than 55 characters is
+	// using an Encrypted Leaseset v2. all other base32 addresses will always be
+	// exactly 52 characters
+	if len(s) < 55 && len(s) != 52 {
+		return nil, fmt.Errorf("failed to parse garlic addr: %s not a i2p base32 address. len: %d", s, len(s))
 	}
+	for len(s)%8 != 0 {
+		s += "="
+	}
+	garlicHostBytes, err := garlicBase32Encoding.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base32 garlic addr: %s, err: %v len: %v", s, err, len(s))
+	}
+	return garlicHostBytes, nil
 }
 
-// OpenBazaar: this has been patched to parse CIDs as well as multihashes
-func p2pVal(b []byte) error {
-	_, err := cid.Cast(b)
-	if err != nil {
-		_, err = mh.Cast(b)
+func garlic32BtS(b []byte) (string, error) {
+	if err := garlic32Validate(b); err != nil {
+		return "", err
 	}
+	return strings.TrimRight(garlicBase32Encoding.EncodeToString(b), "="), nil
+}
+
+func garlic32Validate(b []byte) error {
+	// an i2p base64 for an Encrypted Leaseset v2 will be at least 35 bytes
+	// long other than that, they will be exactly 32 bytes
+	if len(b) < 35 && len(b) != 32 {
+		return fmt.Errorf("failed to validate garlic addr: %s not an i2p base32 address. len: %d\n", b, len(b))
+	}
+	return nil
+}
+
+var TranscoderP2P = NewTranscoderFromFunctions(p2pStB, p2pBtS, p2pVal)
+
+func p2pStB(s string) ([]byte, error) {
+	// the address is a varint prefixed multihash string representation
+	m, err := mh.FromB58String(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse p2p addr: %s %s", s, err)
+	}
+	return m, nil
+}
+
+func p2pVal(b []byte) error {
+	_, err := mh.Cast(b)
 	return err
 }
 
-// OpenBazaar: this function has been updated to also parse a CID
 func p2pBtS(b []byte) (string, error) {
-	id, err := cid.Parse(b)
+	m, err := mh.Cast(b)
 	if err != nil {
-		size, n, err := ReadVarintCode(b)
-		if err != nil {
-			return "", err
-		}
-
-		b = b[n:]
-		if len(b) != size {
-			return "", fmt.Errorf("inconsistent lengths")
-		}
-		m, err := mh.Cast(b)
-		if err != nil {
-			return "", err
-		}
-		return m.B58String(), nil
+		return "", err
 	}
-	return id.String(), nil
+	return m.B58String(), nil
 }
 
 var TranscoderUnix = NewTranscoderFromFunctions(unixStB, unixBtS, nil)

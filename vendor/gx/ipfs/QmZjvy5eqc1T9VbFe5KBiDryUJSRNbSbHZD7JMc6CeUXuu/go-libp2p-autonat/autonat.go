@@ -85,6 +85,7 @@ func NewAutoNAT(ctx context.Context, h host.Host, getAddrs GetAddrs) AutoNAT {
 }
 
 func (as *AmbientAutoNAT) Status() NATStatus {
+	log.Debugf("current NAT status check is %d", as.status)
 	return as.status
 }
 

@@ -7,7 +7,6 @@ import (
 )
 
 func stringToBytes(s string) ([]byte, error) {
-
 	// consume trailing slashes
 	s = strings.TrimRight(s, "/")
 
@@ -15,17 +14,21 @@ func stringToBytes(s string) ([]byte, error) {
 	sp := strings.Split(s, "/")
 
 	if sp[0] != "" {
-		return nil, fmt.Errorf("invalid multiaddr, must begin with /")
+		return nil, fmt.Errorf("failed to parse multiaddr %q: must begin with /", s)
 	}
 
 	// consume first empty elem
 	sp = sp[1:]
 
+	if len(sp) == 0 {
+		return nil, fmt.Errorf("failed to parse multiaddr %q: empty multiaddr", s)
+	}
+
 	for len(sp) > 0 {
 		name := sp[0]
 		p := ProtocolWithName(name)
 		if p.Code == 0 {
-			return nil, fmt.Errorf("no protocol with name %s", sp[0])
+			return nil, fmt.Errorf("failed to parse multiaddr %q: unknown protocol %s", s, sp[0])
 		}
 		_, _ = b.Write(CodeToVarint(p.Code))
 		sp = sp[1:]
@@ -35,7 +38,7 @@ func stringToBytes(s string) ([]byte, error) {
 		}
 
 		if len(sp) < 1 {
-			return nil, fmt.Errorf("protocol requires address, none given: %s", name)
+			return nil, fmt.Errorf("failed to parse multiaddr %q: unexpected end of multiaddr", s)
 		}
 
 		if p.Path {
@@ -46,12 +49,10 @@ func stringToBytes(s string) ([]byte, error) {
 
 		a, err := p.Transcoder.StringToBytes(sp[0])
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s: %s %s", p.Name, sp[0], err)
+			return nil, fmt.Errorf("failed to parse multiaddr %q: invalid value %q for protocol %s: %s", s, sp[0], p.Name, err)
 		}
 		if p.Size < 0 { // varint size.
-			if p.Code != P_P2P { // OpenBazaar: for backwards compatibility we will avoid writing len here until more nodes upgrade
-				_, _ = b.Write(CodeToVarint(len(a)))
-			}
+			_, _ = b.Write(CodeToVarint(len(a)))
 		}
 		b.Write(a)
 		sp = sp[1:]
@@ -61,6 +62,9 @@ func stringToBytes(s string) ([]byte, error) {
 }
 
 func validateBytes(b []byte) (err error) {
+	if len(b) == 0 {
+		return fmt.Errorf("empty multiaddr")
+	}
 	for len(b) > 0 {
 		code, n, err := ReadVarintCode(b)
 		if err != nil {
@@ -139,6 +143,9 @@ func readComponent(b []byte) (int, Component, error) {
 }
 
 func bytesToString(b []byte) (ret string, err error) {
+	if len(b) == 0 {
+		return "", fmt.Errorf("empty multiaddr")
+	}
 	var buf strings.Builder
 
 	for len(b) > 0 {
@@ -159,19 +166,6 @@ func sizeForAddr(p Protocol, b []byte) (skip, size int, err error) {
 		return 0, (p.Size / 8), nil
 	case p.Size == 0:
 		return 0, 0, nil
-	case p.Code == P_P2P:
-		// OpenBazaar: this has to be patched to handle cids and multiaddrs
-		// serialized in both the new and old format until enough nodes
-		// upgrade that this isn't needed any more.
-		if b[0] == 0x01 {
-			return 0, len(b), nil
-		} else if len(b) == 37 {
-			return 3, 34, nil
-		} else if len(b) == 35 {
-			return 1, 34, nil
-		} else {
-			return 2, 34, nil
-		}
 	default:
 		size, n, err := ReadVarintCode(b)
 		if err != nil {

@@ -159,6 +159,10 @@ func (m *multiaddr) Decapsulate(o Multiaddr) Multiaddr {
 		return &multiaddr{bytes: cpy}
 	}
 
+	if i == 0 {
+		return nil
+	}
+
 	ma, err := NewMultiaddr(s1[:i])
 	if err != nil {
 		panic("Multiaddr.Decapsulate incorrect byte boundaries.")

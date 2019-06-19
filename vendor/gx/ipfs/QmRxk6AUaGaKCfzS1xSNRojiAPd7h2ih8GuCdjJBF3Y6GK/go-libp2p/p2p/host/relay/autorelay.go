@@ -117,6 +117,7 @@ func (h *AutoRelayHost) background(ctx context.Context) {
 }
 
 func (h *AutoRelayHost) findRelays(ctx context.Context) {
+	log.Debugf("findRelays entered")
 	h.mx.Lock()
 	if len(h.relays) >= DesiredRelays {
 		h.mx.Unlock()
@@ -131,6 +132,7 @@ func (h *AutoRelayHost) findRelays(ctx context.Context) {
 	}
 
 	dctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	log.Debugf("find peers for relay")
 	pis, err := discovery.FindPeers(dctx, h.discover, RelayRendezvous, limit)
 	cancel()
 	if err != nil {
@@ -138,6 +140,7 @@ func (h *AutoRelayHost) findRelays(ctx context.Context) {
 		return
 	}
 
+	log.Debugf("select peers for relay")
 	pis = h.selectRelays(pis)
 
 	update := 0
@@ -150,9 +153,10 @@ func (h *AutoRelayHost) findRelays(ctx context.Context) {
 		}
 		h.mx.Unlock()
 
-		cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		cctx, cancel := context.WithTimeout(ctx, 600*time.Second)
 
 		if len(pi.Addrs) == 0 {
+			log.Debugf("no addrs for peer %s, getting addrs for relay", pi.ID)
 			pi, err = h.router.FindPeer(cctx, pi.ID)
 			if err != nil {
 				log.Debugf("error finding relay peer %s: %s", pi.ID, err.Error())
@@ -161,6 +165,7 @@ func (h *AutoRelayHost) findRelays(ctx context.Context) {
 			}
 		}
 
+		log.Debugf("connecting to peer %s for relay", pi.ID)
 		err = h.Connect(cctx, pi)
 		cancel()
 		if err != nil {
@@ -174,6 +179,7 @@ func (h *AutoRelayHost) findRelays(ctx context.Context) {
 		h.mx.Unlock()
 
 		// tag the connection as very important
+		log.Debugf("connected! tag peer %s as 'relay'", pi.ID)
 		h.ConnManager().TagPeer(pi.ID, "relay", 42)
 
 		update++
@@ -210,6 +216,8 @@ func (h *AutoRelayHost) updateAddrs() {
 // connected. For each non-private relay addr, we encapsulate the p2p-circuit addr
 // through which we can be dialed.
 func (h *AutoRelayHost) doUpdateAddrs() {
+	log.Debugf("updating relay addrs")
+	defer log.Debugf("done updating relay addrs")
 	h.mx.Lock()
 	defer h.mx.Unlock()
 
