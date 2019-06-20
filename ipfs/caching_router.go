@@ -43,15 +43,16 @@ func (r *CachingRouter) APIRouter() *APIRouter {
 func (r *CachingRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
 	// Write to the tiered router in the background then write to the caching
 	// router and return
-	var err error
-	if err = r.IpfsRouting.PutValue(ctx, key, value, opts...); err != nil {
-		log.Errorf("ipfs dht put (%s): %s", hex.EncodeToString([]byte(key)), err)
+	go func() {
+		if err := r.IpfsRouting.PutValue(ctx, key, value, opts...); err != nil {
+			log.Errorf("ipfs dht put (%s): %s", hex.EncodeToString([]byte(key)), err)
+		}
+	}()
+	if err := r.apiRouter.PutValue(ctx, key, value, opts...); err != nil {
+		log.Errorf("api cache put (%s): %s", hex.EncodeToString([]byte(key)), err)
 		return err
 	}
-	if err = r.apiRouter.PutValue(ctx, key, value, opts...); err != nil {
-		log.Errorf("api cache put (%s): %s", hex.EncodeToString([]byte(key)), err)
-	}
-	return err
+	return nil
 }
 
 func (r *CachingRouter) GetValue(ctx context.Context, key string, opts ...ropts.Option) ([]byte, error) {
