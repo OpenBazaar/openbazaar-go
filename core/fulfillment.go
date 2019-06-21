@@ -32,14 +32,14 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 		if err != nil {
 			return err
 		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.String()
 		f := wal.GetFeePerByte(wallet.NORMAL)
-		payout.PayoutFeePerByte = f.String()
+		payout.PayoutFeePerByteValue = f.String()
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -75,7 +75,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		fee, _ := new(big.Int).SetString(payout.PayoutFeePerByte, 10)
+		fee, _ := new(big.Int).SetString(payout.PayoutFeePerByteValue, 10)
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return err
@@ -237,7 +237,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 		if err != nil {
 			return err
 		}

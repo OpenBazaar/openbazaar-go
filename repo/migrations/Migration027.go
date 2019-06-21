@@ -343,7 +343,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		sl.Listing.RefundPolicy = templisting.RefundPolicy
 		sl.Listing.TermsAndConditions = templisting.TermsAndConditions
 
-		sl.Listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
+		sl.Listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{
 			Code:         templisting.Metadata.PricingCurrency,
 			Divisibility: 8,
 		}
@@ -387,8 +387,8 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		sl.Listing.Item.Description = templisting.Item.Description
 		sl.Listing.Item.ProcessingTime = templisting.Item.ProcessingTime
 
-		sl.Listing.Item.Price = &pb.CurrencyValue{
-			Currency: sl.Listing.Metadata.PricingCurrency,
+		sl.Listing.Item.PriceValue = &pb.CurrencyValue{
+			Currency: sl.Listing.Metadata.PricingCurrencyDefn,
 			Amount:   strconv.FormatUint(templisting.Item.Price, 10),
 		}
 
@@ -406,8 +406,8 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				VariantCombo: s.VariantCombo,
 				ProductID:    s.ProductID,
 				Quantity:     s.Quantity,
-				Surcharge: &pb.CurrencyValue{
-					Currency: sl.Listing.Metadata.PricingCurrency,
+				SurchargeValue: &pb.CurrencyValue{
+					Currency: sl.Listing.Metadata.PricingCurrencyDefn,
 					Amount:   strconv.FormatInt(s.Surcharge, 10),
 				},
 			}
@@ -428,13 +428,13 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			for _, s := range s.Services {
 				ser := &pb.Listing_ShippingOption_Service{
 					Name: s.Name,
-					Price: &pb.CurrencyValue{
-						Currency: sl.Listing.Metadata.PricingCurrency,
+					PriceValue: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrencyDefn,
 						Amount:   strconv.FormatUint(s.Price, 10),
 					},
 					EstimatedDelivery: s.EstimatedDelivery,
-					AdditionalItemPrice: &pb.CurrencyValue{
-						Currency: sl.Listing.Metadata.PricingCurrency,
+					AdditionalItemPriceValue: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrencyDefn,
 						Amount:   strconv.FormatUint(s.AdditionalItemPrice, 10),
 					},
 				}
@@ -488,9 +488,9 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				}
 				coupon.Discount = disc
 			} else {
-				disc := &pb.Listing_Coupon_PriceDiscount{
-					PriceDiscount: &pb.CurrencyValue{
-						Currency: sl.Listing.Metadata.PricingCurrency,
+				disc := &pb.Listing_Coupon_PriceDiscountValue{
+					PriceDiscountValue: &pb.CurrencyValue{
+						Currency: sl.Listing.Metadata.PricingCurrencyDefn,
 						Amount:   strconv.FormatUint(c.PriceDiscount, 10),
 					},
 				}
@@ -627,7 +627,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			return err
 		}
 		hashes[sl.Listing.Slug] = h
-		amounts[sl.Listing.Slug] = sl.Listing.Item.Price
+		amounts[sl.Listing.Slug] = sl.Listing.Item.PriceValue
 
 	}
 

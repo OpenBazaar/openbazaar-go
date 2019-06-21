@@ -164,7 +164,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		oc.Ratings = append(oc.Ratings, rating)
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		n, _ := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, 10)
+		n, _ := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n)
 		if err != nil {
 			return err
@@ -311,7 +311,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	} else if active {
 		return ErrPrematureReleaseOfTimedoutEscrowFunds
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}

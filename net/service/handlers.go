@@ -322,7 +322,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	currentTime := time.Now()
 	purchaseTime := time.Unix(contract.BuyerOrder.Timestamp.Seconds, int64(contract.BuyerOrder.Timestamp.Nanos))
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
@@ -332,7 +332,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
+		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -375,7 +375,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
+		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -585,7 +585,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +680,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
@@ -758,7 +758,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -804,7 +804,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
@@ -957,7 +957,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -1015,7 +1015,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			buyerSignatures = append(buyerSignatures, sig)
 		}
-		payoutFee, _ := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, 10)
+		payoutFee, _ := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
 		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *payoutFee, true)
 		if err != nil {
 			return nil, err

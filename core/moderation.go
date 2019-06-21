@@ -53,7 +53,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if moderator.Fee == nil {
 			return errors.New("moderator must have a fee set")
 		}
-		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
+		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFeeValue == nil {
 			return errors.New("fixed fee must be set when using a fixed fee type")
 		}
 
@@ -149,15 +149,15 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		total, _ := t.Int(nil)
 		return *total, nil
 	case pb.Moderator_Fee_FIXED:
-		fixedFee, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
-		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
+		fixedFee, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
 			if fixedFee.Cmp(&transactionTotal) > 0 {
 				return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 			}
 			return *fixedFee, nil
 		}
-		amt, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
-		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.Currency.Code, *amt)
+		amt, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
 		if err != nil {
 			return *big.NewInt(0), err
 		} else if fee.Cmp(&transactionTotal) > 0 {
@@ -167,11 +167,11 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
-		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
-			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
+			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
 		} else {
-			f, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
-			f0, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.Currency.Code, *f)
+			f, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			f0, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
 			if err != nil {
 				return *big.NewInt(0), err
 			}

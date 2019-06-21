@@ -17,14 +17,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	contract := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
-				Version:            2,
+				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:              pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies:  []string{"BTC"},
+				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Version:             2,
 			},
 			Item: &pb.Listing_Item{
-				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
+				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -33,9 +33,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
-							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
+							Name:                     "Standard shipping",
+							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},
@@ -66,7 +66,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Amount: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
+			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
 		},
 	}
 	contract.BuyerOrder = order
@@ -104,8 +104,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "50000"},
-			VariantCombo: []uint32{0},
+			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "50000"},
+			VariantCombo:   []uint32{0},
 		},
 	}
 	contract.BuyerOrder.Items[0].Options = []*pb.Order_Item_Option{
@@ -134,8 +134,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "-50000"},
-			VariantCombo: []uint32{0},
+			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "-50000"},
+			VariantCombo:   []uint32{0},
 		},
 	}
 	ser, err = proto.Marshal(contract.VendorListings[0])
@@ -195,7 +195,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		{
 			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
 			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "6000"}},
+			Discount: &pb.Listing_Coupon_PriceDiscountValue{PriceDiscountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "6000"}},
 		},
 	}
 
@@ -293,14 +293,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	contract2 := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				Version:            3,
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Version:             3,
+				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:              pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies:  []string{"BTC"},
+				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 			},
 			Item: &pb.Listing_Item{
-				Price: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
+				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -309,9 +309,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
-							AdditionalItemPrice: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
+							Name:                     "Standard shipping",
+							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},
@@ -342,7 +342,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Amount: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
+			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
 		},
 	}
 	contract2.BuyerOrder = order2

@@ -234,7 +234,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 		buyerTestOutpoints     = []*pb.Outpoint{{
 			Hash:  "hash1",
 			Index: 0,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "5",
 			}}}
@@ -281,8 +281,8 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	if string(buyerErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(buyerErrors))
 	}
-	if string(buyerOuts) != `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]`, string(buyerOuts))
+	if string(buyerOuts) != `[{"hash":"hash1","newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash1","newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]`, string(buyerOuts))
 	}
 }
 
@@ -293,7 +293,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 		vendorTestOutpoints    = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "11",
 			}}}
@@ -339,8 +339,8 @@ func TestUpdateVendorInfo(t *testing.T) {
 	if string(vendorErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(vendorErrors))
 	}
-	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]`, string(vendorOuts))
+	if string(vendorOuts) != `[{"hash":"hash2","index":1,"newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]`, string(vendorOuts))
 	}
 }
 
@@ -351,14 +351,14 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 		buyerTestOutpoints     = []*pb.Outpoint{{
 			Hash:  "hash1",
 			Index: 0,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "11",
 			}}}
@@ -438,14 +438,14 @@ func TestGetByCaseID(t *testing.T) {
 		expectedBuyerOutpoints = []*pb.Outpoint{{
 			Hash:  "hash1",
 			Index: 0,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
 				Amount:   "5",
 			}}}
 		expectedVendorOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
 				Amount:   "11",
 			}}}
@@ -495,9 +495,9 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedBuyerOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value.GetAmount() != expectedBuyerOutpoints[i].Value.GetAmount() ||
-			o.Value.GetCurrency().Code != expectedBuyerOutpoints[i].Value.GetCurrency().Code {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedBuyerOutpoints[i].Value)
+		if o.NewValue.GetAmount() != expectedBuyerOutpoints[i].NewValue.GetAmount() ||
+			o.NewValue.GetCurrency().Code != expectedBuyerOutpoints[i].NewValue.GetCurrency().Code {
+			t.Errorf("Expected outpoint value %v got %v", o.NewValue, expectedBuyerOutpoints[i].NewValue)
 		}
 	}
 	if len(dispute.VendorOutpoints) != len(expectedVendorOutpoints) {
@@ -510,8 +510,8 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedVendorOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedVendorOutpoints[i].Index)
 		}
-		if o.Value != expectedVendorOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedVendorOutpoints[i].Value)
+		if o.NewValue != expectedVendorOutpoints[i].NewValue {
+			t.Errorf("Expected outpoint value %v got %v", o.NewValue, expectedVendorOutpoints[i].NewValue)
 		}
 	}
 	if dispute.OrderState != pb.OrderState_DISPUTED {
@@ -529,14 +529,14 @@ func TestMarkAsClosed(t *testing.T) {
 		buyerTestOutpoints     = []*pb.Outpoint{{
 			Hash:  "hash1",
 			Index: 0,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "11",
 			}}}
@@ -583,14 +583,14 @@ func TestCasesDB_GetAll(t *testing.T) {
 		buyerTestOutpoints     = []*pb.Outpoint{{
 			Hash:  "hash1",
 			Index: 0,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "5",
 			}}}
 		vendorTestOutpoints = []*pb.Outpoint{{
 			Hash:  "hash2",
 			Index: 1,
-			Value: &pb.CurrencyValue{
+			NewValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 				Amount:   "11",
 			}}}
@@ -722,7 +722,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 				ShipTo:  "Buyer Name",
 			},
 			Payment: &pb.Order_Payment{
-				Amount: &pb.CurrencyValue{
+				AmountValue: &pb.CurrencyValue{
 					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 					Amount:   "10",
 				},
@@ -881,7 +881,7 @@ func TestGetDisputesForDisputeExpiryAllowsMissingContracts(t *testing.T) {
 				ShipTo:  "Buyer Name",
 			},
 			Payment: &pb.Order_Payment{
-				Amount: &pb.CurrencyValue{
+				AmountValue: &pb.CurrencyValue{
 					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 					Amount:   "10",
 				},

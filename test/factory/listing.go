@@ -23,26 +23,26 @@ func NewListing(slug string) *pb.Listing {
 		TermsAndConditions: "Sample Terms and Conditions",
 		RefundPolicy:       "Sample Refund policy",
 		Metadata: &pb.Listing_Metadata{
-			Version:            1,
-			AcceptedCurrencies: []string{"TBTC"},
-			PricingCurrency:    &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-			Expiry:             &timestamp.Timestamp{Seconds: 3147483647},
-			Format:             pb.Listing_Metadata_FIXED_PRICE,
-			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+			Version:             1,
+			AcceptedCurrencies:  []string{"TBTC"},
+			PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
+			Expiry:              &timestamp.Timestamp{Seconds: 3147483647},
+			Format:              pb.Listing_Metadata_FIXED_PRICE,
+			ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
 		},
 		Item: &pb.Listing_Item{
 			Skus: []*pb.Listing_Item_Sku{
 				{
-					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
-					Quantity:     12,
-					ProductID:    "1",
-					VariantCombo: []uint32{0, 0},
+					SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
+					Quantity:       12,
+					ProductID:      "1",
+					VariantCombo:   []uint32{0, 0},
 				},
 				{
-					Surcharge:    &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
-					Quantity:     44,
-					ProductID:    "2",
-					VariantCombo: []uint32{0, 1},
+					SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
+					Quantity:       44,
+					ProductID:      "2",
+					VariantCombo:   []uint32{0, 1},
 				},
 			},
 			Title: "Ron Swanson Tshirt",
@@ -67,7 +67,7 @@ func NewListing(slug string) *pb.Listing {
 			},
 			Nsfw:        false,
 			Description: "Example item",
-			Price: &pb.CurrencyValue{
+			PriceValue: &pb.CurrencyValue{
 				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
 				Amount:   "2000",
 			},
@@ -93,7 +93,7 @@ func NewListing(slug string) *pb.Listing {
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
 						Name:              "standard",
-						Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
+						PriceValue:        &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
 						EstimatedDelivery: "3 days",
 					},
 				},
@@ -111,11 +111,11 @@ func NewCryptoListing(slug string) *pb.Listing {
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
 	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "ETH", Divisibility: 8}
-	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
+	listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil
-	listing.Item.Price = &pb.CurrencyValue{
+	listing.Item.PriceValue = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		Amount:   "0",
 	}
@@ -133,7 +133,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",
-					Price:             &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
+					PriceValue:        &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
 					EstimatedDelivery: "3 days",
 				},
 			},

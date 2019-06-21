@@ -197,7 +197,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		return
 	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Received payment for order %s", orderId)
 			funded = true
@@ -216,9 +216,9 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				ListingType: contract.VendorListings[0].Metadata.ContractType.String(),
 				OrderId:     orderId,
 				Price: repo.ListingPrice{
-					Amount:           contract.BuyerOrder.Payment.Amount.Amount,
+					Amount:           contract.BuyerOrder.Payment.AmountValue.Amount,
 					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract),
-					CurrencyCode:     contract.BuyerOrder.Payment.Amount.Currency.Code,
+					CurrencyCode:     contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
 				},
 				Slug:      contract.VendorListings[0].Slug,
@@ -257,11 +257,11 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 }
 
 func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
-	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrency.Divisibility
+	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Divisibility
 	if currencyDivisibility != 0 {
 		return currencyDivisibility
 	}
-	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err == nil {
 		return uint32(wallet.ExchangeRates().UnitsPerCoin() / 10)
 	}
@@ -282,7 +282,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		return
 	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.Amount.Amount, 10)
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
@@ -297,7 +297,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			"payment",
 			orderId,
 			funding.String(),
-			contract.BuyerOrder.Payment.Amount.Currency.Code,
+			contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 		}
 		l.broadcast <- n
 		l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))

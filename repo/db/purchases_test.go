@@ -97,8 +97,8 @@ func TestPutPurchase(t *testing.T) {
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
 	}
-	if total != contract.BuyerOrder.Payment.Amount.Amount {
-		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.Amount, total)
+	if total != contract.BuyerOrder.Payment.AmountValue.Amount {
+		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.AmountValue, total)
 	}
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
 		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
@@ -878,7 +878,7 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
 		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
-		contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{
+		contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{
 			Currency: &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8},
 		}
 
@@ -913,7 +913,7 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.PricingCurrency = &pb.CurrencyDefinition{
+		contract.VendorListings[0].Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{
 			Code:         testCoin,
 			Divisibility: 8,
 		}

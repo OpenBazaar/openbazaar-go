@@ -243,8 +243,8 @@ func testMigration012_assertListingMigratedCorrectly(t *testing.T, listingBefore
 	if expectedListing.Item.Description != actualListing.Item.Description {
 		t.Fatal("Expected:", expectedListing.Item.Description, "\nGot:", actualListing.Item.Description)
 	}
-	if expectedListing.Item.Price.GetAmount() != actualListing.Item.Price.GetAmount() {
-		t.Fatal("Expected:", expectedListing.Item.Price, "\nGot:", actualListing.Item.Price)
+	if expectedListing.Item.PriceValue.GetAmount() != actualListing.Item.PriceValue.GetAmount() {
+		t.Fatal("Expected:", expectedListing.Item.PriceValue, "\nGot:", actualListing.Item.PriceValue)
 	}
 	if expectedListing.Item.Grams != actualListing.Item.Grams {
 		t.Fatal("Expected:", expectedListing.Item.Grams, "\nGot:", actualListing.Item.Grams)
@@ -571,7 +571,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 4",
 			Description: "test",
-			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
+			PriceValue:  &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,
@@ -593,7 +593,7 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		Item: &pb.Listing_Item{
 			Title:       "Title 5",
 			Description: "test",
-			Price:       &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
+			PriceValue:  &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "USD", Divisibility: 2}, Amount: "999"},
 			Tags:        []string{"tag1", "tag2"},
 			Categories:  []string{"cat1", "cat2"},
 			Grams:       28,
@@ -607,10 +607,10 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 var testMigraion012_listingFixtureHashes = map[string]string{
 	//"slug-4": "QmXC26R4PNnArmVssrviaA4WGxP1zzmx8y2AiybF6hQpRM",
 	//"slug-4": "QmZgikDe6fHwJE9p8Wr67EovPsjcB8JBxq3hj19r2rXF1V",
-	"slug-4": "QmfA3tDPtKwFW4Kdnt8o3NY2sYurETvVATRKKSh9hbMsmw",
+	"slug-4": "QmQXemFRK9BL96mrZhwSdLJhMfeRjkr4wUiSpepGscT6nz",
 	//"slug-5": "QmaEUP6zWvZkrWAbVAvcxRiV5Fou8jQnHc4nmarAUVLoQr",
 	//"slug-5": "QmNUSvxBYjs727mH34LVXRvXCFomoU2hHhRbK8aP5RrTuQ",
-	"slug-5": "QmTJyFiv6sojcTUBGLPNbsfRnd8QnWWGEC6g69yDFgoLBk",
+	"slug-5": "QmS13ubnTypEChqV9ZbqQH5hUMjYELbpux9CebUoNagbXD",
 }
 
 var testMigration012_configFixture = `{

@@ -330,8 +330,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFee != nil {
-				if len(profile.ModeratorInfo.Fee.FixedFee.Currency.Code) > WordMaxCharacters {
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
+				if len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > WordMaxCharacters {
 					return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
 				}
 			}

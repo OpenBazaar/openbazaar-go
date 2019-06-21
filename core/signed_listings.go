@@ -53,7 +53,7 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) err
 func ApplyShippingOptions(sl *pb.SignedListing) error {
 	for _, so := range sl.Listing.ShippingOptions {
 		for _, ser := range so.Services {
-			ser.AdditionalItemPrice = ser.Price
+			ser.AdditionalItemPriceValue = ser.PriceValue
 		}
 	}
 	return nil

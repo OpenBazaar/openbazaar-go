@@ -474,7 +474,7 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.Price = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
+	listing.Item.PriceValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
@@ -581,7 +581,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
-	sale.Contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}}
+	sale.Contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}}
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err

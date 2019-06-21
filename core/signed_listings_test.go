@@ -104,9 +104,9 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 	option := listing.Listing.ShippingOptions[0].Services[0]
 
 	core.ApplyShippingOptions(listing)
-	fmt.Println("nnnnn   :", option.AdditionalItemPrice.Amount)
+	fmt.Println("nnnnn   :", option.AdditionalItemPriceValue.Amount)
 
-	if option.AdditionalItemPrice.Amount != "100" {
+	if option.AdditionalItemPriceValue.Amount != "100" {
 		t.Error("Shipping options were not applied properly")
 	}
 }

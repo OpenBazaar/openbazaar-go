@@ -73,7 +73,7 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
@@ -82,18 +82,18 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	for _, r := range records {
 		record, ok := payments[r.Txid]
 		if ok {
-			n, _ := new(big.Int).SetString(record.Value.Amount, 10)
+			n, _ := new(big.Int).SetString(record.TxnValue.Amount, 10)
 			sum := new(big.Int).Add(n, &r.Value)
-			record.Value = &pb.CurrencyValue{
-				Currency: record.Value.Currency,
+			record.TxnValue = &pb.CurrencyValue{
+				Currency: record.TxnValue.Currency,
 				Amount:   sum.String(),
 			}
 			payments[r.Txid] = record
 		} else {
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
-			tx.Value = &pb.CurrencyValue{
-				Currency: contract.BuyerOrder.Payment.Amount.Currency,
+			tx.TxnValue = &pb.CurrencyValue{
+				Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
 				Amount:   r.Value.String(),
 			} // r.Value
 			ts, err := ptypes.TimestampProto(r.Timestamp)
@@ -122,13 +122,13 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		// For multisig we can use the outgoing from the payment address
 		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
-				val, _ := new(big.Int).SetString(rec.Value.Amount, 10)
+				val, _ := new(big.Int).SetString(rec.TxnValue.Amount, 10)
 				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.Value = &pb.CurrencyValue{
-						Currency: rec.Value.Currency,
-						Amount:   "-" + rec.Value.Amount,
+					refundRecord.TxnValue = &pb.CurrencyValue{
+						Currency: rec.TxnValue.Currency,
+						Amount:   "-" + rec.TxnValue.Amount,
 					} //-rec.Value
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
@@ -148,7 +148,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				return paymentRecords, refundRecord, nil
 			}
 			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.Value = contract.Refund.RefundTransaction.Value
+			refundRecord.TxnValue = contract.Refund.RefundTransaction.NewValue
 			refundRecord.Timestamp = contract.Refund.Timestamp
 			refundRecord.Confirmations = uint64(confirmations)
 			refundRecord.Height = uint64(height)

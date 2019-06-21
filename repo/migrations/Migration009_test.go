@@ -50,7 +50,7 @@ func testMigration009SetupFixtures(t *testing.T, db *sql.DB) func() {
 	contract := factory.NewDisputedContract()
 	contract.VendorListings[0] = factory.NewCryptoListing("TETH")
 	//contract.BuyerOrder.Payment.Coin = "TBTC"
-	contract.BuyerOrder.Payment.Amount = &pb.CurrencyValue{
+	contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{
 		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 	}
 	marshaledContract, err := marshaler.MarshalToString(contract)

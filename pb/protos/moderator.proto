@@ -12,15 +12,21 @@ message Moderator {
     Fee fee                            = 5;
 
     message Fee {
-        CurrencyValue fixedFee   = 1;
+        //Price fixedFee   = 1 [json_name = ""];
         float percentage = 2;
         FeeType feeType  = 3;
+        CurrencyValue fixedFeeValue   = 4 [json_name = "fixedFee"];
 
         enum FeeType {
             FIXED                 = 0;
             PERCENTAGE            = 1;
             FIXED_PLUS_PERCENTAGE = 2;
         }
+    }
+
+    message Price {
+        string currencyCode = 1;
+        uint64 amount       = 2; // Bitcoins must be in satoshi
     }
 }
 

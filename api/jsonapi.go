@@ -1551,7 +1551,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
@@ -1600,7 +1600,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -1671,7 +1671,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
@@ -1751,7 +1751,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -1946,7 +1946,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
@@ -1987,7 +1987,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
@@ -2075,7 +2075,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
@@ -2219,7 +2219,7 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
@@ -2264,7 +2264,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Amount.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
 	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)

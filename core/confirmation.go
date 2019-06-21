@@ -28,7 +28,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +88,12 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		if err != nil {
 			return nil, err
 		}
-		oc.RequestedAmount = &pb.CurrencyValue{
-			Currency: contract.BuyerOrder.Payment.Amount.Currency,
+		oc.RequestedAmountValue = &pb.CurrencyValue{
+			Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
 			Amount:   val.String(),
 		}
 	} else {
-		oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
+		oc.RequestedAmountValue = contract.BuyerOrder.Payment.AmountValue
 	}
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
@@ -109,7 +109,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Amount, 10)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
@@ -268,10 +268,10 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.OrderID != orderID {
 		return errors.New("vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.RequestedAmount.Amount != contract.BuyerOrder.Payment.Amount.Amount {
+	if contract.VendorOrderConfirmation.RequestedAmountValue.Amount != contract.BuyerOrder.Payment.AmountValue.Amount {
 		return errors.New("vendor requested an amount different from what we calculated")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
