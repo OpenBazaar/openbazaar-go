@@ -10,8 +10,10 @@ import (
 
 const (
 	// AM06MessagesCreateSQL - the messages create sql
-	AM06MessagesCreateSQL       = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	AM06MessagesCreateSQL = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	// AM06CreateIndexMessagesSQL1 - the messages index on messageID sql
 	AM06CreateIndexMessagesSQL1 = "create index index_messages1 on messages (messageID);"
+	// AM06CreateIndexMessagesSQL2 - the messages composite index on orderID and messageType create sql
 	AM06CreateIndexMessagesSQL2 = "create index index_messages2 on messages (orderID, message_type);"
 	// AM06UpVer - set the repo Up version
 	AM06UpVer = "25"
