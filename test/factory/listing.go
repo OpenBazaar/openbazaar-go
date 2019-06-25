@@ -1,32 +1,59 @@
 package factory
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
+
+	"github.com/OpenBazaar/jsonpb"
 )
 
+func MustLoadListingFixture(fixtureName string) []byte {
+	gopath := os.Getenv("GOPATH")
+	repoPath := filepath.Join("src", "github.com", "OpenBazaar", "openbazaar-go")
+	fixturePath, err := filepath.Abs(filepath.Join(gopath, repoPath, "test", "factory", "fixtures", "listings"))
+	if err != nil {
+		panic(errors.New("cannot create absolute path"))
+	}
+	filename := fmt.Sprintf("%s.json", fixtureName)
+	b, err := ioutil.ReadFile(filepath.Join(fixturePath, filename))
+	if err != nil {
+		panic(fmt.Errorf("cannot find fixture (%s): %s", fixtureName, err))
+	}
+	return b
+}
+
 func NewListing(slug string) *pb.Listing {
-	coupons := []*pb.Listing_Coupon{}
-	sampleCoupon := new(pb.Listing_Coupon)
-	sampleCoupon.Title = "sample coupon"
-	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
-	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5.0}
-	// sampleCoupon.Discount = &pb.Listing_Coupon_PriceDiscount{
-	// 	PriceDiscount: &pb.CurrencyValue{
-	// 		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-	// 		Amount:   "50",
-	// 	},
-	// }
-	coupons = append(coupons, sampleCoupon)
+	var (
+		idJSON = `{
+            "peerID": "QmVisrQ9apmvTLnq9FSNKbP8dYvBvkP4AeeysHZg89oB9q",
+            "pubkeys": {
+                "identity": "CAESIBHz9BLX+9JlUN7cfPdaoh1QFN/a4gjJBzmVOZfSFD5G",
+                "bitcoin": "Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"
+            },
+            "bitcoinSig": "MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="
+        }`
+		newPubkey = new(pb.ID)
+	)
+	if err := jsonpb.UnmarshalString(idJSON, newPubkey); err != nil {
+		panic(err)
+	}
+
 	return &pb.Listing{
 		Slug:               slug,
 		TermsAndConditions: "Sample Terms and Conditions",
 		RefundPolicy:       "Sample Refund policy",
+		VendorID:           newPubkey,
 		Metadata: &pb.Listing_Metadata{
 			Version:             1,
 			AcceptedCurrencies:  []string{"TBTC"},
 			PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-			Expiry:              &timestamp.Timestamp{Seconds: 3147483647},
+			Expiry:              &timestamp.Timestamp{Seconds: 2147483647},
 			Format:              pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
 		},
@@ -92,15 +119,23 @@ func NewListing(slug string) *pb.Listing {
 				Regions: []pb.CountryCode{pb.CountryCode_ALL},
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
-						Name:              "standard",
-						PriceValue:        &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
+						Name: "standard",
+						PriceValue: &pb.CurrencyValue{
+							Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
+							Amount:   "20",
+						},
 						EstimatedDelivery: "3 days",
 					},
 				},
 			},
 		},
-
-		Coupons: coupons,
+		Coupons: []*pb.Listing_Coupon{
+			{
+				Title:    "Insider's Discount",
+				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5},
+			},
+		},
 	}
 }
 
@@ -110,7 +145,7 @@ func NewCryptoListing(slug string) *pb.Listing {
 	//listing.Metadata.CoinDivisibility = 1e8
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
-	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "ETH", Divisibility: 8}
+	//listing.Metadata.PricingCurrency = ""
 	listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""

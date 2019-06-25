@@ -36,7 +36,7 @@ func TestMigration024(t *testing.T) {
 		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
 		// If the default hashing algorithm changes at any point in the future you can expect this
 		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmQymrqGcqzxFz6DvHqfhPLG43NkfW6Jnhb986iA5PHZee" // "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
+		expectedListingHash = "QmQVvLCV2aVr4jEfJDjRnoFaH1cRq3ncHDvjsjzqCoxwss" // "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
 
 		listing = factory.NewListing(testListingSlug)
 		m       = jsonpb.Marshaler{
