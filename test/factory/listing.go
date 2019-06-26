@@ -13,8 +13,10 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 )
 
+// MustLoadListingFixture - load listing json from fixtures
 func MustLoadListingFixture(fixtureName string) []byte {
 	gopath := os.Getenv("GOPATH")
+	//fmt.Println("lets see GOPATH : ", gopath)
 	repoPath := filepath.Join("src", "github.com", "OpenBazaar", "openbazaar-go")
 	fixturePath, err := filepath.Abs(filepath.Join(gopath, repoPath, "test", "factory", "fixtures", "listings"))
 	if err != nil {
@@ -28,6 +30,7 @@ func MustLoadListingFixture(fixtureName string) []byte {
 	return b
 }
 
+// NewListing - return new pb.Listing
 func NewListing(slug string) *pb.Listing {
 	var (
 		idJSON = `{
@@ -139,6 +142,7 @@ func NewListing(slug string) *pb.Listing {
 	}
 }
 
+// NewCryptoListing - return new crypto listing
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
 	//listing.Metadata.CoinType = "TETH"
@@ -158,6 +162,7 @@ func NewCryptoListing(slug string) *pb.Listing {
 	return listing
 }
 
+// NewListingWithShippingRegions - return new listing with shipping region
 func NewListingWithShippingRegions(slug string) *pb.Listing {
 	listing := NewListing(slug)
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{
