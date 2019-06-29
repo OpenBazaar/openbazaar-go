@@ -22,20 +22,10 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		OrigName:     false,
 	}
 
-	//out := []byte{}
-
-	//b := bytes.NewBuffer(out)
-	//err := m.Marshal(b, l)
-	//out, err := m.MarshalToString(l)
-	//if err != nil {
-	//	return nil, err
-	//}
 	out, err := m.MarshalToString(l)
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Println("lets see")
-	//fmt.Println(out)
 	return &Listing{
 		Slug:               l.Slug,
 		TermsAndConditions: l.TermsAndConditions,
@@ -93,9 +83,17 @@ func UnmarshalJSONListing(data []byte) (*Listing, error) {
 	if err := json.Unmarshal(data, &l); err != nil {
 		return nil, fmt.Errorf("unmarshal listing: %s", err.Error())
 	}
-	json.Unmarshal(data, &v)
-	//fmt.Println("unmarshalled v : ", v)
-	listing := v.(map[string]interface{})["listing"]
+	if err := json.Unmarshal(data, &v); err != nil {
+		return nil, fmt.Errorf("unmarshal listing: %s", err.Error())
+	}
+	listingData, ok := v.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unmarshal listing: %s", "incorrect data")
+	}
+	listing, ok := listingData["listing"]
+	if !ok {
+		return nil, fmt.Errorf("unmarshal listing: %s", "incorrect data")
+	}
 	out, _ := json.Marshal(listing)
 	l.Listing.ListingBytes = out
 	l.Listing.ListingVersion = uint32(l.Metadata.Version)

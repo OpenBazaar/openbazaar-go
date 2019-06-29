@@ -1,7 +1,6 @@
 package repo_test
 
 import (
-	//"fmt"
 	"math/big"
 	"testing"
 
@@ -126,7 +125,6 @@ func TestListingAttributes(t *testing.T) {
 			t.Errorf("unable to unmarshal example (%s)", e.fixtureName)
 			continue
 		}
-		//fmt.Println("l version : ", l.Metadata.Version, "  exp ver : ", e.expectedResponse, "   extr ver : ", l.ListingVersion)
 		if l.Metadata.Version != e.expectedResponse {
 			t.Errorf("expected example (%s) to have version response (%+v), but instead was (%+v)", e.fixtureName, e.expectedResponse, l.Metadata.Version)
 		}
@@ -160,12 +158,9 @@ func TestListingFromProtobuf(t *testing.T) {
 	if subject.RefundPolicy != actual.RefundPolicy {
 		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.RefundPolicy, actual.RefundPolicy)
 	}
-	//fmt.Println(actual.ListingVersion)
-	//fmt.Println(actual.ListingBytes)
 	if subject.Metadata.Version != actual.ListingVersion {
 		t.Errorf("expected vesion to be (%d), but was (%d)", subject.Metadata.Version, actual.ListingVersion)
 	}
-	//fmt.Println(actual.GetTitle())
 	//if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
 	//	t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
 	//	if err != nil {
