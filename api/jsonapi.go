@@ -26,6 +26,7 @@ import (
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
+	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	iface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
@@ -3829,6 +3830,29 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
 			return
 		}
+
+		// Deserialize the record and check for the presence of a pubkey. If the
+		// record doesn't have one we'll inject it in and re-marshal
+		entry := new(ipnspb.IpnsEntry)
+		if err := entry.Unmarshal(ipnsBytes); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unmarshaling ipns record: %s", err))
+			return
+		}
+
+		if len(entry.PubKey) == 0 {
+			entry.PubKey, err = i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("get public key bytes: %s", err))
+				return
+			}
+
+			ipnsBytes, err = entry.Marshal()
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling ipns record: %s", err))
+				return
+			}
+		}
+
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)
 		b, err := json.MarshalIndent(response, "", "    ")
 		if err != nil {
