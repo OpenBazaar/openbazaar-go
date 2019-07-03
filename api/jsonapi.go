@@ -32,6 +32,8 @@ import (
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
+	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -3815,53 +3817,68 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 		peerID = i.node.IpfsNode.Identity.Pretty()
 	}
 
-	type respType struct {
-		PeerID string `json:"peerid"`
-		Record struct {
-			Hex string `json:"hex"`
-		} `json:"record"`
-	}
-	var response = respType{PeerID: peerID}
-
-	if i.node.IpfsNode.Identity.Pretty() == peerID {
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
-			return
-		}
-		response.Record.Hex = hex.EncodeToString(ipnsBytes)
-		b, err := json.MarshalIndent(response, "", "    ")
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshal json error: %s", err))
-			return
-		}
-
-		SanitizedResponse(w, string(b))
-		return
-	}
-
 	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Load peer's pubkey which is needed to inject into record for a local peer
+	// and to force loading the newest record for remote peers
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
-	_, err = routing.GetPublicKey(i.node.IpfsNode.Routing, ctx, pid)
+	pubkey, err := routing.GetPublicKey(i.node.IpfsNode.Routing, ctx, pid)
 	cancel()
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*180)
-	ipnsBytes, err := i.node.IpfsNode.Routing.GetValue(ctx, ipns.RecordKey(pid))
-	cancel()
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
+	var ipnsBytes []byte
+
+	// Get local IPNS record and add pubkey
+	if i.node.IpfsNode.Identity.Pretty() == peerID {
+		ipnsBytes, err = i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
+			return
+		}
+
+		entry := new(ipnspb.IpnsEntry)
+		if err := entry.Unmarshal(ipnsBytes); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unmarshaling ipns record: %s", err))
+			return
+		}
+
+		entry.PubKey, err = pubkey.Bytes()
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		ipnsBytes, err = entry.Marshal()
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+	} else {
+		// Get remote IPNS entry
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*180)
+		ipnsBytes, err = i.node.IpfsNode.Routing.GetValue(ctx, ipns.RecordKey(pid))
+		cancel()
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
+	// Create formatted response
+	response := struct {
+		PeerID string `json:"peerid"`
+		Record struct {
+			Hex string `json:"hex"`
+		} `json:"record"`
+	}{PeerID: peerID}
 	response.Record.Hex = hex.EncodeToString(ipnsBytes)
 	b, err := json.MarshalIndent(response, "", "    ")
 	if err != nil {
