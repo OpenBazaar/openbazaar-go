@@ -3806,9 +3806,12 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
-	_, peerID := path.Split(r.URL.Path)
+	var (
+		identity  = ipfs.IdentityFromNode(i.node.IpfsNode)
+		_, peerID = path.Split(r.URL.Path)
+	)
 	if len(peerID) == 0 || peerID == "resolveipns" {
-		peerID = i.node.IpfsNode.Identity.Pretty()
+		peerID = identity.Pretty()
 	}
 
 	type respType struct {
@@ -3819,8 +3822,8 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	}
 	var response = respType{PeerID: peerID}
 
-	if i.node.IpfsNode.Identity.Pretty() == peerID {
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
+	if identity.Pretty() == peerID {
+		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(identity))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
 			return
