@@ -27,7 +27,6 @@ import (
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
-	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
@@ -3807,11 +3806,11 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
 	var (
-		identity  = ipfs.IdentityFromNode(i.node.IpfsNode)
-		_, peerID = path.Split(r.URL.Path)
+		localID     = ipfs.IdentityFromNode(i.node.IpfsNode)
+		_, lookupID = path.Split(r.URL.Path)
 	)
-	if len(peerID) == 0 || peerID == "resolveipns" {
-		peerID = identity.Pretty()
+	if len(lookupID) == 0 || lookupID == "resolveipns" {
+		lookupID = localID.Pretty()
 	}
 
 	type respType struct {
@@ -3820,37 +3819,20 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 			Hex string `json:"hex"`
 		} `json:"record"`
 	}
-	var response = respType{PeerID: peerID}
+	var response = respType{PeerID: lookupID}
 
-	if identity.Pretty() == peerID {
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(identity))
+	if localID.Pretty() == lookupID {
+		localRecord, err := ipfs.GetIPNSRecord(i.node.IpfsNode, localID)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
 			return
 		}
 
-		// Deserialize the record and check for the presence of a pubkey. If the
-		// record doesn't have one we'll inject it in and re-marshal
-		entry := new(ipnspb.IpnsEntry)
-		if err := entry.Unmarshal(ipnsBytes); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("unmarshaling ipns record: %s", err))
+		ipnsBytes, err := localRecord.Marshal()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling ipns record: %s", err))
 			return
 		}
-
-		if len(entry.PubKey) == 0 {
-			entry.PubKey, err = i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
-			if err != nil {
-				ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("get public key bytes: %s", err))
-				return
-			}
-
-			ipnsBytes, err = entry.Marshal()
-			if err != nil {
-				ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling ipns record: %s", err))
-				return
-			}
-		}
-
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)
 		b, err := json.MarshalIndent(response, "", "    ")
 		if err != nil {
@@ -3862,7 +3844,7 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pid, err := peer.IDB58Decode(peerID)
+	pid, err := peer.IDB58Decode(lookupID)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return

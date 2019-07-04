@@ -97,9 +97,6 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 	return pth.Segments()[1], nil
 }
 
-// getIPNSRecord will look in the datastore shared by the DHT under the /ipfs/<peerID>
-// key. The value in this namespace contains a serialized protobuf record which is
-// returned if present or an error otherwise.
 func getIPNSRecord(datastore ds.Datastore, p peer.ID) (*ipnspb.IpnsEntry, error) {
 	valBytes, err := datastore.Get(namesys.IpnsDsKey(p))
 	if err != nil {
@@ -111,6 +108,32 @@ func getIPNSRecord(datastore ds.Datastore, p peer.ID) (*ipnspb.IpnsEntry, error)
 		return nil, err
 	}
 	return ipnsEntry, nil
+}
+
+// GetIPNSRecord will look in the datastore shared by the DHT under the /ipfs/<peerID>
+// key. The value in this namespace contains a serialized protobuf record which is
+// returned if present or an error otherwise.
+func GetIPNSRecord(n *core.IpfsNode, p peer.ID) (*ipnspb.IpnsEntry, error) {
+	var (
+		entry, err = getIPNSRecord(n.Repo.Datastore(), p)
+		localID    = n.Identity
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deserialize the record and check for the presence of a pubkey. If the
+	// record doesn't have one we'll inject it in
+	if p == localID {
+		if len(entry.PubKey) == 0 {
+			entry.PubKey, err = n.PrivateKey.GetPublic().Bytes()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return entry, nil
 }
 
 // getIPFSPath looks in two places in the database for a record. First is
