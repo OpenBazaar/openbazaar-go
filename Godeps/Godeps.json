@@ -4,6 +4,23 @@
 	"GodepVersion": "v80",
 	"Deps": [
 		{
+			"ImportPath": "github.com/disintegration/imaging",
+			"Comment": "v1.6.0-3-g465faf0",
+			"Rev": "465faf0892b5c7b3325643b0e47282e1331672e7"
+		},
+		{
+			"ImportPath": "golang.org/x/image/bmp",
+			"Rev": "f03afa92d3ffad9e5ff762aa549908afe674f01e"
+		},
+		{
+			"ImportPath": "golang.org/x/image/tiff",
+			"Rev": "f03afa92d3ffad9e5ff762aa549908afe674f01e"
+		},
+		{
+			"ImportPath": "golang.org/x/image/tiff/lzw",
+			"Rev": "f03afa92d3ffad9e5ff762aa549908afe674f01e"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
 			"Rev": "6c59e2405456eac2ea76c13e7472bb51b655bdd3"
 		},
@@ -901,10 +918,6 @@
 			"ImportPath": "github.com/natefinch/lumberjack",
 			"Comment": "v2.1-2-gaee4629",
 			"Rev": "aee4629129445bbdfb69aa565537dcfa16544311"
-		},
-		{
-			"ImportPath": "github.com/nfnt/resize",
-			"Rev": "891127d8d1b52734debe1b3c3d7e747502b6c366"
 		},
 		{
 			"ImportPath": "github.com/op/go-logging",
