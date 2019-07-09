@@ -169,8 +169,21 @@ func IDFromPublicKey(pk ic.PubKey) (ID, error) {
 	return ID(hash), nil
 }
 
-// OpenBazaar: temporary helper function to remain forward compatible with
-// inline keys
+// HashedIDFromPublicKey will always return the SHA256 hash of
+// the pubkey bytes. OpenBazaar: temporary helper to isolate the
+// hash-producing ID behavior.
+func HashedIDFromPublicKey(pk ic.PubKey) (ID, error) {
+	b, err := pk.Bytes()
+	if err != nil {
+		return "", err
+	}
+	hash, _ := mh.Sum(b, mh.SHA2_256, -1)
+	return ID(hash), nil
+}
+
+// InlineIDFromPublicKey will always return the new inline ID format
+// of the pubkey bytes.  OpenBazaar: temporary helper function to
+// remain forward compatible with inline keys
 func InlineIDFromPublicKey(pk ic.PubKey) (ID, error) {
 	b, err := pk.Bytes()
 	if err != nil {
@@ -178,6 +191,16 @@ func InlineIDFromPublicKey(pk ic.PubKey) (ID, error) {
 	}
 	hash, _ := mh.Sum(b, mh.ID, -1)
 	return ID(hash), nil
+}
+
+// AlternativeIDFromPublicKey returns SHA256 hash ID when AdvancedEnableInlining
+// is true, and returns new InlineID otherwise. This allows legacy IDs to be compared
+// after they are no longer available by the default IDFromPublicKey function.
+func AlternativeIDFromPublicKey(pubkey ic.PubKey) (ID, error) {
+	if AdvancedEnableInlining {
+		return HashedIDFromPublicKey(pubkey)
+	}
+	return InlineIDFromPublicKey(pubkey)
 }
 
 // IDFromPrivateKey returns the Peer ID corresponding to sk
