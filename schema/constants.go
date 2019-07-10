@@ -39,6 +39,7 @@ const (
 	CreateMessagesSQL                       = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
 	CreateIndexMessagesSQL1                 = "create index index_messages1 on messages (messageID);"
 	CreateIndexMessagesSQL2                 = "create index index_messages2 on messages (orderID, message_type);"
+	CreateIndexMessagesSQL3                 = "create index index_messages2 on messages (peerID, message_type);"
 	// End SQL Statements
 
 	// Configuration defaults
