@@ -29,7 +29,7 @@ type NetworkService interface {
 	SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error
 
 	// Disconnect from the given peer
-	DisconnectFromPeer(p peer.ID) error
+	DisconnectFromPeer(p peer.ID)
 
 	// Block until the service is available
 	WaitForReady()

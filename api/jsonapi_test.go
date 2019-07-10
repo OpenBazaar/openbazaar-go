@@ -482,7 +482,7 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend/", spendJSON, 400, insuffientFundsJSON},
+		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
 	})
 }
@@ -796,7 +796,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 		createdAt = time.Unix(837645345, 0)
 		notif1    = &repo.Notification{
 			ID:           "notif1",
-			CreatedAt:    createdAt,
+			CreatedAt:    repo.NewAPITime(createdAt),
 			NotifierType: repo.NotifierTypeFollowNotification,
 			NotifierData: &repo.FollowNotification{
 				ID:     "notif1",
@@ -806,7 +806,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 		}
 		notif2 = &repo.Notification{
 			ID:           "notif2",
-			CreatedAt:    createdAt,
+			CreatedAt:    repo.NewAPITime(createdAt),
 			NotifierType: repo.NotifierTypeFollowNotification,
 			NotifierData: &repo.FollowNotification{
 				ID:     "notif2",
@@ -816,7 +816,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 		}
 		notif3 = &repo.Notification{
 			ID:           "notif3",
-			CreatedAt:    createdAt,
+			CreatedAt:    repo.NewAPITime(createdAt),
 			NotifierType: repo.NotifierTypeFollowNotification,
 			NotifierData: &repo.FollowNotification{
 				ID:     "notif3",
