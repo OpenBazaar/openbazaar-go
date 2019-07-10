@@ -19,11 +19,11 @@ const (
 	MigrationCreateMessagesAM06CreateIndexMessagesSQLPeerIDMType = "create index index_messages_peerIDmType on messages (peerID, message_type);"
 	// MigrationCreateMessagesAM06MessagesDeleteSQL the messages delete sql
 	MigrationCreateMessagesAM06MessagesDeleteSQL = "drop table if exists messages;"
-	// MigrationCreateMessagesAM06CreateIndexMessagesSQLMessageID delete the messages index on messageID sql
+	// MigrationCreateMessagesAM06DeleteIndexMessagesSQLMessageID delete the messages index on messageID sql
 	MigrationCreateMessagesAM06DeleteIndexMessagesSQLMessageID = "drop index if exists index_messages_messageID;"
-	// MigrationCreateMessagesAM06CreateIndexMessagesSQLOrderIDMType delete the messages composite index on orderID and messageType create sql
+	// MigrationCreateMessagesAM06DeleteIndexMessagesSQLOrderIDMType delete the messages composite index on orderID and messageType create sql
 	MigrationCreateMessagesAM06DeleteIndexMessagesSQLOrderIDMType = "drop index if exists index_messages_orderIDmType;"
-	// MigrationCreateMessagesAM06CreateIndexMessagesSQLPeerIDMType delete the messages composite index on peerID and messageType create sql
+	// MigrationCreateMessagesAM06DeleteIndexMessagesSQLPeerIDMType delete the messages composite index on peerID and messageType create sql
 	MigrationCreateMessagesAM06DeleteIndexMessagesSQLPeerIDMType = "drop index if exists index_messages_peerIDmType;"
 	// MigrationCreateMessagesAM06UpVer set the repo Up version
 	MigrationCreateMessagesAM06UpVer = "25"
