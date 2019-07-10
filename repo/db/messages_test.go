@@ -61,13 +61,11 @@ func TestMessageDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println(string(retMsg.GetPayload().Value), "  ", peer)
-
 	if !(string(retMsg.GetPayload().Value) == payload) {
 		t.Error("incorrect payload")
 	}
 
-	if !(peer == peerID) {
+	if peer != peerID {
 		t.Error("incorrect peerID")
 	}
 }

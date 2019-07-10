@@ -11,17 +11,17 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-// MessagesDB - represents the messages table
+// MessagesDB represents the messages table
 type MessagesDB struct {
 	modelStore
 }
 
-// NewMessageStore - return new MessagesDB
+// NewMessageStore return new MessagesDB
 func NewMessageStore(db *sql.DB, lock *sync.Mutex) repo.MessageStore {
 	return &MessagesDB{modelStore{db, lock}}
 }
 
-// Put - insert record into the messages
+// Put will insert a record into the messages
 func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
@@ -38,7 +38,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 
 	msg0, err := msg.MarshalJSON()
 	if err != nil {
-		fmt.Println("err marshaling : ", err)
+		log.Errorf("err marshalling json: %v", err)
 	}
 
 	defer stmt.Close()
@@ -91,8 +91,8 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 	return msg, peerID, nil
 }
 
-// GetByMessageIDType returns the message for the specified message id
-func (o *MessagesDB) GetByMessageIDType(messageID string) (*repo.Message, string, error) {
+// GetByMessageID returns the message for the specified message id
+func (o *MessagesDB) GetByMessageID(messageID string) (*repo.Message, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
