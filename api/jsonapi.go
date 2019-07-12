@@ -4278,9 +4278,9 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 
 // GETScanOfflineMessages - used to manually trigger offline message scan
 func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.Request) {
-	if t := time.Since(lastManualScan).Minutes(); t > 10 && t < 100000000 {
+	if t := time.Since(lastManualScan).Minutes(); t > 2 && t < 100000000 {
 		i.node.MessageRetriever.RunOnce()
-		lastManualScan = time.Now()
 	}
+	lastManualScan = time.Now()
 	SanitizedResponse(w, `{}`)
 }
