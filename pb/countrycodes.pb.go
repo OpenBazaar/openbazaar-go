@@ -3,9 +3,11 @@
 
 package pb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -16,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type CountryCode int32
 
@@ -541,6 +543,7 @@ var CountryCode_name = map[int32]string{
 	507: "SOUTH_AMERICA",
 	508: "OCEANIA",
 }
+
 var CountryCode_value = map[string]int32{
 	"NA":                             0,
 	"AFGHANISTAN":                    1,
@@ -805,17 +808,18 @@ var CountryCode_value = map[string]int32{
 func (x CountryCode) String() string {
 	return proto.EnumName(CountryCode_name, int32(x))
 }
+
 func (CountryCode) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_countrycodes_35efbc79bf99ad19, []int{0}
+	return fileDescriptor_18ecd71e04cfbc43, []int{0}
 }
 
 func init() {
 	proto.RegisterEnum("CountryCode", CountryCode_name, CountryCode_value)
 }
 
-func init() { proto.RegisterFile("countrycodes.proto", fileDescriptor_countrycodes_35efbc79bf99ad19) }
+func init() { proto.RegisterFile("countrycodes.proto", fileDescriptor_18ecd71e04cfbc43) }
 
-var fileDescriptor_countrycodes_35efbc79bf99ad19 = []byte{
+var fileDescriptor_18ecd71e04cfbc43 = []byte{
 	// 2291 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x57, 0x65, 0xbc, 0x1c, 0xc7,
 	0x91, 0xbf, 0xd5, 0x93, 0x05, 0x23, 0x2a, 0x8d, 0x65, 0x9d, 0x6d, 0x99, 0xce, 0x77, 0x17, 0x70,

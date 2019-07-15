@@ -288,6 +288,9 @@ type Txn struct {
 
 	// Raw transaction bytes
 	Bytes []byte
+
+	FromAddress string
+	ToAddress   string
 }
 
 type StatusCode string

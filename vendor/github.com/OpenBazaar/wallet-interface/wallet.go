@@ -55,11 +55,11 @@ type Wallet interface {
 // associated. If the interface is supported, AssociateTransactionToOrder must be called as
 // early as is reasonable to ensure proper reporting of payment.
 type WalletMustManuallyAssociateTransactionToOrder interface {
-	// AssociateOrderToTransaction must be called for wallets which implement it to support
+	// AssociateTransactionWithOrder must be called for wallets which implement it to support
 	// wallet implementations which are not able to generate unique Addresses on a per-Order
 	// basis. It should be called as soon as the wallet transaction and referenceID are both
 	// known by the openbazaar-go node (which should be reported from the buyer to the vendor).
-	AssociateTransactionToOrder(txid chainhash.Hash, referenceID string) error
+	AssociateTransactionWithOrder(cb TransactionCallback)
 }
 
 type walletMustManager interface {

@@ -405,3 +405,9 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return nil
 }
+
+func (w *BitcoinWallet) AssociateTransactionWithOrder(txnCB wi.TransactionCallback) {
+	//for _, l := range w.listeners {
+	//	go l(txnCB)
+	//}
+}
