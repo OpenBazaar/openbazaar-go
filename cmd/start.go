@@ -93,6 +93,8 @@ type Start struct {
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
 	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
+
+	ForceKeyCachePurge bool `long:"forcekeypurge" description:"repair test for issue OpenBazaar/openbazaar-go#1593; use as instructed only"`
 }
 
 func (x *Start) Execute(args []string) error {
@@ -427,6 +429,11 @@ func (x *Start) Execute(args []string) error {
 	err = proto.Unmarshal(ival, ourIpnsRecord)
 	if err != nil {
 		log.Error("unmarshal record value", err)
+		nd.Repo.Datastore().Delete(ipnskey)
+	}
+
+	if x.ForceKeyCachePurge {
+		log.Infof("forcing key purge from namesys cache...")
 		nd.Repo.Datastore().Delete(ipnskey)
 	}
 
