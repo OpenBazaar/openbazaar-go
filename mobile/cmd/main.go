@@ -6,6 +6,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"os"
 	"sync"
+	"time"
 )
 
 type Options struct {
@@ -45,6 +46,10 @@ func main() {
 	if err := n.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
+
+	time.Sleep(time.Second*30)
+	fmt.Println("restarting...")
+	go n.Restart()
 
 	wg.Add(1)
 	wg.Wait()
