@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
@@ -59,11 +61,14 @@ var log = logging.MustGetLogger("mobile")
 
 // Node configuration structure
 type Node struct {
-	OpenBazaarNode *core.OpenBazaarNode
-	config         NodeConfig
-	cancel         context.CancelFunc
-	ipfsConfig     *ipfscore.BuildCfg
-	apiConfig      *apiSchema.APIConfig
+	OpenBazaarNode  *core.OpenBazaarNode
+	config          NodeConfig
+	cancel          context.CancelFunc
+	ipfsConfig      *ipfscore.BuildCfg
+	apiConfig       *apiSchema.APIConfig
+	gatewayListener net.Listener
+	started         bool
+	mtx             sync.Mutex
 }
 
 var (
@@ -244,8 +249,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 
-	core.PublishLock.Lock()
-
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
 	if err != nil && err != db.SettingsNotSetError {
@@ -295,7 +298,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ncfg := ipfs.PrepareIPFSConfig(r, ignoredURI, config.Testnet, config.Testnet)
 	ncfg.Routing = constructMobileRouting
 
-	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	core.Node.PublishLock.Lock()
+
+	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig, mtx: sync.Mutex{}}, nil
 }
 
 func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
@@ -338,6 +343,13 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 // Start start openbazaard (OpenBazaar daemon)
 func (n *Node) Start() error {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	return n.start()
+}
+
+func (n *Node) start() error {
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
@@ -404,7 +416,7 @@ func (n *Node) Start() error {
 		authCookie.Value = n.config.AuthenticationToken
 		n.apiConfig.Authenticated = true
 	}
-	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *n.apiConfig)
+	gateway, err := newHTTPGateway(n, ctx, authCookie, *n.apiConfig)
 	if err != nil {
 		return err
 	}
@@ -454,26 +466,58 @@ func (n *Node) Start() error {
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
 
-		core.PublishLock.Unlock()
+		n.OpenBazaarNode.PublishLock.Unlock()
 		core.Node.UpdateFollow()
-		if !core.InitalPublishComplete {
+		if !n.OpenBazaarNode.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
-
+	n.started = true
 	return nil
 }
 
 // Stop stop openbazaard
 func (n *Node) Stop() error {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	return n.stop()
+}
+
+func (n *Node) stop() error {
+	n.cancel()
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
+	n.gatewayListener.Close()
+	n.started = false
 	return nil
+}
+
+func (n *Node) Restart() error {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	if n.started {
+		n.stop()
+	}
+
+	// This node has been stopped by the stop command so we need to create
+	// a new one before starting it again.
+	newNode, err := NewNodeWithConfig(&n.config, "", "")
+	if err != nil {
+		return err
+	}
+	n.OpenBazaarNode = newNode.OpenBazaarNode
+	n.config = newNode.config
+	n.ipfsConfig = newNode.ipfsConfig
+	n.apiConfig = newNode.apiConfig
+
+	return n.start()
 }
 
 // initializeRepo create the database
@@ -493,7 +537,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *Node, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := ctx.GetConfig()
 	if err != nil {
@@ -528,6 +572,8 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
 
+	node.gatewayListener = manet.NetListener(gwLis)
+
 	// Create and return an API gateway
-	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
+	return api.NewGateway(node.OpenBazaarNode, authCookie, node.gatewayListener, config, mainLoggingBackend, opts...)
 }

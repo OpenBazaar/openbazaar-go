@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"sync"
-
 	"github.com/OpenBazaar/openbazaar-go/mobile"
 	"github.com/jessevdk/go-flags"
+	"os"
+	"sync"
 )
 
 type Options struct {
@@ -43,9 +42,10 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	wg.Add(1)
 	if err := n.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
+
+	wg.Add(1)
 	wg.Wait()
 }
