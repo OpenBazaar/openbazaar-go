@@ -71,6 +71,7 @@ var (
 		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
 	mainLoggingBackend logging.Backend
+	gateway            *api.Gateway
 )
 
 // NewNode create the configuration file for a new node
@@ -404,7 +405,7 @@ func (n *Node) Start() error {
 		authCookie.Value = n.config.AuthenticationToken
 		n.apiConfig.Authenticated = true
 	}
-	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *n.apiConfig)
+	gateway, err = newHTTPGateway(core.Node, ctx, authCookie, *n.apiConfig)
 	if err != nil {
 		return err
 	}
@@ -470,9 +471,36 @@ func (n *Node) Stop() error {
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
-	os.Remove(repoLockFile)
+	err := os.Remove(repoLockFile)
+	if err != nil {
+		return err
+	} else {
+		log.Info("Removed the repo lockfile")
+	}
 	core.Node.Multiwallet.Close()
-	core.Node.IpfsNode.Close()
+
+	err = core.Node.IpfsNode.Close()
+	if err != nil {
+		return err
+	} else {
+		log.Info("Closed the IPFS node down properly")
+	}
+
+	gateway.Close()
+
+	return core.Node.IpfsNode.Process().Err()
+
+	//return nil
+}
+
+func (n *Node) Restart() error {
+	n.Stop()
+	log.Error("STARTING BACK UP")
+	newNode := NewNode(n.config.RepoPath, n.config.AuthenticationToken, n.config.Testnet, n.config.UserAgent, n.config.WalletTrustedPeer, "", "")
+	err := newNode.Start()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
