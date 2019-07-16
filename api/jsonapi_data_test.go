@@ -229,11 +229,11 @@ const avatarValidJSON = `{
 }`
 
 const avatarValidJSONResponse = `{
-    "large": "QmcUNDbsazULoEddnRSsiK1LgUCx6FnujgUG6r17GEviq2",
-    "medium": "Qmdj2NnzQwGuHN7RZmMhu1VEeLP7APDzFE5KmBKsPxZmuH",
+    "large": "QmWssRhf5pBARL5eiNSfvxJMC8UptqDsRNs71Vs8JYcquP",
+    "medium": "QmRCVZ9WSvS69Yv1uSFqwu87UW7TKsjfJY6CwfMNNiimaX",
     "original": "QmYGE9UNEMvQ8W1qcVAMkJTYLpjNu1JHQtwqvppJ2QXiJe",
-    "small": "Qmf198F1mX2hhFJKkWUepxLh3vC853Xr79VQuhJFuBizZD",
-    "tiny": "QmPxXHGMm5J3y2G4S9brxe83CxLgt6D3MZKhxMBkNyKQWn"
+    "small": "QmcFz5VjvRzsjTARECw8EMX3GD7nW8xnEcCew4hAKTr6Mm",
+    "tiny": "QmYvRXkk9eW89R97jtWH5E8Uf6woHVvVrT3GqjVtVn8WCc"
 }`
 
 const avatarUnexpectedEOFJSON = `{
@@ -259,14 +259,14 @@ const imageValidJSON = `[{
 }]`
 
 const imageValidJSONResponse = `[{
-        "filename": "blue_tshirt.jpg",
-        "hashes": {
-            "large": "Qmcy4pW7cv18RMCprxrxhiihQzUJNaCNr5v2qvZGjGAwsj",
-            "medium": "QmVGiFSwTkMPjvGnnreHkspb9Ui2upkctYtqMR5sBKncHR",
-            "original": "QmQ2QdYMLCPWuVpdAvj49Kf7FvbpPrN4bdborHGb3G9jQv",
-            "small": "QmUBvfRXHYmzNx6uke5USD3C5PgWr5Wa3XHzcK3zaTeytS",
-            "tiny": "QmNi2H4MUkLe9eBEPmyE9QVQ6Y3F1RwpPxB4B1us5HnxwG"
-        }
+  "filename": "blue_tshirt.jpg",
+  "hashes": {
+    "large": "Qma36fP81juurtQetNpCABxNoiXyxPSHPaLV2qAsBwfz6u",
+    "medium": "QmYmEQvMRdrvYPpcy1wWDZw4Qpr82cfYeKBMi7igAGhpT1",
+    "original": "QmQ2QdYMLCPWuVpdAvj49Kf7FvbpPrN4bdborHGb3G9jQv",
+    "small": "QmUkYogFP4GAmTfFHiq1dtv8tc7UZGUhBX6DfZ7kfvwidT",
+    "tiny": "QmW3qn2BKeaxQvNTUJE1yXavLkseeut9VWNYb5Ew4tgjLJ"
+  }
 }]`
 
 // nolint lll
@@ -275,11 +275,11 @@ const headerValidJSON = `{
 }`
 
 const headerValidJSONResponse = `{
-    "large": "QmSqNf7gM4LKMsqej8b4q2su14TButMZduF5FJRodttbTZ",
-    "medium": "QmZqF47LXvKvKh5YyCerkEAiS4EmVubACeoQTQKXzU79WV",
+    "large": "QmPDHbQDjqMUfzDRrDAUxhh8KrgMTiijAoPKtN8EvxBN1A",
+    "medium": "QmP9KPZp1cexqkLr6MHJCQME7X76Z4NaFgty94MbXcxSHZ",
     "original": "QmYGE9UNEMvQ8W1qcVAMkJTYLpjNu1JHQtwqvppJ2QXiJe",
-    "small": "QmQHHKV7cBFFE4WDJN9Vojxc3U14dt4dK5ihgtxwphdQij",
-    "tiny": "QmRheKdYREcdSHBdamY3ejZxh89UmnnjRQcqPPxAoQxn9X"
+    "small": "QmcnZDDJY9Ss4TZEFNsttUw8vUsr3Hdzqa5uB6P1TndCbd",
+    "tiny": "QmZrLG7ZSqNvrvcEsy7Zwd2Bb2SSxgAhkX4mrCDCtDJgER"
 }`
 
 //
