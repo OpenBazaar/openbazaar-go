@@ -69,6 +69,7 @@ type Node struct {
 var (
 	fileLogFormat = logging.MustStringFormatter(
 		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+	publishUnlocked = false
 	)
 	mainLoggingBackend logging.Backend
 )
@@ -455,6 +456,7 @@ func (n *Node) Start() error {
 		MR.Wait()
 
 		core.PublishLock.Unlock()
+		publishUnlocked = true
 		core.Node.UpdateFollow()
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
@@ -474,6 +476,11 @@ func (n *Node) Stop() error {
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
 	return nil
+}
+
+// PublishUnlocked return true if publish is unlocked
+func (n *Node) PublishUnlocked() bool {
+	return publishUnlocked
 }
 
 // initializeRepo create the database
