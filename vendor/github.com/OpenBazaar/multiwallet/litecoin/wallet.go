@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/ltcsuite/ltcutil"
 	"io"
 	"time"
+
+	"github.com/ltcsuite/ltcutil"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -435,4 +436,9 @@ func (w *LitecoinWallet) Broadcast(tx *wire.MsgTx) error {
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return nil
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *LitecoinWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
 }

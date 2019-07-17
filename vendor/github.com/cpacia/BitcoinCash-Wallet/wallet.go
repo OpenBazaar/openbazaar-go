@@ -500,8 +500,9 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.wireService.Resync()
 }
 
-func (w *SPVWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
-	//for _, l := range w.listeners {
-	//	go l(txnCB)
-	//}
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *SPVWallet) AssociateTransactionWithOrder(cb wallet.TransactionCallback) {
+	for _, l := range w.txstore.listeners {
+		go l(cb)
+	}
 }

@@ -406,8 +406,7 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 	return nil
 }
 
-func (w *BitcoinWallet) AssociateTransactionWithOrder(txnCB wi.TransactionCallback) {
-	//for _, l := range w.listeners {
-	//	go l(txnCB)
-	//}
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoinWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
 }

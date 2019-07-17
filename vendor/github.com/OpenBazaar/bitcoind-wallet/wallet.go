@@ -1121,12 +1121,6 @@ func (w *BitcoindWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
 }
 
-func (w *BitcoindWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
-	for _, l := range w.listeners {
-		go l(txnCB)
-	}
-}
-
 func DefaultSocksPort(controlPort int) int {
 	socksPort := 9050
 	if controlPort == 9151 || controlPort == 9051 {
@@ -1134,4 +1128,11 @@ func DefaultSocksPort(controlPort int) int {
 		socksPort = controlPort
 	}
 	return socksPort
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoindWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
+	for _, l := range w.listeners {
+		go l(txnCB)
+	}
 }
