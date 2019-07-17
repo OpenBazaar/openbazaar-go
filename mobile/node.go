@@ -483,7 +483,6 @@ func (n *Node) Stop() {
 	defer n.mtx.Unlock()
 
 	n.stop()
-	os.Exit(1)
 }
 
 func (n *Node) stop() error {
