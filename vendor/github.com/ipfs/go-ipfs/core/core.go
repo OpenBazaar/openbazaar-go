@@ -220,14 +220,15 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 		libp2pOpts = append(libp2pOpts, libp2p.PrivateNetwork(protec))
 	}
 
-	addrsFactory, err := makeAddrsFactory(cfg.Addresses)
-	if err != nil {
-		return err
-	}
-	if !cfg.Swarm.DisableRelay {
-		addrsFactory = composeAddrsFactory(addrsFactory, filterRelayAddrs)
-	}
-	libp2pOpts = append(libp2pOpts, libp2p.AddrsFactory(addrsFactory))
+	// OpenBazaar: disable this temporarily as it conflicts with the custom addrfactory in ob-go
+	//addrsFactory, err := makeAddrsFactory(cfg.Addresses)
+	//if err != nil {
+	//return err
+	//}
+	//if !cfg.Swarm.DisableRelay {
+	//addrsFactory = composeAddrsFactory(addrsFactory, filterRelayAddrs)
+	//}
+	//libp2pOpts = append(libp2pOpts, libp2p.AddrsFactory(addrsFactory))
 
 	connm, err := constructConnMgr(cfg.Swarm.ConnMgr)
 	if err != nil {
