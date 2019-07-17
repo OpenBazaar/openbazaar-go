@@ -111,6 +111,13 @@ func (ws *WalletService) AddTransactionListener(callback func(callback wallet.Tr
 	ws.listeners = append(ws.listeners, callback)
 }
 
+// InvokeTransactionListeners will invoke the transaction listeners for the updation of order state
+func (ws *WalletService) InvokeTransactionListeners(callback wallet.TransactionCallback) {
+	for _, l := range ws.listeners {
+		go l(callback)
+	}
+}
+
 func (ws *WalletService) listen() {
 	var (
 		addrs     = ws.getStoredAddresses()
