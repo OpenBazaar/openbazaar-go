@@ -61,7 +61,7 @@ func TestMessageDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !(string(retMsg.GetPayload().Value) == payload) {
+	if string(retMsg.GetPayload().Value) != payload {
 		t.Error("incorrect payload")
 	}
 

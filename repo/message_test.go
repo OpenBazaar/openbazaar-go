@@ -35,6 +35,10 @@ func TestMessage(t *testing.T) {
 		t.Error(err)
 	}
 
+	if retRepoMsg.GetMessageType() != pb.Message_ORDER {
+		t.Error("wrong msg type")
+	}
+
 	if !bytes.Equal(retRepoMsg.GetPayload().GetValue(), []byte(payload)) {
 		t.Error("wrong msg type")
 	}

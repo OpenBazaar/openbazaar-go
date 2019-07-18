@@ -306,8 +306,9 @@ func InitializeDatabaseSQL(encryptionPassword string) string {
 		CreateIndexCouponsSQL,
 		CreateTableModeratedStoresSQL,
 		CreateMessagesSQL,
-		CreateIndexMessagesSQL1,
-		CreateIndexMessagesSQL2,
+		CreateIndexMessagesSQLMessageID,
+		CreateIndexMessagesSQLOrderIDMType,
+		CreateIndexMessagesSQLPeerIDMType,
 	}
 	return strings.Join(initializeStatement, " ")
 }

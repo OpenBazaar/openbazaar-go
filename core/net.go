@@ -279,13 +279,14 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 
 	orderID0, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
-		return resp, err
-	}
-	err = n.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
-		orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER))
+		log.Errorf("failed calculating order id")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
+			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER))
+		}
 	}
 
 	resp, err = n.Service.SendRequest(ctx, p, &m)
@@ -316,15 +317,15 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	}
 	orderID0, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
-		return err
+		log.Errorf("failed calculating order id")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
+			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER_CONFIRMATION))
+		}
 	}
-	err = n.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
-		orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER))
-	}
-
 	return n.sendMessage(peerID, &k, m)
 }
 
@@ -351,7 +352,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
 		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m})
 	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", orderID, int(pb.Message_ORDER))
+		log.Errorf("failed putting message (%s-%d)", orderID, int(pb.Message_ORDER_CANCEL))
 	}
 	return n.sendMessage(peerID, kp, m)
 }
@@ -382,7 +383,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
 		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m})
 	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", rejectMessage.OrderID, int(pb.Message_ORDER))
+		log.Errorf("failed putting message (%s-%d)", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT))
 	}
 	return n.sendMessage(peerID, kp, m)
 }
@@ -416,13 +417,14 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 	}
 	orderID0, err := n.CalcOrderID(fulfillmentMessage.BuyerOrder)
 	if err != nil {
-		return err
-	}
-	err = n.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
-		orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER))
+		log.Errorf("failed calculating order id")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
+			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER_FULFILLMENT))
+		}
 	}
 	return n.sendMessage(peerID, k, m)
 }
@@ -442,13 +444,14 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	}
 	orderID0, err := n.CalcOrderID(completionMessage.BuyerOrder)
 	if err != nil {
-		return err
-	}
-	err = n.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
-		orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER))
+		log.Errorf("failed calculating order id")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
+			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d)", orderID0, int(pb.Message_ORDER_COMPLETION))
+		}
 	}
 	return n.sendMessage(peerID, k, m)
 }
