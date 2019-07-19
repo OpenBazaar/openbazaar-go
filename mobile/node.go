@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -66,7 +65,7 @@ type Node struct {
 	cancel          context.CancelFunc
 	ipfsConfig      *ipfscore.BuildCfg
 	apiConfig       *apiSchema.APIConfig
-	gatewayListener net.Listener
+	gateway         *api.Gateway
 	started         bool
 	mtx             sync.Mutex
 }
@@ -420,7 +419,12 @@ func (n *Node) start() error {
 	if err != nil {
 		return err
 	}
-	go gateway.Serve()
+	n.gateway = gateway
+	go func() {
+		if err := gateway.Serve(); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	go func() {
 		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
@@ -474,6 +478,7 @@ func (n *Node) start() error {
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
 	n.started = true
+	fmt.Println("started")
 	return nil
 }
 
@@ -486,14 +491,20 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) stop() error {
-	n.cancel()
+	//n.cancel()
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
-	os.Remove(repoLockFile)
+	if err := os.Remove(repoLockFile); err != nil {
+		log.Error(err)
+	}
 	core.Node.Multiwallet.Close()
-	core.Node.IpfsNode.Close()
-	n.gatewayListener.Close()
+	if err := core.Node.IpfsNode.Close(); err != nil {
+		log.Error(err)
+	}
+	if err := n.gateway.Close(); err != nil {
+		log.Error(err)
+	}
 	n.started = false
 	return nil
 }
@@ -572,8 +583,6 @@ func newHTTPGateway(node *Node, ctx commands.Context, authCookie http.Cookie, co
 		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
 
-	node.gatewayListener = manet.NetListener(gwLis)
-
 	// Create and return an API gateway
-	return api.NewGateway(node.OpenBazaarNode, authCookie, node.gatewayListener, config, mainLoggingBackend, opts...)
+	return api.NewGateway(node.OpenBazaarNode, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
 }

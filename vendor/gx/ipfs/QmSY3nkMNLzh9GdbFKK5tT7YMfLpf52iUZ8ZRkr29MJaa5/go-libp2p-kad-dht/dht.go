@@ -66,6 +66,7 @@ type IpfsDHT struct {
 	// OpenBazaar: this chan is added which is closed when the bootstrap finished
 	// this is used to flag ob-go that the DHT is ready for use.
 	BootstrapChan chan struct{}
+	bootstrapOnce sync.Once
 }
 
 // Assert that IPFS assumptions about interfaces aren't broken. These aren't a
