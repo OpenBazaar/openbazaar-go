@@ -442,7 +442,4 @@ type MessageStore interface {
 
 	// GetByOrderIDType returns the message for specified order and type
 	GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*Message, string, error)
-
-	// GetByMessageID returns the message for specified message id
-	GetByMessageID(messageID string) (*Message, string, error)
 }

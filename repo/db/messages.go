@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -83,36 +82,6 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 
 	if len(msg0) > 0 {
 		err = msg.UnmarshalJSON(msg0)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	return msg, peerID, nil
-}
-
-// GetByMessageID returns the message for the specified message id
-func (o *MessagesDB) GetByMessageID(messageID string) (*repo.Message, string, error) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	var (
-		msg0   []byte
-		peerID string
-	)
-
-	stmt, err := o.db.Prepare("select message, peerID from messages where messageID=?")
-	if err != nil {
-		return nil, "", err
-	}
-	err = stmt.QueryRow(messageID).Scan(&msg0, &peerID)
-	if err != nil {
-		return nil, "", err
-	}
-
-	msg := new(repo.Message)
-
-	if len(msg0) > 0 {
-		err = json.Unmarshal(msg0, msg)
 		if err != nil {
 			return nil, "", err
 		}
