@@ -110,13 +110,13 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ipfslogging.LdJSONFormatter()
 	ipfslogging.Output(ipfsLog)()
 
-	obLog := &lumberjack.Logger{
-		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
-		MaxSize:    5, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
-	}
-	obFileBackend := logging.NewLogBackend(obLog, "", 0)
+	//obLog := &lumberjack.Logger{
+	//Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
+	//MaxSize:    5, // Megabytes
+	//MaxBackups: 3,
+	//MaxAge:     30, // Days
+	//}
+	obFileBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	obFileBackendFormatted := logging.NewBackendFormatter(obFileBackend, fileLogFormat)
 	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted)
 	logging.SetLevel(logging.INFO, "")
@@ -336,8 +336,9 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 	return nd, ctx, nil
 }
 
-// Start start openbazaard (OpenBazaar daemon)
+// Start OpenBazaar daemon
 func (n *Node) Start() error {
+	log.Infof("starting OpenBazaar daemon")
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
@@ -462,17 +463,20 @@ func (n *Node) Start() error {
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
+	log.Infof("started OpenBazaar daemon")
 	return nil
 }
 
 // Stop stop openbazaard
 func (n *Node) Stop() error {
+	log.Infof("stopping OpenBazaar daemon")
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
+	log.Infof("stopped OpenBazaar daemon")
 	return nil
 }
 

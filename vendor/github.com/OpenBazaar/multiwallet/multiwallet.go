@@ -2,6 +2,7 @@ package multiwallet
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -99,15 +100,19 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 }
 
 func (w *MultiWallet) Start() {
+	fmt.Println("starting multiwallet service")
 	for _, wallet := range *w {
 		wallet.Start()
 	}
+	fmt.Println("started multiwallet service")
 }
 
 func (w *MultiWallet) Close() {
+	fmt.Println("closing multiwallet service")
 	for _, wallet := range *w {
 		wallet.Close()
 	}
+	fmt.Println("closed multiwallet service")
 }
 
 func (w *MultiWallet) WalletForCurrencyCode(currencyCode string) (wallet.Wallet, error) {

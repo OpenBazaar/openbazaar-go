@@ -158,6 +158,7 @@ type Mounts struct {
 }
 
 func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption RoutingOption, hostOption HostOption, do DiscoveryOption, pubsub, ipnsps, mplex bool) error {
+	fmt.Println("start IPFS service")
 	if n.PeerHost != nil { // already online.
 		return errors.New("node already online")
 	}
@@ -652,6 +653,8 @@ func (n *IpfsNode) Process() goprocess.Process {
 
 // Close calls Close() on the Process object
 func (n *IpfsNode) Close() error {
+	fmt.Println("closing IPFS service")
+	defer fmt.Println("closed IPFS service")
 	return n.proc.Close()
 }
 
