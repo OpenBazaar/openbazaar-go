@@ -769,7 +769,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 
 	err = i.node.SendOrderPayment(result.PeerID, &msg)
 	if err != nil {
-		log.Errorf("error sending order payment: %v", err)
+		log.Errorf("error sending order with id %s payment: %v", result.OrderID, err)
 	}
 
 	ser, err := json.MarshalIndent(result, "", "    ")
