@@ -353,6 +353,7 @@ func (n *Node) start() error {
 	if err != nil {
 		return err
 	}
+	obNode := n.OpenBazaarNode
 
 	// Extract the DHT from the tiered routing so it will be more accessible later
 	tiered, ok := nd.Routing.(routinghelpers.Tiered)
@@ -372,8 +373,8 @@ func (n *Node) start() error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
-	n.OpenBazaarNode.IpfsNode = nd
-	n.OpenBazaarNode.DHT = dhtRouting
+	obNode.IpfsNode = nd
+	obNode.DHT = dhtRouting
 
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
@@ -386,9 +387,9 @@ func (n *Node) start() error {
 	if err != nil {
 		log.Error("unmarshal record value", err)
 	}
-	n.OpenBazaarNode.RootHash = string(ourIpnsRecord.Value)
+	obNode.RootHash = string(ourIpnsRecord.Value)
 
-	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
+	configFile, err := ioutil.ReadFile(path.Join(obNode.RepoPath, "config"))
 	if err != nil {
 		return err
 	}
@@ -398,13 +399,13 @@ func (n *Node) start() error {
 	}
 
 	// Offline messaging storage
-	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
+	obNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
 
 	// Build pubsub
 	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
-	n.OpenBazaarNode.Pubsub = ps
+	obNode.Pubsub = ps
 
 	// Start gateway
 	// Create authentication cookie
@@ -427,58 +428,57 @@ func (n *Node) start() error {
 	}()
 
 	go func() {
-		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
+		resyncManager := resync.NewResyncManager(obNode.Datastore.Sales(), obNode.Multiwallet)
 		if !n.config.DisableWallet {
 			if resyncManager == nil {
-				core.Node.WaitForMessageRetrieverCompletion()
+				obNode.WaitForMessageRetrieverCompletion()
 			}
-			TL := lis.NewTransactionListener(n.OpenBazaarNode.Multiwallet, core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range n.OpenBazaarNode.Multiwallet {
-				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
+			TL := lis.NewTransactionListener(obNode.Multiwallet, obNode.Datastore, obNode.Broadcast)
+			for ct, wal := range obNode.Multiwallet {
+				WL := lis.NewWalletListener(obNode.Datastore, obNode.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
-			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
+			su := wallet.NewStatusUpdater(obNode.Multiwallet, obNode.Broadcast, obNode.IpfsNode.Context())
 			go su.Start()
-			go n.OpenBazaarNode.Multiwallet.Start()
+			go obNode.Multiwallet.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {
-					core.Node.WaitForMessageRetrieverCompletion()
+					obNode.WaitForMessageRetrieverCompletion()
 					resyncManager.CheckUnfunded()
 				}()
 			}
 		}
-		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
-		n.OpenBazaarNode.Service.WaitForReady()
+		obNode.Service = service.New(obNode, obNode.Datastore)
+		obNode.Service.WaitForReady()
 		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.OpenBazaarNode.Datastore,
-			IPFSNode:  n.OpenBazaarNode.IpfsNode,
-			DHT:       n.OpenBazaarNode.DHT,
-			BanManger: n.OpenBazaarNode.BanManager,
-			Service:   core.Node.Service,
+			Db:        obNode.Datastore,
+			IPFSNode:  obNode.IpfsNode,
+			DHT:       obNode.DHT,
+			BanManger: obNode.BanManager,
+			Service:   obNode.Service,
 			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
+			PushNodes: obNode.PushNodes,
 			Dialer:    nil,
-			SendAck:   n.OpenBazaarNode.SendOfflineAck,
-			SendError: n.OpenBazaarNode.SendError,
+			SendAck:   obNode.SendOfflineAck,
+			SendError: obNode.SendError,
 		})
 		go MR.Run()
-		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		obNode.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(obNode.DHT, obNode.Datastore, obNode.PushNodes, obNode.IsModerator)
 		go PR.Run()
-		n.OpenBazaarNode.PointerRepublisher = PR
+		obNode.PointerRepublisher = PR
 		MR.Wait()
 
-		n.OpenBazaarNode.PublishLock.Unlock()
-		core.Node.UpdateFollow()
-		if !n.OpenBazaarNode.InitalPublishComplete {
-			core.Node.SeedNode()
+		obNode.PublishLock.Unlock()
+		obNode.UpdateFollow()
+		if !obNode.InitalPublishComplete {
+			obNode.SeedNode()
 		}
-		core.Node.SetUpRepublisher(republishInterval)
+		obNode.SetUpRepublisher(republishInterval)
 	}()
 	n.started = true
-	fmt.Println("started")
 	return nil
 }
 
