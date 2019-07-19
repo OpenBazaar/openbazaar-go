@@ -478,11 +478,11 @@ func (n *Node) start() error {
 }
 
 // Stop stop openbazaard
-func (n *Node) Stop() {
+func (n *Node) Stop() error {
 	n.mtx.Lock()
 	defer n.mtx.Unlock()
 
-	n.stop()
+	return n.stop()
 }
 
 func (n *Node) stop() error {
