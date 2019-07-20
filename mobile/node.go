@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
@@ -59,11 +60,14 @@ var log = logging.MustGetLogger("mobile")
 
 // Node configuration structure
 type Node struct {
-	OpenBazaarNode *core.OpenBazaarNode
-	config         NodeConfig
-	cancel         context.CancelFunc
-	ipfsConfig     *ipfscore.BuildCfg
-	apiConfig      *apiSchema.APIConfig
+	OpenBazaarNode  *core.OpenBazaarNode
+	config          NodeConfig
+	cancel          context.CancelFunc
+	ipfsConfig      *ipfscore.BuildCfg
+	apiConfig       *apiSchema.APIConfig
+	gateway         *api.Gateway
+	started         bool
+	mtx             sync.Mutex
 }
 
 var (
@@ -246,8 +250,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 
-	core.PublishLock.Lock()
-
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
 	if err != nil && err != db.SettingsNotSetError {
@@ -297,7 +299,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ncfg := ipfs.PrepareIPFSConfig(r, ignoredURI, config.Testnet, config.Testnet)
 	ncfg.Routing = constructMobileRouting
 
-	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	core.Node.PublishLock.Lock()
+
+	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig, mtx: sync.Mutex{}}, nil
 }
 
 func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
@@ -347,10 +351,18 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 // Start start openbazaard (OpenBazaar daemon)
 func (n *Node) Start() error {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	return n.start()
+}
+
+func (n *Node) start() error {
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
 	}
+	obNode := n.OpenBazaarNode
 
 	// Extract the DHT from the tiered routing so it will be more accessible later
 	tiered, ok := nd.Routing.(routinghelpers.Tiered)
@@ -370,8 +382,8 @@ func (n *Node) Start() error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
-	n.OpenBazaarNode.IpfsNode = nd
-	n.OpenBazaarNode.DHT = dhtRouting
+	obNode.IpfsNode = nd
+	obNode.DHT = dhtRouting
 
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
@@ -384,9 +396,9 @@ func (n *Node) Start() error {
 	if err != nil {
 		log.Error("unmarshal record value", err)
 	}
-	n.OpenBazaarNode.RootHash = string(ourIpnsRecord.Value)
+	obNode.RootHash = string(ourIpnsRecord.Value)
 
-	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
+	configFile, err := ioutil.ReadFile(path.Join(obNode.RepoPath, "config"))
 	if err != nil {
 		return err
 	}
@@ -396,13 +408,13 @@ func (n *Node) Start() error {
 	}
 
 	// Offline messaging storage
-	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
+	obNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
 
 	// Build pubsub
 	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
-	n.OpenBazaarNode.Pubsub = ps
+	obNode.Pubsub = ps
 
 	// Start gateway
 	// Create authentication cookie
@@ -413,76 +425,119 @@ func (n *Node) Start() error {
 		authCookie.Value = n.config.AuthenticationToken
 		n.apiConfig.Authenticated = true
 	}
-	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *n.apiConfig)
+	gateway, err := newHTTPGateway(n, ctx, authCookie, *n.apiConfig)
 	if err != nil {
 		return err
 	}
-	go gateway.Serve()
+	n.gateway = gateway
+	go func() {
+		if err := gateway.Serve(); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	go func() {
-		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
+		resyncManager := resync.NewResyncManager(obNode.Datastore.Sales(), obNode.Multiwallet)
 		if !n.config.DisableWallet {
 			if resyncManager == nil {
-				core.Node.WaitForMessageRetrieverCompletion()
+				obNode.WaitForMessageRetrieverCompletion()
 			}
-			TL := lis.NewTransactionListener(n.OpenBazaarNode.Multiwallet, core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range n.OpenBazaarNode.Multiwallet {
-				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
+			TL := lis.NewTransactionListener(obNode.Multiwallet, obNode.Datastore, obNode.Broadcast)
+			for ct, wal := range obNode.Multiwallet {
+				WL := lis.NewWalletListener(obNode.Datastore, obNode.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
-			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
+			su := wallet.NewStatusUpdater(obNode.Multiwallet, obNode.Broadcast, obNode.IpfsNode.Context())
 			go su.Start()
-			go n.OpenBazaarNode.Multiwallet.Start()
+			go obNode.Multiwallet.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {
-					core.Node.WaitForMessageRetrieverCompletion()
+					obNode.WaitForMessageRetrieverCompletion()
 					resyncManager.CheckUnfunded()
 				}()
 			}
 		}
-		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
-		n.OpenBazaarNode.Service.WaitForReady()
+		obNode.Service = service.New(obNode, obNode.Datastore)
+		obNode.Service.WaitForReady()
 		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.OpenBazaarNode.Datastore,
-			IPFSNode:  n.OpenBazaarNode.IpfsNode,
-			DHT:       n.OpenBazaarNode.DHT,
-			BanManger: n.OpenBazaarNode.BanManager,
-			Service:   core.Node.Service,
+			Db:        obNode.Datastore,
+			IPFSNode:  obNode.IpfsNode,
+			DHT:       obNode.DHT,
+			BanManger: obNode.BanManager,
+			Service:   obNode.Service,
 			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
+			PushNodes: obNode.PushNodes,
 			Dialer:    nil,
-			SendAck:   n.OpenBazaarNode.SendOfflineAck,
-			SendError: n.OpenBazaarNode.SendError,
+			SendAck:   obNode.SendOfflineAck,
+			SendError: obNode.SendError,
 		})
 		go MR.Run()
-		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		obNode.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(obNode.DHT, obNode.Datastore, obNode.PushNodes, obNode.IsModerator)
 		go PR.Run()
-		n.OpenBazaarNode.PointerRepublisher = PR
+		obNode.PointerRepublisher = PR
 		// MR.Wait()
 
-		core.PublishLock.Unlock()
-		core.Node.UpdateFollow()
-		if !core.InitalPublishComplete {
-			core.Node.SeedNode()
+		obNode.PublishLock.Unlock()
+		obNode.UpdateFollow()
+		if !obNode.InitalPublishComplete {
+			obNode.SeedNode()
 		}
-		core.Node.SetUpRepublisher(republishInterval)
+		obNode.SetUpRepublisher(republishInterval)
 	}()
-
+	n.started = true
 	return nil
 }
 
 // Stop stop openbazaard
-func (n *Node) Stop() error {
+func (n *Node) Stop() {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	n.stop()
+}
+
+func (n *Node) stop() error {
+	//n.cancel()
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
-	os.Remove(repoLockFile)
+	if err := os.Remove(repoLockFile); err != nil {
+		log.Error(err)
+	}
 	core.Node.Multiwallet.Close()
-	core.Node.IpfsNode.Close()
+	if err := core.Node.IpfsNode.Close(); err != nil {
+		log.Error(err)
+	}
+	if err := n.gateway.Close(); err != nil {
+		log.Error(err)
+	}
+	n.started = false
 	return nil
+}
+
+func (n *Node) Restart() error {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	if n.started {
+		n.stop()
+	}
+
+	// This node has been stopped by the stop command so we need to create
+	// a new one before starting it again.
+	newNode, err := NewNodeWithConfig(&n.config, "", "")
+	if err != nil {
+		return err
+	}
+	n.OpenBazaarNode = newNode.OpenBazaarNode
+	n.config = newNode.config
+	n.ipfsConfig = newNode.ipfsConfig
+	n.apiConfig = newNode.apiConfig
+
+	return n.start()
 }
 
 // initializeRepo create the database
@@ -502,7 +557,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *Node, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := ctx.GetConfig()
 	if err != nil {
@@ -538,5 +593,5 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	}
 
 	// Create and return an API gateway
-	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
+	return api.NewGateway(node.OpenBazaarNode, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
 }
