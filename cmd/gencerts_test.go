@@ -26,12 +26,10 @@ func buildCertDirectory() (string, func(), error) {
 
 func TestGenCertsGenericDefaults(t *testing.T) {
 	dataDir, destroy, schemaErr := buildCertDirectory()
-	//defer destroy()
-
 	if schemaErr != nil {
-		destroy()
 		t.Fatal(schemaErr)
 	}
+	defer destroy()
 
 	config := cmd.GenerateCertificates{
 		DataDir:  dataDir,
@@ -40,7 +38,7 @@ func TestGenCertsGenericDefaults(t *testing.T) {
 		ValidFor: 1, // 1ns ... 1*1e9 == 1s
 	}
 
-	args := []string{"args"} // "Commander" interface args
+	args := []string{""}
 
 	if err := config.Execute(args); err != nil {
 		t.Fatalf("unable to GenerateCertificates: %s", err)
@@ -51,8 +49,8 @@ func TestGenCertsGenericDefaults(t *testing.T) {
 	if errSsl != nil {
 		t.Fatalf("unable to find sslPath: %s", errSsl)
 	}
-	if fileInfoSsl.Mode().Perm() != 0775 {
-		t.Fatal("ssl directory does not have 0775 permissions")
+	if fileInfoSsl.Mode().Perm() != 0755 {
+		t.Fatal("ssl directory does not have 0755 permissions")
 	}
 	if !fileInfoSsl.IsDir() {
 		t.Fatalf("Expecting a directory: %s", dataDir)
@@ -63,8 +61,8 @@ func TestGenCertsGenericDefaults(t *testing.T) {
 	if errCert != nil {
 		t.Fatalf("unable to find certPemPath %s: %s", certPemPath, errCert)
 	}
-	if fileInfoCert.Mode().Perm() != 0664 {
-		t.Fatal("cert.pem does not have 0664 permissions")
+	if fileInfoCert.Mode().Perm() != 0644 {
+		t.Fatal("cert.pem does not have 0644 permissions")
 	}
 	if !fileInfoCert.Mode().IsRegular() {
 		t.Fatalf("Expecting a file: %s", certPemPath)
