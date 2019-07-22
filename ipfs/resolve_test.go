@@ -39,7 +39,7 @@ func TestDatastoreCaching(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retreivedPath, err := getIPFSPath(n.Repo.Datastore(), peerID)
+	retreivedPath, err := getFromDatastore(n.Repo.Datastore(), peerID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -49,11 +49,11 @@ func TestDatastoreCaching(t *testing.T) {
 	}
 
 	// Next put to the database using the persistent cache namespace.
-	if err := putIPFSPath(n.Repo.Datastore(), peerID, ipath.Path(pth)); err != nil {
+	if err := putToDatastoreCache(n.Repo.Datastore(), peerID, ipath.Path(pth)); err != nil {
 		t.Fatal(err)
 	}
 
-	retreivedPath, err = getIPFSPath(n.Repo.Datastore(), peerID)
+	retreivedPath, err = getFromDatastore(n.Repo.Datastore(), peerID)
 	if err != nil {
 		t.Error(err)
 	}

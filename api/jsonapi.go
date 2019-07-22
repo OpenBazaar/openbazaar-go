@@ -3780,12 +3780,9 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) {
-	var (
-		localID     = ipfs.IdentityFromNode(i.node.IpfsNode)
-		_, lookupID = path.Split(r.URL.Path)
-	)
-	if len(lookupID) == 0 || lookupID == "resolveipns" {
-		lookupID = localID.Pretty()
+	_, peerID := path.Split(r.URL.Path)
+	if len(peerID) == 0 || peerID == "resolveipns" {
+		peerID = i.node.IpfsNode.Identity.Pretty()
 	}
 
 	type respType struct {
@@ -3794,18 +3791,12 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 			Hex string `json:"hex"`
 		} `json:"record"`
 	}
-	var response = respType{PeerID: lookupID}
+	var response = respType{PeerID: peerID}
 
-	if localID.Pretty() == lookupID {
-		localRecord, err := ipfs.GetIPNSRecord(i.node.IpfsNode, localID)
+	if i.node.IpfsNode.Identity.Pretty() == peerID {
+		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
-			return
-		}
-
-		ipnsBytes, err := localRecord.Marshal()
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling ipns record: %s", err))
 			return
 		}
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)
@@ -3819,7 +3810,7 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pid, err := peer.IDB58Decode(lookupID)
+	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return

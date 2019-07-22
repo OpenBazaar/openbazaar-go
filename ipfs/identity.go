@@ -6,11 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 
-	"github.com/ipfs/go-ipfs/core"
-
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
-	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+
+	"gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 )
 
 func init() {
@@ -51,6 +50,3 @@ func IdentityKeyFromSeed(seed []byte, bits int) ([]byte, error) {
 	}
 	return encodedKey, nil
 }
-
-// IdentityFromNode returns the Identity of the passed in IpfsNode
-func IdentityFromNode(n *core.IpfsNode) peer.ID { return n.Identity }
