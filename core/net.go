@@ -388,14 +388,10 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	if err != nil {
 		return err
 	}
-	m := pb.Message{
+	return n.sendMessage(peerID, k, pb.Message{
 		MessageType: pb.Message_ORDER_COMPLETION,
 		Payload:     a,
-	}
-	if err != nil {
-		return err
-	}
-	return n.sendMessage(peerID, k, m)
+	})
 }
 
 // SendDisputeOpen - send open dispute msg to peer
