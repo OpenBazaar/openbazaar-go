@@ -22,6 +22,10 @@ const (
 	persistentCacheDbPrefix = "/ipns/persistentcache/"
 )
 
+func ipnsCacheDsKey(id peer.ID) ds.Key {
+	return ds.NewKey(persistentCacheDbPrefix + base32.RawStdEncoding.EncodeToString([]byte(id)))
+}
+
 // Resolve an IPNS record. This is a multi-step process.
 // If the usecache flag is provided we will attempt to load the record from the database. If
 // it succeeds we will update the cache in a separate goroutine.
@@ -34,7 +38,7 @@ const (
 // as new records are published.
 func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, usecache bool) (string, error) {
 	if usecache {
-		pth, err := getFromDatastore(n.Repo.Datastore(), p)
+		pth, err := getIPFSPath(n.Repo.Datastore(), p)
 		if err == nil {
 			// Update the cache in background
 			go func() {
@@ -43,7 +47,7 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, us
 					return
 				}
 				if n.Identity != p {
-					if err := putToDatastoreCache(n.Repo.Datastore(), p, pth); err != nil {
+					if err := putIPFSPath(n.Repo.Datastore(), p, pth); err != nil {
 						log.Error("Error putting IPNS record to datastore: %s", err.Error())
 					}
 				}
@@ -54,7 +58,7 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, us
 	pth, err := resolve(n, p, timeout, quorum)
 	if err != nil {
 		// Resolving fail. See if we have it in the db.
-		pth, err := getFromDatastore(n.Repo.Datastore(), p)
+		pth, err := getIPFSPath(n.Repo.Datastore(), p)
 		if err != nil {
 			return "", err
 		}
@@ -62,7 +66,7 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, us
 	}
 	// Resolving succeeded. Update the cache.
 	if n.Identity != p {
-		if err := putToDatastoreCache(n.Repo.Datastore(), p, pth); err != nil {
+		if err := putIPFSPath(n.Repo.Datastore(), p, pth); err != nil {
 			log.Error("Error putting IPNS record to datastore: %s", err.Error())
 		}
 	}
@@ -93,36 +97,68 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 	return pth.Segments()[1], nil
 }
 
-// getFromDatastore looks in two places in the database for a record. First is
+func getIPNSRecord(datastore ds.Datastore, p peer.ID) (*ipnspb.IpnsEntry, error) {
+	valBytes, err := datastore.Get(namesys.IpnsDsKey(p))
+	if err != nil {
+		return nil, err
+	}
+
+	ipnsEntry := new(ipnspb.IpnsEntry)
+	if err := proto.Unmarshal(valBytes, ipnsEntry); err != nil {
+		return nil, err
+	}
+	return ipnsEntry, nil
+}
+
+// GetIPNSRecord will look in the datastore shared by the DHT under the /ipfs/<peerID>
+// key. The value in this namespace contains a serialized protobuf record which is
+// returned if present or an error otherwise.
+func GetIPNSRecord(n *core.IpfsNode, p peer.ID) (*ipnspb.IpnsEntry, error) {
+	var (
+		entry, err = getIPNSRecord(n.Repo.Datastore(), p)
+		localID    = n.Identity
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deserialize the record and check for the presence of a pubkey. If the
+	// record doesn't have one we'll inject it in
+	if p == localID {
+		if len(entry.PubKey) == 0 {
+			entry.PubKey, err = n.PrivateKey.GetPublic().Bytes()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return entry, nil
+}
+
+// getIPFSPath looks in two places in the database for a record. First is
 // under the /ipfs/<peerID> key which is sometimes used by the DHT. The value
 // returned by this location is a serialized protobuf record. The second is
 // under /ipfs/persistentcache/<peerID> which returns only the value (the path)
 // inside the protobuf record.
-func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
-	ival, err := datastore.Get(namesys.IpnsDsKey(p))
-	if err != nil {
-		pth, err := datastore.Get(ipnsCacheDsKey(p))
-		if err != nil {
-			if err == ds.ErrNotFound {
-				return "", namesys.ErrResolveFailed
-			}
-			return "", err
-		}
-		return ipath.ParsePath(string(pth))
+func getIPFSPath(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
+	entry, err := getIPNSRecord(datastore, p)
+	if err == nil {
+		return ipath.ParsePath(string(entry.Value))
 	}
 
-	rec := new(ipnspb.IpnsEntry)
-	err = proto.Unmarshal(ival, rec)
+	pth, err := datastore.Get(ipnsCacheDsKey(p))
 	if err != nil {
+		if err == ds.ErrNotFound {
+			return "", namesys.ErrResolveFailed
+		}
 		return "", err
 	}
-	return ipath.ParsePath(string(rec.Value))
+	return ipath.ParsePath(string(pth))
 }
 
-func putToDatastoreCache(datastore ds.Datastore, p peer.ID, pth ipath.Path) error {
+// putIPFSPath places the path into the datastore under /ipfs/persistentcache/<peerID>
+// for later retreival by getIPFSPath
+func putIPFSPath(datastore ds.Datastore, p peer.ID, pth ipath.Path) error {
 	return datastore.Put(ipnsCacheDsKey(p), []byte(pth.String()))
-}
-
-func ipnsCacheDsKey(id peer.ID) ds.Key {
-	return ds.NewKey(persistentCacheDbPrefix + base32.RawStdEncoding.EncodeToString([]byte(id)))
 }
