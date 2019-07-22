@@ -171,9 +171,6 @@ func (n *OpenBazaarNode) SignDispute(contract *pb.RicardianContract) (*pb.Ricard
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_DISPUTE
-	if err != nil {
-		return contract, err
-	}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedDispute)
 	if err != nil {
 		return contract, err
@@ -620,11 +617,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.MasterPrivateKey
-	if err != nil {
-		return err
-	}
-	mECKey, err := mPrivKey.ECPrivKey()
+	mECKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return err
 	}
@@ -729,9 +722,6 @@ func (n *OpenBazaarNode) SignDisputeResolution(contract *pb.RicardianContract) (
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_DISPUTE_RESOLUTION
-	if err != nil {
-		return contract, err
-	}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedDR)
 	if err != nil {
 		return contract, err
@@ -1062,11 +1052,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.MasterPrivateKey
-	if err != nil {
-		return err
-	}
-	mECKey, err := mPrivKey.ECPrivKey()
+	mECKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return err
 	}

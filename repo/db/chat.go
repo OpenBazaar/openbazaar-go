@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -178,81 +179,43 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	if outgoing {
 		outgoingInt = 1
 	}
-	var stmt *sql.Stmt
-	var tx *sql.Tx
-	var err error
-	if messageId != "" {
-		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 and timestamp<=(select timestamp from chat where messageID=?) limit 1"
-		rows, err := c.db.Query(stm, peerID, subject, outgoingInt, messageId)
-		if err != nil {
-			return "", updated, err
-		}
-		if rows.Next() {
-			updated = true
-		}
-		rows.Close()
-		tx, err = c.db.Begin()
-		if err != nil {
-			return "", updated, err
-		}
-		stmt, err = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
-		if err != nil {
-			return "", updated, err
-		}
-		_, err = stmt.Exec(peerID, subject, outgoingInt, messageId)
-		if err != nil {
-			return "", updated, err
-		}
-	} else {
-		var peerStm string
-		if peerID != "" {
-			peerStm = " and peerID=?"
-		}
 
-		stm := "select messageID from chat where subject=?" + peerStm + " and outgoing=? and read=0 limit 1"
-		var rows *sql.Rows
-		var err error
-		if peerID != "" {
-			rows, err = c.db.Query(stm, subject, peerID, outgoingInt)
-		} else {
-			rows, err = c.db.Query(stm, subject, outgoingInt)
-		}
-		if err != nil {
-			return "", updated, err
-		}
-		if rows.Next() {
-			updated = true
-		}
-		rows.Close()
-		tx, err = c.db.Begin()
-		if err != nil {
-			return "", updated, err
-		}
-		stmt, err = tx.Prepare("update chat set read=1 where subject=?" + peerStm + " and outgoing=?")
-		if err != nil {
-			return "", updated, err
-		}
-		if peerID != "" {
-			_, err = stmt.Exec(subject, peerID, outgoingInt)
-		} else {
-			_, err = stmt.Exec(subject, outgoingInt)
-		}
-		if err != nil {
-			return "", updated, err
-		}
-	}
-	defer stmt.Close()
-	if err != nil {
-		tx.Rollback()
-		return "", updated, err
-	}
-	tx.Commit()
-
-	var peerStm string
-
+	var (
+		peerStm, messageStm string
+		updateArgs          = []interface{}{subject, outgoingInt}
+	)
 	if peerID != "" {
 		peerStm = " and peerID=?"
+		updateArgs = append(updateArgs, peerID)
 	}
+	if messageId != "" {
+		messageStm = " and timestamp<=(select timestamp from chat where messageID=?)"
+		updateArgs = append(updateArgs, messageId)
+	}
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return "", false, fmt.Errorf("begin tx mark chat as read: %s", err)
+	}
+	result, err := tx.Exec("update chat set read=1 where subject=? and outgoing=?"+peerStm+messageStm, updateArgs...)
+	if err != nil {
+		if rErr := tx.Rollback(); rErr != nil {
+			return "", false, fmt.Errorf("mark chat as read: %s (rollback: %s)", err, rErr)
+		}
+		return "", false, fmt.Errorf("mark chat as read: %s", err)
+	}
+	if count, err := result.RowsAffected(); err != nil {
+		log.Error("mark chat as read: unable to determine rows affected, assuming not updated")
+	} else {
+		if count > 0 {
+			updated = true
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return "", false, fmt.Errorf("commit tx mark chat as read: %s", err)
+	}
+
+	// get last message ID
 	stmt2, err := c.db.Prepare("select max(timestamp), messageID from chat where subject=?" + peerStm + " and outgoing=?")
 	if err != nil {
 		return "", updated, err
