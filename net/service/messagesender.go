@@ -111,8 +111,9 @@ func (ms *messageSender) prep() error {
 	if ms.s != nil {
 		return nil
 	}
-
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ipfs.IPFSProtocolAppMainnetOne)
+	ctx, cancel := context.WithTimeout(ms.service.ctx, 3*time.Second)
+	defer cancel()
+	nstr, err := ms.service.host.NewStream(ctx, ms.p, ipfs.IPFSProtocolAppMainnetOne)
 	if err != nil {
 		return err
 	}
