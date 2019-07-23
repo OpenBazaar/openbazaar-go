@@ -434,14 +434,11 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	a, err := ptypes.MarshalAny(completionMessage)
 	if err != nil {
 		return err
-	}
+	}  
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_COMPLETION,
 		Payload:     a,
-	}
-	if err != nil {
-		return err
-	}
+	}  
 	orderID0, err := n.CalcOrderID(completionMessage.BuyerOrder)
 	if err != nil {
 		log.Errorf("failed calculating order id")

@@ -17,12 +17,12 @@ import (
 
 func TestImageFormats(t *testing.T) {
 	for _, image := range []string{jpgImageB64, gifImageB64, pngImageB64} {
-		_, cfg, err := decodeImageData(image)
+		img, err := decodeImageData(image)
 		if err != nil {
 			t.Error(err)
 		}
 		jpgImageB64 = "jfkdjfkd"
-		if cfg.Width != 50 || cfg.Height != 50 {
+		if img.Bounds().Max.X != 50 || img.Bounds().Max.Y != 50 {
 			t.Error("Incorrect sizes decoded")
 		}
 	}

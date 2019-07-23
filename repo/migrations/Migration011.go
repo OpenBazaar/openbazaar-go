@@ -75,7 +75,7 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 
-	ioutil.WriteFile(listingsFilePath, listingsJSON, os.ModePerm)
+	err = ioutil.WriteFile(listingsFilePath, listingsJSON, os.ModePerm)
 	if err != nil {
 		return err
 	}
