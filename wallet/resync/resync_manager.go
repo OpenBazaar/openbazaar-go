@@ -55,7 +55,6 @@ func (r *ResyncManager) CheckUnfunded() {
 			t = uf.Timestamp.Add(-time.Hour * 24)
 			wallets[strings.ToUpper(uf.PaymentCoin)] = t
 		}
-		r.sales.SetNeedsResync(uf.OrderId, false)
 	}
 	if r.mw != nil {
 		for cc, rbt := range wallets {
