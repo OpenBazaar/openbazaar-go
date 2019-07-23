@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
@@ -59,6 +60,25 @@ func (r APIRouter) Bootstrap(_ context.Context) error {
 // PutValue writes the given value to the API for the given key
 func (r APIRouter) PutValue(ctx context.Context, key string, value []byte, opts ...ropts.Option) error {
 	<-r.started
+
+	// Send IPNS updates to the ingestion endpoint
+	if strings.HasPrefix(key, "/ipns/") {
+		peerObj, err := peer.IDFromBytes([]byte(strings.TrimPrefix(key, "/ipns/")))
+		if err != nil {
+			return err
+		}
+
+		req, err := http.NewRequest("PUT", "https://search.ob1.io/ipns/"+peerObj.Pretty(), bytes.NewBuffer(value))
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("write value to %s", r.uri+"/"+peerObj.Pretty())
+		_, err = apiRouterHTTPClient.Do(req)
+		return err
+	}
+
+	// Write the value to the DHT store
 	path := r.pathForKey(key)
 	req, err := http.NewRequest("PUT", path, bytes.NewBuffer(value))
 	if err != nil {
