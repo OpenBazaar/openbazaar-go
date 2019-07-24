@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	"image" // load gif
-	"image/color/palette"
+	"image"
+	"image/color/palette" // load gif
 	"image/draw"
 	"image/gif"
 	_ "image/gif" // load png
-	"image/jpeg"
+	jpeg "image/jpeg"
 	_ "image/png"
 	"io"
 	"io/ioutil"
@@ -254,16 +253,30 @@ func (n *OpenBazaarNode) addResizedImage(img image.Image, imgCfg *image.Config, 
 	return n.addImage(newImg, imgPath, imgType)
 }
 
-func decodeImageData(base64ImageData string) (image.Image, error) {
+func decodeImageType(base64ImageData string) (string, error) {
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
-	img, err := imaging.Decode(reader, imaging.AutoOrientation(true))
+	_, fileType, err := image.DecodeConfig(reader)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return img, err
+	return fileType, nil
 }
 
-func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight int) (width, height int) {
+func decodeImageData(base64ImageData string) (image.Image, *image.Config, error) {
+	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
+	img, _, err := image.Decode(reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
+	imgCfg, _, err := image.DecodeConfig(reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	return img, &imgCfg, err
+}
+
+func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (width, height uint) {
 	targetRatio := float32(targetWidth) / float32(targetHeight)
 	imageRatio := float32(imgWidth) / float32(imgHeight)
 	var h, w float32
@@ -274,7 +287,7 @@ func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight int) (wid
 		w = float32(targetWidth)
 		h = float32(targetWidth) * (float32(imgHeight) / float32(imgWidth))
 	}
-	return int(w), int(h)
+	return uint(w), uint(h)
 }
 
 // FetchAvatar - fetch image avatar from ipfs
