@@ -791,11 +791,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.MasterPrivateKey
-	if err != nil {
-		return err
-	}
-	mECKey, err := mPrivKey.ECPrivKey()
+	mECKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return err
 	}
@@ -1557,9 +1553,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_ORDER
-	if err != nil {
-		return contract, err
-	}
 	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
 	if err != nil {
 		return contract, err

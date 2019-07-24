@@ -531,10 +531,6 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
-	}
-
 	// Create and return an API gateway
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, mainLoggingBackend, opts...)
 }

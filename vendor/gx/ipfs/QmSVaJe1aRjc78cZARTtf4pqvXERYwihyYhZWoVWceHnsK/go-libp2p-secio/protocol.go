@@ -205,26 +205,18 @@ func (s *secureSession) runHandshakeSync() error {
 		// No peer set. We're accepting a remote connection.
 		s.remotePeer = actualRemotePeer
 	default:
-		// OpenBazaar: check that this peerID isn't the old style
-		// If it is then we're good. If not then we error.
-		// This code will be removed after enough OpenBazaar nodes
-		// upgrade to inline pubkeys.
-		pubkeyBytes, err := s.remote.permanentPubKey.Bytes()
+		// OpenBazaar: we are transitioning from hashed IDs to inline IDs, as a last
+		// resort, we should check that the peer isn't using the other variety. Both ID methods
+		// change their behavior based on peer.AdvancedEnableInlining but are written to
+		// operate opposite of each other. This will allow old nodes to successfully connect to
+		// new nodes, and vice versa.
+		altID, err := peer.AlternativeIDFromPublicKey(s.remote.permanentPubKey)
 		if err != nil {
 			return err
 		}
-		oldMultihash, err := mh.Sum(pubkeyBytes, mh.SHA2_256, 32)
-		if err != nil {
-			return err
-		}
-		oldStylePeer, err := peer.IDB58Decode(oldMultihash.B58String())
-		if err != nil {
-			return err
-		}
-		if s.remotePeer != oldStylePeer {
-			// Peer mismatch. Bail.
+		if s.remotePeer != altID {
 			s.insecure.Close()
-			log.Debugf("expected peer %s, got peer %s", s.remotePeer, actualRemotePeer)
+			log.Debugf("expected peer %s, but ID produced from pubkey doesn't match", s.remotePeer)
 			return ErrWrongPeer
 		}
 	}
