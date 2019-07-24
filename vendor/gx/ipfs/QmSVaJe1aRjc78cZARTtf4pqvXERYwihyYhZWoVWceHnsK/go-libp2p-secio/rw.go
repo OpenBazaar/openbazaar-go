@@ -167,7 +167,9 @@ func (r *etmReader) Read(buf []byte) (int, error) {
 
 	// If the destination buffer is too short, fill an internal buffer and then
 	// drain as much of that into the output buffer as will fit.
-	if cap(buf) < fullLen {
+	// Applies patch from v0.0.3 release, see
+	// https://github.com/libp2p/go-libp2p-secio/commit/98b8bd9f149802621eeca00d5a606f6788973038
+	if len(buf) < fullLen {
 		err := r.fill()
 		if err != nil {
 			return 0, err

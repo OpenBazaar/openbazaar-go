@@ -615,8 +615,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.MasterPrivateKey
-		mECKey, err := mPrivKey.ECPrivKey()
+		mECKey, err := service.node.MasterPrivateKey.ECPrivKey()
 		if err != nil {
 			return nil, err
 		}
@@ -664,8 +663,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.MasterPrivateKey
-		mECKey, err := mPrivKey.ECPrivKey()
+		mECKey, err := service.node.MasterPrivateKey.ECPrivKey()
 		if err != nil {
 			return nil, err
 		}
@@ -787,8 +785,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.MasterPrivateKey
-		mECKey, err := mPrivKey.ECPrivKey()
+		mECKey, err := service.node.MasterPrivateKey.ECPrivKey()
 		if err != nil {
 			return nil, err
 		}
@@ -1384,14 +1381,6 @@ func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Messa
 	if err != nil {
 		return nil, err
 	}
-	n := repo.ModeratorAddNotification{
-		ID:     repo.NewNotificationID(),
-		Type:   repo.NotifierTypeModeratorAddNotification,
-		PeerId: id.Pretty(),
-	}
-	service.broadcast <- n
-
-	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("received MODERATOR_ADD message from %s", id.Pretty())
 
 	return nil, nil
@@ -1433,14 +1422,6 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 	if err != nil {
 		return nil, err
 	}
-	n := repo.ModeratorRemoveNotification{
-		ID:     repo.NewNotificationID(),
-		Type:   repo.NotifierTypeModeratorRemoveNotification,
-		PeerId: id.Pretty(),
-	}
-	service.broadcast <- n
-
-	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
