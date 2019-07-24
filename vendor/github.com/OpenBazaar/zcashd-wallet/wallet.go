@@ -1072,3 +1072,10 @@ func (w *ZcashdWallet) Close() {
 func (w *ZcashdWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
 }
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *ZcashdWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
+	for _, l := range w.listeners {
+		go l(txnCB)
+	}
+}
