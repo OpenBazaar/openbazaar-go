@@ -4269,8 +4269,14 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 
 	err = i.node.Service.SendMessage(ctx, p, &msg.Msg)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "order message not sent")
-		return
+		// If send message failed, try sending offline message
+		log.Errorf("resending message failed: %v", err)
+		err = i.node.SendOfflineMessage(p, nil, &msg.Msg)
+		if err != nil {
+			log.Errorf("resending offline message failed: %v", err)
+			ErrorResponse(w, http.StatusBadRequest, "order message not sent")
+			return
+		}
 	}
 
 	SanitizedResponse(w, `{}`)
