@@ -1601,11 +1601,15 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
-	output := wallet.TransactionOutput{
-		Address: toAddress,
-		Value:   txn.Value,
-		Index:   1,
-		OrderID: paymentDetails.OrderID,
+	outputs := []wallet.TransactionOutput{}
+	for _, o := range txn.Outputs {
+		output := wallet.TransactionOutput{
+			Address: o.Address,
+			Value:   o.Value,
+			Index:   o.Index,
+			OrderID: paymentDetails.OrderID,
+		}
+		outputs = append(outputs, output)
 	}
 
 	input := wallet.TransactionInput{}
@@ -1622,7 +1626,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 	cb := wallet.TransactionCallback{
 		Txid:      txn.Txid,
-		Outputs:   []wallet.TransactionOutput{output},
+		Outputs:   outputs,
 		Inputs:    []wallet.TransactionInput{input},
 		Height:    1,
 		Timestamp: time.Now(),

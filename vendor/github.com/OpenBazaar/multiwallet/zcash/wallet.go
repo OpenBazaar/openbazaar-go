@@ -1,7 +1,9 @@
 package zcash
 
 import (
+	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -17,6 +19,7 @@ import (
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
@@ -211,6 +214,31 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				return txn, err
+			}
+			if len(addrs) == 0 {
+				return txn, errors.New("unknown script")
+			}
+			tout := wi.TransactionOutput{
+				Address: addrs[0],
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 

@@ -1,6 +1,7 @@
 package bitcoincash
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"sync"
@@ -11,6 +12,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -411,6 +414,31 @@ func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
 
 func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	txn, err := w.txstore.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wallet.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				return txn, err
+			}
+			if len(addrs) == 0 {
+				return txn, errors.New("unknown script")
+			}
+			tout := wallet.TransactionOutput{
+				Address: addrs[0],
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 

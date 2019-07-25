@@ -476,6 +476,31 @@ func (w *ZcashdWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
+
+	tx := wire.NewMsgTx(1)
+	rbuf := bytes.NewReader([]byte(resp.Hex))
+	err = tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+	if err != nil {
+		return t, err
+	}
+	outs := []wallet.TransactionOutput{}
+	for i, out := range tx.TxOut {
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+		if err != nil {
+			return t, err
+		}
+		if len(addrs) == 0 {
+			return t, errors.New("unknown script")
+		}
+		tout := wallet.TransactionOutput{
+			Address: addrs[0],
+			Value:   out.Value,
+			Index:   uint32(i),
+		}
+		outs = append(outs, tout)
+	}
+	t.Outputs = outs
+
 	return t, nil
 }
 
