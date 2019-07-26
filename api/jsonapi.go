@@ -67,6 +67,8 @@ type jsonAPIHandler struct {
 
 var lastManualScan time.Time
 
+const OfflineMessageScanInterval = 1 * time.Minute
+
 func newJSONAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
@@ -1482,7 +1484,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if profile.PeerID != peerID {
-      ErrorResponse(w, http.StatusNotFound, "invalid profile: peer id mismatch on found profile")
+			ErrorResponse(w, http.StatusNotFound, "invalid profile: peer id mismatch on found profile")
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
@@ -4270,7 +4272,7 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 	err = i.node.Service.SendMessage(ctx, p, &msg.Msg)
 	if err != nil {
 		// If send message failed, try sending offline message
-		log.Errorf("resending message failed: %v", err)
+		log.Warningf("resending message failed: %v", err)
 		err = i.node.SendOfflineMessage(p, nil, &msg.Msg)
 		if err != nil {
 			log.Errorf("resending offline message failed: %v", err)
@@ -4284,14 +4286,13 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 
 // GETScanOfflineMessages - used to manually trigger offline message scan
 func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.Request) {
-	t := time.Since(lastManualScan).Minutes()
-	if t < 100000000 {
-		if t >= 1 {
+	if lastManualScan.IsZero() {
+		lastManualScan = time.Now()
+	} else {
+		if time.Since(lastManualScan) >= OfflineMessageScanInterval {
 			i.node.MessageRetriever.RunOnce()
 			lastManualScan = time.Now()
 		}
-	} else {
-		lastManualScan = time.Now()
 	}
 	SanitizedResponse(w, `{}`)
 }
