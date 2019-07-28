@@ -64,7 +64,8 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -276,17 +277,17 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDisputedTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
-        self.send_bitcoin_cmd("generate", 1)
-        time.sleep(2)
+        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        time.sleep(5)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
-            #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= (generated_coins*100000000) - payment_amount:
+            confirmed = int(resp["confirmed"]["amount"])
+            #unconfirmed = int(resp["unconfirmed"]["amount"])
+            if confirmed <= (generated_coins*100000000) - int(payment_amount["amount"]):
                 raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to detect dispute payout")
         elif r.status_code == 404:
             raise TestFailure("CompleteDisputedTest - FAIL: Receive coins endpoint not found")
@@ -358,6 +359,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to order completion")
 
         print("CompleteDisputedTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running CompleteDisputedTest")

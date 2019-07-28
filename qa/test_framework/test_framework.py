@@ -83,10 +83,14 @@ class OpenBazaarTestFramework(object):
 
         self.cointype = self.cointype.upper()
 
+        coinConfig = config["Wallets"][self.cointype]
+        del config["Wallets"]
+        config["Wallets"] = {}
+        config["Wallets"][self.cointype] = coinConfig
+
         config["Wallets"][self.cointype]["Type"] = "SPV"
         config["Wallets"][self.cointype]["TrustedPeer"] = "127.0.0.1:18444"
         config["Wallets"][self.cointype]["FeeAPI"] = ""
-
 
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
@@ -142,7 +146,7 @@ class OpenBazaarTestFramework(object):
     def init_blockchain(self):
         self.send_bitcoin_cmd("generate", 1)
         self.bitcoin_address = self.send_bitcoin_cmd("getnewaddress")
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generatetoaddress", 103, self.bitcoin_address)
         self.send_bitcoin_cmd("generate", 435)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
