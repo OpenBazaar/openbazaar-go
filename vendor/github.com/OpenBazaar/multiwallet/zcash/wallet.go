@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/cache"
@@ -38,6 +40,13 @@ type ZCashWallet struct {
 
 	exchangeRates wi.ExchangeRates
 }
+
+var (
+	ZcashCurrencyDefinition = wi.CurrencyDefinition{
+		Code:         "ZCASH",
+		Divisibility: 8,
+	}
+)
 
 func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
@@ -100,8 +109,8 @@ func (w *ZCashWallet) CurrencyCode() string {
 	}
 }
 
-func (w *ZCashWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btcutil.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *ZCashWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btcutil.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *ZCashWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -169,10 +178,12 @@ func (w *ZCashWallet) HasKey(addr btcutil.Address) bool {
 	return true
 }
 
-func (w *ZCashWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *ZCashWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	utxos, _ := w.db.Utxos().GetAll()
 	txns, _ := w.db.Txns().GetAll(false)
-	return util.CalcBalance(utxos, txns)
+	c, u := util.CalcBalance(utxos, txns)
+	return wi.CurrencyValue{Value: *big.NewInt(c), Currency: ZcashCurrencyDefinition},
+		wi.CurrencyValue{Value: *big.NewInt(u), Currency: ZcashCurrencyDefinition}
 }
 
 func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
@@ -218,11 +229,11 @@ func (w *ZCashWallet) ChainTip() (uint32, chainhash.Hash) {
 	return w.ws.ChainTip()
 }
 
-func (w *ZCashWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
-	return w.fp.GetFeePerByte(feeLevel)
+func (w *ZCashWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
+	return *big.NewInt(int64(w.fp.GetFeePerByte(feeLevel)))
 }
 
-func (w *ZCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *ZCashWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
 		tx  *wire.MsgTx
 		err error
@@ -233,7 +244,7 @@ func (w *ZCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeL
 			return nil, err
 		}
 	} else {
-		tx, err = w.buildTx(amount, addr, feeLevel, nil)
+		tx, err = w.buildTx(amount.Int64(), addr, feeLevel, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -251,32 +262,33 @@ func (w *ZCashWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	return w.bumpFee(txid)
 }
 
-func (w *ZCashWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte uint64) uint64 {
+func (w *ZCashWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte big.Int) big.Int {
 	tx := new(wire.MsgTx)
 	for _, out := range outs {
 		scriptPubKey, _ := zaddr.PayToAddrScript(out.Address)
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, P2PKH)
-	fee := estimatedSize * int(feePerByte)
-	return uint64(fee)
+	fee := estimatedSize * int(feePerByte.Int64())
+	return *big.NewInt(int64(fee))
 }
 
-func (w *ZCashWallet) EstimateSpendFee(amount int64, feeLevel wi.FeeLevel) (uint64, error) {
-	return w.estimateSpendFee(amount, feeLevel)
+func (w *ZCashWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLevel) (big.Int, error) {
+	val, err := w.estimateSpendFee(amount.Int64(), feeLevel)
+	return *big.NewInt(int64(val)), err
 }
 
 func (w *ZCashWallet) SweepAddress(ins []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
 	return w.sweepAddress(ins, address, key, redeemScript, feeLevel)
 }
 
-func (w *ZCashWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
-	return w.createMultisigSignature(ins, outs, key, redeemScript, feePerByte)
+func (w *ZCashWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]wi.Signature, error) {
+	return w.createMultisigSignature(ins, outs, key, redeemScript, feePerByte.Uint64())
 }
 
-func (w *ZCashWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	return w.multisign(ins, outs, sigs1, sigs2, redeemScript, feePerByte, broadcast)
+func (w *ZCashWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
+	return w.multisign(ins, outs, sigs1, sigs2, redeemScript, feePerByte.Uint64(), broadcast)
 }
 
 func (w *ZCashWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btcutil.Address, redeemScript []byte, err error) {
@@ -342,12 +354,12 @@ func (w *ZCashWallet) DumpTables(wr io.Writer) {
 	fmt.Fprintln(wr, "Transactions-----")
 	txns, _ := w.db.Txns().GetAll(true)
 	for _, tx := range txns {
-		fmt.Fprintf(wr, "Hash: %s, Height: %d, Value: %d, WatchOnly: %t\n", tx.Txid, int(tx.Height), int(tx.Value), tx.WatchOnly)
+		fmt.Fprintf(wr, "Hash: %s, Height: %d, Value: %s, WatchOnly: %t\n", tx.Txid, int(tx.Height), tx.Value, tx.WatchOnly)
 	}
 	fmt.Fprintln(wr, "\nUtxos-----")
 	utxos, _ := w.db.Utxos().GetAll()
 	for _, u := range utxos {
-		fmt.Fprintf(wr, "Hash: %s, Index: %d, Height: %d, Value: %d, WatchOnly: %t\n", u.Op.Hash.String(), int(u.Op.Index), int(u.AtHeight), int(u.Value), u.WatchOnly)
+		fmt.Fprintf(wr, "Hash: %s, Index: %d, Height: %d, Value: %s, WatchOnly: %t\n", u.Op.Hash.String(), int(u.Op.Index), int(u.AtHeight), u.Value, u.WatchOnly)
 	}
 }
 
@@ -381,6 +393,7 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		val, _ := strconv.ParseInt(u.Value, 10, 64)
 		input := model.Input{
 			Txid: in.PreviousOutPoint.Hash.String(),
 			Vout: int(in.PreviousOutPoint.Index),
@@ -390,8 +403,8 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) (string, error) {
 			Sequence: uint32(in.Sequence),
 			N:        n,
 			Addr:     addr.String(),
-			Satoshis: u.Value,
-			Value:    float64(u.Value) / util.SatoshisPerCoin(wi.Zcash),
+			Satoshis: val,
+			Value:    float64(val) / util.SatoshisPerCoin(wi.Zcash),
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)
 	}

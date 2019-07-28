@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/cache"
@@ -42,6 +44,13 @@ type BitcoinWallet struct {
 
 	exchangeRates wi.ExchangeRates
 }
+
+var (
+	BitcoinCurrencyDefinition = wi.CurrencyDefinition{
+		Code:         "BTC",
+		Divisibility: 8,
+	}
+)
 
 func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
@@ -99,8 +108,8 @@ func (w *BitcoinWallet) CurrencyCode() string {
 	}
 }
 
-func (w *BitcoinWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *BitcoinWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *BitcoinWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -171,10 +180,12 @@ func (w *BitcoinWallet) HasKey(addr btc.Address) bool {
 	return true
 }
 
-func (w *BitcoinWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *BitcoinWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	utxos, _ := w.db.Utxos().GetAll()
 	txns, _ := w.db.Txns().GetAll(false)
-	return util.CalcBalance(utxos, txns)
+	c, u := util.CalcBalance(utxos, txns)
+	return wi.CurrencyValue{Value: *big.NewInt(c), Currency: BitcoinCurrencyDefinition},
+		wi.CurrencyValue{Value: *big.NewInt(u), Currency: BitcoinCurrencyDefinition}
 }
 
 func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
@@ -220,11 +231,11 @@ func (w *BitcoinWallet) ChainTip() (uint32, chainhash.Hash) {
 	return w.ws.ChainTip()
 }
 
-func (w *BitcoinWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
-	return w.fp.GetFeePerByte(feeLevel)
+func (w *BitcoinWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
+	return *big.NewInt(int64(w.fp.GetFeePerByte(feeLevel)))
 }
 
-func (w *BitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *BitcoinWallet) Spend(amount big.Int, addr btc.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
 		tx  *wire.MsgTx
 		err error
@@ -235,7 +246,7 @@ func (w *BitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel wi.FeeLev
 			return nil, err
 		}
 	} else {
-		tx, err = w.buildTx(amount, addr, feeLevel, nil)
+		tx, err = w.buildTx(amount.Int64(), addr, feeLevel, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -252,32 +263,33 @@ func (w *BitcoinWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	return w.bumpFee(txid)
 }
 
-func (w *BitcoinWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte uint64) uint64 {
+func (w *BitcoinWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte big.Int) big.Int {
 	tx := new(wire.MsgTx)
 	for _, out := range outs {
 		scriptPubKey, _ := txscript.PayToAddrScript(out.Address)
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, P2PKH)
-	fee := estimatedSize * int(feePerByte)
-	return uint64(fee)
+	fee := estimatedSize * int(feePerByte.Int64())
+	return *big.NewInt(int64(fee))
 }
 
-func (w *BitcoinWallet) EstimateSpendFee(amount int64, feeLevel wi.FeeLevel) (uint64, error) {
-	return w.estimateSpendFee(amount, feeLevel)
+func (w *BitcoinWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLevel) (big.Int, error) {
+	val, err := w.estimateSpendFee(amount.Int64(), feeLevel)
+	return *big.NewInt(int64(val)), err
 }
 
 func (w *BitcoinWallet) SweepAddress(ins []wi.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
 	return w.sweepAddress(ins, address, key, redeemScript, feeLevel)
 }
 
-func (w *BitcoinWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
-	return w.createMultisigSignature(ins, outs, key, redeemScript, feePerByte)
+func (w *BitcoinWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]wi.Signature, error) {
+	return w.createMultisigSignature(ins, outs, key, redeemScript, feePerByte.Uint64())
 }
 
-func (w *BitcoinWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	return w.multisign(ins, outs, sigs1, sigs2, redeemScript, feePerByte, broadcast)
+func (w *BitcoinWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
+	return w.multisign(ins, outs, sigs1, sigs2, redeemScript, feePerByte.Uint64(), broadcast)
 }
 
 func (w *BitcoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
@@ -330,12 +342,12 @@ func (w *BitcoinWallet) DumpTables(wr io.Writer) {
 	fmt.Fprintln(wr, "Transactions-----")
 	txns, _ := w.db.Txns().GetAll(true)
 	for _, tx := range txns {
-		fmt.Fprintf(wr, "Hash: %s, Height: %d, Value: %d, WatchOnly: %t\n", tx.Txid, int(tx.Height), int(tx.Value), tx.WatchOnly)
+		fmt.Fprintf(wr, "Hash: %s, Height: %d, Value: %s, WatchOnly: %t\n", tx.Txid, int(tx.Height), tx.Value, tx.WatchOnly)
 	}
 	fmt.Fprintln(wr, "\nUtxos-----")
 	utxos, _ := w.db.Utxos().GetAll()
 	for _, u := range utxos {
-		fmt.Fprintf(wr, "Hash: %s, Index: %d, Height: %d, Value: %d, WatchOnly: %t\n", u.Op.Hash.String(), int(u.Op.Index), int(u.AtHeight), int(u.Value), u.WatchOnly)
+		fmt.Fprintf(wr, "Hash: %s, Index: %d, Height: %d, Value: %s, WatchOnly: %t\n", u.Op.Hash.String(), int(u.Op.Index), int(u.AtHeight), u.Value, u.WatchOnly)
 	}
 }
 
@@ -367,6 +379,7 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 		if err != nil {
 			return err
 		}
+		val, _ := strconv.ParseInt(u.Value, 10, 64)
 		input := model.Input{
 			Txid: in.PreviousOutPoint.Hash.String(),
 			Vout: int(in.PreviousOutPoint.Index),
@@ -376,8 +389,8 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 			Sequence: uint32(in.Sequence),
 			N:        n,
 			Addr:     addr.String(),
-			Satoshis: u.Value,
-			Value:    float64(u.Value) / util.SatoshisPerCoin(wi.Bitcoin),
+			Satoshis: val,
+			Value:    float64(val) / util.SatoshisPerCoin(wi.Bitcoin),
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)
 	}

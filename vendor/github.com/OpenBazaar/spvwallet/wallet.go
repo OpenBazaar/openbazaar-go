@@ -2,6 +2,12 @@ package spvwallet
 
 import (
 	"errors"
+	"io"
+	"math/big"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
@@ -14,9 +20,6 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io"
-	"sync"
-	"time"
 )
 
 type SPVWallet struct {
@@ -53,6 +56,13 @@ type SPVWallet struct {
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
+
+var (
+	BitcoinCurrencyDefinition = wallet.CurrencyDefinition{
+		Code:         "BTC",
+		Divisibility: 8,
+	}
+)
 
 func NewSPVWallet(config *Config) (*SPVWallet, error) {
 
@@ -183,8 +193,8 @@ func (w *SPVWallet) CurrencyCode() string {
 	}
 }
 
-func (w *SPVWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *SPVWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -302,23 +312,26 @@ func (w *SPVWallet) ListKeys() []btcec.PrivateKey {
 	return list
 }
 
-func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *SPVWallet) Balance() (wallet.CurrencyValue, wallet.CurrencyValue) {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	stxos, _ := w.txstore.Stxos().GetAll()
+	var confirmed, unconfirmed int64
 	for _, utxo := range utxos {
+		val, _ := strconv.ParseInt(utxo.Value, 10, 64)
 		if !utxo.WatchOnly {
 			if utxo.AtHeight > 0 {
-				confirmed += utxo.Value
+				confirmed += val
 			} else {
 				if w.checkIfStxoIsConfirmed(utxo, stxos) {
-					confirmed += utxo.Value
+					confirmed += val
 				} else {
-					unconfirmed += utxo.Value
+					unconfirmed += val
 				}
 			}
 		}
 	}
-	return confirmed, unconfirmed
+	return wallet.CurrencyValue{Value: *big.NewInt(confirmed), Currency: BitcoinCurrencyDefinition},
+		wallet.CurrencyValue{Value: *big.NewInt(unconfirmed), Currency: BitcoinCurrencyDefinition}
 }
 
 func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
