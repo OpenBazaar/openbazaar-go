@@ -12,9 +12,10 @@ message Moderator {
     Fee fee                            = 5;
 
     message Fee {
-        Price fixedFee   = 1;
+        //Price fixedFee   = 1 [json_name = ""];
         float percentage = 2;
         FeeType feeType  = 3;
+        CurrencyValue fixedFeeValue   = 4 [json_name = "fixedFee"];
 
         enum FeeType {
             FIXED                 = 0;
