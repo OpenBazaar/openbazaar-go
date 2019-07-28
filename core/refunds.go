@@ -58,8 +58,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.MasterPrivateKey
-		mECKey, err := mPrivKey.ECPrivKey()
+		mECKey, err := n.MasterPrivateKey.ECPrivKey()
 		if err != nil {
 			return err
 		}

@@ -62,8 +62,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.MasterPrivateKey
-		mECKey, err := mPrivKey.ECPrivKey()
+		mECKey, err := n.MasterPrivateKey.ECPrivKey()
 		if err != nil {
 			return err
 		}

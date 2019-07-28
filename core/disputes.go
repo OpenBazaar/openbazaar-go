@@ -636,8 +636,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.MasterPrivateKey
-	mECKey, err := mPrivKey.ECPrivKey()
+	mECKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return err
 	}
@@ -1109,8 +1108,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
-	mPrivKey := n.MasterPrivateKey
-	mECKey, err := mPrivKey.ECPrivKey()
+	mECKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return err
 	}
