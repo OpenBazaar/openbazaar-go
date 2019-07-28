@@ -2,6 +2,12 @@ package bitcoincash
 
 import (
 	"errors"
+	"io"
+	"math/big"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -14,9 +20,6 @@ import (
 	"github.com/cpacia/bchutil"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io"
-	"sync"
-	"time"
 )
 
 func setupNetworkParams(params *chaincfg.Params) {
@@ -65,6 +68,13 @@ type SPVWallet struct {
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
+
+var (
+	BitcoinCashCurrencyDefinition = wallet.CurrencyDefinition{
+		Code:         "BCH",
+		Divisibility: 8,
+	}
+)
 
 func NewSPVWallet(config *Config) (*SPVWallet, error) {
 	setupNetworkParams(config.Params)
@@ -202,8 +212,8 @@ func (w *SPVWallet) CreationDate() time.Time {
 	return w.creationDate
 }
 
-func (w *SPVWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *SPVWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -355,23 +365,26 @@ func (w *SPVWallet) ImportKey(privKey *btcec.PrivateKey, compress bool) error {
 	return w.keyManager.datastore.ImportKey(addr.ScriptAddress(), privKey)
 }
 
-func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *SPVWallet) Balance() (wallet.CurrencyValue, wallet.CurrencyValue) {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	stxos, _ := w.txstore.Stxos().GetAll()
+	var confirmed, unconfirmed int64
 	for _, utxo := range utxos {
 		if !utxo.WatchOnly {
+			v, _ := strconv.ParseInt(utxo.Value, 10, 64)
 			if utxo.AtHeight > 0 {
-				confirmed += utxo.Value
+				confirmed += v
 			} else {
 				if w.checkIfStxoIsConfirmed(utxo, stxos) {
-					confirmed += utxo.Value
+					confirmed += v
 				} else {
-					unconfirmed += utxo.Value
+					unconfirmed += v
 				}
 			}
 		}
 	}
-	return confirmed, unconfirmed
+	return wallet.CurrencyValue{Value: *big.NewInt(confirmed), Currency: BitcoinCashCurrencyDefinition},
+		wallet.CurrencyValue{Value: *big.NewInt(unconfirmed), Currency: BitcoinCashCurrencyDefinition}
 }
 
 func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {

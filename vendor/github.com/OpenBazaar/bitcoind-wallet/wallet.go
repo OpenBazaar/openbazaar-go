@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"path"
@@ -408,7 +409,7 @@ func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
 
 		t := wallet.Txn{
 			Txid:          r.TxID,
-			Value:         int64(amt.ToUnit(btc.AmountSatoshi)),
+			Value:         strconv.FormatInt(int64(amt.ToUnit(btc.AmountSatoshi)), 10),
 			Height:        height,
 			Timestamp:     ts,
 			Confirmations: int64(confirmations),
@@ -428,7 +429,7 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error)
 		return t, err
 	}
 	t.Txid = resp.TxID
-	t.Value = int64(resp.Amount * 100000000)
+	t.Value = strconv.FormatInt(int64(resp.Amount*100000000), 10)
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
@@ -641,7 +642,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 				LinkedAddress: addr,
 				OutpointIndex: u.Vout,
 				OutpointHash:  h.CloneBytes(),
-				Value:         int64(u.Amount),
+				Value:         *big.NewInt(int64(u.Amount)),
 			}
 			hdKey := hd.NewExtendedKey(w.params.HDPrivateKeyID[:], key.PrivKey.Serialize(), make([]byte, 32), make([]byte, 4), 0, 0, true)
 			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, hdKey, nil, wallet.FEE_BUMP)
@@ -687,7 +688,7 @@ func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []walle
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
 		scriptPubKey, _ := txscript.PayToAddrScript(out.Address)
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
@@ -746,7 +747,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 		if err != nil {
 			return nil, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -775,7 +776,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 
 	hashes := txscript.NewTxSigHashes(tx)
 	for i := range tx.TxIn {
-		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, redeemScript, txscript.SigHashAll, signingKey)
+		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value.Int64(), redeemScript, txscript.SigHashAll, signingKey)
 		if err != nil {
 			continue
 		}
@@ -802,7 +803,7 @@ func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.
 		if err != nil {
 			return nil, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -883,7 +884,7 @@ func (w *BitcoindWallet) SweepAddress(ins []wallet.TransactionInput, address *bt
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
 	for _, in := range ins {
-		val += in.Value
+		val += in.Value.Int64()
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return nil, err
@@ -983,7 +984,7 @@ func (w *BitcoindWallet) SweepAddress(ins []wallet.TransactionInput, address *bt
 			}
 			txIn.SignatureScript = script
 		} else {
-			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, *redeemScript, txscript.SigHashAll, privKey)
+			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value.Int64(), *redeemScript, txscript.SigHashAll, privKey)
 			if err != nil {
 				return nil, err
 			}

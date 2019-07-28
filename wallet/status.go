@@ -21,8 +21,8 @@ type walletUpdateWrapper struct {
 
 type walletUpdate struct {
 	Height      uint32 `json:"height"`
-	Unconfirmed int64  `json:"unconfirmed"`
-	Confirmed   int64  `json:"confirmed"`
+	Unconfirmed string `json:"unconfirmed"`
+	Confirmed   string `json:"confirmed"`
 }
 
 func NewStatusUpdater(mw multiwallet.MultiWallet, c chan repo.Notifier, ctx context.Context) *StatusUpdater {
@@ -40,8 +40,8 @@ func (s *StatusUpdater) Start() {
 				height, _ := wal.ChainTip()
 				u := walletUpdate{
 					Height:      height,
-					Unconfirmed: unconfirmed,
-					Confirmed:   confirmed,
+					Unconfirmed: unconfirmed.Value.String(),
+					Confirmed:   confirmed.Value.String(),
 				}
 				ret[ct.CurrencyCode()] = u
 			}

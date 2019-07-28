@@ -88,7 +88,7 @@ func (b *BitcoinCashPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64,
 	return b.cache, nil
 }
 
-func (b *BitcoinCashPriceFetcher) UnitsPerCoin() int {
+func (b *BitcoinCashPriceFetcher) UnitsPerCoin() int64 {
 	return 100000000
 }
 
