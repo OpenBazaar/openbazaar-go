@@ -413,6 +413,10 @@ func (x *Start) Execute(args []string) error {
 			if err != nil {
 				return err
 			}
+		} else if x.Regtest {
+			if r, ok := router.(*dht.IpfsDHT); ok {
+				dhtRouting = r
+			}
 		}
 	}
 	if dhtRouting == nil {

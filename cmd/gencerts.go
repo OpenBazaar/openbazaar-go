@@ -100,7 +100,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	}
 
 	// Create ssl directory
-	err = os.MkdirAll(path.Join(repoPath, "ssl"), 0755)
+	err = os.MkdirAll(path.Join(repoPath, "ssl"), os.ModePerm)
 	if err != nil {
 		log.Fatalf("Failed to create ssl directory: %s", err)
 	}
