@@ -13,14 +13,14 @@ const (
 	am01EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
 	am01EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
 	am01EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
-	am01UpVersion                      = 30
-	am01DownVersion                    = 29
+	am01UpVersion                      = 31
+	am01DownVersion                    = 30
 )
 
 // am01 - required migration struct
 type am01 struct{}
 
-type Migration029 struct {
+type Migration030 struct {
 	am01
 }
 

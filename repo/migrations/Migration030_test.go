@@ -148,7 +148,7 @@ func TestAM01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var m migrations.Migration029
+	var m migrations.Migration030
 	err = m.Up(testRepo.DataPath(), "", true)
 	if err != nil {
 		t.Fatal(err)
@@ -197,7 +197,7 @@ func TestAM01(t *testing.T) {
 		t.Fatal("incorrect post-migration config")
 	}
 
-	assertCorrectRepoVer(t, repoverPath, "30")
+	assertCorrectRepoVer(t, repoverPath, "31")
 
 	err = m.Down(testRepo.DataPath(), "", true)
 	if err != nil {
@@ -240,5 +240,5 @@ func TestAM01(t *testing.T) {
 	AM01AssertAPI(t, zec["APIPool"], "https://zec.blockbook.api.openbazaar.org/api")
 	AM01AssertAPI(t, zec["APITestnetPool"], "https://tzec.blockbook.api.openbazaar.org/api")
 
-	assertCorrectRepoVer(t, repoverPath, "29")
+	assertCorrectRepoVer(t, repoverPath, "30")
 }
