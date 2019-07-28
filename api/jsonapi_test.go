@@ -404,31 +404,35 @@ func TestCryptoListingsQuantity(t *testing.T) {
 	})
 }
 
+/*
 func TestCryptoListingsNoCoinType(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.CoinType = ""
+	//listing.Metadata.CoinType = ""
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingCoinTypeRequired)},
 	})
 }
+*/
 
+/*
 func TestCryptoListingsCoinDivisibilityIncorrect(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON},
 	})
 
-	listing.Metadata.CoinDivisibility = 1e7
+	//listing.Metadata.CoinDivisibility = 1e7
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
 	})
 
-	listing.Metadata.CoinDivisibility = 0
+	//listing.Metadata.CoinDivisibility = 0
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
 	})
 }
+*/
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
 	runTest := func(listing *pb.Listing, err error) {
@@ -439,11 +443,11 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	physicalListing := factory.NewListing("physical")
 
-	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PricingCurrency = "btc"
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
+	//listing := factory.NewCryptoListing("crypto")
+	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
+	//runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
-	listing = factory.NewCryptoListing("crypto")
+	listing := factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
 	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
 
@@ -457,13 +461,20 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
+	/*[]*pb.Listing_Coupon{}
+	sampleCoupon := new(pb.Listing_Coupon)
+	sampleCoupon.Title = "sample coupon"
+	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
+	*/
 	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
+
 }
 
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.Price = 1
+	listing.Item.PriceValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
@@ -570,7 +581,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
-	sale.Contract.BuyerOrder.Payment.Coin = "ZEC"
+	sale.Contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}}
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err
@@ -585,7 +596,7 @@ func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 func TestSalesGet(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
 	sale.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false)
@@ -615,9 +626,9 @@ func TestSalesGet(t *testing.T) {
 	if actualSale.BuyerId != sale.Contract.BuyerOrder.BuyerID.PeerID {
 		t.Fatal("Incorrect buyerId:", actualSale.BuyerId, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.PeerID)
 	}
-	if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualSale.OrderId != sale.OrderID {
 		t.Fatal("Incorrect orderId:", actualSale.OrderId, "\nwanted:", sale.OrderID)
 	}
@@ -637,7 +648,7 @@ func TestSalesGet(t *testing.T) {
 func TestPurchasesGet(t *testing.T) {
 	purchase := factory.NewPurchaseRecord()
 	purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
 	purchase.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Purchases().Put(purchase.OrderID, *purchase.Contract, purchase.OrderState, false)
@@ -667,9 +678,9 @@ func TestPurchasesGet(t *testing.T) {
 	if actualPurchase.VendorId != purchase.Contract.VendorListings[0].VendorID.PeerID {
 		t.Fatal("Incorrect vendorId:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.PeerID)
 	}
-	if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualPurchase.OrderId != purchase.OrderID {
 		t.Fatal("Incorrect orderId:", actualPurchase.OrderId, "\nwanted:", purchase.OrderID)
 	}
@@ -691,7 +702,7 @@ func TestCasesGet(t *testing.T) {
 	paymentCoinCode := repo.CurrencyCode("BTC")
 	disputeCaseRecord := factory.NewDisputeCaseRecord()
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	disputeCaseRecord.CoinType = "ZEC"
 	disputeCaseRecord.PaymentCoin = &paymentCoinCode
@@ -717,9 +728,9 @@ func TestCasesGet(t *testing.T) {
 
 	actualCase := respObj.Cases[0]
 
-	if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualCase.PaymentCoin != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
 		t.Fatal("Incorrect paymentCoin:", actualCase.PaymentCoin, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0])
 	}
