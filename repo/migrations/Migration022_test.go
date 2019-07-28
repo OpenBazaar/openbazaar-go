@@ -20,7 +20,7 @@ const postMigration022Config = `{
 	"IpnsExtra": {
 		"APIRouter": "https://routing.api.openbazaar.org",
 		"DHTQuorumSize": 1
-       		
+
    	}
 }`
 

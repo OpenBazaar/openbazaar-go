@@ -43,14 +43,14 @@ func mustNewPointer() ipfs.Pointer {
 		panic(err)
 	}
 	return ipfs.Pointer{
-		&k,
-		ps.PeerInfo{
+		Cid: &k,
+		Value: ps.PeerInfo{
 			ID:    id,
 			Addrs: []ma.Multiaddr{maAddr},
 		},
-		ipfs.MESSAGE,
-		time.Now(),
-		&cancelID,
+		Purpose:   ipfs.MESSAGE,
+		Timestamp: time.Now(),
+		CancelID:  &cancelID,
 	}
 }
 
@@ -198,14 +198,14 @@ func TestPointersDB_GetByPurpose(t *testing.T) {
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
 	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
 	m := ipfs.Pointer{
-		&k,
-		ps.PeerInfo{
+		Cid: &k,
+		Value: ps.PeerInfo{
 			ID:    id,
 			Addrs: []ma.Multiaddr{maAddr},
 		},
-		ipfs.MODERATOR,
-		time.Now(),
-		nil,
+		Purpose:   ipfs.MODERATOR,
+		Timestamp: time.Now(),
+		CancelID:  nil,
 	}
 	err = pdb.Put(m)
 	if err != nil {
@@ -249,14 +249,14 @@ func TestPointersDB_Get(t *testing.T) {
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
 	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
 	m := ipfs.Pointer{
-		&k,
-		ps.PeerInfo{
+		Cid: &k,
+		Value: ps.PeerInfo{
 			ID:    id,
 			Addrs: []ma.Multiaddr{maAddr},
 		},
-		ipfs.MODERATOR,
-		time.Now(),
-		nil,
+		Purpose:   ipfs.MODERATOR,
+		Timestamp: time.Now(),
+		CancelID:  nil,
 	}
 	err = pdb.Put(m)
 	if err != nil {

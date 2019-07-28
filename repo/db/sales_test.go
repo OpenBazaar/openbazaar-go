@@ -63,7 +63,10 @@ func TestPutSale(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	contract.BuyerOrder.Payment.Coin = "BTC"
+	//contract.BuyerOrder.Payment.Coin = "BTC"
+	contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{
+		Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+	}
 
 	err = saldb.Put("orderID", *contract, 0, false)
 	if err != nil {
@@ -77,7 +80,7 @@ func TestPutSale(t *testing.T) {
 	var state int
 	var read int
 	var date int
-	var total int
+	var total string
 	var thumbnail string
 	var buyerID string
 	var buyerHandle string
@@ -102,8 +105,8 @@ func TestPutSale(t *testing.T) {
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
 	}
-	if total != int(contract.BuyerOrder.Payment.Amount) {
-		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Payment.Amount), total)
+	if total != contract.BuyerOrder.Payment.AmountValue.Amount {
+		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.AmountValue, total)
 	}
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
 		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
@@ -123,11 +126,12 @@ func TestPutSale(t *testing.T) {
 	if shippingAddress != contract.BuyerOrder.Shipping.Address {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.Address), shippingAddress)
 	}
-	if paymentCoin != contract.BuyerOrder.Payment.Coin {
-		t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.Coin, paymentCoin)
-	}
-	if coinType != "" {
-		t.Errorf(`Expected empty string got %s`, coinType)
+	//if paymentCoin != contract.BuyerOrder.Payment.Coin {
+	//	t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.Coin, paymentCoin)
+	//}
+	// if coinType != "" {
+	if coinType != "BTC" {
+		t.Errorf(`Expected %s string got %s`, paymentCoin, coinType)
 	}
 }
 
@@ -345,7 +349,7 @@ func TestSalesGetByOrderId(t *testing.T) {
 	}
 
 	contract := factory.NewContract()
-	contract.BuyerOrder.Payment.Coin = expectedCoin
+	//contract.BuyerOrder.Payment.Coin = expectedCoin
 	if err := saldb.Put("orderID", *contract, 0, false); err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +757,9 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
-		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{
+			Currency: &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8},
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -783,7 +789,10 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{
+			Code:         testCoin,
+			Divisibility: 8,
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {

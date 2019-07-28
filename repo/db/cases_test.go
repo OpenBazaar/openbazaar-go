@@ -231,8 +231,14 @@ func TestMarkCaseAsUnread(t *testing.T) {
 func TestUpdateBuyerInfo(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
-		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
-		contract               = factory.NewContract()
+		buyerTestOutpoints     = []*pb.Outpoint{{
+			Hash:  "hash1",
+			Index: 0,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "5",
+			}}}
+		contract = factory.NewContract()
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -275,8 +281,8 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	if string(buyerErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(buyerErrors))
 	}
-	if string(buyerOuts) != `[{"hash":"hash1","value":5}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash1","value":5}]`, string(buyerOuts))
+	if string(buyerOuts) != `[{"hash":"hash1","newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash1","newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"5"}}]`, string(buyerOuts))
 	}
 }
 
@@ -284,7 +290,13 @@ func TestUpdateVendorInfo(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
+		vendorTestOutpoints    = []*pb.Outpoint{{
+			Hash:  "hash2",
+			Index: 1,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "11",
+			}}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -327,8 +339,8 @@ func TestUpdateVendorInfo(t *testing.T) {
 	if string(vendorErrors) != `["someError","anotherError"]` {
 		t.Errorf("Expected %s, got %s", `["someError","anotherError"]`, string(vendorErrors))
 	}
-	if string(vendorOuts) != `[{"hash":"hash2","index":1,"value":11}]` {
-		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,value":11}]`, string(vendorOuts))
+	if string(vendorOuts) != `[{"hash":"hash2","index":1,"newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]` {
+		t.Errorf("Expected %s got %s", `[{"hash":"hash2",index:1,newValue":{"currency":{"code":"BTC","divisibility":8},"amount":"11"}}]`, string(vendorOuts))
 	}
 }
 
@@ -336,8 +348,20 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{
+			Hash:  "hash1",
+			Index: 0,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "5",
+			}}}
+		vendorTestOutpoints = []*pb.Outpoint{{
+			Hash:  "hash2",
+			Index: 1,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "11",
+			}}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -408,11 +432,23 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 
 func TestGetByCaseID(t *testing.T) {
 	var (
-		expectedPaymentCoin     = "BCH"
-		casesdb, teardown, err  = buildNewCaseStore()
-		contract                = factory.NewContract()
-		expectedBuyerOutpoints  = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
-		expectedVendorOutpoints = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
+		expectedPaymentCoin    = "BCH"
+		casesdb, teardown, err = buildNewCaseStore()
+		contract               = factory.NewContract()
+		expectedBuyerOutpoints = []*pb.Outpoint{{
+			Hash:  "hash1",
+			Index: 0,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
+				Amount:   "5",
+			}}}
+		expectedVendorOutpoints = []*pb.Outpoint{{
+			Hash:  "hash2",
+			Index: 1,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BCH", Divisibility: 8},
+				Amount:   "11",
+			}}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -459,8 +495,9 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedBuyerOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value != expectedBuyerOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedBuyerOutpoints[i].Value)
+		if o.NewValue.GetAmount() != expectedBuyerOutpoints[i].NewValue.GetAmount() ||
+			o.NewValue.GetCurrency().Code != expectedBuyerOutpoints[i].NewValue.GetCurrency().Code {
+			t.Errorf("Expected outpoint value %v got %v", o.NewValue, expectedBuyerOutpoints[i].NewValue)
 		}
 	}
 	if len(dispute.VendorOutpoints) != len(expectedVendorOutpoints) {
@@ -473,8 +510,8 @@ func TestGetByCaseID(t *testing.T) {
 		if o.Index != expectedVendorOutpoints[i].Index {
 			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedVendorOutpoints[i].Index)
 		}
-		if o.Value != expectedVendorOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedVendorOutpoints[i].Value)
+		if o.NewValue != expectedVendorOutpoints[i].NewValue {
+			t.Errorf("Expected outpoint value %v got %v", o.NewValue, expectedVendorOutpoints[i].NewValue)
 		}
 	}
 	if dispute.OrderState != pb.OrderState_DISPUTED {
@@ -489,8 +526,20 @@ func TestMarkAsClosed(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{
+			Hash:  "hash1",
+			Index: 0,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "5",
+			}}}
+		vendorTestOutpoints = []*pb.Outpoint{{
+			Hash:  "hash2",
+			Index: 1,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "11",
+			}}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -531,8 +580,20 @@ func TestCasesDB_GetAll(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{
+			Hash:  "hash1",
+			Index: 0,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "5",
+			}}}
+		vendorTestOutpoints = []*pb.Outpoint{{
+			Hash:  "hash2",
+			Index: 1,
+			NewValue: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Amount:   "11",
+			}}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -661,7 +722,10 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 				ShipTo:  "Buyer Name",
 			},
 			Payment: &pb.Order_Payment{
-				Amount:  10,
+				AmountValue: &pb.CurrencyValue{
+					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+					Amount:   "10",
+				},
 				Method:  pb.Order_Payment_DIRECT,
 				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
 			},
@@ -817,7 +881,10 @@ func TestGetDisputesForDisputeExpiryAllowsMissingContracts(t *testing.T) {
 				ShipTo:  "Buyer Name",
 			},
 			Payment: &pb.Order_Payment{
-				Amount:  10,
+				AmountValue: &pb.CurrencyValue{
+					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+					Amount:   "10",
+				},
 				Method:  pb.Order_Payment_DIRECT,
 				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
 			},
@@ -985,8 +1052,9 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
-		contract.BuyerOrder.Payment.Coin = test.paymentCoin
-		paymentCoin := repo.CurrencyCode(test.paymentCoin)
+		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		paymentCoin := repo.CurrencyCode(test.paymentCoin) //repo.NewCurrencyCode(test.paymentCoin)
+
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
 			BuyerContract:    contract,
@@ -1024,7 +1092,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.CoinType = testCoin
+		//contract.VendorListings[0].Metadata.CoinType = testCoin
 		paymentCoin := repo.CurrencyCode(testCoin)
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{

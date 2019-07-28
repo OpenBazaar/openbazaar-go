@@ -68,7 +68,7 @@ type Purchase struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
-	Total              uint64    `json:"total"`
+	Total              string    `json:"total"`
 	VendorId           string    `json:"vendorId"`
 	VendorHandle       string    `json:"vendorHandle"`
 	ShippingName       string    `json:"shippingName"`
@@ -87,7 +87,7 @@ type Sale struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
-	Total              uint64    `json:"total"`
+	Total              string    `json:"total"`
 	BuyerId            string    `json:"buyerId"`
 	BuyerHandle        string    `json:"buyerHandle"`
 	ShippingName       string    `json:"shippingName"`
@@ -106,7 +106,7 @@ type Case struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
-	Total              uint64    `json:"total"`
+	Total              string    `json:"total"`
 	BuyerId            string    `json:"buyerId"`
 	BuyerHandle        string    `json:"buyerHandle"`
 	VendorId           string    `json:"vendorId"`

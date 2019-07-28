@@ -52,7 +52,7 @@ func (f *FollowerDB) Get(offsetId string, limit int) ([]repo.Follower, error) {
 		var peerID string
 		var proof []byte
 		rows.Scan(&peerID, &proof)
-		ret = append(ret, repo.Follower{peerID, proof})
+		ret = append(ret, repo.Follower{PeerId: peerID, Proof: proof})
 	}
 	return ret, nil
 }

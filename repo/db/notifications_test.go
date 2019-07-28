@@ -101,7 +101,7 @@ func TestNotficationsDB_Delete(t *testing.T) {
 	}
 	defer teardown()
 
-	n := repo.FollowNotification{"1", repo.NotifierTypeFollowNotification, "abc"}
+	n := repo.FollowNotification{ID: "1", Type: repo.NotifierTypeFollowNotification, PeerId: "abc"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
@@ -129,17 +129,17 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 	}
 	defer teardown()
 
-	f := repo.FollowNotification{"1", repo.NotifierTypeFollowNotification, "abc"}
+	f := repo.FollowNotification{ID: "1", Type: repo.NotifierTypeFollowNotification, PeerId: "abc"}
 	err = notificationDb.PutRecord(repo.NewNotification(f, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
-	u := repo.UnfollowNotification{"2", repo.NotifierTypeUnfollowNotification, "123"}
+	u := repo.UnfollowNotification{ID: "2", Type: repo.NotifierTypeUnfollowNotification, PeerId: "123"}
 	err = notificationDb.PutRecord(repo.NewNotification(u, time.Now().Add(time.Second), false))
 	if err != nil {
 		t.Error(err)
 	}
-	u = repo.UnfollowNotification{"3", repo.NotifierTypeUnfollowNotification, "56778"}
+	u = repo.UnfollowNotification{ID: "3", Type: repo.NotifierTypeUnfollowNotification, PeerId: "56778"}
 	err = notificationDb.PutRecord(repo.NewNotification(u, time.Now().Add(time.Second*2), false))
 	if err != nil {
 		t.Error(err)
@@ -188,7 +188,7 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 	}
 	defer teardown()
 
-	n := repo.FollowNotification{"5", repo.NotifierTypeFollowNotification, "abc"}
+	n := repo.FollowNotification{ID: "5", Type: repo.NotifierTypeFollowNotification, PeerId: "abc"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
@@ -219,12 +219,12 @@ func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
 	}
 	defer teardown()
 
-	n := repo.FollowNotification{"6", repo.NotifierTypeFollowNotification, "abc"}
+	n := repo.FollowNotification{ID: "6", Type: repo.NotifierTypeFollowNotification, PeerId: "abc"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
-	n = repo.FollowNotification{"7", repo.NotifierTypeFollowNotification, "123"}
+	n = repo.FollowNotification{ID: "7", Type: repo.NotifierTypeFollowNotification, PeerId: "123"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
@@ -249,7 +249,7 @@ func TestNotificationDB_GetUnreadCount(t *testing.T) {
 	}
 	defer teardown()
 
-	n := repo.FollowNotification{"8", repo.NotifierTypeFollowNotification, "abc"}
+	n := repo.FollowNotification{ID: "8", Type: repo.NotifierTypeFollowNotification, PeerId: "abc"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
@@ -258,7 +258,7 @@ func TestNotificationDB_GetUnreadCount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	n = repo.FollowNotification{"9", repo.NotifierTypeFollowNotification, "xyz"}
+	n = repo.FollowNotification{ID: "9", Type: repo.NotifierTypeFollowNotification, PeerId: "xyz"}
 	err = notificationDb.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)

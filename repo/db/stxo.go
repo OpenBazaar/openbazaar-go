@@ -37,7 +37,7 @@ func (s *StxoDB) Put(stxo wallet.Stxo) error {
 		watchOnly = 1
 	}
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
-	_, err = stmt.Exec(s.coinType.CurrencyCode(), outpoint, int(stxo.Utxo.Value), int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), watchOnly, int(stxo.SpendHeight), stxo.SpendTxid.String())
+	_, err = stmt.Exec(s.coinType.CurrencyCode(), outpoint, stxo.Utxo.Value, int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), watchOnly, int(stxo.SpendHeight), stxo.SpendTxid.String())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -58,7 +58,7 @@ func (s *StxoDB) GetAll() ([]wallet.Stxo, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var outpoint string
-		var value int
+		var value string
 		var height int
 		var scriptPubKey string
 		var spendHeight int
@@ -91,7 +91,7 @@ func (s *StxoDB) GetAll() ([]wallet.Stxo, error) {
 		utxo := wallet.Utxo{
 			Op:           *wire.NewOutPoint(shaHash, uint32(index)),
 			AtHeight:     int32(height),
-			Value:        int64(value),
+			Value:        value,
 			ScriptPubkey: scriptBytes,
 			WatchOnly:    watchOnly,
 		}
