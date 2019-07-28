@@ -30,7 +30,7 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) err
 	for _, coupon := range sl.Listing.Coupons {
 		for _, c := range savedCoupons {
 			if coupon.GetHash() == c.Hash {
-				coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+				coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: c.Code}
 				break
 			}
 		}
@@ -53,7 +53,7 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) err
 func ApplyShippingOptions(sl *pb.SignedListing) error {
 	for _, so := range sl.Listing.ShippingOptions {
 		for _, ser := range so.Services {
-			ser.AdditionalItemPrice = ser.Price
+			ser.AdditionalItemPriceValue = ser.PriceValue
 		}
 	}
 	return nil
