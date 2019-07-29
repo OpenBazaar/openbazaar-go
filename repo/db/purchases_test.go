@@ -454,6 +454,39 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 }
 
+func TestPurchasesDB_GetUnfunded(t *testing.T) {
+	var purdb, teardown, err = buildNewPurchaseStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	contract := factory.NewContract()
+	purdb.Put("orderID", *contract, 1, false)
+	purdb.Put("orderID1", *contract, 1, false)
+	unfunded, err := purdb.GetUnfunded()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(unfunded) != 2 {
+		t.Error("Return incorrect number of unfunded orders")
+	}
+	var a, b bool
+	for _, uf := range unfunded {
+		if uf.OrderId == "orderID" {
+			a = true
+		} else if uf.OrderId == "orderID1" {
+			b = true
+		}
+		if uf.PaymentAddress != contract.BuyerOrder.Payment.Address {
+			t.Errorf("Incorrect payment address. Expected %s, got %s", contract.BuyerOrder.Payment.Address, uf.PaymentAddress)
+		}
+	}
+	if !a || !b {
+		t.Error("Failed to return correct unfunded orders")
+	}
+}
+
 func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
