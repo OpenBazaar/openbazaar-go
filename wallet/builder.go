@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	eth "github.com/OpenBazaar/go-ethwallet/wallet"
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/bitcoin"
 	"github.com/OpenBazaar/multiwallet/bitcoincash"
@@ -163,13 +162,6 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 			actualCoin = wallet.Zcash
 		}
 		w, err := zcash.NewZCashWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
-		if err != nil {
-			return InvalidCoinType, nil, err
-		}
-		return actualCoin, w, nil
-	case wallet.Ethereum:
-		actualCoin = wallet.Ethereum
-		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Mnemonic, cfg.Proxy)
 		if err != nil {
 			return InvalidCoinType, nil, err
 		}

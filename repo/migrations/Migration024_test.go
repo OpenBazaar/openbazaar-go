@@ -2,15 +2,16 @@ package migrations_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"testing"
 )
 
 func TestMigration024(t *testing.T) {
@@ -53,7 +54,7 @@ func TestMigration024(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	index := []*migrations.Migration024_ListingData{extractListingData(listing)}
+	index := []*migrations.Migration024_ListingData{extractListingData24(listing)}
 	indexJSON, err := json.MarshalIndent(&index, "", "    ")
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +92,7 @@ func TestMigration024(t *testing.T) {
 	assertCorrectRepoVer(t, repoverPath, "24")
 }
 
-func extractListingData(listing *pb.Listing) *migrations.Migration024_ListingData {
+func extractListingData24(listing *pb.Listing) *migrations.Migration024_ListingData {
 	descriptionLength := len(listing.Item.Description)
 
 	contains := func(s []string, e string) bool {

@@ -2,14 +2,17 @@ package migrations_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+
 	"github.com/OpenBazaar/jsonpb"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 func TestMigration029(t *testing.T) {
@@ -35,7 +38,7 @@ func TestMigration029(t *testing.T) {
 		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
 		// If the default hashing algorithm changes at any point in the future you can expect this
 		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
+		expectedListingHash = "QmeEhL5jcnuCimemQ9A5XATGTtDSEkMwveChaxiepoUBQF" //"QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
 
 		listing = factory.NewListing(testListingSlug)
 		m       = jsonpb.Marshaler{
@@ -110,26 +113,28 @@ func extractListingData(listing *pb.Listing) *migrations.Migration029_ListingDat
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				if service.Price == 0 && !contains(freeShipping, region.String()) {
+				serviceValue, _ := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if serviceValue.Int64() == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
 			}
 		}
 	}
 
+	priceValue, _ := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
 	ld := &migrations.Migration029_ListingData{
 		Hash:         "aabbcc",
 		Slug:         listing.Slug,
 		Title:        listing.Item.Title,
 		Categories:   listing.Item.Categories,
 		NSFW:         listing.Item.Nsfw,
-		CoinType:     listing.Metadata.CoinType,
+		CoinType:     listing.Metadata.PricingCurrencyDefn.Code,
 		ContractType: listing.Metadata.ContractType.String(),
 		Description:  listing.Item.Description[:descriptionLength],
 		Thumbnail:    migrations.Migration029_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
 		Price: migrations.Migration029_Price{
-			CurrencyCode: listing.Metadata.PricingCurrency,
-			Amount:       listing.Item.Price,
+			CurrencyCode: listing.Metadata.PricingCurrencyDefn.Code,
+			Amount:       priceValue.Uint64(),
 			Modifier:     listing.Metadata.PriceModifier,
 		},
 		ShipsTo:            shipsTo,
