@@ -2,6 +2,10 @@ package spvwallet
 
 import (
 	"errors"
+	"io"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
@@ -14,9 +18,6 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io"
-	"sync"
-	"time"
 )
 
 type SPVWallet struct {
@@ -444,4 +445,10 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 
 func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
+}
+
+func (w *SPVWallet) AssociateTransactionWithOrder(cb wallet.TransactionCallback) {
+	for _, l := range w.txstore.listeners {
+		go l(cb)
+	}
 }
