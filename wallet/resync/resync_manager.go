@@ -11,7 +11,7 @@ import (
 
 var log = logging.MustGetLogger("ResyncManager")
 
-var ResyncInterval = time.Hour
+var ResyncInterval = time.Minute * 15
 
 type ResyncManager struct {
 	sales     repo.SaleStore
