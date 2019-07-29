@@ -411,7 +411,7 @@ func (n *Node) Start() error {
 	go gateway.Serve()
 
 	go func() {
-		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
+		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Datastore.Purchases(), n.OpenBazaarNode.Multiwallet)
 		if !n.config.DisableWallet {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()

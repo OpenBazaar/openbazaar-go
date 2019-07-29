@@ -482,7 +482,7 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), mw)
+	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), sqliteDB.Purchases(), mw)
 
 	// Master key setup
 	seed := bip39.NewSeed(mn, "")

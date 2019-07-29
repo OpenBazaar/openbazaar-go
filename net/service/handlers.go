@@ -305,8 +305,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil && (err != core.ErrPurchaseUnknownListing || !offline) {
 		return errorResponse(err.Error()), err
 	}
-	currentTime := time.Now()
-	purchaseTime := time.Unix(contract.BuyerOrder.Timestamp.Seconds, int64(contract.BuyerOrder.Timestamp.Nanos))
 
 	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {
@@ -330,9 +328,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
-		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -350,9 +345,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		wal.AddWatchedAddress(addr)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
-		}
 		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
@@ -385,9 +377,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
-		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -413,9 +402,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		wal.AddWatchedAddress(addr)
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
-		}
 		return nil, nil
 	}
 	log.Error("Unrecognized payment type")
