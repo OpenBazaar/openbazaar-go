@@ -1540,7 +1540,7 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	// Unmarshall
+	// Unmarshal
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
 	}
@@ -1556,7 +1556,6 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	wal0, ok := wal.(wallet.WalletMustManuallyAssociateTransactionToOrder)
-
 	if !ok {
 		return nil, nil
 	}
@@ -1582,7 +1581,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// the seller has confirmed the direct order, so a simple check of
 		// the addresses and we are good to proceed
 		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
-			log.Debugf("mismatched payment address details: orderID: %s, expectedAddr: %s, actualAddr: %s",
+			log.Errorf("mismatched payment address details: orderID: %s, expectedAddr: %s, actualAddr: %s",
 				paymentDetails.OrderID, contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress)
 			return nil, errors.New("mismatched payment addresses")
 
@@ -1592,9 +1591,9 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// the seller has not confirmed or this is a moderated purchase,
 		// so we need to compare the peerID in the vendorListing
 		// to the node peerID
-		if !(contract.VendorListings[0].VendorID.PeerID ==
-			service.node.IpfsNode.Identity.Pretty()) {
-			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s",
+		if contract.VendorListings[0].VendorID.PeerID !=
+			service.node.IpfsNode.Identity.Pretty() {
+			log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
 				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
 			return nil, errors.New("mismatched peer id")
 		}

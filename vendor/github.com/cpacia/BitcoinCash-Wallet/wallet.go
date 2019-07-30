@@ -423,15 +423,18 @@ func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 		}
 		outs := []wallet.TransactionOutput{}
 		for i, out := range tx.TxOut {
+			var addr btc.Address
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
 			if err != nil {
-				return txn, err
+				log.Warningf("error extracting address from txn pkscript: %v\n", err)
 			}
 			if len(addrs) == 0 {
-				return txn, errors.New("unknown script")
+				addr = nil
+			} else {
+				addr = addrs[0]
 			}
 			tout := wallet.TransactionOutput{
-				Address: addrs[0],
+				Address: addr,
 				Value:   out.Value,
 				Index:   uint32(i),
 			}

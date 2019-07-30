@@ -3,9 +3,9 @@ package litecoin
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/ltcsuite/ltcutil"
@@ -219,15 +219,18 @@ func (w *LitecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 		}
 		outs := []wi.TransactionOutput{}
 		for i, out := range tx.TxOut {
+			var addr btcutil.Address
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
 			if err != nil {
-				return txn, err
+				log.Printf("error extracting address from txn pkscript: %v\n", err)
 			}
 			if len(addrs) == 0 {
-				return txn, errors.New("unknown script")
+				addr = nil
+			} else {
+				addr = addrs[0]
 			}
 			tout := wi.TransactionOutput{
-				Address: addrs[0],
+				Address: addr,
 				Value:   out.Value,
 				Index:   uint32(i),
 			}

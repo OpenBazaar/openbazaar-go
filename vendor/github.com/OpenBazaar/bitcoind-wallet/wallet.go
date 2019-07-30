@@ -427,11 +427,39 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error)
 	if err != nil {
 		return t, err
 	}
+
 	t.Txid = resp.TxID
 	t.Value = int64(resp.Amount * 100000000)
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
+
+	raw, err := w.rpcClient.GetRawTransaction(&txid)
+	if err != nil {
+		return t, err
+	}
+
+	outs := []wallet.TransactionOutput{}
+	for i, out := range raw.MsgTx().TxOut {
+		var addr btc.Address
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+		if err != nil {
+			log.Warningf("error extracting address from txn pkscript: %v\n", err)
+		}
+		if len(addrs) == 0 {
+			addr = nil
+		} else {
+			addr = addrs[0]
+		}
+		tout := wallet.TransactionOutput{
+			Address: addr,
+			Value:   out.Value,
+			Index:   uint32(i),
+		}
+		outs = append(outs, tout)
+	}
+	t.Outputs = outs
+
 	return t, nil
 }
 
