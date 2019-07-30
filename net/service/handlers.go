@@ -1628,7 +1628,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		Txid:      txn.Txid,
 		Outputs:   outputs,
 		Inputs:    []wallet.TransactionInput{input},
-		Height:    1,
+		Height:    0,
 		Timestamp: time.Now(),
 		Value:     txn.Value,
 		WatchOnly: false,
