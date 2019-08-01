@@ -477,6 +477,7 @@ func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
 }
 
+
 // AssociateTransactionWithOrder used for ORDER_PAYMENT message
 func (w *SPVWallet) AssociateTransactionWithOrder(cb wallet.TransactionCallback) {
 	for _, l := range w.txstore.listeners {

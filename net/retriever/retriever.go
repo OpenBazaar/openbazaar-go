@@ -118,6 +118,14 @@ func (m *MessageRetriever) Run() {
 	}
 }
 
+// RunOnce - used to fetch messages only once
+func (m *MessageRetriever) RunOnce() {
+	m.Add(1)
+	go m.fetchPointers(true)
+	m.Add(1)
+	go m.fetchPointers(false)
+}
+
 func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
