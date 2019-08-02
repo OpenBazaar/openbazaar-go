@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	// ErrEmptyPayload occurs when an inbound message is provided without the contents
 	ErrEmptyPayload = errors.New("message payload is empty")
 )
 
@@ -74,6 +75,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleStore
 	case pb.Message_ERROR:
 		return service.handleError
+	case pb.Message_ORDER_PROCESSING_FAILURE:
+		return service.handleOrderProcessingFailure
 	default:
 		return nil
 	}
@@ -281,13 +284,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			Payload:     a,
 		}
 		if err != nil {
-			log.Errorf("failed marshaling errorResponse (%s): %s", err)
+			log.Errorf("failed marshaling errorResponse (%s) for order (%s): %s", e.ErrorMessage, orderId, err)
 			return m
 		}
 		if offline {
 			contract.Errors = []string{errMsg}
 			if err := service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false); err != nil {
-				log.Errorf("failed updating PROCESSING_ERROR on sale (%s): %s", err)
+				log.Errorf("failed updating PROCESSING_ERROR on sale (%s): %s", orderId, err)
 			}
 		}
 		return m
@@ -1232,6 +1235,89 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	return nil, nil
 }
 
+func (service *OpenBazaarService) handleOrderProcessingFailure(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, ErrEmptyPayload
+	}
+	procFailure := new(pb.OrderProcessingFailure)
+	if err := ptypes.UnmarshalAny(pmes.Payload, procFailure); err != nil {
+		return nil, err
+	}
+
+	var (
+		localContract *pb.RicardianContract
+	)
+	if contract, _, _, _, _, _, err := service.node.Datastore.Sales().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	} else if contract, _, _, _, _, _, err := service.node.Datastore.Purchases().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	}
+	if localContract == nil {
+		return nil, fmt.Errorf("no contract found for order ID (%s)", procFailure.OrderID)
+	}
+	// TODO: Validate we aren't in a loop, exit if we are
+	missingMessageTypes, err := analyzeForMissingMessages(localContract, procFailure)
+	if err != nil {
+		return nil, err
+	}
+	if missingMessageTypes == nil {
+		err := fmt.Errorf("unable to determine missing message types for order ID (%s)", procFailure.OrderID)
+		log.Error(err.Error())
+		return nil, err
+	}
+	for _, msgType := range missingMessageTypes {
+		log.Debugf("resending missing ORDER message (%s) to peer (%s)", msgType.String(), p.Pretty())
+		if err := service.node.ResendCachedOrderMessage(procFailure.OrderID, msgType); err != nil {
+			err := fmt.Errorf("resending message type (%s) for order (%s): %s", msgType.String(), procFailure.OrderID, err.Error())
+			log.Error(err.Error())
+			// TODO: Can we attempt to recreate MessageType?
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+// analyzeForMissingMessages compares the local RicardianContract with the one provided with the
+// error message to determine which messages might be missing and need to be resent to the remote
+// peer
+func analyzeForMissingMessages(lc *pb.RicardianContract, e *pb.OrderProcessingFailure) ([]pb.Message_MessageType, error) {
+	var msgsToResend = []pb.Message_MessageType{}
+	if lc == nil {
+		return nil, fmt.Errorf("no local contract for order ID (%s) to compare to, unable to recover missing messages", e.OrderID)
+	}
+	if lc.BuyerOrder != nil && (e.Contract == nil || e.Contract.BuyerOrder == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER)
+	}
+	if lc.VendorOrderConfirmation != nil && (e.Contract == nil || e.Contract.VendorOrderConfirmation == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_CONFIRMATION)
+	}
+	// TODO: How do we detect ORDER_REJECT diff?
+	// TODO: How do we detect ORDER_CANCEL diff?
+	if len(lc.VendorOrderFulfillment) != 0 && (e.Contract == nil || len(e.Contract.VendorOrderFulfillment) == 0) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_FULFILLMENT)
+	}
+	if lc.Dispute != nil && (e.Contract == nil || e.Contract.Dispute == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_OPEN)
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_UPDATE)
+	}
+	if lc.DisputeResolution != nil && (e.Contract == nil || e.Contract.DisputeResolution == nil) {
+		// TODO: Re-broadcast error to moderator so they can resend DISPUTE_CLOSE
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_CLOSE)
+	}
+	if lc.DisputeAcceptance != nil && (e.Contract == nil || e.Contract.DisputeAcceptance == nil) {
+		// TODO: This msg occurs after order is PENDING, FULFILLED, and DISPUTED states, is
+		// there a better check for resending FINALIZED_PAYMENT?
+		msgsToResend = append(msgsToResend, pb.Message_VENDOR_FINALIZED_PAYMENT)
+	}
+	if lc.Refund != nil && (e.Contract == nil || e.Contract.Refund == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_REFUND)
+	}
+	if lc.BuyerOrderCompletion != nil && (e.Contract == nil || e.Contract.BuyerOrderCompletion == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_COMPLETION)
+	}
+	return msgsToResend, nil
+}
+
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
@@ -1557,6 +1643,9 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 	return nil, nil
 }
 
-func (service *OpenBazaarService) SendProcessingError(pid, oid string, attemptedMessage pb.Message_MessageType, latestContract *pb.RicardianContract) error {
-	return service.node.SendProcessingError(pid, oid, attemptedMessage, latestContract)
+// SendProcessingError produces a ORDER_PROCESSING_FAILURE error message to be sent to peerID regarding
+// orderID. This message should cause the peerID to reproduce the missing messages omitted in latestContract
+// up-to-and-including the last attemptedMessage
+func (service *OpenBazaarService) SendProcessingError(peerID, orderID string, attemptedMessage pb.Message_MessageType, latestContract *pb.RicardianContract) error {
+	return service.node.SendProcessingError(peerID, orderID, attemptedMessage, latestContract)
 }
