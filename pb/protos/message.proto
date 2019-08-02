@@ -33,6 +33,7 @@ message Message {
         STORE                    = 18;
         BLOCK                    = 19;
         VENDOR_FINALIZED_PAYMENT = 20;
+        ORDER_PROCESSING_FAILURE = 21;
         ERROR                    = 500;
     }
 }

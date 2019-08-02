@@ -459,6 +459,9 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Load the order
 	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CONFIRMATION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -518,6 +521,9 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CANCEL, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -563,6 +569,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rejectMsg.OrderID, pb.Message_ORDER_REJECT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -726,6 +735,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.Refund.OrderID, pb.Message_REFUND, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -841,10 +853,16 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
 	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -910,6 +928,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1054,6 +1075,9 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	dispute, err := service.node.Datastore.Cases().GetByCaseID(update.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), update.OrderId, pb.Message_DISPUTE_UPDATE, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 	rc := new(pb.RicardianContract)
@@ -1142,6 +1166,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	if err != nil {
 		contract, state, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
+			if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, nil); err != nil {
+				log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+			}
 			return nil, net.OutOfOrderMessage
 		}
 		isPurchase = true
@@ -1161,6 +1188,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	if state != pb.OrderState_DISPUTED {
+		if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1525,4 +1555,8 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	return nil, nil
+}
+
+func (service *OpenBazaarService) SendProcessingError(pid, oid string, attemptedMessage pb.Message_MessageType, latestContract *pb.RicardianContract) error {
+	return service.node.SendProcessingError(pid, oid, attemptedMessage, latestContract)
 }
