@@ -229,7 +229,7 @@ func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	var ret []repo.UnfundedOrder
-	rows, err := p.db.Query(`select orderID, contract, timestamp, paymentAddr from purchases where state=?`, 1, 1)
+	rows, err := p.db.Query(`select orderID, contract, timestamp, paymentAddr from purchases where state=?`, 1)
 	if err != nil {
 		return ret, err
 	}

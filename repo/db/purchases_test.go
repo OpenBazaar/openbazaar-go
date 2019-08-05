@@ -2,6 +2,7 @@ package db_test
 
 import (
 	"reflect"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -462,8 +463,20 @@ func TestPurchasesDB_GetUnfunded(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 1, false)
-	purdb.Put("orderID1", *contract, 1, false)
+	if err := purdb.Put("orderID", *contract, 1, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := purdb.Put("orderID1", *contract, 1, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := purdb.Put("x0", *contract, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	for i := 2; i < 15; i++ {
+		if err := purdb.Put("x"+strconv.Itoa(i), *contract, pb.OrderState(i), false); err != nil {
+			t.Fatal(err)
+		}
+	}
 	unfunded, err := purdb.GetUnfunded()
 	if err != nil {
 		t.Error(err)

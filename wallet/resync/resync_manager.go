@@ -20,7 +20,7 @@ type ResyncManager struct {
 }
 
 func NewResyncManager(salesDB repo.SaleStore, purchaseDB repo.PurchaseStore, mw multiwallet.MultiWallet) *ResyncManager {
-	return &ResyncManager{salesDB, purchaseDB, mw}
+	return &ResyncManager{sales: salesDB, purchases: purchaseDB, mw: mw}
 }
 
 func (r *ResyncManager) Start() {
@@ -50,7 +50,6 @@ func (r *ResyncManager) CheckUnfunded() {
 		addrs, ok := wallets[strings.ToUpper(uf.PaymentCoin)]
 		if !ok {
 			addrs = []string{}
-			wallets[strings.ToUpper(uf.PaymentCoin)] = addrs
 		}
 		addrs = append(addrs, uf.PaymentAddress)
 		wallets[strings.ToUpper(uf.PaymentCoin)] = addrs
@@ -65,15 +64,15 @@ func (r *ResyncManager) CheckUnfunded() {
 			for _, addr := range addrs {
 				iaddr, err := wal.DecodeAddress(addr)
 				if err != nil {
-					log.Errorf("Error decoding unfunded payment address: %s", err)
+					log.Errorf("Error decoding unfunded payment address(%s): %s", addr, err)
 					continue
 				}
 				if err := wal.AddWatchedAddress(iaddr); err != nil {
-					log.Errorf("Error adding watched address: %s", err)
+					log.Errorf("Error adding watched address(%s): %s", iaddr, err)
 				}
 			}
 
-			log.Infof("Rescanning blocking for %d orders\n", cc, len(unfunded))
+			log.Infof("Rescanning %s wallet looking for %d orders", cc, len(unfunded))
 			wal.ReSyncBlockchain(time.Time{})
 		}
 	}
