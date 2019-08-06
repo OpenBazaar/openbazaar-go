@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -20,6 +19,8 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 )
 
 type SPVWallet struct {

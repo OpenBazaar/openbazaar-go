@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/OpenBazaar/spvwallet"
@@ -216,32 +215,7 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
 	if err == nil {
-		tx := wire.NewMsgTx(1)
-		rbuf := bytes.NewReader(txn.Bytes)
-		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
-		if err != nil {
-			return txn, err
-		}
-		outs := []wi.TransactionOutput{}
-		for i, out := range tx.TxOut {
-			var addr btc.Address
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
-			if err != nil {
-				log.Printf("error extracting address from txn pkscript: %v\n", err)
-			}
-			if len(addrs) == 0 {
-				addr = nil
-			} else {
-				addr = addrs[0]
-			}
-			tout := wi.TransactionOutput{
-				Address: addr,
-				Value:   out.Value,
-				Index:   uint32(i),
-			}
-			outs = append(outs, tout)
-		}
-		txn.Outputs = outs
+		txn.Outputs, err = util.GetTxnOutputs(txn.Bytes, w.params)
 	}
 	return txn, err
 }

@@ -490,9 +490,7 @@ func (w *ZcashdWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 		if err != nil {
 			log.Warningf("error extracting address from txn pkscript: %v\n", err)
 		}
-		if len(addrs) == 0 {
-			addr = nil
-		} else {
+		if len(addrs) != 0 {
 			addr = addrs[0]
 		}
 		tout := wallet.TransactionOutput{

@@ -5,10 +5,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
+	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ltcsuite/ltcutil"
+	"github.com/ltcsuite/ltcwallet/wallet/txrules"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -18,16 +26,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
-	wi "github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/ltcsuite/ltcwallet/wallet/txrules"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/net/proxy"
 )
 
 type LitecoinWallet struct {
@@ -211,32 +209,7 @@ func (w *LitecoinWallet) Transactions() ([]wi.Txn, error) {
 func (w *LitecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
 	if err == nil {
-		tx := wire.NewMsgTx(1)
-		rbuf := bytes.NewReader(txn.Bytes)
-		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
-		if err != nil {
-			return txn, err
-		}
-		outs := []wi.TransactionOutput{}
-		for i, out := range tx.TxOut {
-			var addr btcutil.Address
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
-			if err != nil {
-				log.Printf("error extracting address from txn pkscript: %v\n", err)
-			}
-			if len(addrs) == 0 {
-				addr = nil
-			} else {
-				addr = addrs[0]
-			}
-			tout := wi.TransactionOutput{
-				Address: addr,
-				Value:   out.Value,
-				Index:   uint32(i),
-			}
-			outs = append(outs, tout)
-		}
-		txn.Outputs = outs
+		txn.Outputs, err = util.GetTxnOutputs(txn.Bytes, w.params)
 	}
 	return txn, err
 }
