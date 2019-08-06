@@ -418,3 +418,8 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return nil
 }
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoinWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
+}

@@ -38,7 +38,7 @@ func TestMigration025(t *testing.T) {
 		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
 		// If the default hashing algorithm changes at any point in the future you can expect this
 		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmeEhL5jcnuCimemQ9A5XATGTtDSEkMwveChaxiepoUBQF" //"QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
+		expectedListingHash = "QmPSxr6UedtkmrBKftc6t24N89GrTiDSNzMb4QkpCUgseY" //"QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
 
 		listing = factory.NewListing(testListingSlug)
 		m       = jsonpb.Marshaler{
@@ -131,8 +131,8 @@ func extractListingData(listing *pb.Listing) *migrations.Migration025_ListingDat
 		CoinType:     listing.Metadata.PricingCurrencyDefn.Code,
 		ContractType: listing.Metadata.ContractType.String(),
 		Description:  listing.Item.Description[:descriptionLength],
-		Thumbnail:    migrations.Migration029_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
-		Price: migrations.Migration029_Price{
+		Thumbnail:    migrations.Migration025_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
+		Price: migrations.Migration025_Price{
 			CurrencyCode: listing.Metadata.PricingCurrencyDefn.Code,
 			Amount:       priceValue.Uint64(),
 			Modifier:     listing.Metadata.PriceModifier,

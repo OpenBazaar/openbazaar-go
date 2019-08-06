@@ -28,6 +28,7 @@ type Datastore interface {
 	Coupons() CouponStore
 	TxMetadata() TransactionMetadataStore
 	ModeratedStores() ModeratedStore
+	Messages() MessageStore
 	Ping() error
 	Close()
 }
@@ -430,4 +431,15 @@ type UnspentTransactionOutputStore interface {
 type WatchedScriptStore interface {
 	Queryable
 	wallet.WatchedScripts
+}
+
+// MessageStore is the messages table interface
+type MessageStore interface {
+	Queryable
+
+	// Save a new message
+	Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg Message) error
+
+	// GetByOrderIDType returns the message for specified order and type
+	GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*Message, string, error)
 }

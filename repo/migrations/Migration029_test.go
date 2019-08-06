@@ -2,6 +2,7 @@ package migrations_test
 
 import (
 	"database/sql"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -46,7 +47,7 @@ func TestMigration029(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var m migrations.Migration026
+	var m migrations.Migration029
 	err = m.Up("./", "letmein", false)
 	if err != nil {
 		t.Error(err)
@@ -85,6 +86,7 @@ func TestMigration029(t *testing.T) {
 		t.Error(err)
 	}
 	if string(repoVer) != "30" {
+		fmt.Println("lets see : ", string(repoVer))
 		t.Error("Failed to write new repo version")
 	}
 
@@ -119,6 +121,7 @@ func TestMigration029(t *testing.T) {
 		t.Error(err)
 	}
 	if string(repoVer) != "29" {
+		fmt.Println("lets see down: ", string(repoVer))
 		t.Error("Failed to write new repo version")
 	}
 	os.RemoveAll("./datastore")

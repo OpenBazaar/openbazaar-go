@@ -1130,3 +1130,10 @@ func DefaultSocksPort(controlPort int) int {
 	}
 	return socksPort
 }
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoindWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
+	for _, l := range w.listeners {
+		go l(txnCB)
+	}
+}

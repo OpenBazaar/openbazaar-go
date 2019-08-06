@@ -169,7 +169,7 @@ func TestMigration031(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertCorrectRepoVer(t, repoVerPath, "31")
+	assertCorrectRepoVer(t, repoVerPath, "32")
 
 	// Test migration down
 	if err := (migrations.AM01{}).Down(appSchema.DataPath(), dbPassword, true); err != nil {
@@ -251,7 +251,7 @@ func TestMigration031(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertCorrectRepoVer(t, repoVerPath, "30")
+	assertCorrectRepoVer(t, repoVerPath, "31")
 }
 
 func AM01_assertTransaction(t *testing.T, examples map[string]migrations.AM01_TransactionRecord_beforeMigration, actual []migrations.AM01_TransactionRecord_afterMigration) {

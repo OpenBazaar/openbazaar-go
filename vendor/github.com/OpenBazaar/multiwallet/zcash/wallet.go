@@ -432,3 +432,8 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) (string, error) {
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return cTxn.Txid, nil
 }
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *ZCashWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
+}

@@ -458,3 +458,9 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
 }
+
+func (w *SPVWallet) AssociateTransactionWithOrder(cb wallet.TransactionCallback) {
+	for _, l := range w.txstore.listeners {
+		go l(cb)
+	}
+}

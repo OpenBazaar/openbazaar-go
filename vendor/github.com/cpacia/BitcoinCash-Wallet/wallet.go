@@ -511,3 +511,10 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.txstore.PopulateAdrs()
 	w.wireService.Resync()
 }
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *SPVWallet) AssociateTransactionWithOrder(cb wallet.TransactionCallback) {
+	for _, l := range w.txstore.listeners {
+		go l(cb)
+	}
+}
