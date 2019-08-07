@@ -6,15 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
-	"github.com/OpenBazaar/multiwallet/cache"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/config"
-	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/multiwallet/model"
-	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
@@ -27,6 +21,14 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	bip39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
+
+	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/client"
+	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/keys"
+	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/OpenBazaar/multiwallet/service"
+	"github.com/OpenBazaar/multiwallet/util"
 )
 
 type BitcoinWallet struct {
@@ -213,6 +215,34 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			var addr btc.Address
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				log.Printf("error extracting address from txn pkscript: %v\n", err)
+			}
+			if len(addrs) == 0 {
+				addr = nil
+			} else {
+				addr = addrs[0]
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 

@@ -8,7 +8,7 @@
   packages = [
     ".",
     "protocol",
-    "transport",
+    "transport"
   ]
   pruneopts = "UT"
   revision = "909b73d947ae79609bc2c5b03cb480f35180c564"
@@ -19,7 +19,7 @@
   name = "github.com/OpenBazaar/spvwallet"
   packages = [
     ".",
-    "exchangerates",
+    "exchangerates"
   ]
   pruneopts = "UT"
   revision = "a32d41681bf3a75473498711710d0123f1625ec8"
@@ -54,7 +54,7 @@
     "database",
     "peer",
     "txscript",
-    "wire",
+    "wire"
   ]
   pruneopts = "UT"
   revision = "5bda5314ca9549a589e63d7b2e6104492a0d5328"
@@ -78,7 +78,7 @@
     "bloom",
     "coinset",
     "hdkeychain",
-    "txsort",
+    "txsort"
   ]
   pruneopts = "UT"
   revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
@@ -91,7 +91,7 @@
     "internal/helpers",
     "wallet/internal/txsizes",
     "wallet/txauthor",
-    "wallet/txrules",
+    "wallet/txrules"
   ]
   pruneopts = "UT"
   revision = "177e31c0b3273c5f7422102cc65be55cbcfde957"
@@ -118,7 +118,7 @@
   packages = [
     "leveldb/errors",
     "leveldb/storage",
-    "leveldb/util",
+    "leveldb/util"
   ]
   pruneopts = "UT"
   revision = "3fd0373267b6461dbefe91cef614278064d05465"
@@ -138,7 +138,7 @@
   name = "github.com/cpacia/BitcoinCash-Wallet"
   packages = [
     ".",
-    "exchangerates",
+    "exchangerates"
   ]
   pruneopts = "UT"
   revision = "ba9295daa6d43b4cbd3f88e925379f0cf025b6b9"
@@ -160,6 +160,47 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:1e9a0ec4f7e852123fefad9aadd7647eed1e9fd3716118e99a4b3dc463705c82"
+  name = "github.com/dchest/siphash"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "34f201214d993633bb24f418ba11736ab8b55aa7"
+  version = "v1.2.1"
+
+[[projects]]
+  digest = "1:700f82416846a964010b86fddeada0e1ceb1c96fa65acc4f234811a7d3e4fded"
+  name = "github.com/gcash/bchd"
+  packages = [
+    "bchec",
+    "chaincfg",
+    "chaincfg/chainhash",
+    "txscript",
+    "wire"
+  ]
+  pruneopts = "UT"
+  revision = "34d8b67e58c8487e08cc2b8130398ec4f4bc6df5"
+  version = "v0.14.6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b1053b781e9090dab5d3e916eb04c8d85b63a7f6911007c2cd1dd82fb22f7f6a"
+  name = "github.com/gcash/bchlog"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b4f036f92fa66c88eec458f4531ff14ff87704d6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2538b5efd7d3d7ac9efdfef955f5bcda82cbec4d6f8aef4d388f1c70e6318fc5"
+  name = "github.com/gcash/bchutil"
+  packages = [
+    ".",
+    "base58"
+  ]
+  pruneopts = "UT"
+  revision = "800e62fe9aff291db8909a5dbf35c23cff8d1a62"
+
+[[projects]]
   branch = "master"
   digest = "1:a54f931f516df9f3b2401e3cfa47482be79397d20fcbe838b7da6c63d5b8e615"
   name = "github.com/golang/protobuf"
@@ -169,7 +210,7 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp",
+    "ptypes/timestamp"
   ]
   pruneopts = "UT"
   revision = "347cf4a86c1cb8d262994d8ef5924d4576c5b331"
@@ -199,7 +240,7 @@
     "chaincfg",
     "chaincfg/chainhash",
     "txscript",
-    "wire",
+    "wire"
   ]
   pruneopts = "UT"
   revision = "f37f8bf35796325487af28e0e01c2528dd97ea95"
@@ -211,7 +252,7 @@
   packages = [
     ".",
     "base58",
-    "bech32",
+    "bech32"
   ]
   pruneopts = "UT"
   revision = "17f3b04680b6521349067fb99d9f7495a9e96d60"
@@ -254,7 +295,7 @@
   name = "github.com/tyler-smith/go-bip39"
   packages = [
     ".",
-    "wordlists",
+    "wordlists"
   ]
   pruneopts = "UT"
   revision = "dbb3b84ba2ef14e894f5e33d6c6e43641e665738"
@@ -266,7 +307,7 @@
   packages = [
     "pbkdf2",
     "ripemd160",
-    "scrypt",
+    "scrypt"
   ]
   pruneopts = "UT"
   revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
@@ -284,7 +325,7 @@
     "internal/socks",
     "internal/timeseries",
     "proxy",
-    "trace",
+    "trace"
   ]
   pruneopts = "UT"
   revision = "1e06a53dbb7e2ed46e91183f219db23c6943c532"
@@ -314,7 +355,7 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable",
+    "unicode/rangetable"
   ]
   pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -365,7 +406,7 @@
     "resolver/passthrough",
     "stats",
     "status",
-    "tap",
+    "tap"
   ]
   pruneopts = "UT"
   revision = "b6f0a0f3fc650f4977c0b6869f5e4e717c1c0f24"
@@ -406,6 +447,9 @@
     "github.com/cpacia/BitcoinCash-Wallet",
     "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
     "github.com/cpacia/bchutil",
+    "github.com/gcash/bchd/chaincfg/chainhash",
+    "github.com/gcash/bchd/txscript",
+    "github.com/gcash/bchd/wire",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/gorilla/websocket",
@@ -423,7 +467,7 @@
     "golang.org/x/net/proxy",
     "google.golang.org/grpc",
     "google.golang.org/grpc/reflection",
-    "gopkg.in/jarcoal/httpmock.v1",
+    "gopkg.in/jarcoal/httpmock.v1"
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
