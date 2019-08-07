@@ -213,7 +213,26 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
 	if err == nil {
-		txn.Outputs, err = util.GetTxnOutputs(txn.Bytes, w.params)
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			addr, err := zaddr.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				log.Printf("error extracting address from txn pkscript: %v\n", err)
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
 	}
 	return txn, err
 }
