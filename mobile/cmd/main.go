@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/OpenBazaar/openbazaar-go/mobile"
-	"github.com/jessevdk/go-flags"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/mobile"
+	"github.com/jessevdk/go-flags"
 )
 
 type Options struct {

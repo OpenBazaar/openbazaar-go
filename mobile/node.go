@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -54,6 +55,7 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -74,11 +76,12 @@ var (
 	fileLogFormat = logging.MustStringFormatter(
 		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
+	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
 )
 
 // NewNode create the configuration file for a new node
-func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
+func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string, profile bool) *Node {
 	// Node config
 	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
@@ -86,6 +89,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 		Testnet:             testnet,
 		UserAgent:           userAgent,
 		WalletTrustedPeer:   walletTrustedPeer,
+		Profile:             profile,
 	}
 
 	// Use Mobile struct to carry config data
@@ -348,7 +352,20 @@ func (n *Node) Start() error {
 	return n.start()
 }
 
+func (n *Node) mountProfileHandlerAndListen() {
+	listenAddr := net.JoinHostPort("", "6060")
+	profileRedirect := http.RedirectHandler("/debug/pprof",
+		http.StatusSeeOther)
+	http.Handle("/", profileRedirect)
+	if err := http.ListenAndServe(listenAddr, nil); err != nil {
+		log.Errorf("serving debug profiler: %s", err.Error())
+	}
+}
+
 func (n *Node) start() error {
+	if n.config.Profile {
+		go n.mountProfileHandlerAndListen()
+	}
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
@@ -471,6 +488,7 @@ func (n *Node) start() error {
 		MR.Wait()
 
 		n.OpenBazaarNode.PublishLock.Unlock()
+		publishUnlocked = true
 		n.OpenBazaarNode.UpdateFollow()
 		if !n.OpenBazaarNode.InitalPublishComplete {
 			n.OpenBazaarNode.SeedNode()
@@ -529,6 +547,11 @@ func (n *Node) Restart() error {
 	return n.start()
 }
 
+// PublishUnlocked return true if publish is unlocked
+func (n *Node) PublishUnlocked() bool {
+	return publishUnlocked
+}
+
 // initializeRepo create the database
 func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
@@ -575,10 +598,6 @@ func newHTTPGateway(node *Node, ctx commands.Context, authCookie http.Cookie, co
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
 		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
 
 	// Create and return an API gateway

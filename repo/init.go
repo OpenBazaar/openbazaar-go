@@ -17,7 +17,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-const RepoVersion = "24"
+const RepoVersion = "25"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -35,7 +35,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if err != nil {
 		return err
 	}
-	if nodeSchema.BuildSchemaDirectories(); err != nil {
+	if err := nodeSchema.BuildSchemaDirectories(); err != nil {
 		return err
 	}
 
