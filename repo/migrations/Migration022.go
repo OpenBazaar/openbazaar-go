@@ -49,7 +49,7 @@ func (Migration022) Up(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	if err := writeRepoVer(repoPath, 23); err != nil {
-		return fmt.Errorf("bumping repover to 18: %s", err.Error())
+		return fmt.Errorf("bumping repover to 23: %s", err.Error())
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (Migration022) Down(repoPath, dbPassword string, testnet bool) error {
 	}
 
 	if err := writeRepoVer(repoPath, 22); err != nil {
-		return fmt.Errorf("dropping repover to 16: %s", err.Error())
+		return fmt.Errorf("dropping repover to 22: %s", err.Error())
 	}
 	return nil
 }

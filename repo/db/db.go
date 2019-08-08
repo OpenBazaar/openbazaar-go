@@ -36,6 +36,7 @@ type SQLiteDatastore struct {
 	coupons         repo.CouponStore
 	txMetadata      repo.TransactionMetadataStore
 	moderatedStores repo.ModeratedStore
+	messages        repo.MessageStore
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -81,6 +82,7 @@ func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex, coinType wallet.CoinType) *SQ
 		coupons:         NewCouponStore(db, l),
 		txMetadata:      NewTransactionMetadataStore(db, l),
 		moderatedStores: NewModeratedStore(db, l),
+		messages:        NewMessageStore(db, l),
 		db:              db,
 		lock:            l,
 	}
@@ -181,6 +183,11 @@ func (d *SQLiteDatastore) TxMetadata() repo.TransactionMetadataStore {
 
 func (d *SQLiteDatastore) ModeratedStores() repo.ModeratedStore {
 	return d.moderatedStores
+}
+
+// Messages - return the messages datastore
+func (d *SQLiteDatastore) Messages() repo.MessageStore {
+	return d.messages
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {

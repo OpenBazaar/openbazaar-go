@@ -1,7 +1,6 @@
 package migrations_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -11,7 +10,6 @@ func assertCorrectRepoVer(t *testing.T, verPath, expectedRepoVer string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("read repo ver : ", string(repoVer))
 	if string(repoVer) != expectedRepoVer {
 		t.Fatal("Failed to write new repo version")
 	}

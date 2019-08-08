@@ -13,6 +13,7 @@ import (
 	"github.com/op/go-logging"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/util"
@@ -361,7 +362,7 @@ func calcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id, err := core.EncodeMultihash(ser)
+	id, err := ipfs.EncodeMultihash(ser)
 	if err != nil {
 		return "", err
 	}

@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -30,11 +31,12 @@ func TestListingUnmarshalJSON(t *testing.T) {
 
 func TestListingAttributes(t *testing.T) {
 	var examples = []struct {
-		fixtureName      string
-		expectedResponse uint
-		expectedTitle    string
-		expectedSlug     string
-		expectedPrice    repo.CurrencyValue
+		fixtureName                string
+		expectedResponse           uint
+		expectedTitle              string
+		expectedSlug               string
+		expectedPrice              repo.CurrencyValue
+		expectedAcceptedCurrencies []string
 	}{
 		{
 			fixtureName:      "v3-physical-good",
@@ -48,6 +50,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"BCH"},
 		},
 		{
 			fixtureName:      "v4-physical-good",
@@ -61,6 +64,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BTC", "BCH"},
 		},
 		{
 			fixtureName:      "v4-digital-good",
@@ -74,6 +78,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"ZEC"},
 		},
 		{
 			fixtureName:      "v4-service",
@@ -87,6 +92,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
 		},
 		{
 			fixtureName:      "v4-cryptocurrency",
@@ -100,6 +106,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"LTC"},
 		},
 		{
 			fixtureName:      "v5-physical-good",
@@ -113,6 +120,7 @@ func TestListingAttributes(t *testing.T) {
 					Divisibility: 8,
 				},
 			},
+			expectedAcceptedCurrencies: []string{"BTC", "BCH", "ZEC", "LTC", "ETH"},
 		},
 	}
 
@@ -136,6 +144,9 @@ func TestListingAttributes(t *testing.T) {
 		}
 		if price, _ := l.GetPrice(); !price.Equal(&e.expectedPrice) {
 			t.Errorf("expected example (%s) to have price response (%+v), but instead was (%+v)", e.fixtureName, e.expectedPrice, price)
+		}
+		if acceptedCurrencies, _ := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {
+			t.Errorf("expected example (%s) to have acceptedCurrencies response (%+v), but instead was (%+v)", e.fixtureName, e.expectedAcceptedCurrencies, acceptedCurrencies)
 		}
 	}
 }
@@ -161,13 +172,13 @@ func TestListingFromProtobuf(t *testing.T) {
 	if subject.Metadata.Version != actual.ListingVersion {
 		t.Errorf("expected vesion to be (%d), but was (%d)", subject.Metadata.Version, actual.ListingVersion)
 	}
-	//if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
-	//	t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
-	//	if err != nil {
-	//		t.Logf("hash had an error: %s", err)
-	//	}
-	//}
-	//if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
-	//	t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
-	//}
+	if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
+		t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
+		if err != nil {
+			t.Logf("hash had an error: %s", err)
+		}
+	}
+	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
+		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
+	}
 }
