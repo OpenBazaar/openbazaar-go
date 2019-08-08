@@ -517,16 +517,10 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r.Body, ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
 
-	err = i.node.CreateListing(ld)
+	slug, err := i.node.CreateListing(r.Body)
 	if err != nil {
-		if err == core.ErrListingAlreadyExists {
+		if err == repo.ErrListingAlreadyExists {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
@@ -535,20 +529,13 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, ld.Slug))
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, slug))
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r.Body, ld)
+	err := i.node.UpdateListing(r.Body, true)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = i.node.UpdateListing(ld, true)
-	if err != nil {
-		if err == core.ErrListingDoesNotExist {
+		if err == repo.ErrListingDoesNotExist {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 			return
 		}
@@ -587,7 +574,7 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var data core.PurchaseData
+	var data repo.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -1796,7 +1783,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
-			id, err := core.ExtractIDFromPointer(p)
+			id, err := ipfs.ExtractIDFromPointer(p)
 			if err != nil {
 				continue
 			}
@@ -1882,7 +1869,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			foundMu := sync.Mutex{}
 			for p := range peerChan {
 				go func(pi ps.PeerInfo) {
-					pid, err := core.ExtractIDFromPointer(pi)
+					pid, err := ipfs.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
@@ -3448,7 +3435,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var data core.PurchaseData
+	var data repo.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())

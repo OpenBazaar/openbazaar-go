@@ -16,6 +16,11 @@ func init() {
 	peer.AdvancedEnableInlining = false
 }
 
+// PubKey wraps IPFS's underlying PubKey dependency
+type PubKey interface {
+	crypto.PubKey
+}
+
 func IdentityFromKey(privkey []byte) (config.Identity, error) {
 	ident := config.Identity{}
 	sk, err := crypto.UnmarshalPrivateKey(privkey)
