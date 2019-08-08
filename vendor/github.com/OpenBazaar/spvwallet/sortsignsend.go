@@ -698,7 +698,6 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 func (w *SPVWallet) buildSpendAllTx(addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
 	tx := wire.NewMsgTx(1)
 
-
 	coinMap := w.gatherCoins()
 	inVals := make(map[wire.OutPoint]int64)
 	totalIn := int64(0)

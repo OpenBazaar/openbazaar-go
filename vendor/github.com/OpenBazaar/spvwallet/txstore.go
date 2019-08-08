@@ -94,7 +94,7 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 	return f, nil
 }
 
-// GetDoubleSpends takes a transaction and compares it with
+// CheckDoubleSpends takes a transaction and compares it with
 // all transactions in the db.  It returns a slice of all txids in the db
 // which are double spent by the received tx.
 func (ts *TxStore) CheckDoubleSpends(argTx *wire.MsgTx) ([]*chainhash.Hash, error) {

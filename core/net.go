@@ -749,3 +749,29 @@ func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte
 	}
 	return n.sendMessage(peerID, nil, m)
 }
+
+// SendOrderPayment - send order payment msg to seller from buyer
+func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.OrderPaymentTxn) error {
+	a, err := ptypes.MarshalAny(paymentMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_ORDER_PAYMENT,
+		Payload:     a,
+	}
+
+	p, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	err = n.Service.SendMessage(ctx, p, &m)
+	cancel()
+	if err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}

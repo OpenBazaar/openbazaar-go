@@ -3,9 +3,11 @@
 
 package pb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -16,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type OrderState int32
 
@@ -75,6 +77,7 @@ var OrderState_name = map[int32]string{
 	13: "PAYMENT_FINALIZED",
 	14: "PROCESSING_ERROR",
 }
+
 var OrderState_value = map[string]int32{
 	"PENDING":              0,
 	"AWAITING_PAYMENT":     1,
@@ -96,17 +99,18 @@ var OrderState_value = map[string]int32{
 func (x OrderState) String() string {
 	return proto.EnumName(OrderState_name, int32(x))
 }
+
 func (OrderState) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_orders_c6051e92f6cf6ced, []int{0}
+	return fileDescriptor_e0f5d4cf0fc9e41b, []int{0}
 }
 
 func init() {
 	proto.RegisterEnum("OrderState", OrderState_name, OrderState_value)
 }
 
-func init() { proto.RegisterFile("orders.proto", fileDescriptor_orders_c6051e92f6cf6ced) }
+func init() { proto.RegisterFile("orders.proto", fileDescriptor_e0f5d4cf0fc9e41b) }
 
-var fileDescriptor_orders_c6051e92f6cf6ced = []byte{
+var fileDescriptor_e0f5d4cf0fc9e41b = []byte{
 	// 243 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x90, 0x4d, 0x4e, 0xc3, 0x30,
 	0x10, 0x85, 0xa1, 0x94, 0xfe, 0x4c, 0x53, 0x18, 0xdc, 0x22, 0x38, 0x03, 0x0b, 0x36, 0x9c, 0xc0,

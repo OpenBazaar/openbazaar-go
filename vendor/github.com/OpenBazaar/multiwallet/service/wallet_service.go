@@ -104,7 +104,7 @@ func (ws *WalletService) ChainTip() (uint32, chainhash.Hash) {
 	if err != nil {
 		Log.Errorf("producing BestBlock hash: %s", err.Error())
 	}
-	return uint32(ws.chainHeight), *ch
+	return ws.chainHeight, *ch
 }
 
 func (ws *WalletService) AddTransactionListener(callback func(callback wallet.TransactionCallback)) {
@@ -160,7 +160,7 @@ func (ws *WalletService) ProcessIncomingTransaction(tx model.Transaction) {
 					utxo := model.Utxo{
 						Txid:          tx.Txid,
 						ScriptPubKey:  out.ScriptPubKey.Hex,
-						Satoshis:      int64(math.Round(out.Value * float64(util.SatoshisPerCoin(ws.coinType)))),
+						Satoshis:      int64(math.Round(out.Value * util.SatoshisPerCoin(ws.coinType))),
 						Vout:          out.N,
 						Address:       addr,
 						Confirmations: 0,

@@ -416,6 +416,7 @@ var MessageProcessingOrder = []pb.Message_MessageType{
 	pb.Message_ORDER_CANCEL,
 	pb.Message_ORDER_REJECT,
 	pb.Message_ORDER_CONFIRMATION,
+	pb.Message_ORDER_PAYMENT,
 	pb.Message_ORDER_FULFILLMENT,
 	pb.Message_ORDER_COMPLETION,
 	pb.Message_DISPUTE_OPEN,
