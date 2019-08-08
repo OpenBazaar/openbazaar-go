@@ -16,7 +16,6 @@ import (
 // MustLoadListingFixture - load listing json from fixtures
 func MustLoadListingFixture(fixtureName string) []byte {
 	gopath := os.Getenv("GOPATH")
-	//fmt.Println("lets see GOPATH : ", gopath)
 	repoPath := filepath.Join("src", "github.com", "OpenBazaar", "openbazaar-go")
 	fixturePath, err := filepath.Abs(filepath.Join(gopath, repoPath, "test", "factory", "fixtures", "listings"))
 	if err != nil {

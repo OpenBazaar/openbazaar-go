@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 
@@ -271,68 +273,68 @@ func ValidateProfile(profile *pb.Profile) error {
 	if strings.Contains(profile.Handle, "@") {
 		return errors.New("handle should not contain @")
 	}
-	if len(profile.Handle) > WordMaxCharacters {
-		return fmt.Errorf("handle character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Handle) > repo.WordMaxCharacters {
+		return fmt.Errorf("handle character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
 	if len(profile.Name) == 0 {
 		return errors.New("profile name not set")
 	}
-	if len(profile.Name) > WordMaxCharacters {
-		return fmt.Errorf("name character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Name) > repo.WordMaxCharacters {
+		return fmt.Errorf("name character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
-	if len(profile.Location) > WordMaxCharacters {
-		return fmt.Errorf("location character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Location) > repo.WordMaxCharacters {
+		return fmt.Errorf("location character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
-	if len(profile.About) > AboutMaxCharacters {
-		return fmt.Errorf("about character length is greater than the max of %d", AboutMaxCharacters)
+	if len(profile.About) > repo.AboutMaxCharacters {
+		return fmt.Errorf("about character length is greater than the max of %d", repo.AboutMaxCharacters)
 	}
-	if len(profile.ShortDescription) > ShortDescriptionLength {
-		return fmt.Errorf("short description character length is greater than the max of %d", ShortDescriptionLength)
+	if len(profile.ShortDescription) > repo.ShortDescriptionLength {
+		return fmt.Errorf("short description character length is greater than the max of %d", repo.ShortDescriptionLength)
 	}
 	if profile.ContactInfo != nil {
-		if len(profile.ContactInfo.Website) > URLMaxCharacters {
-			return fmt.Errorf("website character length is greater than the max of %d", URLMaxCharacters)
+		if len(profile.ContactInfo.Website) > repo.URLMaxCharacters {
+			return fmt.Errorf("website character length is greater than the max of %d", repo.URLMaxCharacters)
 		}
-		if len(profile.ContactInfo.Email) > SentenceMaxCharacters {
-			return fmt.Errorf("email character length is greater than the max of %d", SentenceMaxCharacters)
+		if len(profile.ContactInfo.Email) > repo.SentenceMaxCharacters {
+			return fmt.Errorf("email character length is greater than the max of %d", repo.SentenceMaxCharacters)
 		}
-		if len(profile.ContactInfo.PhoneNumber) > WordMaxCharacters {
-			return fmt.Errorf("phone number character length is greater than the max of %d", WordMaxCharacters)
+		if len(profile.ContactInfo.PhoneNumber) > repo.WordMaxCharacters {
+			return fmt.Errorf("phone number character length is greater than the max of %d", repo.WordMaxCharacters)
 		}
-		if len(profile.ContactInfo.Social) > MaxListItems {
-			return fmt.Errorf("number of social accounts is greater than the max of %d", MaxListItems)
+		if len(profile.ContactInfo.Social) > repo.MaxListItems {
+			return fmt.Errorf("number of social accounts is greater than the max of %d", repo.MaxListItems)
 		}
 		for _, s := range profile.ContactInfo.Social {
-			if len(s.Username) > WordMaxCharacters {
-				return fmt.Errorf("social username character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Username) > repo.WordMaxCharacters {
+				return fmt.Errorf("social username character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
-			if len(s.Type) > WordMaxCharacters {
-				return fmt.Errorf("social account type character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Type) > repo.WordMaxCharacters {
+				return fmt.Errorf("social account type character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
-			if len(s.Proof) > URLMaxCharacters {
-				return fmt.Errorf("social proof character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Proof) > repo.URLMaxCharacters {
+				return fmt.Errorf("social proof character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
 	}
 	if profile.ModeratorInfo != nil {
-		if len(profile.ModeratorInfo.Description) > AboutMaxCharacters {
-			return fmt.Errorf("moderator description character length is greater than the max of %d", AboutMaxCharacters)
+		if len(profile.ModeratorInfo.Description) > repo.AboutMaxCharacters {
+			return fmt.Errorf("moderator description character length is greater than the max of %d", repo.AboutMaxCharacters)
 		}
-		if len(profile.ModeratorInfo.TermsAndConditions) > PolicyMaxCharacters {
-			return fmt.Errorf("moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
+		if len(profile.ModeratorInfo.TermsAndConditions) > repo.PolicyMaxCharacters {
+			return fmt.Errorf("moderator terms and conditions character length is greater than the max of %d", repo.PolicyMaxCharacters)
 		}
-		if len(profile.ModeratorInfo.Languages) > MaxListItems {
-			return fmt.Errorf("moderator number of languages greater than the max of %d", MaxListItems)
+		if len(profile.ModeratorInfo.Languages) > repo.MaxListItems {
+			return fmt.Errorf("moderator number of languages greater than the max of %d", repo.MaxListItems)
 		}
 		for _, l := range profile.ModeratorInfo.Languages {
-			if len(l) > WordMaxCharacters {
-				return fmt.Errorf("moderator language character length is greater than the max of %d", WordMaxCharacters)
+			if len(l) > repo.WordMaxCharacters {
+				return fmt.Errorf("moderator language character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
 			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
-				if len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > WordMaxCharacters {
-					return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
+				if len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
+					return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
 				}
 			}
 		}

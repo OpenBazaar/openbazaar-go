@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"golang.org/x/net/context"
 )
 
@@ -204,7 +205,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			sl := new(pb.SignedListing)
+			sl := new(repo.SignedListing)
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
@@ -217,15 +218,15 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.Listing.Coupons {
+			for _, coupon := range sl.Listing.ProtoListing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.Listing.Moderators = moderators
-			sl, err = n.SignListing(sl.Listing)
+			sl.Listing.ProtoListing.Moderators = moderators
+			sl, err = n.SignListing(&sl.Listing)
 			if err != nil {
 				return err
 			}

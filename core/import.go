@@ -1,29 +1,31 @@
 package core
 
 import (
-	"encoding/csv"
-	"encoding/json"
-	"errors"
-	"fmt"
+	//"encoding/csv"
+	//"encoding/json"
+	//"errors"
+	//"fmt"
 	"io"
-	"math/big"
-	"net/url"
-	"os"
-	"path"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
+	//"math/big"
+	//"net/url"
+	//"os"
+	//"path"
+	//"strconv"
+	//"strings"
+	//"sync"
+	//"time"
 
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes"
+	//"github.com/OpenBazaar/jsonpb"
+	//"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	//"github.com/golang/protobuf/ptypes"
 )
 
 const bufferSize = 5
 
 // ImportListings - upload/read listings
 func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
+	/*
 	reader := csv.NewReader(r)
 	columns, err := reader.Read()
 	if err != nil {
@@ -41,7 +43,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	countLock := new(sync.Mutex)
 	count := 0
 
-	var ld []ListingData
+	var ld []repo.ListingData
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 
@@ -639,10 +641,14 @@ listingLoop:
 	_, werr := f.Write(j)
 	if werr != nil {
 		return werr
-	}
+	}*/
 	return nil
 }
 
-func listingCurrencyIsBTC(l *pb.Listing) bool {
-	return NormalizeCurrencyCode(l.Metadata.PricingCurrencyDefn.Code) == "BTC"
+func listingCurrencyIsBTC(l *repo.Listing) bool {
+	price, err := l.GetPrice()
+	if err != nil {
+		return false
+	}
+	return NormalizeCurrencyCode(price.Currency.Code.String()) == "BTC"
 }

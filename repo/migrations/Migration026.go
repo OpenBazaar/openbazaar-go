@@ -1,143 +1,97 @@
 package migrations
 
 import (
-	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
-	_ "github.com/mutecomm/go-sqlcipher"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/core/mock"
 )
 
-var (
-	am03_up_create_utxos   = "create table utxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, coin text);"
-	am03_down_create_utxos = "create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, coin text);"
-	am03_temp_utxos        = "ALTER TABLE utxos RENAME TO temp_utxos;"
-	am03_insert_utxos      = "INSERT INTO utxos SELECT outpoint, value, height, scriptPubKey, watchOnly, coin FROM temp_utxos;"
-	am03_drop_temp_utxos   = "DROP TABLE temp_utxos;"
+// Migration026 will update the hashes of each listing in the listing index with
+// the newest hash format.
+type Migration026 struct{}
 
-	am03_up_create_stxos   = "create table stxos (outpoint text primary key not null, value text, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
-	am03_down_create_stxos = "create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text, coin text);"
-	am03_temp_stxos        = "ALTER TABLE stxos RENAME TO temp_stxos;"
-	am03_insert_stxos      = "INSERT INTO stxos SELECT outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid, coin FROM temp_stxos;"
-	am03_drop_temp_stxos   = "DROP TABLE temp_stxos;"
-
-	am03_up_create_txns   = "create table txns (txid text primary key not null, value text, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
-	am03_down_create_txns = "create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob, coin text);"
-	am03_temp_txns        = "ALTER TABLE txns RENAME TO temp_txns;"
-	am03_insert_txns      = "INSERT INTO txns SELECT txid, value, height, timestamp, watchOnly, tx, coin FROM temp_txns;"
-	am03_drop_temp_txns   = "DROP TABLE temp_txns;"
-)
-
-type Migration026 struct {
-	AM03
+type Migration026_Price struct {
+	CurrencyCode string  `json:"currencyCode"`
+	Amount       uint64  `json:"amount"`
+	Modifier     float32 `json:"modifier"`
+}
+type Migration026_Thumbnail struct {
+	Tiny   string `json:"tiny"`
+	Small  string `json:"small"`
+	Medium string `json:"medium"`
 }
 
-type AM03 struct{}
-
-func (AM03) Up(repoPath string, dbPassword string, testnet bool) error {
-	var dbPath string
-	if testnet {
-		dbPath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	if dbPassword != "" {
-		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
-	}
-
-	upSequence := strings.Join([]string{
-		am03_temp_utxos,
-		am03_up_create_utxos,
-		am03_insert_utxos,
-		am03_drop_temp_utxos,
-		am03_temp_stxos,
-		am03_up_create_stxos,
-		am03_insert_stxos,
-		am03_drop_temp_stxos,
-		am03_temp_txns,
-		am03_up_create_txns,
-		am03_insert_txns,
-		am03_drop_temp_txns,
-	}, " ")
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	if _, err = tx.Exec(upSequence); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	f1, err := os.Create(path.Join(repoPath, "repover"))
-	if err != nil {
-		return err
-	}
-	_, err = f1.Write([]byte("27"))
-	if err != nil {
-		return err
-	}
-	f1.Close()
-	return nil
+type Migration026_ListingData struct {
+	Hash               string                 `json:"hash"`
+	Slug               string                 `json:"slug"`
+	Title              string                 `json:"title"`
+	Categories         []string               `json:"categories"`
+	NSFW               bool                   `json:"nsfw"`
+	ContractType       string                 `json:"contractType"`
+	Description        string                 `json:"description"`
+	Thumbnail          Migration026_Thumbnail `json:"thumbnail"`
+	Price              Migration026_Price     `json:"price"`
+	ShipsTo            []string               `json:"shipsTo"`
+	FreeShipping       []string               `json:"freeShipping"`
+	Language           string                 `json:"language"`
+	AverageRating      float32                `json:"averageRating"`
+	RatingCount        uint32                 `json:"ratingCount"`
+	ModeratorIDs       []string               `json:"moderators"`
+	AcceptedCurrencies []string               `json:"acceptedCurrencies"`
+	CoinType           string                 `json:"coinType"`
 }
 
-func (AM03) Down(repoPath string, dbPassword string, testnet bool) error {
-	var dbPath string
-	if testnet {
-		dbPath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	if dbPassword != "" {
-		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
-	}
-	downSequence := strings.Join([]string{
-		am03_temp_utxos,
-		am03_down_create_utxos,
-		am03_insert_utxos,
-		am03_drop_temp_utxos,
-		am03_temp_stxos,
-		am03_down_create_stxos,
-		am03_insert_stxos,
-		am03_drop_temp_stxos,
-		am03_temp_txns,
-		am03_down_create_txns,
-		am03_insert_txns,
-		am03_drop_temp_txns,
-	}, " ")
+func (Migration026) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+	listingsFilePath := path.Join(repoPath, "root", "listings.json")
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
+	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
+	indexExists := true
+	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
+		indexExists = false
+		fmt.Println(listingsFilePath)
 	}
-	if _, err = tx.Exec(downSequence); err != nil {
-		tx.Rollback()
-		return err
+
+	if indexExists {
+		var listingIndex []Migration026_ListingData
+		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listingsJSON, &listingIndex); err != nil {
+			return err
+		}
+		n, err := coremock.NewMockNode()
+		if err != nil {
+			return err
+		}
+		for i, listing := range listingIndex {
+			hash, err := ipfs.GetHashOfFile(n, path.Join(repoPath, "root", "listings", listing.Slug+".json"))
+			if err != nil {
+				return err
+			}
+
+			listingIndex[i].Hash = hash
+		}
+		migratedJSON, err := json.MarshalIndent(&listingIndex, "", "    ")
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	f1, err := os.Create(path.Join(repoPath, "repover"))
-	if err != nil {
-		return err
-	}
-	_, err = f1.Write([]byte("26"))
-	if err != nil {
-		return err
-	}
-	f1.Close()
-	return nil
+
+	return writeRepoVer(repoPath, 27)
+}
+
+func (Migration026) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+	// Down migration is a no-op (outside of updating the version)
+	// We can't calculate the old style hash format anymore.
+	return writeRepoVer(repoPath, 26)
 }

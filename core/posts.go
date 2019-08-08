@@ -16,6 +16,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -46,7 +47,7 @@ var (
 	ErrPostSlugNotEmpty = errors.New("slug must not be empty")
 
 	// ErrPostSlugTooLong - post slug longer than max characters error
-	ErrPostSlugTooLong = fmt.Errorf("slug is longer than the max of %d", SentenceMaxCharacters)
+	ErrPostSlugTooLong = fmt.Errorf("slug is longer than the max of %d", repo.SentenceMaxCharacters)
 
 	// ErrPostSlugContainsSpaces - post slug has spaces error
 	ErrPostSlugContainsSpaces = errors.New("slugs cannot contain spaces")
@@ -88,7 +89,7 @@ var (
 	ErrPostReferenceContainsSpaces = errors.New("reference cannot contain spaces")
 
 	// ErrPostImagesTooMany - post images longer than max error
-	ErrPostImagesTooMany = fmt.Errorf("number of post images is greater than the max of %d", MaxListItems)
+	ErrPostImagesTooMany = fmt.Errorf("number of post images is greater than the max of %d", repo.MaxListItems)
 
 	// ErrPostImageTinyFormatInvalid - post tiny image hash incorrectly formatted error
 	ErrPostImageTinyFormatInvalid = errors.New("tiny image hashes must be properly formatted CID")
@@ -109,7 +110,7 @@ var (
 	ErrPostImageFilenameNil = errors.New("image file names must not be nil")
 
 	// ErrPostImageFilenameTooLong - post image filename length longer than max
-	ErrPostImageFilenameTooLong = fmt.Errorf("image filename length must be less than the max of %d", FilenameMaxCharacters)
+	ErrPostImageFilenameTooLong = fmt.Errorf("image filename length must be less than the max of %d", repo.FilenameMaxCharacters)
 )
 
 // JSON structure returned for each post from GETPosts
@@ -135,7 +136,7 @@ type postImage struct {
 func (n *OpenBazaarNode) GeneratePostSlug(status string) (string, error) {
 	status = strings.Replace(status, "/", "", -1)
 	counter := 1
-	slugBase := createSlugFor(status)
+	slugBase := repo.CreateSlugFor(status)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetPostFromSlug(slugToTry)
@@ -547,7 +548,7 @@ func validatePost(post *pb.Post) (err error) {
 	if post.Slug == "" {
 		return ErrPostSlugNotEmpty
 	}
-	if len(post.Slug) > SentenceMaxCharacters {
+	if len(post.Slug) > repo.SentenceMaxCharacters {
 		return ErrPostSlugTooLong
 	}
 	if strings.Contains(post.Slug, " ") {
@@ -609,7 +610,7 @@ func validatePost(post *pb.Post) (err error) {
 	}
 
 	// Images
-	if len(post.Images) > MaxListItems {
+	if len(post.Images) > repo.MaxListItems {
 		return ErrPostImagesTooMany
 	}
 	for _, img := range post.Images {
@@ -636,7 +637,7 @@ func validatePost(post *pb.Post) (err error) {
 		if img.Filename == "" {
 			return ErrPostImageFilenameNil
 		}
-		if len(img.Filename) > FilenameMaxCharacters {
+		if len(img.Filename) > repo.FilenameMaxCharacters {
 			return ErrPostImageFilenameTooLong
 		}
 	}

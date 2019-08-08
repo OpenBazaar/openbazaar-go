@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
@@ -337,34 +336,34 @@ func TestCryptoListings(t *testing.T) {
 }
 
 func TestCryptoListingsPriceModifier(t *testing.T) {
-	outOfRangeErr := core.ErrPriceModifierOutOfRange{
-		Min: core.PriceModifierMin,
-		Max: core.PriceModifierMax,
+	outOfRangeErr := repo.ErrPriceModifierOutOfRange{
+		Min: repo.PriceModifierMin,
+		Max: repo.PriceModifierMax,
 	}
 
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PriceModifier = core.PriceModifierMax
+	listing.Metadata.PriceModifier = repo.PriceModifierMax
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
 		{"GET", "/ob/listing/crypto", jsonFor(t, listing), 200, anyResponseJSON},
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.001
+	listing.Metadata.PriceModifier = repo.PriceModifierMax + 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.01
+	listing.Metadata.PriceModifier = repo.PriceModifierMax + 0.01
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMin - 0.001
+	listing.Metadata.PriceModifier = repo.PriceModifierMin - 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMin - 1
+	listing.Metadata.PriceModifier = repo.PriceModifierMin - 1
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
@@ -395,12 +394,12 @@ func TestCryptoListingsQuantity(t *testing.T) {
 
 	listing.Item.Skus[0].Quantity = 0
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
 
 	listing.Item.Skus[0].Quantity = -1
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
 }
 
@@ -449,15 +448,15 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	listing := factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("item.condition"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Options = physicalListing.Item.Options
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.options"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("item.options"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.ShippingOptions = physicalListing.ShippingOptions
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("shippingOptions"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("shippingOptions"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
@@ -467,7 +466,7 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
 	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
 	*/
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("coupons"))
 
 }
 
@@ -477,7 +476,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.PriceValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.price"))},
 	})
 }
 
