@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -53,6 +54,7 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -70,11 +72,12 @@ var (
 	fileLogFormat = logging.MustStringFormatter(
 		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
+	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
 )
 
 // NewNode create the configuration file for a new node
-func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
+func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string, profile bool) *Node {
 	// Node config
 	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
@@ -82,6 +85,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 		Testnet:             testnet,
 		UserAgent:           userAgent,
 		WalletTrustedPeer:   walletTrustedPeer,
+		Profile:             profile,
 	}
 
 	// Use Mobile struct to carry config data
@@ -338,6 +342,15 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 // Start start openbazaard (OpenBazaar daemon)
 func (n *Node) Start() error {
+	if n.config.Profile {
+		go func() {
+			listenAddr := net.JoinHostPort("", "6060")
+			profileRedirect := http.RedirectHandler("/debug/pprof",
+				http.StatusSeeOther)
+			http.Handle("/", profileRedirect)
+			log.Errorf("%v", http.ListenAndServe(listenAddr, nil))
+		}()
+	}
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
@@ -455,6 +468,7 @@ func (n *Node) Start() error {
 		MR.Wait()
 
 		core.PublishLock.Unlock()
+		publishUnlocked = true
 		core.Node.UpdateFollow()
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
@@ -474,6 +488,11 @@ func (n *Node) Stop() error {
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
 	return nil
+}
+
+// PublishUnlocked return true if publish is unlocked
+func (n *Node) PublishUnlocked() bool {
+	return publishUnlocked
 }
 
 // initializeRepo create the database

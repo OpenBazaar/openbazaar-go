@@ -66,6 +66,10 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
+var lastManualScan time.Time
+
+const OfflineMessageScanInterval = 1 * time.Minute
+
 func newJSONAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
@@ -4257,4 +4261,76 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponseM(w, out, new(pb.SignedPost))
+}
+
+// POSTSendOrderMessage - used to manually send an order message
+func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.Request) {
+	type sendRequest struct {
+		OrderID     string `json:"orderID"`
+		MessageType string `json:"messageType"`
+	}
+
+	var args sendRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&args)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if args.OrderID == "" {
+		ErrorResponse(w, http.StatusBadRequest, core.ErrOrderNotFound.Error())
+		return
+	}
+
+	var msgType int32
+	var ok bool
+
+	if msgType, ok = pb.Message_MessageType_value[args.MessageType]; !ok {
+		ErrorResponse(w, http.StatusBadRequest, "invalid order message type")
+		return
+	}
+
+	msg, peerID, err := i.node.Datastore.Messages().
+		GetByOrderIDType(args.OrderID, pb.Message_MessageType(msgType))
+	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
+		ErrorResponse(w, http.StatusBadRequest, "order message not found")
+		return
+	}
+
+	p, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "invalid peer id")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = i.node.Service.SendMessage(ctx, p, &msg.Msg)
+	if err != nil {
+		// If send message failed, try sending offline message
+		log.Warningf("resending message failed: %v", err)
+		err = i.node.SendOfflineMessage(p, nil, &msg.Msg)
+		if err != nil {
+			log.Errorf("resending offline message failed: %v", err)
+			ErrorResponse(w, http.StatusBadRequest, "order message not sent")
+			return
+		}
+	}
+
+	SanitizedResponse(w, `{}`)
+}
+
+// GETScanOfflineMessages - used to manually trigger offline message scan
+func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.Request) {
+	if lastManualScan.IsZero() {
+		lastManualScan = time.Now()
+	} else {
+		if time.Since(lastManualScan) >= OfflineMessageScanInterval {
+			i.node.MessageRetriever.RunOnce()
+			lastManualScan = time.Now()
+		}
+	}
+	SanitizedResponse(w, `{}`)
 }

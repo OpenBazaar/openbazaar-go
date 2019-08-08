@@ -94,7 +94,7 @@ func NewCurrencyValue(amount string, currency *CurrencyDefinition) (*CurrencyVal
 		i  = new(big.Int)
 		ok bool
 	)
-	if _, ok = i.SetString(amount, 10); !ok {
+	if _, ok = i.SetString(amount, 0); !ok {
 		return nil, ErrCurrencyValueAmountInvalid
 	}
 	return &CurrencyValue{Amount: i, Currency: currency}, nil

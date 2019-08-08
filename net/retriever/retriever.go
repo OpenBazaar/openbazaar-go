@@ -3,6 +3,7 @@ package net
 import (
 	"context"
 	"errors"
+
 	routing "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
@@ -115,6 +116,14 @@ func (m *MessageRetriever) Run() {
 			go m.fetchPointers(false)
 		}
 	}
+}
+
+// RunOnce - used to fetch messages only once
+func (m *MessageRetriever) RunOnce() {
+	m.Add(1)
+	go m.fetchPointers(true)
+	m.Add(1)
+	go m.fetchPointers(false)
 }
 
 func (m *MessageRetriever) fetchPointers(useDHT bool) {
