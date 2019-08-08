@@ -5,19 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"time"
-
-	wi "github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/ltcsuite/ltcutil"
-	"github.com/ltcsuite/ltcwallet/wallet/txrules"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -27,6 +15,17 @@ import (
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
+	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ltcsuite/ltcutil"
+	"github.com/ltcsuite/ltcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 )
 
 type LitecoinWallet struct {
@@ -41,6 +40,7 @@ type LitecoinWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
@@ -75,7 +75,18 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
-	return &LitecoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &LitecoinWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("litecoin-wallet"),
+	}, nil
 }
 
 func litecoinAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Address, error) {
@@ -161,10 +172,7 @@ func (w *LitecoinWallet) AddressToScript(addr btcutil.Address) ([]byte, error) {
 
 func (w *LitecoinWallet) HasKey(addr btcutil.Address) bool {
 	_, err := w.km.GetKeyForScript(addr.ScriptAddress())
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (w *LitecoinWallet) Balance() (confirmed, unconfirmed int64) {
@@ -220,7 +228,7 @@ func (w *LitecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 		for i, out := range tx.TxOut {
 			addr, err := laddr.ExtractPkScriptAddrs(out.PkScript, w.params)
 			if err != nil {
-				log.Printf("error extracting address from txn pkscript: %v\n", err)
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
 			}
 			tout := wi.TransactionOutput{
 				Address: addr,

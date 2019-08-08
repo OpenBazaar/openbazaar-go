@@ -288,7 +288,7 @@ func (w *BitcoinCashWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error
 				LinkedAddress: addr,
 				OutpointIndex: u.Op.Index,
 				OutpointHash:  h,
-				Value:         int64(u.Value),
+				Value:         u.Value,
 			}
 			transactionID, err := w.sweepAddress([]wi.TransactionInput{in}, nil, key, nil, wi.FEE_BUMP)
 			if err != nil {

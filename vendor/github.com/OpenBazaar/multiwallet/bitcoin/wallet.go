@@ -6,9 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
+	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/client"
+	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/keys"
+	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/OpenBazaar/multiwallet/service"
+	"github.com/OpenBazaar/multiwallet/util"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
@@ -19,16 +25,9 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
 	bip39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
-
-	"github.com/OpenBazaar/multiwallet/cache"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/config"
-	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/multiwallet/model"
-	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
 )
 
 type BitcoinWallet struct {
@@ -43,6 +42,7 @@ type BitcoinWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinWallet, error) {
@@ -77,7 +77,18 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 
 	fp := spvwallet.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.FeeAPI, proxy)
 
-	return &BitcoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &BitcoinWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("bitcoin-wallet"),
+	}, nil
 }
 
 func keyToAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btc.Address, error) {
@@ -227,7 +238,7 @@ func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 			var addr btc.Address
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
 			if err != nil {
-				log.Printf("error extracting address from txn pkscript: %v\n", err)
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
 			}
 			if len(addrs) == 0 {
 				addr = nil

@@ -5,18 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"time"
-
-	wi "github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/btcsuite/btcwallet/wallet/txrules"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -26,6 +15,16 @@ import (
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
+	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 )
 
 type ZCashWallet struct {
@@ -40,6 +39,7 @@ type ZCashWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
@@ -75,7 +75,18 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
-	return &ZCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &ZCashWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("zcash-wallet"),
+	}, nil
 }
 
 func zcashCashAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Address, error) {
@@ -233,7 +244,7 @@ func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 		for i, out := range tx.TxOut {
 			addr, err := zaddr.ExtractPkScriptAddrs(out.PkScript, w.params)
 			if err != nil {
-				log.Printf("error extracting address from txn pkscript: %v\n", err)
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
 			}
 			tout := wi.TransactionOutput{
 				Address: addr,
