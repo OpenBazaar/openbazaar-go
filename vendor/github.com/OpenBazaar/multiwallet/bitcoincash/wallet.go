@@ -5,15 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
-	"github.com/OpenBazaar/multiwallet/cache"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/config"
-	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/multiwallet/model"
-	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -26,6 +20,14 @@ import (
 	"github.com/cpacia/bchutil"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
+
+	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/client"
+	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/keys"
+	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/OpenBazaar/multiwallet/service"
+	"github.com/OpenBazaar/multiwallet/util"
 )
 
 type BitcoinCashWallet struct {
@@ -209,6 +211,28 @@ func (w *BitcoinCashWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *BitcoinCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			addr, err := bchutil.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				log.Printf("error extracting address from txn pkscript: %v\n", err)
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 
@@ -415,4 +439,9 @@ func (w *BitcoinCashWallet) Broadcast(tx *wire.MsgTx) error {
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return nil
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoinCashWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
 }

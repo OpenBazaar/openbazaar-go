@@ -3,10 +3,12 @@
 
 package pb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import timestamp "github.com/golang/protobuf/ptypes/timestamp"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -17,7 +19,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Post_PostType int32
 
@@ -32,6 +34,7 @@ var Post_PostType_name = map[int32]string{
 	1: "COMMENT",
 	2: "REPOST",
 }
+
 var Post_PostType_value = map[string]int32{
 	"POST":    0,
 	"COMMENT": 1,
@@ -41,8 +44,9 @@ var Post_PostType_value = map[string]int32{
 func (x Post_PostType) String() string {
 	return proto.EnumName(Post_PostType_name, int32(x))
 }
+
 func (Post_PostType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0, 0}
+	return fileDescriptor_b14bd1586479c33d, []int{0, 0}
 }
 
 type Post struct {
@@ -65,16 +69,17 @@ func (m *Post) Reset()         { *m = Post{} }
 func (m *Post) String() string { return proto.CompactTextString(m) }
 func (*Post) ProtoMessage()    {}
 func (*Post) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0}
+	return fileDescriptor_b14bd1586479c33d, []int{0}
 }
+
 func (m *Post) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post.Unmarshal(m, b)
 }
 func (m *Post) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Post.Marshal(b, m, deterministic)
 }
-func (dst *Post) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Post.Merge(dst, src)
+func (m *Post) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post.Merge(m, src)
 }
 func (m *Post) XXX_Size() int {
 	return xxx_messageInfo_Post.Size(m)
@@ -171,16 +176,17 @@ func (m *Post_Image) Reset()         { *m = Post_Image{} }
 func (m *Post_Image) String() string { return proto.CompactTextString(m) }
 func (*Post_Image) ProtoMessage()    {}
 func (*Post_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0, 0}
+	return fileDescriptor_b14bd1586479c33d, []int{0, 0}
 }
+
 func (m *Post_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post_Image.Unmarshal(m, b)
 }
 func (m *Post_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Post_Image.Marshal(b, m, deterministic)
 }
-func (dst *Post_Image) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Post_Image.Merge(dst, src)
+func (m *Post_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post_Image.Merge(m, src)
 }
 func (m *Post_Image) XXX_Size() int {
 	return xxx_messageInfo_Post_Image.Size(m)
@@ -246,16 +252,17 @@ func (m *SignedPost) Reset()         { *m = SignedPost{} }
 func (m *SignedPost) String() string { return proto.CompactTextString(m) }
 func (*SignedPost) ProtoMessage()    {}
 func (*SignedPost) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{1}
+	return fileDescriptor_b14bd1586479c33d, []int{1}
 }
+
 func (m *SignedPost) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedPost.Unmarshal(m, b)
 }
 func (m *SignedPost) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedPost.Marshal(b, m, deterministic)
 }
-func (dst *SignedPost) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SignedPost.Merge(dst, src)
+func (m *SignedPost) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedPost.Merge(m, src)
 }
 func (m *SignedPost) XXX_Size() int {
 	return xxx_messageInfo_SignedPost.Size(m)
@@ -288,15 +295,15 @@ func (m *SignedPost) GetSignature() []byte {
 }
 
 func init() {
+	proto.RegisterEnum("Post_PostType", Post_PostType_name, Post_PostType_value)
 	proto.RegisterType((*Post)(nil), "Post")
 	proto.RegisterType((*Post_Image)(nil), "Post.Image")
 	proto.RegisterType((*SignedPost)(nil), "SignedPost")
-	proto.RegisterEnum("Post_PostType", Post_PostType_name, Post_PostType_value)
 }
 
-func init() { proto.RegisterFile("posts.proto", fileDescriptor_posts_590fe5621382a1af) }
+func init() { proto.RegisterFile("posts.proto", fileDescriptor_b14bd1586479c33d) }
 
-var fileDescriptor_posts_590fe5621382a1af = []byte{
+var fileDescriptor_b14bd1586479c33d = []byte{
 	// 429 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x92, 0x4f, 0x8b, 0xdb, 0x30,
 	0x10, 0xc5, 0xeb, 0xc4, 0xf6, 0xda, 0xe3, 0xb2, 0x5d, 0x44, 0x29, 0x6a, 0x28, 0xac, 0x49, 0x2f,

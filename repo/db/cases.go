@@ -256,29 +256,27 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			jsonpb.UnmarshalString(string(vendorContract), contract)
 		}
 		var slug string
-		if contract != nil {
-			if len(contract.VendorListings) > 0 {
-				slug = contract.VendorListings[0].Slug
-				if contract.VendorListings[0].VendorID != nil {
-					vendorId = contract.VendorListings[0].VendorID.PeerID
-					vendorHandle = contract.VendorListings[0].VendorID.Handle
-				}
-				if contract.VendorListings[0].Item != nil {
-					title = contract.VendorListings[0].Item.Title
-					if len(contract.VendorListings[0].Item.Images) > 0 {
-						thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
-					}
+		if len(contract.VendorListings) > 0 {
+			slug = contract.VendorListings[0].Slug
+			if contract.VendorListings[0].VendorID != nil {
+				vendorId = contract.VendorListings[0].VendorID.PeerID
+				vendorHandle = contract.VendorListings[0].VendorID.Handle
+			}
+			if contract.VendorListings[0].Item != nil {
+				title = contract.VendorListings[0].Item.Title
+				if len(contract.VendorListings[0].Item.Images) > 0 {
+					thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 				}
 			}
-			if contract.BuyerOrder != nil {
-				slug = contract.VendorListings[0].Slug
-				if contract.BuyerOrder.BuyerID != nil {
-					buyerId = contract.BuyerOrder.BuyerID.PeerID
-					buyerHandle = contract.BuyerOrder.BuyerID.Handle
-				}
-				if contract.BuyerOrder.Payment != nil {
-					total = contract.BuyerOrder.Payment.Amount
-				}
+		}
+		if contract.BuyerOrder != nil {
+			slug = contract.VendorListings[0].Slug
+			if contract.BuyerOrder.BuyerID != nil {
+				buyerId = contract.BuyerOrder.BuyerID.PeerID
+				buyerHandle = contract.BuyerOrder.BuyerID.Handle
+			}
+			if contract.BuyerOrder.Payment != nil {
+				total = contract.BuyerOrder.Payment.Amount
 			}
 		}
 

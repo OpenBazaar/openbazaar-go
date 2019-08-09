@@ -6,8 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/chaincfg"
 	"time"
+
+	"github.com/btcsuite/btcd/chaincfg"
 
 	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
@@ -358,10 +359,13 @@ func (w *BitcoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Add
 	// Sign tx
 	privKey, err := key.ECPrivKey()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("retrieving private key: %s", err.Error())
 	}
 	pk := privKey.PubKey().SerializeCompressed()
 	addressPub, err := btc.NewAddressPubKey(pk, w.params)
+	if err != nil {
+		return nil, fmt.Errorf("generating address pub key: %s", err.Error())
+	}
 
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
 		if addressPub.EncodeAddress() == addr.EncodeAddress() {
