@@ -2,6 +2,7 @@ package db_test
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -463,7 +464,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 }
 
-func TestSalesDB_SetNeedsResync(t *testing.T) {
+func TestSalesDB_GetUnfunded(t *testing.T) {
 	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
@@ -471,53 +472,21 @@ func TestSalesDB_SetNeedsResync(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
-	err = saldb.SetNeedsResync("orderID", true)
-	if err != nil {
-		t.Error(err)
-	}
-	stmt, _ := saldb.PrepareQuery("select needsSync from sales where orderID=?")
-	defer stmt.Close()
-	var needsSyncInt int
-	err = stmt.QueryRow("orderID").Scan(&needsSyncInt)
-	if err != nil {
-		t.Error(err)
-	}
-	if needsSyncInt != 1 {
-		t.Errorf(`Expected %d got %d`, 1, needsSyncInt)
-	}
-	err = saldb.SetNeedsResync("orderID", false)
-	if err != nil {
-		t.Error(err)
-	}
-	err = stmt.QueryRow("orderID").Scan(&needsSyncInt)
-	if err != nil {
-		t.Error(err)
-	}
-	if needsSyncInt != 0 {
-		t.Errorf(`Expected %d got %d`, 0, needsSyncInt)
-	}
-}
-
-func TestSalesDB_GetNeedsResync(t *testing.T) {
-	var saldb, teardown, err = buildNewSaleStore()
-	if err != nil {
+	if err := saldb.Put("orderID", *contract, 1, false); err != nil {
 		t.Fatal(err)
 	}
-	defer teardown()
-
-	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 1, false)
-	saldb.Put("orderID1", *contract, 1, false)
-	err = saldb.SetNeedsResync("orderID", true)
-	if err != nil {
-		t.Error(err)
+	if err := saldb.Put("orderID1", *contract, 1, false); err != nil {
+		t.Fatal(err)
 	}
-	err = saldb.SetNeedsResync("orderID1", true)
-	if err != nil {
-		t.Error(err)
+	if err := saldb.Put("x0", *contract, 0, false); err != nil {
+		t.Fatal(err)
 	}
-	unfunded, err := saldb.GetNeedsResync()
+	for i := 2; i < 15; i++ {
+		if err := saldb.Put("x"+strconv.Itoa(i), *contract, pb.OrderState(i), false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	unfunded, err := saldb.GetUnfunded()
 	if err != nil {
 		t.Error(err)
 	}
@@ -530,6 +499,9 @@ func TestSalesDB_GetNeedsResync(t *testing.T) {
 			a = true
 		} else if uf.OrderId == "orderID1" {
 			b = true
+		}
+		if uf.PaymentAddress != contract.BuyerOrder.Payment.Address {
+			t.Errorf("Incorrect payment address. Expected %s, got %s", contract.BuyerOrder.Payment.Address, uf.PaymentAddress)
 		}
 	}
 	if !a || !b {

@@ -225,6 +225,35 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 	return ret, count, nil
 }
 
+func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	var ret []repo.UnfundedOrder
+	rows, err := p.db.Query(`select orderID, contract, timestamp, paymentAddr from purchases where state=?`, 1)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var orderID, paymentAddr string
+		var timestamp int
+		var contractBytes []byte
+		err := rows.Scan(&orderID, &contractBytes, &timestamp, &paymentAddr)
+		if err != nil {
+			return ret, err
+		}
+		if timestamp > 0 {
+			rc := new(pb.RicardianContract)
+			err = jsonpb.UnmarshalString(string(contractBytes), rc)
+			if err != nil {
+				return ret, err
+			}
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.Coin, PaymentAddress: paymentAddr})
+		}
+	}
+	return ret, nil
+}
+
 func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
 	if addr == nil {
 		return nil, pb.OrderState(0), false, nil, fmt.Errorf("unable to find purchase with nil payment address")

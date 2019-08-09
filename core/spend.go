@@ -37,6 +37,7 @@ type SpendResponse struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
 	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+	PeerID             string    `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the

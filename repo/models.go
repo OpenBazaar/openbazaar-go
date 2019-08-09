@@ -119,8 +119,9 @@ type Case struct {
 	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
 
-type UnfundedSale struct {
-	OrderId     string
-	Timestamp   time.Time
-	PaymentCoin string
+type UnfundedOrder struct {
+	OrderId        string
+	Timestamp      time.Time
+	PaymentCoin    string
+	PaymentAddress string
 }

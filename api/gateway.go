@@ -1,13 +1,12 @@
 package api
 
 import (
-	"net"
-	"net/http"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/op/go-logging"
+	"net"
+	"net/http"
 )
 
 var log = logging.MustGetLogger("api")

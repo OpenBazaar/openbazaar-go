@@ -7,8 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/ltcsuite/ltcutil"
-
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
 	"github.com/OpenBazaar/multiwallet/config"
@@ -23,7 +21,9 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ltcsuite/ltcutil"
 	"github.com/ltcsuite/ltcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 )
@@ -40,6 +40,7 @@ type LitecoinWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
@@ -74,7 +75,18 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
-	return &LitecoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &LitecoinWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("litecoin-wallet"),
+	}, nil
 }
 
 func litecoinAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Address, error) {
@@ -160,10 +172,7 @@ func (w *LitecoinWallet) AddressToScript(addr btcutil.Address) ([]byte, error) {
 
 func (w *LitecoinWallet) HasKey(addr btcutil.Address) bool {
 	_, err := w.km.GetKeyForScript(addr.ScriptAddress())
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (w *LitecoinWallet) Balance() (confirmed, unconfirmed int64) {
@@ -208,6 +217,28 @@ func (w *LitecoinWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *LitecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			addr, err := laddr.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 

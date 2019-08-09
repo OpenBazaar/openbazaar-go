@@ -482,7 +482,7 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), mw)
+	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), sqliteDB.Purchases(), mw)
 
 	// Master key setup
 	seed := bip39.NewSeed(mn, "")
@@ -607,7 +607,7 @@ func (x *Start) Execute(args []string) error {
 		UserAgent:                     core.USERAGENT,
 		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
 	}
-	core.PublishLock.Lock()
+	core.Node.PublishLock.Lock()
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
@@ -688,12 +688,12 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
 
-		core.PublishLock.Unlock()
+		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
 		if err != nil {
 			log.Error(err)
 		}
-		if !core.InitalPublishComplete {
+		if !core.Node.InitalPublishComplete {
 			err = core.Node.SeedNode()
 			if err != nil {
 				log.Error(err)
