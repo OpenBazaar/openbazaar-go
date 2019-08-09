@@ -263,6 +263,36 @@ func (n *OpenBazaarNode) Unfollow(peerID string) error {
 	return nil
 }
 
+// ResendCachedOrderMessage will retrieve the ORDER message from the datastore and resend it to the peerID
+// for which it was originally intended
+func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Message_MessageType) error {
+	if _, ok := pb.Message_MessageType_name[int32(msgType)]; !ok {
+		return fmt.Errorf("invalid order message type (%d)", int(msgType))
+	}
+
+	msg, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
+	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
+		return fmt.Errorf("unable to find message for order ID (%s) and message type (%s)", orderID, msgType.String())
+	}
+
+	p, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		return fmt.Errorf("unable to decode invalid peer ID for order (%s) and message type (%s)", orderID, msgType.String())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	defer cancel()
+
+	if err = n.Service.SendMessage(ctx, p, &msg.Msg); err != nil {
+		go func() {
+			if err := n.SendOfflineMessage(p, nil, &msg.Msg); err != nil {
+				log.Errorf("error resending offline message for order id (%s) and message type (%+v): %s", orderID, msgType, err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
 // SendOrder - send order created msg to peer
 func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract) (resp *pb.Message, err error) {
 	p, err := peer.IDB58Decode(peerID)

@@ -3,6 +3,7 @@ option go_package = "pb";
 
 
 import "countrycodes.proto";
+import "message.proto";
 import "google/protobuf/timestamp.proto";
 
 message RicardianContract {
@@ -291,6 +292,12 @@ message OrderCompletion {
     google.protobuf.Timestamp timestamp  = 2;
     repeated BitcoinSignature payoutSigs = 3;
     repeated Rating ratings              = 4;
+}
+
+message OrderProcessingFailure {
+  string orderID                           = 1;
+  Message.MessageType attemptedMessageType = 2;
+  RicardianContract contract               = 3;
 }
 
 message Rating {

@@ -35,6 +35,7 @@ message Message {
         VENDOR_FINALIZED_PAYMENT = 20;
         ORDER_PAYMENT            = 21;
         ERROR                    = 500;
+        ORDER_PROCESSING_FAILURE = 501;
     }
 }
 

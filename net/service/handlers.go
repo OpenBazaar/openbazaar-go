@@ -26,6 +26,11 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 )
 
+var (
+	// ErrEmptyPayload occurs when an inbound message is provided without the contents
+	ErrEmptyPayload = errors.New("message payload is empty")
+)
+
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
 	switch t {
 	case pb.Message_PING:
@@ -74,6 +79,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOrderPayment
 	case pb.Message_ERROR:
 		return service.handleError
+	case pb.Message_ORDER_PROCESSING_FAILURE:
+		return service.handleOrderProcessingFailure
 	default:
 		return nil
 	}
@@ -86,7 +93,7 @@ func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, opt
 
 func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -135,7 +142,7 @@ func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, op
 
 func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -208,7 +215,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 
 	// Decrypt and unmarshal plaintext
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
 	if err != nil {
@@ -277,26 +284,32 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	offline, _ := options.(bool)
 	contract := new(pb.RicardianContract)
 	var orderId string
-	errorResponse := func(error string) *pb.Message {
+	errorResponse := func(errMsg string) *pb.Message {
 		e := &pb.Error{
 			Code:         0,
-			ErrorMessage: error,
+			ErrorMessage: errMsg,
 			OrderID:      orderId,
 		}
-		a, _ := ptypes.MarshalAny(e)
+		a, err := ptypes.MarshalAny(e)
 		m := &pb.Message{
 			MessageType: pb.Message_ERROR,
 			Payload:     a,
 		}
+		if err != nil {
+			log.Errorf("failed marshaling errorResponse (%s) for order (%s): %s", e.ErrorMessage, orderId, err)
+			return m
+		}
 		if offline {
-			contract.Errors = []string{error}
-			service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false)
+			contract.Errors = []string{errMsg}
+			if err := service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false); err != nil {
+				log.Errorf("failed updating PROCESSING_ERROR on sale (%s): %s", orderId, err)
+			}
 		}
 		return m
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	err := ptypes.UnmarshalAny(pmes.Payload, contract)
 	if err != nil {
@@ -339,7 +352,10 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error building order confirmation"), err
 		}
-		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if err := service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false); err != nil {
+			log.Errorf("failed to put sale (%s): %s", contract.VendorOrderConfirmation.OrderID, err)
+			return errorResponse("Error persisting order"), err
+		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -416,7 +432,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		return nil, nil
 	}
-	log.Error("Unrecognized payment type")
+	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
 	return errorResponse("Unrecognized payment type"), errors.New("unrecognized payment type")
 }
 
@@ -424,7 +440,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	// Unmarshal payload
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	vendorContract := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, vendorContract)
@@ -442,6 +458,9 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Load the order
 	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CONFIRMATION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -501,13 +520,16 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CANCEL, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -549,7 +571,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rejectMsg := new(pb.OrderReject)
 	err := ptypes.UnmarshalAny(pmes.Payload, rejectMsg)
@@ -560,6 +582,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rejectMsg.OrderID, pb.Message_ORDER_REJECT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -711,7 +736,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -730,6 +755,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.Refund.OrderID, pb.Message_REFUND, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -837,7 +865,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -852,10 +880,16 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
 	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -913,7 +947,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -928,6 +962,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1040,7 +1077,7 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -1070,7 +1107,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	update := new(pb.DisputeUpdate)
 	err := ptypes.UnmarshalAny(pmes.Payload, update)
@@ -1079,6 +1116,9 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	dispute, err := service.node.Datastore.Cases().GetByCaseID(update.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), update.OrderId, pb.Message_DISPUTE_UPDATE, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 	rc := new(pb.RicardianContract)
@@ -1158,7 +1198,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -1177,6 +1217,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	if err != nil {
 		contract, state, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
+			if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, nil); err != nil {
+				log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+			}
 			return nil, net.OutOfOrderMessage
 		}
 		isPurchase = true
@@ -1196,6 +1239,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	if state != pb.OrderState_DISPUTED {
+		if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1245,11 +1291,94 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	return nil, nil
 }
 
+func (service *OpenBazaarService) handleOrderProcessingFailure(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, ErrEmptyPayload
+	}
+	procFailure := new(pb.OrderProcessingFailure)
+	if err := ptypes.UnmarshalAny(pmes.Payload, procFailure); err != nil {
+		return nil, err
+	}
+
+	var (
+		localContract *pb.RicardianContract
+	)
+	if contract, _, _, _, _, _, err := service.node.Datastore.Sales().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	} else if contract, _, _, _, _, _, err := service.node.Datastore.Purchases().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	}
+	if localContract == nil {
+		return nil, fmt.Errorf("no contract found for order ID (%s)", procFailure.OrderID)
+	}
+	// TODO: Validate we aren't in a loop, exit if we are
+	missingMessageTypes, err := analyzeForMissingMessages(localContract, procFailure)
+	if err != nil {
+		return nil, err
+	}
+	if missingMessageTypes == nil {
+		err := fmt.Errorf("unable to determine missing message types for order ID (%s)", procFailure.OrderID)
+		log.Error(err.Error())
+		return nil, err
+	}
+	for _, msgType := range missingMessageTypes {
+		log.Debugf("resending missing ORDER message (%s) to peer (%s)", msgType.String(), p.Pretty())
+		if err := service.node.ResendCachedOrderMessage(procFailure.OrderID, msgType); err != nil {
+			err := fmt.Errorf("resending message type (%s) for order (%s): %s", msgType.String(), procFailure.OrderID, err.Error())
+			log.Error(err.Error())
+			// TODO: Can we attempt to recreate MessageType?
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+// analyzeForMissingMessages compares the local RicardianContract with the one provided with the
+// error message to determine which messages might be missing and need to be resent to the remote
+// peer
+func analyzeForMissingMessages(lc *pb.RicardianContract, e *pb.OrderProcessingFailure) ([]pb.Message_MessageType, error) {
+	var msgsToResend = []pb.Message_MessageType{}
+	if lc == nil {
+		return nil, fmt.Errorf("no local contract for order ID (%s) to compare to, unable to recover missing messages", e.OrderID)
+	}
+	if lc.BuyerOrder != nil && (e.Contract == nil || e.Contract.BuyerOrder == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER)
+	}
+	if lc.VendorOrderConfirmation != nil && (e.Contract == nil || e.Contract.VendorOrderConfirmation == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_CONFIRMATION)
+	}
+	// TODO: How do we detect ORDER_REJECT diff?
+	// TODO: How do we detect ORDER_CANCEL diff?
+	if len(lc.VendorOrderFulfillment) != 0 && (e.Contract == nil || len(e.Contract.VendorOrderFulfillment) == 0) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_FULFILLMENT)
+	}
+	if lc.Dispute != nil && (e.Contract == nil || e.Contract.Dispute == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_OPEN)
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_UPDATE)
+	}
+	if lc.DisputeResolution != nil && (e.Contract == nil || e.Contract.DisputeResolution == nil) {
+		// TODO: Re-broadcast error to moderator so they can resend DISPUTE_CLOSE
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_CLOSE)
+	}
+	if lc.DisputeAcceptance != nil && (e.Contract == nil || e.Contract.DisputeAcceptance == nil) {
+		// TODO: This msg occurs after order is PENDING, FULFILLED, and DISPUTED states, is
+		// there a better check for resending FINALIZED_PAYMENT?
+		msgsToResend = append(msgsToResend, pb.Message_VENDOR_FINALIZED_PAYMENT)
+	}
+	if lc.Refund != nil && (e.Contract == nil || e.Contract.Refund == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_REFUND)
+	}
+	if lc.BuyerOrderCompletion != nil && (e.Contract == nil || e.Contract.BuyerOrderCompletion == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_COMPLETION)
+	}
+	return msgsToResend, nil
+}
+
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	chat := new(pb.Chat)
 	err := ptypes.UnmarshalAny(pmes.Payload, chat)
@@ -1332,7 +1461,7 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 
 func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -1373,7 +1502,7 @@ func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Messa
 
 func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -1420,7 +1549,7 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	b := new(pb.Block)
 	err := ptypes.UnmarshalAny(pmes.Payload, b)
@@ -1445,7 +1574,7 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 
 func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	paymentFinalizedMessage := new(pb.VendorFinalizedPayment)
 	if err := ptypes.UnmarshalAny(pmes.Payload, paymentFinalizedMessage); err != nil {
@@ -1490,7 +1619,7 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	cList := new(pb.CidList)
 	err := ptypes.UnmarshalAny(pmes.Payload, cList)
@@ -1625,13 +1754,16 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		log.Debugf("received empty ERROR message from peer (%s)", peer.Pretty())
+		return nil, ErrEmptyPayload
 	}
 	errorMessage := new(pb.Error)
 	err := ptypes.UnmarshalAny(pmes.Payload, errorMessage)
 	if err != nil {
+		log.Debugf("received unmarshalable ERROR message from peer (%s)", peer.Pretty())
 		return nil, err
 	}
+	log.Debugf("received ERROR message from peer (%s): %s", peer.Pretty(), errorMessage.ErrorMessage)
 
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(errorMessage.OrderID)
@@ -1670,6 +1802,13 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("received ERROR message from %s:%s", peer.Pretty(), errorMessage.ErrorMessage)
+	log.Debugf("received ERROR message from peer (%s): %s", peer.Pretty(), errorMessage.ErrorMessage)
 	return nil, nil
+}
+
+// SendProcessingError produces a ORDER_PROCESSING_FAILURE error message to be sent to peerID regarding
+// orderID. This message should cause the peerID to reproduce the missing messages omitted in latestContract
+// up-to-and-including the last attemptedMessage
+func (service *OpenBazaarService) SendProcessingError(peerID, orderID string, attemptedMessage pb.Message_MessageType, latestContract *pb.RicardianContract) error {
+	return service.node.SendProcessingError(peerID, orderID, attemptedMessage, latestContract)
 }
