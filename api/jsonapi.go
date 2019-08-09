@@ -4240,9 +4240,18 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	msgInt, ok := pb.Message_MessageType_value[args.MessageType]
+	if args.MessageType == "" {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing messageType argument"))
+		return
+	}
+	if args.OrderID == "" {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing orderID argument"))
+		return
+	}
+
+	msgInt, ok := pb.Message_MessageType_value[strings.ToUpper(args.MessageType)]
 	if !ok {
-		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unknown message type (%s)", args.MessageType))
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unknown messageType (%s)", args.MessageType))
 		return
 	}
 
