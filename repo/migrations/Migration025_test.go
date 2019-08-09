@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMigration024(t *testing.T) {
+func TestMigration025(t *testing.T) {
 	// Setup
 	basePath := schema.GenerateTempPath()
 	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
@@ -31,7 +31,7 @@ func TestMigration024(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	migration := Migration024{}
+	migration := Migration025{}
 	if err := migration.Up(appSchema.DataPath(), "", true); err != nil {
 		t.Fatal(err)
 	}

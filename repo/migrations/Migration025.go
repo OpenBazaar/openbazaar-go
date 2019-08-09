@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-type Migration024 struct{}
+type Migration025 struct{}
 
-func (Migration024) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration025) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
 	if err != nil {
 		return fmt.Errorf("opening db: %s", err.Error())
@@ -44,7 +44,7 @@ func (Migration024) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	return nil
 }
 
-func (Migration024) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration025) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
 	if err != nil {
 		return fmt.Errorf("opening db: %s", err.Error())
