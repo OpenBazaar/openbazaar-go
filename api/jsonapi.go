@@ -784,7 +784,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 
 	err = i.node.SendOrderPayment(result.PeerID, &msg)
 	if err != nil {
-		log.Errorf("error sending order payment: %v", err)
+		log.Errorf("error sending order with id %s payment: %v", result.OrderID, err)
 	}
 
 	ser, err := json.MarshalIndent(result, "", "    ")
@@ -4291,45 +4291,24 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	if args.MessageType == "" {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing messageType argument"))
+		return
+	}
 	if args.OrderID == "" {
-		ErrorResponse(w, http.StatusBadRequest, core.ErrOrderNotFound.Error())
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing orderID argument"))
 		return
 	}
 
-	var msgType int32
-	var ok bool
-
-	if msgType, ok = pb.Message_MessageType_value[args.MessageType]; !ok {
-		ErrorResponse(w, http.StatusBadRequest, "invalid order message type")
+	msgInt, ok := pb.Message_MessageType_value[strings.ToUpper(args.MessageType)]
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unknown messageType (%s)", args.MessageType))
 		return
 	}
 
-	msg, peerID, err := i.node.Datastore.Messages().
-		GetByOrderIDType(args.OrderID, pb.Message_MessageType(msgType))
-	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
-		ErrorResponse(w, http.StatusBadRequest, "order message not found")
+	if err := i.node.ResendCachedOrderMessage(args.OrderID, pb.Message_MessageType(msgInt)); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	p, err := peer.IDB58Decode(peerID)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "invalid peer id")
-		return
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	err = i.node.Service.SendMessage(ctx, p, &msg.Msg)
-	if err != nil {
-		// If send message failed, try sending offline message
-		log.Warningf("resending message failed: %v", err)
-		err = i.node.SendOfflineMessage(p, nil, &msg.Msg)
-		if err != nil {
-			log.Errorf("resending offline message failed: %v", err)
-			ErrorResponse(w, http.StatusBadRequest, "order message not sent")
-			return
-		}
 	}
 
 	SanitizedResponse(w, `{}`)

@@ -26,11 +26,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0efd5e1f5ad2283a539357586532519154e3b9894ad611a896069c8c46e86874"
+  digest = "1:cdb20ba34409b4eb78ff013e71eafce40e49b42485dafcfb675b64c5cb3cdaca"
   name = "github.com/OpenBazaar/wallet-interface"
   packages = ["."]
   pruneopts = "UT"
-  revision = "90321224966c0c88e02e99f1f9d3cef18a77f399"
+  revision = "aa8e214acd9b86f0c7a190d2eaf269070f5b5f3c"
 
 [[projects]]
   digest = "1:0f98f59e9a2f4070d66f0c9c39561f68fcd1dc837b22a852d28d0003aebd1b1e"
@@ -158,6 +158,47 @@
   pruneopts = "UT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:1e9a0ec4f7e852123fefad9aadd7647eed1e9fd3716118e99a4b3dc463705c82"
+  name = "github.com/dchest/siphash"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "34f201214d993633bb24f418ba11736ab8b55aa7"
+  version = "v1.2.1"
+
+[[projects]]
+  digest = "1:700f82416846a964010b86fddeada0e1ceb1c96fa65acc4f234811a7d3e4fded"
+  name = "github.com/gcash/bchd"
+  packages = [
+    "bchec",
+    "chaincfg",
+    "chaincfg/chainhash",
+    "txscript",
+    "wire",
+  ]
+  pruneopts = "UT"
+  revision = "34d8b67e58c8487e08cc2b8130398ec4f4bc6df5"
+  version = "v0.14.6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b1053b781e9090dab5d3e916eb04c8d85b63a7f6911007c2cd1dd82fb22f7f6a"
+  name = "github.com/gcash/bchlog"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b4f036f92fa66c88eec458f4531ff14ff87704d6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2538b5efd7d3d7ac9efdfef955f5bcda82cbec4d6f8aef4d388f1c70e6318fc5"
+  name = "github.com/gcash/bchutil"
+  packages = [
+    ".",
+    "base58",
+  ]
+  pruneopts = "UT"
+  revision = "800e62fe9aff291db8909a5dbf35c23cff8d1a62"
 
 [[projects]]
   branch = "master"
@@ -406,6 +447,9 @@
     "github.com/cpacia/BitcoinCash-Wallet",
     "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
     "github.com/cpacia/bchutil",
+    "github.com/gcash/bchd/chaincfg/chainhash",
+    "github.com/gcash/bchd/txscript",
+    "github.com/gcash/bchd/wire",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/gorilla/websocket",

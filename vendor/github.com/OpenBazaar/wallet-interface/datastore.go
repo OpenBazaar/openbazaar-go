@@ -294,6 +294,8 @@ type Txn struct {
 
 	FromAddress string
 	ToAddress   string
+
+	Outputs []TransactionOutput
 }
 
 type StatusCode string
