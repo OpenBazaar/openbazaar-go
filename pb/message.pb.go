@@ -5,10 +5,11 @@ package pb
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	any "github.com/golang/protobuf/ptypes/any"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -48,6 +49,7 @@ const (
 	Message_VENDOR_FINALIZED_PAYMENT Message_MessageType = 20
 	Message_ORDER_PAYMENT            Message_MessageType = 21
 	Message_ERROR                    Message_MessageType = 500
+	Message_ORDER_PROCESSING_FAILURE Message_MessageType = 501
 )
 
 var Message_MessageType_name = map[int32]string{
@@ -74,6 +76,7 @@ var Message_MessageType_name = map[int32]string{
 	20:  "VENDOR_FINALIZED_PAYMENT",
 	21:  "ORDER_PAYMENT",
 	500: "ERROR",
+	501: "ORDER_PROCESSING_FAILURE",
 }
 
 var Message_MessageType_value = map[string]int32{
@@ -100,6 +103,7 @@ var Message_MessageType_value = map[string]int32{
 	"VENDOR_FINALIZED_PAYMENT": 20,
 	"ORDER_PAYMENT":            21,
 	"ERROR":                    500,
+	"ORDER_PROCESSING_FAILURE": 501,
 }
 
 func (x Message_MessageType) String() string {

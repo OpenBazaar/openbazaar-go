@@ -31,7 +31,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.13.4"
+	VERSION = "0.13.5"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
@@ -116,14 +116,12 @@ type OpenBazaarNode struct {
 
 	TestnetEnable        bool
 	RegressionTestEnable bool
+
+	PublishLock sync.Mutex
+	seedLock    sync.Mutex
+
+	InitalPublishComplete bool
 }
-
-// PublishLock seedLock - Unpin the current node repo, re-add it, then publish to IPNS
-var PublishLock sync.Mutex
-var seedLock sync.Mutex
-
-// InitalPublishComplete - indicate publish completion
-var InitalPublishComplete bool // = false
 
 // TestNetworkEnabled indicates whether the node is operating with test parameters
 func (n *OpenBazaarNode) TestNetworkEnabled() bool { return n.TestnetEnable }
@@ -133,7 +131,7 @@ func (n *OpenBazaarNode) RegressionNetworkEnabled() bool { return n.RegressionTe
 
 // SeedNode - publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
-	seedLock.Lock()
+	n.seedLock.Lock()
 	ipfs.UnPinDir(n.IpfsNode, n.RootHash)
 	var aerr error
 	var rootHash string
@@ -147,12 +145,12 @@ func (n *OpenBazaarNode) SeedNode() error {
 		time.Sleep(time.Millisecond * 500)
 	}
 	if aerr != nil {
-		seedLock.Unlock()
+		n.seedLock.Unlock()
 		return aerr
 	}
 	n.RootHash = rootHash
-	seedLock.Unlock()
-	InitalPublishComplete = true
+	n.seedLock.Unlock()
+	n.InitalPublishComplete = true
 	go n.publish(rootHash)
 	return nil
 }
@@ -160,8 +158,8 @@ func (n *OpenBazaarNode) SeedNode() error {
 func (n *OpenBazaarNode) publish(hash string) {
 	// Multiple publishes may have been queued
 	// We only need to publish the most recent
-	PublishLock.Lock()
-	defer PublishLock.Unlock()
+	n.PublishLock.Lock()
+	defer n.PublishLock.Unlock()
 	if hash != n.RootHash {
 		return
 	}

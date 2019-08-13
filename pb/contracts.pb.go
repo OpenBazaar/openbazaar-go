@@ -5,9 +5,10 @@ package pb
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2521,6 +2522,60 @@ func (m *OrderCompletion) GetRatings() []*Rating {
 	return nil
 }
 
+type OrderProcessingFailure struct {
+	OrderID              string              `protobuf:"bytes,1,opt,name=orderID,proto3" json:"orderID,omitempty"`
+	AttemptedMessageType Message_MessageType `protobuf:"varint,2,opt,name=attemptedMessageType,proto3,enum=Message_MessageType" json:"attemptedMessageType,omitempty"`
+	Contract             *RicardianContract  `protobuf:"bytes,3,opt,name=contract,proto3" json:"contract,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
+}
+
+func (m *OrderProcessingFailure) Reset()         { *m = OrderProcessingFailure{} }
+func (m *OrderProcessingFailure) String() string { return proto.CompactTextString(m) }
+func (*OrderProcessingFailure) ProtoMessage()    {}
+func (*OrderProcessingFailure) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b6d125f880f9ca35, []int{9}
+}
+func (m *OrderProcessingFailure) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_OrderProcessingFailure.Unmarshal(m, b)
+}
+func (m *OrderProcessingFailure) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_OrderProcessingFailure.Marshal(b, m, deterministic)
+}
+func (dst *OrderProcessingFailure) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderProcessingFailure.Merge(dst, src)
+}
+func (m *OrderProcessingFailure) XXX_Size() int {
+	return xxx_messageInfo_OrderProcessingFailure.Size(m)
+}
+func (m *OrderProcessingFailure) XXX_DiscardUnknown() {
+	xxx_messageInfo_OrderProcessingFailure.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OrderProcessingFailure proto.InternalMessageInfo
+
+func (m *OrderProcessingFailure) GetOrderID() string {
+	if m != nil {
+		return m.OrderID
+	}
+	return ""
+}
+
+func (m *OrderProcessingFailure) GetAttemptedMessageType() Message_MessageType {
+	if m != nil {
+		return m.AttemptedMessageType
+	}
+	return Message_PING
+}
+
+func (m *OrderProcessingFailure) GetContract() *RicardianContract {
+	if m != nil {
+		return m.Contract
+	}
+	return nil
+}
+
 type Rating struct {
 	RatingData           *Rating_RatingData `protobuf:"bytes,1,opt,name=ratingData,proto3" json:"ratingData,omitempty"`
 	Signature            []byte             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -3532,6 +3587,7 @@ func init() {
 	proto.RegisterType((*OrderFulfillment_CryptocurrencyDelivery)(nil), "OrderFulfillment.CryptocurrencyDelivery")
 	proto.RegisterType((*OrderFulfillment_Payout)(nil), "OrderFulfillment.Payout")
 	proto.RegisterType((*OrderCompletion)(nil), "OrderCompletion")
+	proto.RegisterType((*OrderProcessingFailure)(nil), "OrderProcessingFailure")
 	proto.RegisterType((*Rating)(nil), "Rating")
 	proto.RegisterType((*Rating_RatingData)(nil), "Rating.RatingData")
 	proto.RegisterType((*Dispute)(nil), "Dispute")
