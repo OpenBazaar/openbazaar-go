@@ -2,6 +2,9 @@ package ipfs
 
 import (
 	"context"
+	"errors"
+	"golang.org/x/net/proxy"
+	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
 
 	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	dhtopts "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht/opts"
@@ -52,6 +55,35 @@ func PrepareIPFSConfig(r repo.Repo, routerAPIEndpoint string, testEnable, regtes
 		ncfg.Routing = constructTestnetRouting
 	}
 	return ncfg
+}
+
+// ConfigureTieredRouter sets the Tor dialer in the caching router and returns
+// the underlying DHT.
+func ConfigureTieredRouter(router routing.IpfsRouting, torDialer proxy.Dialer) (*dht.IpfsDHT, error) {
+	tieredRouting, ok := router.(routinghelpers.Tiered)
+	if !ok {
+		return nil, errors.New("router is not type Tiered")
+	}
+	var (
+		dhtRouting *dht.IpfsDHT
+		err        error
+	)
+	for _, router := range tieredRouting.Routers {
+		if r, ok := router.(*CachingRouter); ok {
+			r.APIRouter().Start(torDialer)
+			dhtRouting, err = r.DHT()
+			if err != nil {
+				return nil, err
+			}
+		}
+		if r, ok := router.(*dht.IpfsDHT); ok {
+			dhtRouting = r
+		}
+	}
+	if dhtRouting == nil {
+		return nil, errors.New("IPFS DHT routing is not configured")
+	}
+	return dhtRouting, nil
 }
 
 func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {

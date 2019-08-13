@@ -18,9 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	routinghelpers "gx/ipfs/QmRCrPXk2oUwpK1Cj2FXrUotRpddUxz56setkny2gz13Cx/go-libp2p-routing-helpers"
-	libp2p "gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
-	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
+	"gx/ipfs/QmRxk6AUaGaKCfzS1xSNRojiAPd7h2ih8GuCdjJBF3Y6GK/go-libp2p"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	config "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
@@ -28,7 +26,7 @@ import (
 	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	manet "gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
+	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -401,22 +399,10 @@ func (x *Start) Execute(args []string) error {
 	printSwarmAddrs(nd)
 
 	// Extract the DHT from the tiered routing so it will be more accessible later
-	tiered, ok := nd.Routing.(routinghelpers.Tiered)
-	if !ok {
-		return errors.New("IPFS routing is not a type routinghelpers.Tiered")
-	}
-	var dhtRouting *dht.IpfsDHT
-	for _, router := range tiered.Routers {
-		if r, ok := router.(*ipfs.CachingRouter); ok {
-			r.APIRouter().Start(torDialer)
-			dhtRouting, err = r.DHT()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if dhtRouting == nil {
-		return errors.New("IPFS DHT routing is not configured")
+	dhtRouting, err := ipfs.ConfigureTieredRouter(nd.Routing, torDialer)
+	if err != nil {
+		log.Error("Routing config error:", err)
+		return err
 	}
 
 	// Get current directory root hash
