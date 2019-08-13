@@ -94,7 +94,7 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
-	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.MasterPrivateKey)
+	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.MasterPrivateKey, &n.Datastore)
 }
 
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation

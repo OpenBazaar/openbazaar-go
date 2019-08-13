@@ -19,9 +19,9 @@ func TestPeerInfoFromProtobuf(t *testing.T) {
 
 	if hash, err := subject.Hash(); err == nil && hash != validFixture.PeerID {
 		t.Errorf("expected Hash() to be (%s), but was (%s)", validFixture.PeerID, hash)
-		if err != nil {
-			t.Logf("error from Hash(): %s", err)
-		}
+		//if err != nil {
+		//	t.Logf("error from Hash(): %s", err)
+		//}
 	}
 
 	if subject.Handle() != validFixture.Handle {
@@ -72,9 +72,9 @@ func TestPeerInfoFromIdentityKey(t *testing.T) {
 
 	if hash, err := subject.Hash(); err == nil && hash != testHash {
 		t.Error("expected derived hash to match test peer, but did not")
-		if err != nil {
-			t.Logf("error from Hash(): %s", err)
-		}
+		//if err != nil {
+		//	t.Logf("error from Hash(): %s", err)
+		//}
 	}
 }
 

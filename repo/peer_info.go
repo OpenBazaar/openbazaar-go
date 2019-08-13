@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -136,7 +137,7 @@ func (p *PeerInfo) Valid() (result bool, errs []error) {
 		}
 	}
 	// TODO: validate BitcoinSignature comes from bitcoin identity
-	return
+	return result, errs
 }
 
 // Hash returns the public hash based on the PeerKeychain.Identity key material

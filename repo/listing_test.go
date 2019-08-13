@@ -174,9 +174,8 @@ func TestListingFromProtobuf(t *testing.T) {
 	}
 	if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
 		t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
-		if err != nil {
-			t.Logf("hash had an error: %s", err)
-		}
+		t.Logf("hash had an error: %s", err)
+
 	}
 	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
 		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
