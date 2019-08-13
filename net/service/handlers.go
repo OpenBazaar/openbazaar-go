@@ -1500,6 +1500,7 @@ func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Messa
 	if err != nil {
 		return nil, err
 	}
+
 	log.Debugf("received MODERATOR_ADD message from %s", id.Pretty())
 
 	return nil, nil
@@ -1541,6 +1542,7 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 	if err != nil {
 		return nil, err
 	}
+
 	log.Debugf("received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
@@ -1659,7 +1661,6 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	// Unmarshal
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
 	}

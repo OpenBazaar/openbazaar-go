@@ -795,9 +795,9 @@ func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.Orde
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
+	cancel()
 	if err != nil {
 		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
