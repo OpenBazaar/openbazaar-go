@@ -993,6 +993,72 @@ func (l *Listing) GetPriceModifier() (float32, error) {
 	return p.Metadata.PriceModifier, nil
 }
 
+// GetPricingCurrencyDefn return the listing currency definition
+func (l *Listing) GetPricingCurrencyDefn() (*pb.CurrencyDefinition, error) {
+	retVal := &pb.CurrencyDefinition{}
+	contractType, err := l.GetContractType()
+	if err != nil {
+		return nil, err
+	}
+	switch l.ListingVersion {
+	case 3, 4:
+		{
+			if contractType == "CRYPTOCURRENCY" {
+				type coinType struct {
+					Metadata struct {
+						CoinType string `json:"coinType"`
+					} `json:"metadata"`
+				}
+				var c coinType
+				err := json.Unmarshal(l.ListingBytes, &c)
+				if err != nil {
+					return nil, err
+				}
+				retVal = &pb.CurrencyDefinition{
+					Code:         c.Metadata.CoinType,
+					Divisibility: 8,
+				}
+			} else {
+				type pricingCurrency struct {
+					Metadata struct {
+						PricingCurrency string `json:"pricingCurrency"`
+					} `json:"metadata"`
+				}
+				var pc pricingCurrency
+				err := json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return nil, err
+				}
+				retVal = &pb.CurrencyDefinition{
+					Code:         pc.Metadata.PricingCurrency,
+					Divisibility: 8,
+				}
+			}
+		}
+	case 5:
+		{
+			type currdefn struct {
+				Metadata struct {
+					PricingCurrencyDefn struct {
+						Code         string `json:"code"`
+						Divisibility uint   `json:"divisibility"`
+					} `json:"pricingCurrency"`
+				} `json:"metadata"`
+			}
+			var p currdefn
+			err = json.Unmarshal(l.ListingBytes, &p)
+			if err != nil {
+				return nil, err
+			}
+			retVal = &pb.CurrencyDefinition{
+				Code:         p.Metadata.PricingCurrencyDefn.Code,
+				Divisibility: uint32(p.Metadata.PricingCurrencyDefn.Divisibility),
+			}
+		}
+	}
+	return retVal, nil
+}
+
 // GetMetadata return metadata
 func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 	ct, err := l.GetContractType()
@@ -1031,35 +1097,187 @@ func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	currDefn, err := l.GetPricingCurrencyDefn()
+	if err != nil {
+		return nil, err
+	}
 	m := pb.Listing_Metadata{
-		Version:            l.ListingVersion,
-		ContractType:       pb.Listing_Metadata_ContractType(ct0),
-		Format:             pb.Listing_Metadata_Format(frmt0),
-		Expiry:             expiry,
-		AcceptedCurrencies: currs,
-		Language:           lang,
-		EscrowTimeoutHours: escrowTimout,
-		PriceModifier:      priceMod,
+		Version:             l.ListingVersion,
+		ContractType:        pb.Listing_Metadata_ContractType(ct0),
+		Format:              pb.Listing_Metadata_Format(frmt0),
+		Expiry:              expiry,
+		AcceptedCurrencies:  currs,
+		Language:            lang,
+		EscrowTimeoutHours:  escrowTimout,
+		PriceModifier:       priceMod,
+		PricingCurrencyDefn: currDefn,
 	}
 	return &m, nil
 }
 
+// GetSOName returns shipping option name
+
 // GetShippingOptions - return shippingOptions
 func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
 	options := []*pb.Listing_ShippingOption{}
+	type shippingOptions struct {
+		ShippingOptions []struct {
+			Name     string   `json:"name"`
+			Type     string   `json:"type"`
+			Regions  []string `json:"regions"`
+			Services []struct {
+				Name              string      `json:"name"`
+				EstimatedDelivery string      `json:"estimatedDelivery"`
+				Price             interface{} `json:"price"`
+				AdditionalPrice   interface{} `json:"addtionalPrice"`
+			} `json:"services"`
+		} `json:"shippingOptions"`
+	}
+	var sopts shippingOptions
+	err := json.Unmarshal(l.ListingBytes, &sopts)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range sopts.ShippingOptions {
+		sType, ok := pb.Listing_ShippingOption_ShippingType_value[elem.Type]
+		if !ok {
+			return nil, errors.New("invalid shipping option type specified")
+		}
+		countryCodes := []pb.CountryCode{}
+		for _, c := range elem.Regions {
+			cCode, ok := pb.CountryCode_value[c]
+			if ok {
+				countryCodes = append(countryCodes, pb.CountryCode(cCode))
+			}
+		}
+		services := []*pb.Listing_ShippingOption_Service{}
+
+		for _, svc := range elem.Services {
+			priceValue := new(pb.CurrencyValue)
+			addnPriceValue := new(pb.CurrencyValue)
+			var ok bool
+			switch l.ListingVersion {
+			case 3, 4:
+				{
+					price, ok := svc.Price.(uint64)
+					if !ok {
+						return nil, errors.New("invalid service price value")
+					}
+					priceValue.Amount = big.NewInt(int64(price)).String()
+					addnPrice, ok := svc.AdditionalPrice.(uint64)
+					if !ok {
+						return nil, errors.New("invalid service additional price value")
+					}
+					addnPriceValue.Amount = big.NewInt(int64(addnPrice)).String()
+					type pricingCurrency struct {
+						Metadata struct {
+							PricingCurrency string `json:"pricingCurrency"`
+						} `json:"metadata"`
+					}
+					var pc pricingCurrency
+					err = json.Unmarshal(l.ListingBytes, &pc)
+					if err != nil {
+						return nil, err
+					}
+					priceValue.Currency = &pb.CurrencyDefinition{
+						Code:         pc.Metadata.PricingCurrency,
+						Divisibility: 8,
+					}
+					addnPriceValue.Currency = &pb.CurrencyDefinition{
+						Code:         pc.Metadata.PricingCurrency,
+						Divisibility: 8,
+					}
+				}
+			case 5:
+				{
+					*priceValue, ok = svc.Price.(pb.CurrencyValue)
+					if !ok {
+						return nil, errors.New("invalid price value")
+					}
+					*addnPriceValue, ok = svc.AdditionalPrice.(pb.CurrencyValue)
+					if !ok {
+						return nil, errors.New("invalid price value")
+					}
+				}
+			}
+			srv := pb.Listing_ShippingOption_Service{
+				Name:                     svc.Name,
+				EstimatedDelivery:        svc.EstimatedDelivery,
+				PriceValue:               priceValue,
+				AdditionalItemPriceValue: addnPriceValue,
+			}
+			services = append(services, &srv)
+		}
+		shipOption := pb.Listing_ShippingOption{
+			Name:     elem.Name,
+			Type:     pb.Listing_ShippingOption_ShippingType(sType),
+			Regions:  countryCodes,
+			Services: services,
+		}
+		options = append(options, &shipOption)
+	}
 	return options, nil
 }
 
 // GetTaxes - return taxes
 func (l *Listing) GetTaxes() ([]*pb.Listing_Tax, error) {
-	taxes := []*pb.Listing_Tax{}
-	return taxes, nil
+	ret := []*pb.Listing_Tax{}
+	type taxes struct {
+		Taxes []struct {
+			Type       string   `json:"taxtype"`
+			Regions    []string `json:"taxRegions"`
+			Shipping   bool     `json:"taxShipping"`
+			Percentage float32  `json:"Percentage"`
+		} `json:"taxes"`
+	}
+	var t taxes
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range t.Taxes {
+		countryCodes := []pb.CountryCode{}
+		for _, c := range elem.Regions {
+			cCode, ok := pb.CountryCode_value[c]
+			if ok {
+				countryCodes = append(countryCodes, pb.CountryCode(cCode))
+			}
+		}
+		tax := pb.Listing_Tax{
+			TaxType:     elem.Type,
+			TaxRegions:  countryCodes,
+			TaxShipping: elem.Shipping,
+			Percentage:  elem.Percentage,
+		}
+		ret = append(ret, &tax)
+	}
+	return ret, nil
 }
 
 // GetCoupons - return coupons
 func (l *Listing) GetCoupons() ([]*pb.Listing_Coupon, error) {
-	coupons := []*pb.Listing_Coupon{}
-	return coupons, nil
+	ret := []*pb.Listing_Coupon{}
+	type coupons struct {
+		Coupons []interface{} `json:"coupons"`
+	}
+	var c coupons
+	err := json.Unmarshal(l.ListingBytes, &c)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range c.Coupons {
+		ret1 := new(pb.Listing_Coupon)
+		b, err := json.Marshal(elem)
+		if err != nil {
+			return nil, err
+		}
+		err = jsonpb.UnmarshalString(string(b), ret1)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, ret1)
+	}
+	return ret, nil
 }
 
 /*
