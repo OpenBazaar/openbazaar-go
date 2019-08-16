@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/cache"
@@ -73,7 +74,7 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 		er = NewLitecoinPriceFetcher(proxy)
 	}
 
-	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, er)
 
 	return &LitecoinWallet{
 		db:            cfg.DB,
@@ -145,16 +146,34 @@ func (w *LitecoinWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKe
 }
 
 func (w *LitecoinWallet) CurrentAddress(purpose wi.KeyPurpose) btcutil.Address {
-	key, _ := w.km.GetCurrentKey(purpose)
-	addr, _ := litecoinAddress(key, w.params)
+	var addr btcutil.Address
+	for {
+		key, _ := w.km.GetCurrentKey(purpose)
+		addr, _ = litecoinAddress(key, w.params)
+
+		if !strings.HasPrefix(strings.ToLower(addr.String()), "ltc1") {
+			break
+		}
+		if err := w.db.Keys().MarkKeyAsUsed(addr.ScriptAddress()); err != nil {
+			w.log.Errorf("Error marking key as used: %s", err)
+		}
+	}
 	return btcutil.Address(addr)
 }
 
 func (w *LitecoinWallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address {
-	i, _ := w.db.Keys().GetUnused(purpose)
-	key, _ := w.km.GenerateChildKey(purpose, uint32(i[1]))
-	addr, _ := litecoinAddress(key, w.params)
-	w.db.Keys().MarkKeyAsUsed(addr.ScriptAddress())
+	var addr btcutil.Address
+	for {
+		i, _ := w.db.Keys().GetUnused(purpose)
+		key, _ := w.km.GenerateChildKey(purpose, uint32(i[1]))
+		addr, _ = litecoinAddress(key, w.params)
+		if err := w.db.Keys().MarkKeyAsUsed(addr.ScriptAddress()); err != nil {
+			w.log.Error("Error marking key as used: %s", err)
+		}
+		if !strings.HasPrefix(strings.ToLower(addr.String()), "ltc1") {
+			break
+		}
+	}
 	return btcutil.Address(addr)
 }
 
