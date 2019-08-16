@@ -134,17 +134,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f0b9d28f2379d36697c1356720e1134ee5040eb75d9f30cdb5ce0b39465fdf31"
-  name = "github.com/cpacia/BitcoinCash-Wallet"
-  packages = [
-    ".",
-    "exchangerates",
-  ]
-  pruneopts = "UT"
-  revision = "ba9295daa6d43b4cbd3f88e925379f0cf025b6b9"
-
-[[projects]]
-  branch = "master"
   digest = "1:36236e7063db3314f32b60885ef7ddf8abab65cb055f3a21d118f7e19148cfa3"
   name = "github.com/cpacia/bchutil"
   packages = ["."]
@@ -444,8 +433,6 @@
     "github.com/btcsuite/btcwallet/wallet/txauthor",
     "github.com/btcsuite/btcwallet/wallet/txrules",
     "github.com/btcsuite/golangcrypto/ripemd160",
-    "github.com/cpacia/BitcoinCash-Wallet",
-    "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
     "github.com/cpacia/bchutil",
     "github.com/gcash/bchd/chaincfg/chainhash",
     "github.com/gcash/bchd/txscript",
