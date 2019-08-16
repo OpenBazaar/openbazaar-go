@@ -146,17 +146,26 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
 		t.Mul(t, f)
-		total, _ := t.Int(nil)
+		total, accuracy := t.Int(nil)
+		if accuracy != 0 {
+			//return *big.NewInt(0), errors.New("inaccurate fee amount rounding")
+		}
 		return *total, nil
 	case pb.Moderator_Fee_FIXED:
-		fixedFee, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		if !ok {
+			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+		}
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
 			if fixedFee.Cmp(&transactionTotal) > 0 {
-				return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
+				return *big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
 			}
 			return *fixedFee, nil
 		}
-		amt, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		amt, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		if !ok {
+			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+		}
 		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
 		if err != nil {
 			return *big.NewInt(0), err
@@ -167,10 +176,17 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
+		var ok bool
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
-			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			if !ok {
+				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			}
 		} else {
-			f, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			f, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			if !ok {
+				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			}
 			f0, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
 			if err != nil {
 				return *big.NewInt(0), err
@@ -180,8 +196,10 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
 		t.Mul(t, f)
-		total, _ := t.Int(&transactionTotal)
-		//percentage := uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100))
+		total, accuracy := t.Int(&transactionTotal)
+		if accuracy != 0 {
+			//return *big.NewInt(0), errors.New("inaccurate transaction total rounding")
+		}
 		if fixed.Add(fixed, total).Cmp(&transactionTotal) > 0 {
 			return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}

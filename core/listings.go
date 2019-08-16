@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"os"
 	"path"
@@ -1345,15 +1344,13 @@ func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) erro
 		//	return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	var expectedDivisibility uint32
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.PricingCurrencyDefn.Code); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
-	} else {
-		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
+	currencyDefinition, err := repo.LoadCurrencyDefinitions().Lookup(listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return errors.New("invalid pricing currency")
 	}
 
-	if listing.Metadata.PricingCurrencyDefn.Divisibility != expectedDivisibility {
-		fmt.Println("listing.Metadata.PricingCurrency.Divisibility : ", listing.Metadata.PricingCurrencyDefn.Divisibility, "  ", expectedDivisibility)
+	if listing.Metadata.PricingCurrencyDefn.Divisibility != uint32(currencyDefinition.Divisibility) {
+		log.Errorf("listing.Metadata.PricingCurrency.Divisibility : %d %d", listing.Metadata.PricingCurrencyDefn.Divisibility, currencyDefinition.Divisibility)
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
@@ -1421,7 +1418,7 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			return errors.New("vendor's bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}
