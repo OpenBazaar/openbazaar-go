@@ -118,6 +118,14 @@ func (m *MessageRetriever) Run() {
 	}
 }
 
+// RunOnce - used to fetch messages only once
+func (m *MessageRetriever) RunOnce() {
+	m.Add(1)
+	go m.fetchPointers(true)
+	m.Add(1)
+	go m.fetchPointers(false)
+}
+
 func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -408,6 +416,7 @@ var MessageProcessingOrder = []pb.Message_MessageType{
 	pb.Message_ORDER_CANCEL,
 	pb.Message_ORDER_REJECT,
 	pb.Message_ORDER_CONFIRMATION,
+	pb.Message_ORDER_PAYMENT,
 	pb.Message_ORDER_FULFILLMENT,
 	pb.Message_ORDER_COMPLETION,
 	pb.Message_DISPUTE_OPEN,

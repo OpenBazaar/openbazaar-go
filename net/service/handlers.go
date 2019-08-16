@@ -4,24 +4,31 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	"gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	blocks "gx/ipfs/QmYYLnAzR28nAQ4U5MFniLprnktu6eTFKibeNt96V21EZK/go-block-format"
-	"strconv"
-	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	u "github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+)
+
+var (
+	// ErrEmptyPayload occurs when an inbound message is provided without the contents
+	ErrEmptyPayload = errors.New("message payload is empty")
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -68,8 +75,12 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleVendorFinalizedPayment
 	case pb.Message_STORE:
 		return service.handleStore
+	case pb.Message_ORDER_PAYMENT:
+		return service.handleOrderPayment
 	case pb.Message_ERROR:
 		return service.handleError
+	case pb.Message_ORDER_PROCESSING_FAILURE:
+		return service.handleOrderProcessingFailure
 	default:
 		return nil
 	}
@@ -82,7 +93,7 @@ func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, opt
 
 func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -118,7 +129,11 @@ func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, op
 	if err != nil {
 		return nil, err
 	}
-	n := repo.FollowNotification{repo.NewNotificationID(), "follow", id.Pretty()}
+	n := repo.FollowNotification{
+		ID:     repo.NewNotificationID(),
+		Type:   repo.NotifierTypeFollowNotification,
+		PeerId: id.Pretty(),
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("Received FOLLOW message from %s", id.Pretty())
@@ -127,7 +142,7 @@ func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, op
 
 func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -161,7 +176,11 @@ func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, 
 	if err != nil {
 		return nil, err
 	}
-	n := repo.UnfollowNotification{repo.NewNotificationID(), "unfollow", id.Pretty()}
+	n := repo.UnfollowNotification{
+		ID:     repo.NewNotificationID(),
+		Type:   repo.NotifierTypeUnfollowNotification,
+		PeerId: id.Pretty(),
+	}
 	service.broadcast <- n
 	log.Debugf("Received UNFOLLOW message from %s", id.Pretty())
 	return nil, nil
@@ -196,7 +215,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 
 	// Decrypt and unmarshal plaintext
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
 	if err != nil {
@@ -265,26 +284,32 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	offline, _ := options.(bool)
 	contract := new(pb.RicardianContract)
 	var orderId string
-	errorResponse := func(error string) *pb.Message {
+	errorResponse := func(errMsg string) *pb.Message {
 		e := &pb.Error{
 			Code:         0,
-			ErrorMessage: error,
+			ErrorMessage: errMsg,
 			OrderID:      orderId,
 		}
-		a, _ := ptypes.MarshalAny(e)
+		a, err := ptypes.MarshalAny(e)
 		m := &pb.Message{
 			MessageType: pb.Message_ERROR,
 			Payload:     a,
 		}
+		if err != nil {
+			log.Errorf("failed marshaling errorResponse (%s) for order (%s): %s", e.ErrorMessage, orderId, err)
+			return m
+		}
 		if offline {
-			contract.Errors = []string{error}
-			service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false)
+			contract.Errors = []string{errMsg}
+			if err := service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false); err != nil {
+				log.Errorf("failed updating PROCESSING_ERROR on sale (%s): %s", orderId, err)
+			}
 		}
 		return m
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	err := ptypes.UnmarshalAny(pmes.Payload, contract)
 	if err != nil {
@@ -305,8 +330,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil && (err != core.ErrPurchaseUnknownListing || !offline) {
 		return errorResponse(err.Error()), err
 	}
-	currentTime := time.Now()
-	purchaseTime := time.Unix(contract.BuyerOrder.Timestamp.Seconds, int64(contract.BuyerOrder.Timestamp.Nanos))
 
 	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {
@@ -329,9 +352,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error building order confirmation"), err
 		}
-		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
+		if err := service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false); err != nil {
+			log.Errorf("failed to put sale (%s): %s", contract.VendorOrderConfirmation.OrderID, err)
+			return errorResponse("Error persisting order"), err
 		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
@@ -350,9 +373,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		wal.AddWatchedAddress(addr)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
-		}
 		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
@@ -385,9 +405,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
-		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -413,12 +430,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		wal.AddWatchedAddress(addr)
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if currentTime.After(purchaseTime) {
-			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
-		}
 		return nil, nil
 	}
-	log.Error("Unrecognized payment type")
+	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
 	return errorResponse("Unrecognized payment type"), errors.New("unrecognized payment type")
 }
 
@@ -426,7 +440,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	// Unmarshal payload
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	vendorContract := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, vendorContract)
@@ -444,6 +458,9 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Load the order
 	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CONFIRMATION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -487,7 +504,14 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	// Send notification to websocket
-	n := repo.OrderConfirmationNotification{repo.NewNotificationID(), "orderConfirmation", orderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	n := repo.OrderConfirmationNotification{
+		ID:           repo.NewNotificationID(),
+		Type:         repo.NotifierTypeOrderConfirmationNotification,
+		OrderId:      orderId,
+		Thumbnail:    repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		VendorHandle: vendorHandle,
+		VendorID:     vendorID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
@@ -496,13 +520,16 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CANCEL, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -527,7 +554,14 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	}
 
 	// Send notification to websocket
-	n := repo.OrderCancelNotification{repo.NewNotificationID(), "canceled", orderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerHandle, buyerID}
+	n := repo.OrderCancelNotification{
+		ID:          repo.NewNotificationID(),
+		Type:        repo.NotifierTypeOrderCancelNotification,
+		OrderId:     orderId,
+		Thumbnail:   repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		BuyerHandle: buyerHandle,
+		BuyerID:     buyerID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
@@ -537,7 +571,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rejectMsg := new(pb.OrderReject)
 	err := ptypes.UnmarshalAny(pmes.Payload, rejectMsg)
@@ -548,6 +582,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rejectMsg.OrderID, pb.Message_ORDER_REJECT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -681,7 +718,14 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Send notification to websocket
-	n := repo.OrderDeclinedNotification{repo.NewNotificationID(), "declined", rejectMsg.OrderID, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	n := repo.OrderDeclinedNotification{
+		ID:           repo.NewNotificationID(),
+		Type:         repo.NotifierTypeOrderDeclinedNotification,
+		OrderId:      rejectMsg.OrderID,
+		Thumbnail:    repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		VendorHandle: vendorHandle,
+		VendorID:     vendorID,
+	}
 	service.broadcast <- n
 
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
@@ -692,7 +736,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -711,6 +755,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.Refund.OrderID, pb.Message_REFUND, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -802,7 +849,14 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Send notification to websocket
-	n := repo.RefundNotification{repo.NewNotificationID(), "refund", contract.Refund.OrderID, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	n := repo.RefundNotification{
+		ID:           repo.NewNotificationID(),
+		Type:         repo.NotifierTypeRefundNotification,
+		OrderId:      contract.Refund.OrderID,
+		Thumbnail:    repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		VendorHandle: vendorHandle,
+		VendorID:     vendorID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	log.Debugf("Received REFUND message from %s", p.Pretty())
@@ -811,7 +865,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -826,10 +880,16 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
 	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -869,10 +929,17 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Send notification to websocket
-	n := repo.FulfillmentNotification{repo.NewNotificationID(), "fulfillment", rc.VendorOrderFulfillment[0].OrderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	n := repo.FulfillmentNotification{
+		ID:           repo.NewNotificationID(),
+		Type:         repo.NotifierTypeFulfillmentNotification,
+		OrderId:      rc.VendorOrderFulfillment[0].OrderId,
+		Thumbnail:    repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		VendorHandle: vendorHandle,
+		VendorID:     vendorID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
+	log.Debugf("received ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	return nil, nil
 }
@@ -880,7 +947,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -895,6 +962,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Load the order
 	contract, state, _, records, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -969,7 +1039,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	err = service.node.ValidateAndSaveRating(contract)
 	if err != nil {
-		log.Error("Error validating rating:", err)
+		log.Error("error validating rating:", err)
 	}
 
 	// Set message state to complete
@@ -989,10 +1059,17 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Send notification to websocket
-	n := repo.CompletionNotification{repo.NewNotificationID(), "orderComplete", rc.BuyerOrderCompletion.OrderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerHandle, buyerID}
+	n := repo.CompletionNotification{
+		ID:          repo.NewNotificationID(),
+		Type:        repo.NotifierTypeCompletionNotification,
+		OrderId:     rc.BuyerOrderCompletion.OrderId,
+		Thumbnail:   repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		BuyerHandle: buyerHandle,
+		BuyerID:     buyerID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
+	log.Debugf("received ORDER_COMPLETION message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -1000,7 +1077,7 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -1019,7 +1096,7 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received DISPUTE_OPEN message from %s", p.Pretty())
+	log.Debugf("received DISPUTE_OPEN message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -1030,7 +1107,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	update := new(pb.DisputeUpdate)
 	err := ptypes.UnmarshalAny(pmes.Payload, update)
@@ -1039,6 +1116,9 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	dispute, err := service.node.Datastore.Cases().GetByCaseID(update.OrderId)
 	if err != nil {
+		if err := service.SendProcessingError(p.Pretty(), update.OrderId, pb.Message_DISPUTE_UPDATE, nil); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 	rc := new(pb.RicardianContract)
@@ -1096,11 +1176,21 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 
 	// Send notification to websocket
-	n := repo.DisputeUpdateNotification{repo.NewNotificationID(), "disputeUpdate", update.OrderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, disputerID, disputerHandle, disputeeID, disputeeHandle, buyer}
+	n := repo.DisputeUpdateNotification{
+		ID:             repo.NewNotificationID(),
+		Type:           repo.NotifierTypeDisputeUpdateNotification,
+		OrderId:        update.OrderId,
+		Thumbnail:      repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		DisputerID:     disputerID,
+		DisputerHandle: disputerHandle,
+		DisputeeID:     disputeeID,
+		DisputeeHandle: disputeeHandle,
+		Buyer:          buyer,
+	}
 	service.broadcast <- n
 
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
+	log.Debugf("received DISPUTE_UPDATE message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -1108,7 +1198,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -1127,6 +1217,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	if err != nil {
 		contract, state, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
+			if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, nil); err != nil {
+				log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+			}
 			return nil, net.OutOfOrderMessage
 		}
 		isPurchase = true
@@ -1146,6 +1239,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	if state != pb.OrderState_DISPUTED {
+		if err := service.SendProcessingError(p.Pretty(), rc.DisputeResolution.OrderId, pb.Message_DISPUTE_CLOSE, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1179,19 +1275,110 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	// Send notification to websocket
-	n := repo.DisputeCloseNotification{repo.NewNotificationID(), "disputeClose", rc.DisputeResolution.OrderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, otherPartyID, otherPartyHandle, buyer}
+	n := repo.DisputeCloseNotification{
+		ID:               repo.NewNotificationID(),
+		Type:             repo.NotifierTypeDisputeCloseNotification,
+		OrderId:          rc.DisputeResolution.OrderId,
+		Thumbnail:        repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		OtherPartyID:     otherPartyID,
+		OtherPartyHandle: otherPartyHandle,
+		Buyer:            buyer,
+	}
 	service.broadcast <- n
 
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received DISPUTE_CLOSE message from %s", p.Pretty())
+	log.Debugf("received DISPUTE_CLOSE message from %s", p.Pretty())
 	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOrderProcessingFailure(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, ErrEmptyPayload
+	}
+	procFailure := new(pb.OrderProcessingFailure)
+	if err := ptypes.UnmarshalAny(pmes.Payload, procFailure); err != nil {
+		return nil, err
+	}
+
+	var (
+		localContract *pb.RicardianContract
+	)
+	if contract, _, _, _, _, _, err := service.node.Datastore.Sales().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	} else if contract, _, _, _, _, _, err := service.node.Datastore.Purchases().GetByOrderId(procFailure.OrderID); err != nil {
+		localContract = contract
+	}
+	if localContract == nil {
+		return nil, fmt.Errorf("no contract found for order ID (%s)", procFailure.OrderID)
+	}
+	// TODO: Validate we aren't in a loop, exit if we are
+	missingMessageTypes, err := analyzeForMissingMessages(localContract, procFailure)
+	if err != nil {
+		return nil, err
+	}
+	if missingMessageTypes == nil {
+		err := fmt.Errorf("unable to determine missing message types for order ID (%s)", procFailure.OrderID)
+		log.Error(err.Error())
+		return nil, err
+	}
+	for _, msgType := range missingMessageTypes {
+		log.Debugf("resending missing ORDER message (%s) to peer (%s)", msgType.String(), p.Pretty())
+		if err := service.node.ResendCachedOrderMessage(procFailure.OrderID, msgType); err != nil {
+			err := fmt.Errorf("resending message type (%s) for order (%s): %s", msgType.String(), procFailure.OrderID, err.Error())
+			log.Error(err.Error())
+			// TODO: Can we attempt to recreate MessageType?
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+// analyzeForMissingMessages compares the local RicardianContract with the one provided with the
+// error message to determine which messages might be missing and need to be resent to the remote
+// peer
+func analyzeForMissingMessages(lc *pb.RicardianContract, e *pb.OrderProcessingFailure) ([]pb.Message_MessageType, error) {
+	var msgsToResend = []pb.Message_MessageType{}
+	if lc == nil {
+		return nil, fmt.Errorf("no local contract for order ID (%s) to compare to, unable to recover missing messages", e.OrderID)
+	}
+	if lc.BuyerOrder != nil && (e.Contract == nil || e.Contract.BuyerOrder == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER)
+	}
+	if lc.VendorOrderConfirmation != nil && (e.Contract == nil || e.Contract.VendorOrderConfirmation == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_CONFIRMATION)
+	}
+	// TODO: How do we detect ORDER_REJECT diff?
+	// TODO: How do we detect ORDER_CANCEL diff?
+	if len(lc.VendorOrderFulfillment) != 0 && (e.Contract == nil || len(e.Contract.VendorOrderFulfillment) == 0) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_FULFILLMENT)
+	}
+	if lc.Dispute != nil && (e.Contract == nil || e.Contract.Dispute == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_OPEN)
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_UPDATE)
+	}
+	if lc.DisputeResolution != nil && (e.Contract == nil || e.Contract.DisputeResolution == nil) {
+		// TODO: Re-broadcast error to moderator so they can resend DISPUTE_CLOSE
+		msgsToResend = append(msgsToResend, pb.Message_DISPUTE_CLOSE)
+	}
+	if lc.DisputeAcceptance != nil && (e.Contract == nil || e.Contract.DisputeAcceptance == nil) {
+		// TODO: This msg occurs after order is PENDING, FULFILLED, and DISPUTED states, is
+		// there a better check for resending FINALIZED_PAYMENT?
+		msgsToResend = append(msgsToResend, pb.Message_VENDOR_FINALIZED_PAYMENT)
+	}
+	if lc.Refund != nil && (e.Contract == nil || e.Contract.Refund == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_REFUND)
+	}
+	if lc.BuyerOrderCompletion != nil && (e.Contract == nil || e.Contract.BuyerOrderCompletion == nil) {
+		msgsToResend = append(msgsToResend, pb.Message_ORDER_COMPLETION)
+	}
+	return msgsToResend, nil
 }
 
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	chat := new(pb.Chat)
 	err := ptypes.UnmarshalAny(pmes.Payload, chat)
@@ -1268,13 +1455,13 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		Timestamp: repo.NewAPITime(t),
 	}
 	service.broadcast <- n
-	log.Debugf("Received CHAT message from %s", p.Pretty())
+	log.Debugf("received CHAT message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -1308,14 +1495,14 @@ func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Messa
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received MODERATOR_ADD message from %s", id.Pretty())
+	log.Debugf("received MODERATOR_ADD message from %s", id.Pretty())
 
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
@@ -1349,7 +1536,7 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received MODERATOR_REMOVE message from %s", id.Pretty())
+	log.Debugf("received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
 }
@@ -1362,7 +1549,7 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	b := new(pb.Block)
 	err := ptypes.UnmarshalAny(pmes.Payload, b)
@@ -1381,13 +1568,13 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received BLOCK message from %s", pid.Pretty())
+	log.Debugf("received BLOCK message from %s", pid.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	paymentFinalizedMessage := new(pb.VendorFinalizedPayment)
 	if err := ptypes.UnmarshalAny(pmes.Payload, paymentFinalizedMessage); err != nil {
@@ -1411,7 +1598,7 @@ func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes
 	}
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	service.broadcast <- n
-	log.Debugf("Received VENDOR_FINALIZED_PAYMENT message from %s", pid.Pretty())
+	log.Debugf("received VENDOR_FINALIZED_PAYMENT message from %s", pid.Pretty())
 	return nil, nil
 }
 
@@ -1432,12 +1619,12 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 	}
 
 	if pmes.Payload == nil {
-		return nil, errors.New("payload is nil")
+		return nil, ErrEmptyPayload
 	}
 	cList := new(pb.CidList)
 	err := ptypes.UnmarshalAny(pmes.Payload, cList)
 	if err != nil {
-		return errorResponse("Could not unmarshall message"), err
+		return errorResponse("could not unmarshall message"), err
 	}
 	var need []string
 	for _, id := range cList.Cids {
@@ -1466,15 +1653,117 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 	return m, nil
 }
 
-func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	// Unmarshal
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
+	}
+	paymentDetails := new(pb.OrderPaymentTxn)
+	err := ptypes.UnmarshalAny(pmes.Payload, paymentDetails)
+	if err != nil {
+		return nil, err
+	}
+
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(paymentDetails.GetCoin())
+	if err != nil {
+		return nil, err
+	}
+
+	wal0, ok := wal.(wallet.WalletMustManuallyAssociateTransactionToOrder)
+	if !ok {
+		return nil, nil
+	}
+
+	chash, err := chainhash.NewHashFromStr(paymentDetails.GetTransactionID())
+	if err != nil {
+		return nil, err
+	}
+
+	txn, err := wal.GetTransaction(*chash)
+	if err != nil {
+		return nil, err
+	}
+
+	contract, _, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
+	if err != nil {
+		return nil, net.OutOfOrderMessage
+	}
+
+	if contract.VendorOrderConfirmation != nil &&
+		contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+
+		// the seller has confirmed the direct order, so a simple check of
+		// the addresses and we are good to proceed
+		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
+			log.Errorf("mismatched payment address details: orderID: %s, expectedAddr: %s, actualAddr: %s",
+				paymentDetails.OrderID, contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress)
+			return nil, errors.New("mismatched payment addresses")
+
+		}
+
+	} else {
+		// the seller has not confirmed or this is a moderated purchase,
+		// so we need to compare the peerID in the vendorListing
+		// to the node peerID
+		if contract.VendorListings[0].VendorID.PeerID !=
+			service.node.IpfsNode.Identity.Pretty() {
+			log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
+				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
+			return nil, errors.New("mismatched peer id")
+		}
+	}
+
+	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
+	outputs := []wallet.TransactionOutput{}
+	for _, o := range txn.Outputs {
+		output := wallet.TransactionOutput{
+			Address: o.Address,
+			Value:   o.Value,
+			Index:   o.Index,
+			OrderID: paymentDetails.OrderID,
+		}
+		outputs = append(outputs, output)
+	}
+
+	input := wallet.TransactionInput{}
+
+	if paymentDetails.WithInput {
+		input = wallet.TransactionInput{
+			OutpointHash:  []byte(txn.Txid[:32]),
+			OutpointIndex: 1,
+			LinkedAddress: toAddress,
+			Value:         txn.Value,
+			OrderID:       paymentDetails.OrderID,
+		}
+	}
+
+	cb := wallet.TransactionCallback{
+		Txid:      txn.Txid,
+		Outputs:   outputs,
+		Inputs:    []wallet.TransactionInput{input},
+		Height:    0,
+		Timestamp: time.Now(),
+		Value:     txn.Value,
+		WatchOnly: false,
+	}
+
+	wal0.AssociateTransactionWithOrder(cb)
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		log.Debugf("received empty ERROR message from peer (%s)", peer.Pretty())
+		return nil, ErrEmptyPayload
 	}
 	errorMessage := new(pb.Error)
 	err := ptypes.UnmarshalAny(pmes.Payload, errorMessage)
 	if err != nil {
+		log.Debugf("received unmarshalable ERROR message from peer (%s)", peer.Pretty())
 		return nil, err
 	}
+	log.Debugf("received ERROR message from peer (%s): %s", peer.Pretty(), errorMessage.ErrorMessage)
 
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(errorMessage.OrderID)
@@ -1503,9 +1792,23 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 	}
 
 	// Send notification to websocket
-	n := repo.ProcessingErrorNotification{repo.NewNotificationID(), "processingError", errorMessage.OrderID, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	n := repo.ProcessingErrorNotification{
+		ID:           repo.NewNotificationID(),
+		Type:         repo.NotifierTypeProcessingErrorNotification,
+		OrderId:      errorMessage.OrderID,
+		Thumbnail:    repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
+		VendorHandle: vendorHandle,
+		VendorID:     vendorID,
+	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received ERROR message from %s:%s", peer.Pretty(), errorMessage.ErrorMessage)
+	log.Debugf("received ERROR message from peer (%s): %s", peer.Pretty(), errorMessage.ErrorMessage)
 	return nil, nil
+}
+
+// SendProcessingError produces a ORDER_PROCESSING_FAILURE error message to be sent to peerID regarding
+// orderID. This message should cause the peerID to reproduce the missing messages omitted in latestContract
+// up-to-and-including the last attemptedMessage
+func (service *OpenBazaarService) SendProcessingError(peerID, orderID string, attemptedMessage pb.Message_MessageType, latestContract *pb.RicardianContract) error {
+	return service.node.SendProcessingError(peerID, orderID, attemptedMessage, latestContract)
 }

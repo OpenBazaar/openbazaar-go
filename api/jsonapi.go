@@ -65,6 +65,10 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
+var lastManualScan time.Time
+
+const OfflineMessageScanInterval = 1 * time.Minute
+
 func newJSONAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
@@ -759,6 +763,17 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	msg := pb.OrderPaymentTxn{
+		Coin:          spendArgs.Wallet,
+		OrderID:       result.OrderID,
+		TransactionID: result.Txid,
+		WithInput:     false,
+	}
+
+	err = i.node.SendOrderPayment(result.PeerID, &msg)
+	if err != nil {
+		log.Errorf("error sending order with id %s payment: %v", result.OrderID, err)
 	}
 
 	ser, err := json.MarshalIndent(result, "", "    ")
@@ -1889,7 +1904,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{b}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 					} else {
 						type wsResp struct {
 							ID     string `json:"id"`
@@ -1900,7 +1915,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{data}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: data}
 					}
 				}(p)
 			}
@@ -2824,7 +2839,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+						i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 					}
 
 					pro, err := i.node.FetchProfile(pid, useCache)
@@ -2849,7 +2864,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("error Marshalling to JSON")
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{b}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 				}(p)
 			}
 		}()
@@ -3601,7 +3616,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
+					i.node.Broadcast <- repo.PremarshalledNotifier{Payload: ret}
 				}
 				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
@@ -3640,7 +3655,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("error marshalling rating")
 					return
 				}
-				i.node.Broadcast <- repo.PremarshalledNotifier{b}
+				i.node.Broadcast <- repo.PremarshalledNotifier{Payload: b}
 			}(r)
 		}
 	}
@@ -4228,4 +4243,55 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponseM(w, out, new(pb.SignedPost))
+}
+
+// POSTSendOrderMessage - used to manually send an order message
+func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.Request) {
+	type sendRequest struct {
+		OrderID     string `json:"orderID"`
+		MessageType string `json:"messageType"`
+	}
+
+	var args sendRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&args)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if args.MessageType == "" {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing messageType argument"))
+		return
+	}
+	if args.OrderID == "" {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing orderID argument"))
+		return
+	}
+
+	msgInt, ok := pb.Message_MessageType_value[strings.ToUpper(args.MessageType)]
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("unknown messageType (%s)", args.MessageType))
+		return
+	}
+
+	if err := i.node.ResendCachedOrderMessage(args.OrderID, pb.Message_MessageType(msgInt)); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, `{}`)
+}
+
+// GETScanOfflineMessages - used to manually trigger offline message scan
+func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.Request) {
+	if lastManualScan.IsZero() {
+		lastManualScan = time.Now()
+	} else {
+		if time.Since(lastManualScan) >= OfflineMessageScanInterval {
+			i.node.MessageRetriever.RunOnce()
+			lastManualScan = time.Now()
+		}
+	}
+	SanitizedResponse(w, `{}`)
 }

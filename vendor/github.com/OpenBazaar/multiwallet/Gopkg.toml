@@ -27,10 +27,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/OpenBazaar/go-ethwallet"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/OpenBazaar/golang-socketio"
 
 [[constraint]]

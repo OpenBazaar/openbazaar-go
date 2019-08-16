@@ -33,7 +33,9 @@ message Message {
         STORE                    = 18;
         BLOCK                    = 19;
         VENDOR_FINALIZED_PAYMENT = 20;
+        ORDER_PAYMENT            = 21;
         ERROR                    = 500;
+        ORDER_PROCESSING_FAILURE = 501;
     }
 }
 
@@ -82,4 +84,11 @@ message Error {
     uint32 code         = 1;
     string errorMessage = 2;
     string orderID      = 3;
+}
+
+message OrderPaymentTxn {
+    string coin          = 1;
+    string orderID       = 2;
+    string transactionID = 3;
+    bool withInput = 4;
 }

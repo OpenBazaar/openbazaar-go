@@ -1,6 +1,7 @@
 package zcash
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 )
@@ -37,6 +39,7 @@ type ZCashWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
@@ -72,7 +75,18 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
-	return &ZCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &ZCashWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("zcash-wallet"),
+	}, nil
 }
 
 func zcashCashAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Address, error) {
@@ -172,6 +186,14 @@ func (w *ZCashWallet) HasKey(addr btcutil.Address) bool {
 func (w *ZCashWallet) Balance() (confirmed, unconfirmed int64) {
 	utxos, _ := w.db.Utxos().GetAll()
 	txns, _ := w.db.Txns().GetAll(false)
+	// Zcash transactions have additional data embedded in them
+	// that is not expected by the BtcDecode deserialize function.
+	// We strip off the extra data here so the derserialize function
+	// does not error. This will have no affect on the balance calculation
+	// as the metadata is not used in the calculation.
+	for i, tx := range txns {
+		txns[i].Bytes = tx.Bytes[4 : len(tx.Bytes)-15]
+	}
 	return util.CalcBalance(utxos, txns)
 }
 
@@ -211,6 +233,28 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			addr, err := zaddr.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 
@@ -418,4 +462,9 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) (string, error) {
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return cTxn.Txid, nil
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *ZCashWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
 }

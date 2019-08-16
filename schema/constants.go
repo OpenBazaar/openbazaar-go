@@ -23,7 +23,7 @@ const (
 	CreateIndexInventorySQL                 = "create index index_inventory on inventory (slug);"
 	CreateTablePurchasesSQL                 = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
 	CreateIndexPurchasesSQL                 = "create index index_purchases on purchases (paymentAddr, timestamp);"
-	CreateTableSalesSQL                     = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+	CreateTableSalesSQL                     = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
 	CreateIndexSalesSQL                     = "create index index_sales on sales (paymentAddr, timestamp);"
 	CreatedTableWatchedScriptsSQL           = "create table watchedscripts (scriptPubKey text primary key not null, coin text);"
 	CreateIndexWatchedScriptsSQL            = "create index index_watchscripts on watchedscripts (coin);"
@@ -36,6 +36,10 @@ const (
 	CreateTableCouponsSQL                   = "create table coupons (slug text, code text, hash text);"
 	CreateIndexCouponsSQL                   = "create index index_coupons on coupons (slug);"
 	CreateTableModeratedStoresSQL           = "create table moderatedstores (peerID text primary key not null);"
+	CreateMessagesSQL                       = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
+	CreateIndexMessagesSQLMessageID         = "create index index_messages_messageID on messages (messageID);"
+	CreateIndexMessagesSQLOrderIDMType      = "create index index_messages_orderIDmType on messages (orderID, message_type);"
+	CreateIndexMessagesSQLPeerIDMType       = "create index index_messages_peerIDmType on messages (peerID, message_type);"
 	// End SQL Statements
 
 	// Configuration defaults

@@ -296,7 +296,7 @@ func (b *Blockchain) GetBlockLocator() blockchain.BlockLocator {
 	return blockchain.BlockLocator(ret)
 }
 
-// Returns last header before reorg point
+// GetCommonAncestor returns last header before reorg point
 func (b *Blockchain) GetCommonAncestor(bestHeader, prevBestHeader StoredHeader) (*StoredHeader, error) {
 	var err error
 	rollback := func(parent StoredHeader, n int) (StoredHeader, error) {

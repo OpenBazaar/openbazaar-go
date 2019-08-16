@@ -25,6 +25,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
+	logging "github.com/op/go-logging"
 	bip39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 )
@@ -41,6 +42,7 @@ type BitcoinWallet struct {
 	mPubKey  *hd.ExtendedKey
 
 	exchangeRates wi.ExchangeRates
+	log           *logging.Logger
 }
 
 func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinWallet, error) {
@@ -75,7 +77,18 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 
 	fp := spvwallet.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.FeeAPI, proxy)
 
-	return &BitcoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
+	return &BitcoinWallet{
+		db:            cfg.DB,
+		km:            km,
+		params:        params,
+		client:        c,
+		ws:            wm,
+		fp:            fp,
+		mPrivKey:      mPrivKey,
+		mPubKey:       mPubKey,
+		exchangeRates: er,
+		log:           logging.MustGetLogger("bitcoin-wallet"),
+	}, nil
 }
 
 func keyToAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btc.Address, error) {
@@ -213,6 +226,34 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+	if err == nil {
+		tx := wire.NewMsgTx(1)
+		rbuf := bytes.NewReader(txn.Bytes)
+		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+		if err != nil {
+			return txn, err
+		}
+		outs := []wi.TransactionOutput{}
+		for i, out := range tx.TxOut {
+			var addr btc.Address
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+			if err != nil {
+				w.log.Errorf("error extracting address from txn pkscript: %v\n", err)
+			}
+			if len(addrs) == 0 {
+				addr = nil
+			} else {
+				addr = addrs[0]
+			}
+			tout := wi.TransactionOutput{
+				Address: addr,
+				Value:   out.Value,
+				Index:   uint32(i),
+			}
+			outs = append(outs, tout)
+		}
+		txn.Outputs = outs
+	}
 	return txn, err
 }
 
@@ -404,4 +445,9 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
 	return nil
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *BitcoinWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
+	w.ws.InvokeTransactionListeners(cb)
 }
