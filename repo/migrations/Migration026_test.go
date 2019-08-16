@@ -37,7 +37,7 @@ func TestMigration026(t *testing.T) {
 		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
 		// If the default hashing algorithm changes at any point in the future you can expect this
 		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmXLJCndsJdW8nQqJWsvhZsnwYE1qUt13FCPFsF1PTKFVy" // "QmfEr6qqLxRsjJhk1XPq2FBP6aiwG6w6Dwr1XepU1Rg1Wx"
+		expectedListingHash = "QmXLJCndsJdW8nQqJWsvhZsnwYE1qUt13FCPFsF1PTKFVy"
 
 		listing = factory.NewListing(testListingSlug)
 		m       = jsonpb.Marshaler{
@@ -54,7 +54,7 @@ func TestMigration026(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	index := []*migrations.Migration026_ListingData{extractListingData24(listing)}
+	index := []*migrations.Migration026_ListingData{extractListingData26(listing)}
 	indexJSON, err := json.MarshalIndent(&index, "", "    ")
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestMigration026(t *testing.T) {
 	assertCorrectRepoVer(t, repoverPath, "26")
 }
 
-func extractListingData24(listing *pb.Listing) *migrations.Migration026_ListingData {
+func extractListingData26(listing *pb.Listing) *migrations.Migration026_ListingData {
 	descriptionLength := len(listing.Item.Description)
 
 	contains := func(s []string, e string) bool {
@@ -122,12 +122,11 @@ func extractListingData24(listing *pb.Listing) *migrations.Migration026_ListingD
 	amt, _ := strconv.ParseUint(listing.Item.PriceValue.Amount, 10, 64)
 
 	ld := &migrations.Migration026_ListingData{
-		Hash:       "aabbcc",
-		Slug:       listing.Slug,
-		Title:      listing.Item.Title,
-		Categories: listing.Item.Categories,
-		NSFW:       listing.Item.Nsfw,
-		//CoinType:     listing.Metadata.CoinType,
+		Hash:         "aabbcc",
+		Slug:         listing.Slug,
+		Title:        listing.Item.Title,
+		Categories:   listing.Item.Categories,
+		NSFW:         listing.Item.Nsfw,
 		ContractType: listing.Metadata.ContractType.String(),
 		Description:  listing.Item.Description[:descriptionLength],
 		Thumbnail:    migrations.Migration026_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},

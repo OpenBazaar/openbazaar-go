@@ -16,7 +16,6 @@ import (
 // MustLoadListingFixture - load listing json from fixtures
 func MustLoadListingFixture(fixtureName string) []byte {
 	gopath := os.Getenv("GOPATH")
-	//fmt.Println("lets see GOPATH : ", gopath)
 	repoPath := filepath.Join("src", "github.com", "OpenBazaar", "openbazaar-go")
 	fixturePath, err := filepath.Abs(filepath.Join(gopath, repoPath, "test", "factory", "fixtures", "listings"))
 	if err != nil {
@@ -41,9 +40,9 @@ func NewListing(slug string) *pb.Listing {
             },
             "bitcoinSig": "MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="
         }`
-		newPubkey = new(pb.ID)
+		vendorID = new(pb.ID)
 	)
-	if err := jsonpb.UnmarshalString(idJSON, newPubkey); err != nil {
+	if err := jsonpb.UnmarshalString(idJSON, vendorID); err != nil {
 		panic(err)
 	}
 
@@ -51,7 +50,7 @@ func NewListing(slug string) *pb.Listing {
 		Slug:               slug,
 		TermsAndConditions: "Sample Terms and Conditions",
 		RefundPolicy:       "Sample Refund policy",
-		VendorID:           newPubkey,
+		VendorID:           vendorID,
 		Metadata: &pb.Listing_Metadata{
 			Version:             1,
 			AcceptedCurrencies:  []string{"TBTC"},
@@ -145,11 +144,8 @@ func NewListing(slug string) *pb.Listing {
 // NewCryptoListing - return new crypto listing
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
-	//listing.Metadata.CoinType = "TETH"
-	//listing.Metadata.CoinDivisibility = 1e8
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
-	//listing.Metadata.PricingCurrency = ""
 	listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
