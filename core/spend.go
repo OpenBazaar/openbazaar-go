@@ -21,7 +21,7 @@ type SpendRequest struct {
 	decodedAddress btcutil.Address
 
 	Address                string              `json:"address"`
-	Amount                 *repo.CurrencyValue `json:"amount"`
+	Value                  *repo.CurrencyValue `json:"value"`
 	FeeLevel               string              `json:"feeLevel"`
 	Memo                   string              `json:"memo"`
 	OrderID                string              `json:"orderId"`
@@ -73,7 +73,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	amt := args.Amount.Amount //new(big.Int).SetString(args.Amount, 10)
+	amt := args.Value.Amount
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {

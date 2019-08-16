@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"strconv"
-	"log"
 	"time"
 
 	wi "github.com/OpenBazaar/wallet-interface"

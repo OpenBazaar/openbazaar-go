@@ -343,7 +343,10 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		if !ok {
+			return errorResponse("invalid amount"), errors.New("invalid amount")
+		}
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -383,7 +386,10 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
 		}
-		n, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		if !ok {
+			return errorResponse("invalid amount"), errors.New("invalid amount")
+		}
 		if !service.node.ValidatePaymentAmount(total, *n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
@@ -689,7 +695,10 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		if !ok {
+			return nil, errors.New("invalid amount")
+		}
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
@@ -699,7 +708,6 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		//fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
 		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *fee, true)
 		if err != nil {
 			return nil, err
@@ -815,7 +823,10 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		if !ok {
+			return nil, errors.New("invalid amount")
+		}
 		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
@@ -1035,7 +1046,10 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			buyerSignatures = append(buyerSignatures, sig)
 		}
-		payoutFee, _ := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
+		payoutFee, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
+		if !ok {
+			return nil, errors.New("invalid amount")
+		}
 		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *payoutFee, true)
 		if err != nil {
 			return nil, err
@@ -1080,7 +1094,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
-	// Unmarshall
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -1110,7 +1123,6 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	// Make sure we aren't currently processing any disputes before proceeding
 	core.DisputeWg.Wait()
 
-	// Unmarshall
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -1201,7 +1213,6 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 
 func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
-	// Unmarshall
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -1381,7 +1392,6 @@ func analyzeForMissingMessages(lc *pb.RicardianContract, e *pb.OrderProcessingFa
 
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
-	// Unmarshall
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -1733,7 +1743,10 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 	input := wallet.TransactionInput{}
 
-	txnValue, _ :=  new(big.Int).SetString(txn.Value, 10)
+	txnValue, ok := new(big.Int).SetString(txn.Value, 10)
+	if !ok {
+		return nil, errors.New("invalid amount")
+	}
 	if paymentDetails.WithInput {
 		input = wallet.TransactionInput{
 			OutpointHash:  []byte(txn.Txid[:32]),
@@ -1750,7 +1763,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		Inputs:    []wallet.TransactionInput{input},
 		Height:    0,
 		Timestamp: time.Now(),
-		Value:    *txnValue,
+		Value:     *txnValue,
 		WatchOnly: false,
 	}
 

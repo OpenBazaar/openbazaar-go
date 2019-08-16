@@ -258,7 +258,7 @@ func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 			}
 			tout := wi.TransactionOutput{
 				Address: addr,
-				Value:  *big.NewInt(out.Value),
+				Value:   *big.NewInt(out.Value),
 				Index:   uint32(i),
 			}
 			outs = append(outs, tout)

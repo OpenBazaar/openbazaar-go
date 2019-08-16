@@ -423,7 +423,7 @@ const walletBalanceJSONResponse = `{
 const spendJSON = `{
 	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"amount": {
+	"value": {
         "amount": "1700000",
         "currency": {
             "code": "BTC",

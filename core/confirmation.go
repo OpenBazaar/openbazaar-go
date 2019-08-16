@@ -35,7 +35,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 
 	if addressRequest {
 		addr := wal.NewAddress(wallet.EXTERNAL)
-		oc.PaymentAddress = addr.String() //addr.EncodeAddress()
+		oc.PaymentAddress = addr.String()
 	}
 
 	ts, err := ptypes.TimestampProto(time.Now())
@@ -235,7 +235,10 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		if !ok {
+			return errors.New("invalid refund fee value")
+		}
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
