@@ -497,7 +497,10 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				servicePrice, _ := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if !ok {
+					return ListingData{}, errors.New("invalid price amount")
+				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
@@ -505,8 +508,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		}
 	}
 
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
-	amt, _ := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return ListingData{}, errors.New("invalid pricing currency")
+	}
+	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return ListingData{}, errors.New("invalid price amount")
+	}
 
 	ld := ListingData{
 		Hash:         listingHash,
@@ -1156,19 +1165,24 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("percent discount cannot be over 100 percent")
 		}
-		n, _ := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
-		discountVal := coupon.GetPriceDiscountValue()
-		flag := false
-		if discountVal != nil {
-			discount0, _ := new(big.Int).SetString(discountVal.Amount, 10)
+		n, ok := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
+		if !ok {
+			return errors.New("invalid price amount")
+		}
+		isPriceEqualToDiscount := false
+		if discountVal := coupon.GetPriceDiscountValue(); discountVal != nil {
+			discount0, ok := new(big.Int).SetString(discountVal.Amount, 10)
+			if !ok {
+				return errors.New("invalid discount amount")
+			}
 			if n.Cmp(discount0) < 0 {
 				return errors.New("price discount cannot be greater than the item price")
 			}
 			if n.Cmp(discount0) == 0 {
-				flag = true
+				isPriceEqualToDiscount = true
 			}
 		}
-		if coupon.GetPercentDiscount() == 0 && flag {
+		if coupon.GetPercentDiscount() == 0 && isPriceEqualToDiscount {
 			return errors.New("coupons must have at least one positive discount value")
 		}
 	}
@@ -1347,7 +1361,10 @@ func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) erro
 }
 
 func validateMarketPriceListing(listing *pb.Listing) error {
-	n, _ := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
+	n, ok := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return errors.New("invalid price amount")
+	}
 	if n.Cmp(big.NewInt(0)) > 0 {
 		return ErrMarketPriceListingIllegalField("item.price")
 	}

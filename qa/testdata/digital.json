@@ -12,7 +12,15 @@
 		"title": "Citizenfour",
 		"description": "A documentarian and a reporter travel to Hong Kong for the first of many meetings with Edward Snowden.",
 		"processingTime": "1 confirmation",
-		"price": 12000000,
+		"price": {
+			"currency": {
+				"code": "TBTC",
+				"divisibility": 8,
+				"name": "A",
+				"currencyType": "A"
+			},
+			"amount": "12000000"
+		},
 		"tags": [
 			"documentary"
 		],
