@@ -73,6 +73,9 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
+	if args.Value == nil {
+		return nil, errors.New("value argument is nil")
+	}
 	amt := args.Value.Amount
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {

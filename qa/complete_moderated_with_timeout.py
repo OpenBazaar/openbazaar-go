@@ -132,7 +132,7 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"

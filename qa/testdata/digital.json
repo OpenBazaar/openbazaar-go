@@ -5,8 +5,13 @@
 		"contractType": "DIGITAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
-		"pricingCurrency": "tbtc",
-		"acceptedCurrencies": ["tbtc", "tbch", "tltc", "tzec"]
+		"pricingCurrency": {
+			"code": "TBTC",
+			"divisibility": 8,
+			"name": "A",
+			"currencyType": "A"
+		},
+		"acceptedCurrencies": []
 	},
 	"item": {
 		"title": "Citizenfour",
@@ -42,14 +47,14 @@
 		]
 	},
 	"taxes": [
-	{
-		"taxType": "Sales tax",
-		"taxRegions": [
-			"UNITED_STATES"
-		],
-		"taxShipping": false,
-		"percentage": 7
-	}
+		{
+			"taxType": "Sales tax",
+			"taxRegions": [
+				"UNITED_STATES"
+			],
+			"taxShipping": false,
+			"percentage": 7
+		}
 	],
 	"moderators": [],
 	"termsAndConditions": "NA",
