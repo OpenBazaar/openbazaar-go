@@ -8,7 +8,6 @@ import (
 	"fmt"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path"
 	"strings"
@@ -362,25 +361,27 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		}
 	}
 
-	chaincode, err := hex.DecodeString(order.Payment.Chaincode)
-	if err != nil {
-		return err
-	}
-	mECKey, err := n.MasterPrivateKey.ECPrivKey()
-	if err != nil {
-		return err
-	}
-	vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
-	if err != nil {
-		return err
-	}
-	redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
-	if err != nil {
-		return err
-	}
-	_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
-	if err != nil {
-		return err
+	if len(txInputs) != 0 {
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return err
+		}
+		mECKey, err := n.MasterPrivateKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
+		if err != nil {
+			return err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
+		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		if err != nil {
+			return err
+		}
 	}
 
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
