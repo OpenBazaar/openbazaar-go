@@ -3,14 +3,14 @@ package zcash
 import (
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/multiwallet/util"
 	"net"
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/multiwallet/util"
 
 	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"golang.org/x/net/proxy"
