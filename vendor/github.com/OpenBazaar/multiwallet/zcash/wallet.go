@@ -82,7 +82,7 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 		er = NewZcashPriceFetcher(proxy)
 	}
 
-	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, er)
 
 	return &ZCashWallet{
 		db:            cfg.DB,
@@ -202,7 +202,7 @@ func (w *ZCashWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	// does not error. This will have no affect on the balance calculation
 	// as the metadata is not used in the calculation.
 	for i, tx := range txns {
-		txns[i].Bytes = tx.Bytes[4 : len(tx.Bytes)-15]
+		txns[i].Bytes = trimTxForDeserialization(tx.Bytes)
 	}
 	c, u := util.CalcBalance(utxos, txns)
 	return wi.CurrencyValue{Value: *big.NewInt(c), Currency: ZcashCurrencyDefinition},
@@ -247,7 +247,7 @@ func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
 	if err == nil {
 		tx := wire.NewMsgTx(1)
-		rbuf := bytes.NewReader(txn.Bytes)
+		rbuf := bytes.NewReader(trimTxForDeserialization(txn.Bytes))
 		err := tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
 		if err != nil {
 			return txn, err
@@ -481,4 +481,8 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) (string, error) {
 // AssociateTransactionWithOrder used for ORDER_PAYMENT message
 func (w *ZCashWallet) AssociateTransactionWithOrder(cb wi.TransactionCallback) {
 	w.ws.InvokeTransactionListeners(cb)
+}
+
+func trimTxForDeserialization(txBytes []byte) []byte {
+	return txBytes[4 : len(txBytes)-15]
 }

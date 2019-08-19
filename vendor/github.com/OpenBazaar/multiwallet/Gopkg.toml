@@ -55,10 +55,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/cpacia/BitcoinCash-Wallet"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/cpacia/bchutil"
 
 [[constraint]]

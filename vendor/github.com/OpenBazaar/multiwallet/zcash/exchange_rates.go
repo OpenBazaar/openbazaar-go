@@ -3,6 +3,7 @@ package zcash
 import (
 	"encoding/json"
 	"errors"
+	"github.com/OpenBazaar/multiwallet/util"
 	"net"
 	"net/http"
 	"reflect"
@@ -63,7 +64,7 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 }
 
 func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
-	currencyCode = NormalizeCurrencyCode(currencyCode)
+	currencyCode = util.NormalizeCurrencyCode(currencyCode)
 
 	z.Lock()
 	defer z.Unlock()
@@ -75,7 +76,7 @@ func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error
 }
 
 func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
-	currencyCode = NormalizeCurrencyCode(currencyCode)
+	currencyCode = util.NormalizeCurrencyCode(currencyCode)
 
 	z.fetchCurrentRates()
 	z.Lock()
@@ -328,9 +329,4 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 		cache[k] = v * rate
 	}
 	return nil
-}
-
-// NormalizeCurrencyCode standardizes the format for the given currency code
-func NormalizeCurrencyCode(currencyCode string) string {
-	return strings.ToUpper(currencyCode)
 }
