@@ -367,7 +367,14 @@ func TestOpenBazaarNode_GetOrder(t *testing.T) {
 
 	contract := factory.NewContract()
 	orderID, err := node.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = node.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	if err != nil {
+		t.Error(err)
+	}
 
 	orderResponse, err := node.GetOrder(orderID)
 	if err != nil {
