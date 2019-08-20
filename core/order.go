@@ -78,6 +78,7 @@ const (
 	CryptocurrencyPurchasePaymentAddressMaxLength = 512
 )
 
+// GetOrder - provide API response order object by orderID
 func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	var (
 		err         error
