@@ -1,6 +1,8 @@
 package core_test
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
+	"github.com/go-errors/errors"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -354,5 +356,29 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	if total != 1115000 {
 		t.Error("Calculated wrong order total")
+	}
+}
+
+func TestOpenBazaarNode_GetOrder(t *testing.T) {
+	node, err := test.NewNode()
+	if err != nil {
+		t.Error(err)
+	}
+
+	contract := factory.NewContract()
+	orderID, err := node.CalcOrderID(contract.BuyerOrder)
+	err = node.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+
+	orderResponse, err := node.GetOrder(orderID)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if orderResponse.Funded {
+		t.Error(errors.New("Should not be funded"))
+	}
+
+	if orderResponse.State != pb.OrderState_AWAITING_PAYMENT {
+		t.Error(errors.New("Expected state OrderState_AWAITING_PAYMENT"))
 	}
 }
