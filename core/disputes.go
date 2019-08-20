@@ -629,7 +629,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		valF := new(big.Float).Sub(new(big.Float).SetInt(&output.Value), outputShareOfFee)
 		val, accuracy := valF.Int(nil)
 		if accuracy != 0 {
-			return errors.New("problem rounding the fee")
+			//return errors.New("problem rounding the fee")
 		}
 		if !wal.IsDust(*val) {
 			o := wallet.TransactionOutput{
@@ -701,7 +701,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
 		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
 		if accuracy != 0 {
-			return errors.New("problem rounding the fee")
+			//return errors.New("problem rounding the fee")
 		}
 		amt := new(big.Int).Sub(buyerValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {
@@ -720,7 +720,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
 		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
 		if accuracy != 0 {
-			return errors.New("problem rounding the fee")
+			//return errors.New("problem rounding the fee")
 		}
 		amt := new(big.Int).Sub(vendorValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {
@@ -739,7 +739,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
 		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
 		if accuracy != 0 {
-			return errors.New("problem rounding the fee")
+			//return errors.New("problem rounding the fee")
 		}
 		amt := new(big.Int).Sub(&modValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {

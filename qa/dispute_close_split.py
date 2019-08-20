@@ -285,7 +285,8 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"]["amount"])
-            #unconfirmed = int(resp["unconfirmed"])
+            unconfirmed = int(resp["unconfirmed"]["amount"])
+            #print("Alice current wallet balance: Confirmed : ", confirmed, "   Unconfirmed: ", unconfirmed)
             if confirmed <= 0:
                 raise TestFailure("DisputeCloseSplitTest - FAIL: Alice failed to detect dispute payout")
         elif r.status_code == 404:

@@ -967,12 +967,12 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
 			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountValue.Currency.Code, l.Metadata.PricingCurrencyDefn.Code, *big.NewInt(int64(itemQuantity)))
-			t1, accuracy := new(big.Float).Mul(big.NewFloat(float64(l.Metadata.PriceModifier)), big.NewFloat(0.01)).Int(nil)
+			t0 := new(big.Float).Mul(big.NewFloat(float64(l.Metadata.PriceModifier)), new(big.Float).SetInt(&satoshis))
+			t1, accuracy := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
 			if accuracy != 0 {
 				//return *big.NewInt(0), errors.New("rounding error in price")
 			}
-			t2 := new(big.Int).Mul(&satoshis, t1)
-			satoshis = *new(big.Int).Add(&satoshis, t2)
+			satoshis = *new(big.Int).Add(&satoshis, t1)
 			itemQuantity = 1
 		} else {
 			p, ok := new(big.Int).SetString(l.Item.PriceValue.Amount, 10)

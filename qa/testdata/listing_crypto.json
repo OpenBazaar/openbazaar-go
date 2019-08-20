@@ -19,7 +19,7 @@
         "processingTime": "1 to 2 hours",
         "price": {
             "code": "TETH",
-            "divisibility": 8,
+            "divisibility": 18,
             "name": "A",
             "currencyType": "A",
             "amount": "0"
