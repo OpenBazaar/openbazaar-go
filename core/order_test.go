@@ -1,14 +1,14 @@
 package core_test
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/go-errors/errors"
-	"testing"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
+
+	"fmt"
+	"testing"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -362,30 +362,30 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 func TestOpenBazaarNode_GetOrder(t *testing.T) {
 	node, err := test.NewNode()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	contract := factory.NewContract()
+
 	orderID, err := node.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	err = node.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	state := pb.OrderState_AWAITING_PAYMENT
+	err = node.Datastore.Purchases().Put(orderID, *contract, state, false)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	orderResponse, err := node.GetOrder(orderID)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	if orderResponse.Funded {
-		t.Error(errors.New("Should not be funded"))
-	}
-
-	if orderResponse.State != pb.OrderState_AWAITING_PAYMENT {
-		t.Error(errors.New("Expected state OrderState_AWAITING_PAYMENT"))
+	if orderResponse.State != state {
+		t.Fatal(fmt.Errorf("expected attribute description to be %s, but was %s",
+			pb.OrderState_name[int32(state)],
+			pb.OrderState_name[int32(orderResponse.State)]))
 	}
 }
