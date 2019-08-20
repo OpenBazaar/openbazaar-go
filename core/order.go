@@ -78,6 +78,64 @@ const (
 	CryptocurrencyPurchasePaymentAddressMaxLength = 512
 )
 
+// GetOrder - provide API response order object by orderID
+func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
+	var (
+		err      error
+		isSale   bool
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		funded   bool
+		records  []*wallet.TransactionRecord
+		read     bool
+		//paymentCoin *repo.CurrencyCode
+	)
+	contract, state, funded, records, read, _, err = n.Datastore.Purchases().GetByOrderId(orderID)
+	if err != nil {
+		contract, state, funded, records, read, _, err = n.Datastore.Sales().GetByOrderId(orderID)
+		if err != nil {
+			return nil, errors.New("order not found")
+		}
+		isSale = true
+	}
+	resp := new(pb.OrderRespApi)
+	resp.Contract = contract
+	resp.Funded = funded
+	resp.Read = read
+	resp.State = state
+
+	// TODO: Remove once broken contracts are migrated
+	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
+	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
+	if err != nil {
+		log.Errorf(err.Error())
+		return nil, err
+	}
+	resp.PaymentAddressTransactions = paymentTxs
+	resp.RefundAddressTransaction = refundTx
+
+	unread, err := n.Datastore.Chat().GetUnreadCount(orderID)
+	if err != nil {
+		log.Errorf(err.Error())
+		return nil, err
+	}
+	resp.UnreadChatMessages = uint64(unread)
+
+	if isSale {
+		n.Datastore.Sales().MarkAsRead(orderID)
+	} else {
+		n.Datastore.Purchases().MarkAsRead(orderID)
+	}
+
+	return resp, nil
+}
+
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
 
