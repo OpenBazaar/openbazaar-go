@@ -384,7 +384,7 @@ func TestOpenBazaarNode_GetOrder(t *testing.T) {
 	}
 
 	if orderResponse.State != state {
-		t.Fatal(fmt.Errorf("expected attribute description to be %s, but was %s",
+		t.Fatal(fmt.Errorf("expected order state to be %s, but was %s",
 			pb.OrderState_name[int32(state)],
 			pb.OrderState_name[int32(orderResponse.State)]))
 	}
