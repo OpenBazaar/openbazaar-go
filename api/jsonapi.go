@@ -1637,53 +1637,12 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
-	var (
-		err         error
-		isSale      bool
-		contract    *pb.RicardianContract
-		state       pb.OrderState
-		funded      bool
-		records     []*wallet.TransactionRecord
-		read        bool
-		paymentCoin *repo.CurrencyCode
-	)
-	contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
-	if err != nil {
-		contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(orderID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Order not found")
-			return
-		}
-		isSale = true
-	}
-	resp := new(pb.OrderRespApi)
-	resp.Contract = contract
-	resp.Funded = funded
-	resp.Read = read
-	resp.State = state
 
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.Coin
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	resp, err := i.node.GetOrder(orderID)
 	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
-	}
-
-	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return
 	}
-	resp.PaymentAddressTransactions = paymentTxs
-	resp.RefundAddressTransaction = refundTx
-
-	unread, err := i.node.Datastore.Chat().GetUnreadCount(orderID)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.UnreadChatMessages = uint64(unread)
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1696,11 +1655,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if isSale {
-		i.node.Datastore.Sales().MarkAsRead(orderID)
-	} else {
-		i.node.Datastore.Purchases().MarkAsRead(orderID)
-	}
+
 	SanitizedResponseM(w, out, new(pb.OrderRespApi))
 }
 
