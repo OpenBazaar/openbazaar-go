@@ -11,7 +11,7 @@
 			"name": "A",
 			"currencyType": "A"
 		},
-		"acceptedCurrencies": []
+		"acceptedCurrencies": ["tbtc", "tbch", "tltc", "tzec"]
 	},
 	"item": {
 		"title": "Citizenfour",
