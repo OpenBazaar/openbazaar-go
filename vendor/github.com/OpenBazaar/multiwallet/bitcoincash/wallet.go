@@ -15,8 +15,6 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
-	bcw "github.com/cpacia/BitcoinCash-Wallet"
-	er "github.com/cpacia/BitcoinCash-Wallet/exchangerates"
 	"github.com/cpacia/bchutil"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
@@ -36,7 +34,7 @@ type BitcoinCashWallet struct {
 	params *chaincfg.Params
 	client model.APIClient
 	ws     *service.WalletService
-	fp     *bcw.FeeProvider
+	fp     *util.FeeProvider
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
@@ -69,12 +67,12 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 	if err != nil {
 		return nil, err
 	}
-	exchangeRates := er.NewBitcoinCashPriceFetcher(proxy)
+	exchangeRates := NewBitcoinCashPriceFetcher(proxy)
 	if !disableExchangeRates {
 		go exchangeRates.Run()
 	}
 
-	fp := bcw.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, exchangeRates)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, exchangeRates)
 
 	return &BitcoinCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, exchangeRates}, nil
 }
