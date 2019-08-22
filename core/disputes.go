@@ -627,10 +627,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outPercentage := new(big.Float).Quo(new(big.Float).SetInt(&output.Value), new(big.Float).SetInt(totalOut))
 		outputShareOfFee := new(big.Float).Mul(outPercentage, new(big.Float).SetInt(&txFee))
 		valF := new(big.Float).Sub(new(big.Float).SetInt(&output.Value), outputShareOfFee)
-		val, accuracy := valF.Int(nil)
-		if accuracy != 0 {
-			//return errors.New("problem rounding the fee")
-		}
+		val, _ := valF.Int(nil)
 		if !wal.IsDust(*val) {
 			o := wallet.TransactionOutput{
 				Value:   *val,
@@ -699,10 +696,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if _, ok := outMap["buyer"]; ok {
 		f := new(big.Float).Quo(new(big.Float).SetInt(buyerValue), new(big.Float).SetInt(totalOut))
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
-		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
-		if accuracy != 0 {
-			//return errors.New("problem rounding the fee")
-		}
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
 		amt := new(big.Int).Sub(buyerValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)
@@ -718,10 +712,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if _, ok := outMap["vendor"]; ok {
 		f := new(big.Float).Quo(new(big.Float).SetInt(vendorValue), new(big.Float).SetInt(totalOut))
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
-		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
-		if accuracy != 0 {
-			//return errors.New("problem rounding the fee")
-		}
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
 		amt := new(big.Int).Sub(vendorValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)
@@ -737,10 +728,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if _, ok := outMap["moderator"]; ok {
 		f := new(big.Float).Quo(new(big.Float).SetInt(&modValue), new(big.Float).SetInt(totalOut))
 		outputShareOfFeeF := new(big.Float).Mul(f, new(big.Float).SetInt(&txFee))
-		outputShareOfFeeInt, accuracy := outputShareOfFeeF.Int(nil)
-		if accuracy != 0 {
-			//return errors.New("problem rounding the fee")
-		}
+		outputShareOfFeeInt, _ := outputShareOfFeeF.Int(nil)
 		amt := new(big.Int).Sub(&modValue, outputShareOfFeeInt)
 		if amt.Cmp(big.NewInt(0)) < 0 {
 			amt = big.NewInt(0)

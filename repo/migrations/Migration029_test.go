@@ -25,27 +25,28 @@ var stm = `PRAGMA key = 'letmein';
 
 func TestMigration029(t *testing.T) {
 	var dbPath string
-	os.Mkdir("./datastore", os.ModePerm)
+	if err := os.Mkdir("./datastore", os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 	dbPath = path.Join("./", "datastore", "mainnet.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	db.Exec(stm)
+	if _, err := db.Exec(stm); err != nil {
+		t.Fatal(err)
+	}
 	_, err = db.Exec("INSERT INTO utxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	_, err = db.Exec("INSERT INTO stxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	_, err = db.Exec("INSERT INTO txns (txid, value, height, timestamp, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, 234, 1, "TBTC")
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	var m migrations.Migration029
 	err = m.Up("./", "letmein", false)
@@ -63,22 +64,19 @@ func TestMigration029(t *testing.T) {
 	r := db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value, &height, &watchOnlyInt); err != nil || value != "3" {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	repoVer, err := ioutil.ReadFile("./repover")
@@ -92,28 +90,24 @@ func TestMigration029(t *testing.T) {
 
 	err = m.Down("./", "letmein", false)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
 
 	if err := r.Scan(&outpoint, &value1, &height, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	repoVer, err = ioutil.ReadFile("./repover")

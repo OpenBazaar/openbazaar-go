@@ -13,14 +13,13 @@ import (
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 type Migration027 struct{}
@@ -317,7 +316,9 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			b, _ := json.Marshal(listingAbstract)
 			//indexBytes0 = append(indexBytes0, b...)
 			var n Migration027_ListingDatav5
-			json.Unmarshal(b, &n)
+			if err := json.Unmarshal(b, &n); err != nil {
+				return fmt.Errorf("failed unmarshaling (%s): %s", listSlug, err.Error())
+			}
 			indexv5 = append(indexv5, n)
 			continue
 		}
