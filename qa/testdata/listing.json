@@ -11,7 +11,7 @@
 			"name": "A",
 			"currencyType": "A"
 		},
-		"acceptedCurrencies": ["tbtc", "tbch", "tltc", "tzec"]
+		"acceptedCurrencies": ["TBTC"]
 	},
 	"item": {
 		"title": "Ron Swanson Tshirt",
