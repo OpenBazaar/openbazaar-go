@@ -308,6 +308,8 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return m
 	}
 
+	log.Infof("attempting to process incoming order from: %s", peer.String())
+
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
