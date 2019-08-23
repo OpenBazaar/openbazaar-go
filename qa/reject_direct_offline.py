@@ -177,9 +177,9 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
             #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= 50 - payment_amount:
+            if confirmed <= 50 - int(payment_amount["amount"]):
                 raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Failed to query Bob's balance")
