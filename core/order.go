@@ -1026,10 +1026,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
 			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountValue.Currency.Code, l.Metadata.PricingCurrencyDefn.Code, *big.NewInt(int64(itemQuantity)))
 			t0 := new(big.Float).Mul(big.NewFloat(float64(l.Metadata.PriceModifier)), new(big.Float).SetInt(&satoshis))
-			t1, accuracy := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
-			if accuracy != 0 {
-				//return *big.NewInt(0), errors.New("rounding error in price")
-			}
+			t1, _ := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
 			satoshis = *new(big.Int).Add(&satoshis, t1)
 			itemQuantity = 1
 		} else {
@@ -1100,10 +1097,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 						itemTotal = *new(big.Int).Sub(&itemTotal, &satoshis)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
 						d := new(big.Float).Mul(big.NewFloat(float64(discountF)), big.NewFloat(0.01))
-						totalDiscount, accuracy := new(big.Float).Mul(d, new(big.Float).SetInt(&itemTotal)).Int(nil)
-						if accuracy != 0 {
-							//return *big.NewInt(0), errors.New("rounding error in discount total")
-						}
+						totalDiscount, _ := new(big.Float).Mul(d, new(big.Float).SetInt(&itemTotal)).Int(nil)
 						itemTotal = *new(big.Int).Sub(&itemTotal, totalDiscount)
 					}
 				}
@@ -1114,10 +1108,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
 					t := new(big.Float).Mul(big.NewFloat(float64(tax.Percentage)), big.NewFloat(0.01))
-					totalTax, accuracy := new(big.Float).Mul(t, new(big.Float).SetInt(&itemTotal)).Int(nil)
-					if accuracy != 0 {
-						//return *big.NewInt(0), errors.New("rounding error in tax total")
-					}
+					totalTax, _ := new(big.Float).Mul(t, new(big.Float).SetInt(&itemTotal)).Int(nil)
 					itemTotal = *new(big.Int).Add(&itemTotal, totalTax)
 					break
 				}
@@ -1245,10 +1236,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	if len(is) == 1 {
 		s := int64(((1 + is[0].shippingTaxPercentage) * 100) + .5)
 		shippingTotalPrimary := new(big.Int).Mul(&is[0].primary, big.NewInt(s))
-		stp, accuracy := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary)).Int(nil)
-		if accuracy != 0 {
-			//return *big.NewInt(0), errors.New("rounding error in shipping total")
-		}
+		stp, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary)).Int(nil)
 		shippingTotal = *stp
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
@@ -1256,10 +1244,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 				shippingTotal = *new(big.Int).Add(stp, t1)
 			} else if is[0].version >= 2 {
 				shippingTotalSecondary := new(big.Int).Mul(&is[0].secondary, big.NewInt(s))
-				sts, accuracy := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary)).Int(nil)
-				if accuracy != 0 {
-					//return *big.NewInt(0), errors.New("rounding error in shipping total")
-				}
+				sts, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary)).Int(nil)
 
 				t1 := new(big.Int).Mul(sts, big.NewInt(int64(is[0].quantity-1)))
 				shippingTotal = *new(big.Int).Add(stp, t1)
@@ -1280,26 +1265,17 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 		s0 := int64(((1 + s.shippingTaxPercentage) * 100) + .5)
 		shippingTotalSec := new(big.Int).Mul(&s.secondary, big.NewInt(s0))
-		sts0, accuracy := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSec)).Int(nil)
-		if accuracy != 0 {
-			//return *big.NewInt(0), errors.New("rounding error in shipping total")
-		}
+		sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSec)).Int(nil)
 		shippingTotal0 := new(big.Int).Mul(sts0, big.NewInt(int64(s.quantity)))
 		shippingTotal = *new(big.Int).Add(&shippingTotal, shippingTotal0)
 	}
 	sp := int64(((1 + is[i].shippingTaxPercentage) * 100) + .5)
 	shippingTotalPrimary0 := new(big.Int).Mul(&is[i].primary, big.NewInt(sp))
-	stp0, accuracy := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary0)).Int(nil)
-	if accuracy != 0 {
-		//return *big.NewInt(0), errors.New("rounding error in shipping total")
-	}
+	stp0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary0)).Int(nil)
 	shippingTotal = *new(big.Int).Sub(&shippingTotal, stp0)
 
 	shippingTotalSecondary0 := new(big.Int).Mul(&is[i].secondary, big.NewInt(sp))
-	sts0, accuracy := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary0)).Int(nil)
-	if accuracy != 0 {
-		//return *big.NewInt(0), errors.New("rounding error in shipping total")
-	}
+	sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary0)).Int(nil)
 	shippingTotal = *new(big.Int).Add(&shippingTotal, sts0)
 
 	return shippingTotal, nil
@@ -1393,10 +1369,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 	if err != nil {
 		return *big.NewInt(0), err
 	}
-	r, accuracy := big.NewFloat(rate).Int(nil)
-	if accuracy != 0 {
-		//return *big.NewInt(0), errors.New("rounding error in rate")
-	}
+	r, _ := big.NewFloat(rate).Int(nil)
 	if r.Int64() == 0 {
 		return *big.NewInt(0), errors.New("invalid rate of zero value")
 	}

@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -45,7 +46,9 @@ func (AM02) Up(repoPath string, dbPassword string, testnet bool) error {
 	}
 	if dbPassword != "" {
 		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
+		if _, err := db.Exec(p); err != nil {
+			return err
+		}
 	}
 
 	upSequence := strings.Join([]string{
@@ -64,7 +67,9 @@ func (AM02) Up(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 	if _, err = tx.Exec(upSequence); err != nil {
-		tx.Rollback()
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("failed rollback: (%s) due to (%s)", rErr.Error(), err.Error())
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -95,7 +100,9 @@ func (AM02) Down(repoPath string, dbPassword string, testnet bool) error {
 	}
 	if dbPassword != "" {
 		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
+		if _, err := db.Exec(p); err != nil {
+			return err
+		}
 	}
 	downSequence := strings.Join([]string{
 		AM02_temp_sales,
@@ -113,7 +120,9 @@ func (AM02) Down(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 	if _, err = tx.Exec(downSequence); err != nil {
-		tx.Rollback()
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("failed rollback: (%s) due to (%s)", rErr.Error(), err.Error())
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {
