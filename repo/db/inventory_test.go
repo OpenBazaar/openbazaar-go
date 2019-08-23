@@ -9,14 +9,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-//var ivdb repo.InventoryStore
-
-//func init() {
-//conn, _ := sql.Open("sqlite3", ":memory:")
-//initDatabaseTables(conn, "")
-//ivdb = NewInventoryStore(conn, new(sync.Mutex))
-//}
-
 func buildNewInventoryStore() (repo.InventoryStore, func(), error) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
