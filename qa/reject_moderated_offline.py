@@ -65,7 +65,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
-        
+
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
