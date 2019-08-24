@@ -25,7 +25,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]       
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -100,7 +100,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -130,7 +130,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(60)
+        time.sleep(160)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

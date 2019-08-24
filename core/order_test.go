@@ -356,3 +356,34 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error("Calculated wrong order total")
 	}
 }
+
+func TestOpenBazaarNode_GetOrder(t *testing.T) {
+	node, err := test.NewNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contract := factory.NewContract()
+
+	orderID, err := node.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	state := pb.OrderState_AWAITING_PAYMENT
+	err = node.Datastore.Purchases().Put(orderID, *contract, state, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	orderResponse, err := node.GetOrder(orderID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if orderResponse.State != state {
+		t.Fatal(fmt.Errorf("expected order state to be %s, but was %s",
+			pb.OrderState_name[int32(state)],
+			pb.OrderState_name[int32(orderResponse.State)]))
+	}
+}

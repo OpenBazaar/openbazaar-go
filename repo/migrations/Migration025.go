@@ -38,8 +38,8 @@ func (Migration025) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	if err := writeRepoVer(repoPath, 25); err != nil {
-		return fmt.Errorf("bumping repover to 25: %s", err.Error())
+	if err := writeRepoVer(repoPath, 26); err != nil {
+		return fmt.Errorf("bumping repover to 26: %s", err.Error())
 	}
 	return nil
 }
@@ -65,8 +65,8 @@ func (Migration025) Down(repoPath, databasePassword string, testnetEnabled bool)
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	if err := writeRepoVer(repoPath, 24); err != nil {
-		return fmt.Errorf("dropping repover to 24: %s", err.Error())
+	if err := writeRepoVer(repoPath, 25); err != nil {
+		return fmt.Errorf("dropping repover to 25: %s", err.Error())
 	}
 	return nil
 }

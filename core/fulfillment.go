@@ -74,7 +74,10 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		fee, _ := new(big.Int).SetString(payout.PayoutFeePerByteValue, 10)
+		fee, ok := new(big.Int).SetString(payout.PayoutFeePerByteValue, 10)
+		if !ok {
+			return errors.New("invalid payout fee value")
+		}
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return err
@@ -141,9 +144,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 
 	fulfillment.RatingSignature = rs
 
-	fulfils := []*pb.OrderFulfillment{}
-
-	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
+	rc.VendorOrderFulfillment = []*pb.OrderFulfillment{fulfillment}
 	rc, err = n.SignOrderFulfillment(rc)
 	if err != nil {
 		return err

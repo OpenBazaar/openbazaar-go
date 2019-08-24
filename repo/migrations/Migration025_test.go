@@ -1,9 +1,8 @@
 package migrations
 
 import (
-	"testing"
-
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"testing"
 )
 
 func TestMigration025(t *testing.T) {
@@ -49,7 +48,7 @@ func TestMigration025(t *testing.T) {
 	}
 
 	// assert repo version reverted
-	if err = appSchema.VerifySchemaVersion("25"); err != nil {
+	if err = appSchema.VerifySchemaVersion("26"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,7 +62,7 @@ func TestMigration025(t *testing.T) {
 	}
 
 	// assert repo version reverted
-	if err = appSchema.VerifySchemaVersion("24"); err != nil {
+	if err = appSchema.VerifySchemaVersion("25"); err != nil {
 		t.Fatal(err)
 	}
 }

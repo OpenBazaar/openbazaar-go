@@ -313,6 +313,8 @@ func (c CurrencyDictionary) Lookup(code string) (*CurrencyDefinition, error) {
 	}
 	if !ok {
 		fmt.Println("so there is a problem with code : ", code, "   upcase : ", upcase)
+		log.Errorf("so there is a problem with code : %s   upcase : %s", code, upcase)
+		//return InvalidDefinition(), nil
 		return nil, ErrCurrencyDefinitionUndefined
 	}
 	if isTestnet {
@@ -327,5 +329,14 @@ func NewTestnetDefinition(def *CurrencyDefinition) *CurrencyDefinition {
 		Code:         CurrencyCode(fmt.Sprintf("T%s", def.Code)),
 		Divisibility: def.Divisibility,
 		CurrencyType: def.CurrencyType,
+	}
+}
+
+func InvalidDefinition() *CurrencyDefinition {
+	return &CurrencyDefinition{
+		Name:         "Unknown",
+		Code:         CurrencyCode("__"),
+		Divisibility: 10,
+		CurrencyType: "invalid",
 	}
 }

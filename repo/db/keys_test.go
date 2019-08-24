@@ -133,7 +133,9 @@ func TestImportKey(t *testing.T) {
 
 func TestPutDuplicateKey(t *testing.T) {
 	b := make([]byte, 32)
-	kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0})
+	if err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0}); err != nil {
+		t.Fatal(err)
+	}
 	err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0})
 	if err == nil {
 		t.Error("Expected duplicate key error")

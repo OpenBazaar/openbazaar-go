@@ -723,12 +723,16 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		ErrorResponse(w, http.StatusBadRequest, "unknown wallet type")
 		return
 	}
 	height, _ := wal.ChainTip()
 	confirmed, unconfirmed := wal.Balance()
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	bal := balance{
 		Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
 		Unconfirmed: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
@@ -1636,17 +1640,7 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
-	var (
-		err      error
-		isSale   bool
-		contract *pb.RicardianContract
-		state    pb.OrderState
-		funded   bool
-		records  []*wallet.TransactionRecord
-		read     bool
-		//paymentCoin *repo.CurrencyCode
-	)
-	contract, state, funded, records, read, _, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
+	resp, err := i.node.GetOrder(orderID)
 	if err != nil {
 		contract, state, funded, records, read, _, err = i.node.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
@@ -3296,7 +3290,11 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		Memo               string              `json:"memo"`
 	}
 	confirmed, unconfirmed := wal.Balance()
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	txn, err := wal.GetTransaction(*newTxid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3371,7 +3369,11 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	resp := &response{
 		Fee: &repo.CurrencyValue{Currency: defn, Amount: &fee},
 	}
@@ -3396,7 +3398,11 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
-			defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+			defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			ret[ct.CurrencyCode()] = fees{
 				Priority: &repo.CurrencyValue{Currency: defn, Amount: &priority},
 				Normal:   &repo.CurrencyValue{Currency: defn, Amount: &normal},
