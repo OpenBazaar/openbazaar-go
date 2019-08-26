@@ -1,6 +1,7 @@
 # Test artifacts
 
 repo/testdata/
+./config*
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
