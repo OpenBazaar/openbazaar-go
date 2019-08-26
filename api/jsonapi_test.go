@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
@@ -337,9 +336,9 @@ func TestCryptoListings(t *testing.T) {
 }
 
 func TestCryptoListingsPriceModifier(t *testing.T) {
-	outOfRangeErr := core.ErrPriceModifierOutOfRange{
-		Min: core.PriceModifierMin,
-		Max: core.PriceModifierMax,
+	outOfRangeErr := repo.ErrPriceModifierOutOfRange{
+		Min: repo.PriceModifierMin,
+		Max: repo.PriceModifierMax,
 	}
 
 	listing := factory.NewCryptoListing("crypto")
