@@ -147,7 +147,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
-				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+				}
 			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
@@ -177,7 +179,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+				}
 			}
 		}
 	}
@@ -203,9 +207,13 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			funded = true
 
 			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
-				l.db.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false); err != nil {
+					log.Errorf("failed updating order (%s) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
+				}
 			} else if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation == nil { // Unconfirmed orders go into PENDING
-				l.db.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
+				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false); err != nil {
+					log.Errorf("failed updating order (%s) to PENDING: %s", orderId, err.Error())
+				}
 			}
 			l.adjustInventory(contract)
 
@@ -253,7 +261,9 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		bumpable = true
 	}
-	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
+	if err := l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable}); err != nil {
+		log.Errorf("failed updating tx metadata (%s): %s", txid, err.Error())
+	}
 }
 
 func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
@@ -287,9 +297,13 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
 			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false); err != nil {
+					log.Errorf("failed updating order (%s) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
+				}
 			} else if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation == nil { // Unconfirmed go into PENDING
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
+				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false); err != nil {
+					log.Errorf("failed updating order (%s) to PENDING: %s", orderId, err.Error())
+				}
 			}
 		}
 		n := repo.PaymentNotification{
@@ -344,7 +358,9 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			log.Warningf("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
 			l.broadcast <- repo.PremarshalledNotifier{[]byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)}
 		}
-		l.db.Inventory().Put(listing.Slug, variant, newCount)
+		if err := l.db.Inventory().Put(listing.Slug, variant, newCount); err != nil {
+			log.Errorf("failed updating inventory for listing (%s, %d): %s", listing.Slug, variant, err.Error())
+		}
 		inventoryUpdated = true
 		if newCount >= 0 {
 			log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, newCount)
@@ -352,7 +368,9 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 	}
 
 	if inventoryUpdated && core.Node != nil {
-		core.Node.PublishInventory()
+		if err := core.Node.PublishInventory(); err != nil {
+			log.Errorf("failed publishing inventory updates: %s", err.Error())
+		}
 	}
 }
 
