@@ -126,11 +126,11 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # generate one more block containing this tx
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generate", 1)
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(160)
+        time.sleep(60)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId
@@ -170,7 +170,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: order confirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generate", 1)
         time.sleep(2)
 
         # Check the funds moved into alice's wallet

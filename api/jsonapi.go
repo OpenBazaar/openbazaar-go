@@ -705,7 +705,11 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
 			height, _ := wal.ChainTip()
-			defn, _ := repo.LoadCurrencyDefinitions().Lookup(ct.CurrencyCode())
+			defn, err := repo.LoadCurrencyDefinitions().Lookup(ct.CurrencyCode())
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			confirmed, unconfirmed := wal.Balance()
 			ret[ct.CurrencyCode()] = balance{
 				Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
@@ -1642,41 +1646,9 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
 	resp, err := i.node.GetOrder(orderID)
 	if err != nil {
-		contract, state, funded, records, read, _, err = i.node.Datastore.Sales().GetByOrderId(orderID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Order not found")
-			return
-		}
-		isSale = true
-	}
-	resp := new(pb.OrderRespApi)
-	resp.Contract = contract
-	resp.Funded = funded
-	resp.Read = read
-	resp.State = state
-
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
-	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
-	}
-
-	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return
 	}
-	resp.PaymentAddressTransactions = paymentTxs
-	resp.RefundAddressTransaction = refundTx
-
-	unread, err := i.node.Datastore.Chat().GetUnreadCount(orderID)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.UnreadChatMessages = uint64(unread)
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1689,11 +1661,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if isSale {
-		i.node.Datastore.Sales().MarkAsRead(orderID)
-	} else {
-		i.node.Datastore.Purchases().MarkAsRead(orderID)
-	}
+
 	SanitizedResponseM(w, out, new(pb.OrderRespApi))
 }
 
@@ -3425,7 +3393,11 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	f := fees{
 		Priority: &repo.CurrencyValue{Currency: defn, Amount: &priority},
 		Normal:   &repo.CurrencyValue{Currency: defn, Amount: &normal},

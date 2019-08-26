@@ -140,7 +140,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseSplitTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(30)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
