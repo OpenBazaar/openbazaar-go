@@ -39,6 +39,7 @@ dist
 .tags*
 *.sw?
 openbazaar-go*
+config_*
 
 # macOS
 .DS_Store
