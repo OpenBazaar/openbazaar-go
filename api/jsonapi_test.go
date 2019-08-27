@@ -498,6 +498,25 @@ func TestWallet(t *testing.T) {
 	})
 }
 
+func TestWalletCurrencyDictionary(t *testing.T) {
+	type dictionaryResponse struct {
+		Entries repo.CurrencyDictionary `json:"entries"`
+	}
+	var (
+		resp = dictionaryResponse{
+			Entries: repo.LoadCurrencyDefinitions(),
+		}
+		expectedResponse, err = json.MarshalIndent(resp, "", "    ")
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", "/wallet/currencies", "", 200, string(expectedResponse)},
+	})
+}
+
 func TestExchangeRates(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"GET", "/ob/exchangerates", "", 500, invalidCoinJSON},

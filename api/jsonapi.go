@@ -674,6 +674,24 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, `{}`)
 }
 
+func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Entries repo.CurrencyDictionary `json:"entries"`
+	}
+	var (
+		resp = response{
+			Entries: repo.LoadCurrencyDefinitions(),
+		}
+		out, err = json.MarshalIndent(resp, "", "    ")
+	)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, string(out))
+}
+
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	if coinType == "address" {

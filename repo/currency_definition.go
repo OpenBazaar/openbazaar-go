@@ -164,7 +164,7 @@ var (
 		"TJS": {Name: "Somoni", Code: CurrencyCode("TJS"), CurrencyType: Fiat, Divisibility: 2},
 		"TMT": {Name: "Turkmenistan New Manat", Code: CurrencyCode("TMT"), CurrencyType: Fiat, Divisibility: 2},
 		"TND": {Name: "Tunisian Dinar", Code: CurrencyCode("TND"), CurrencyType: Fiat, Divisibility: 2},
-		"TOP": {Name: "Pa\"anga", Code: CurrencyCode("TOP"), CurrencyType: Fiat, Divisibility: 2},
+		"TOP": {Name: "Paanga", Code: CurrencyCode("TOP"), CurrencyType: Fiat, Divisibility: 2},
 		"TRY": {Name: "Turkish Lira", Code: CurrencyCode("TRY"), CurrencyType: Fiat, Divisibility: 2},
 		"TTD": {Name: "Trinidad and Tobago Dollar", Code: CurrencyCode("TTD"), CurrencyType: Fiat, Divisibility: 2},
 		"TWD": {Name: "New Taiwan Dollar", Code: CurrencyCode("TWD"), CurrencyType: Fiat, Divisibility: 2},
