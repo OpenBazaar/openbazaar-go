@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -514,6 +515,35 @@ func TestWalletCurrencyDictionary(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"GET", "/wallet/currencies", "", 200, string(expectedResponse)},
+	})
+}
+
+func TestWalletCurrencyDictionaryLookup(t *testing.T) {
+	type dictionaryResponse struct {
+		Entries repo.CurrencyDictionary `json:"entries"`
+	}
+	var randomLookup string
+	for currency := range repo.LoadCurrencyDefinitions() {
+		// pick any currency string from the dictionary
+		randomLookup = currency
+		break
+	}
+
+	def, err := repo.LoadCurrencyDefinitions().Lookup(randomLookup)
+	if err != nil {
+		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
+	}
+	resp := dictionaryResponse{
+		Entries: repo.CurrencyDictionary{randomLookup: def},
+	}
+	expectedResponse, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", randomLookup), "", 200, string(expectedResponse)},
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", "INVALID"), "", 404, errorResponseJSON(errors.New("unknown definition for INVALID"))},
 	})
 }
 

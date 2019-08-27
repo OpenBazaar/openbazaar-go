@@ -679,11 +679,22 @@ func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *h
 		Entries repo.CurrencyDictionary `json:"entries"`
 	}
 	var (
-		resp = response{
-			Entries: repo.LoadCurrencyDefinitions(),
-		}
-		out, err = json.MarshalIndent(resp, "", "    ")
+		resp      = response{}
+		_, lookup = path.Split(r.URL.Path)
 	)
+	if lookup == "currencies" {
+		resp.Entries = repo.LoadCurrencyDefinitions()
+	} else {
+		def, err := repo.LoadCurrencyDefinitions().Lookup(lookup)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unknown definition for %s", lookup))
+			return
+		}
+		resp.Entries = repo.CurrencyDictionary{
+			lookup: def,
+		}
+	}
+	out, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
