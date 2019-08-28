@@ -400,7 +400,7 @@ type messageTypingWrapper struct {
 }
 
 type ListingPrice struct {
-	Amount           uint64  `json:"amount"`
+	Amount           string  `json:"amount"`
 	CurrencyCode     string  `json:"currencyCode"`
 	PriceModifier    float32 `json:"priceModifier"`
 	CoinDivisibility uint32  `json:"coinDivisibility"`
@@ -442,7 +442,7 @@ type PaymentNotification struct {
 	ID           string           `json:"notificationId"`
 	Type         NotificationType `json:"type"`
 	OrderId      string           `json:"orderId"`
-	FundingTotal uint64           `json:"fundingTotal"`
+	FundingTotal string           `json:"fundingTotal"`
 	CoinType     string           `json:"coinType"`
 }
 
@@ -844,7 +844,7 @@ func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", ""
 type IncomingTransaction struct {
 	Wallet        string    `json:"wallet"`
 	Txid          string    `json:"txid"`
-	Value         int64     `json:"value"`
+	Value         string    `json:"value"`
 	Address       string    `json:"address"`
 	Status        string    `json:"status"`
 	Memo          string    `json:"memo"`

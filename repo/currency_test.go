@@ -1,7 +1,7 @@
 package repo_test
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"strings"
 	"testing"
 
@@ -41,19 +41,21 @@ func TestCurrencyValueMarshalsToJSON(t *testing.T) {
 	for _, e := range examples {
 		var (
 			example, err = repo.NewCurrencyValue(e.value, e.currency)
-			actual       *repo.CurrencyValue
+			//actual       *repo.CurrencyValue
 		)
+		actual := &repo.CurrencyValue{}
 		if err != nil {
 			t.Errorf("unable to parse valid input '%s': %s", e.value, err.Error())
 			continue
 		}
-		j, err := json.Marshal(example)
+		j, err := example.MarshalJSON() // json.Marshal(example)
 		if err != nil {
 			t.Errorf("marshaling %s: %s", example.String(), err)
 			continue
 		}
 
-		if err := json.Unmarshal(j, &actual); err != nil {
+		//if err := json.Unmarshal(j, &actual); err != nil {
+		if err := actual.UnmarshalJSON(j); err != nil {
 			t.Errorf("unmarhsaling %s, %s", example.String(), err)
 			continue
 		}

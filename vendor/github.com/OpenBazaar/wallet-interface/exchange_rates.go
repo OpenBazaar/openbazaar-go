@@ -15,5 +15,5 @@ type ExchangeRates interface {
 	/* Return the number of currency units per coin. For example, in bitcoin
 	   this is 100m satoshi per BTC. This is used when converting from fiat
 	   to the smaller currency unit. */
-	UnitsPerCoin() int
+	UnitsPerCoin() int64
 }

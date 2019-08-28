@@ -20,6 +20,18 @@ message RicardianContract {
     repeated string errors                             = 11;
 }
 
+message CurrencyDefinition {
+    string      code = 1;
+    uint32 divisibility = 2;
+    string name = 3;
+    string currencyType = 4;
+}
+
+message CurrencyValue {
+    CurrencyDefinition currency = 1;
+    string        amount = 2;
+}
+
 message Listing {
     string slug                             = 1;
     ID vendorID                             = 2;
@@ -38,12 +50,13 @@ message Listing {
         Format format                      = 3;
         google.protobuf.Timestamp expiry   = 4;
         repeated string acceptedCurrencies = 5;
-        string pricingCurrency             = 6;
+        //string pricingCurrency = 6 [json_name = ""];
         string language                    = 7;
         uint32 escrowTimeoutHours          = 8;
-        string coinType                    = 9;
-        uint32 coinDivisibility            = 10;
+        //string coinType                    = 9 [json_name = ""];
+        //uint32 coinDivisibility            = 10 [json_name = ""];
         float priceModifier                = 11;
+        CurrencyDefinition pricingCurrencyDefn = 12 [json_name = "pricingCurrency"];
 
         enum ContractType {
             PHYSICAL_GOOD  = 0;
@@ -63,7 +76,7 @@ message Listing {
         string title               = 1;
         string description         = 2;
         string processingTime      = 3;
-        uint64 price               = 4;
+        //uint64 price        = 4 [json_name = ""];
         bool nsfw                  = 5;
         repeated string tags       = 6;
         repeated Image images      = 7;
@@ -72,6 +85,7 @@ message Listing {
         string condition           = 10;
         repeated Option options    = 11;
         repeated Sku skus          = 12;
+        CurrencyValue priceValue        = 13 [json_name = "price"];
 
         message Option {
             string name                = 1;
@@ -87,8 +101,9 @@ message Listing {
         message Sku {
             repeated uint32 variantCombo = 1;
             string productID             = 2;
-            int64 surcharge              = 3;
+            //int64 surcharge      = 3 [json_name = ""];
             int64 quantity               = 4; // Not saved with listing
+            CurrencyValue surchargeValue = 5 [json_name = "surcharge"];
         }
 
         message Image {
@@ -113,10 +128,12 @@ message Listing {
         }
 
         message Service {
-            string name                = 1;
-            uint64 price               = 2;
-            string estimatedDelivery   = 3;
-            uint64 additionalItemPrice = 4;
+            string name                       = 1;
+            //uint64 price               = 2 [json_name = ""];
+            string estimatedDelivery          = 3;
+            //uint64 additionalItemPrice = 4 [json_name = ""];
+            CurrencyValue priceValue               = 5 [json_name = "price"];
+            CurrencyValue additionalItemPriceValue = 6 [json_name = "additionalItemPrice"];
         }
     }
 
@@ -134,15 +151,16 @@ message Listing {
             string discountCode = 3;
         }
         oneof discount {
-            float percentDiscount = 5;
-            uint64 priceDiscount  = 6;
+            float percentDiscount        = 5;
+            //uint64 priceDiscount  = 6 [json_name = ""];
+            CurrencyValue priceDiscountValue = 7 [json_name = "priceDiscount"];
         }
     }
 }
 
 message Order {
     string refundAddress                 = 1;
-    uint64 refundFee                     = 2;
+    //uint64 refundFee              = 2 [json_name = ""];
     Shipping shipping                    = 3;
     ID buyerID                           = 4;
     google.protobuf.Timestamp timestamp  = 5;
@@ -151,6 +169,7 @@ message Order {
     repeated bytes ratingKeys            = 8;
     string alternateContactInfo          = 9;
     uint32 version                       = 10;
+    CurrencyValue refundFeeValue = 11 [json_name = "refundFee"];
 
     message Shipping {
         string shipTo       = 1;
@@ -186,12 +205,13 @@ message Order {
     message Payment {
         Method method       = 1;
         string moderator    = 2;
-        uint64 amount       = 3; // Satoshis
+        //uint64 amount = 3 [json_name = ""];
         string chaincode    = 4; // Hex encoded
         string address      = 5; // B58check encoded
         string redeemScript = 6; // Hex encoded
         bytes  moderatorKey = 7;
-        string coin         = 8;
+        //string coin         = 8 [json_name = ""];
+        CurrencyValue amountValue = 9 [json_name = "amount"];
 
         enum Method {
             ADDRESS_REQUEST = 0;
@@ -206,9 +226,9 @@ message OrderConfirmation {
     google.protobuf.Timestamp timestamp       = 2;
     // Direct payments only
     string paymentAddress                     = 3;
-    uint64 requestedAmount                    = 4;
-
+    //uint64 requestedAmount             = 4 [json_name = ""];
     repeated RatingSignature ratingSignatures = 5;
+    CurrencyValue requestedAmountValue             = 6 [json_name = "requestedAmount"];
 }
 
 message OrderReject {
@@ -283,7 +303,8 @@ message OrderFulfillment {
     message Payout {
         repeated BitcoinSignature sigs = 1;
         string payoutAddress           = 2;
-        uint64 payoutFeePerByte        = 3;
+        //uint64 payoutFeePerByte        = 3 [json_name = ""];
+        string payoutFeePerByteValue        = 4 [json_name = "payoutFeePerByte"];
     }
 }
 
@@ -353,7 +374,8 @@ message DisputeResolution {
                 string script  = 1;
                 string address = 3;
               }
-              uint64 amount  = 2;
+              //uint64 amount  = 2 [json_name = ""];
+              CurrencyValue amountValue = 4 [json_name = "amount"];
             }
     }
 }
@@ -366,7 +388,8 @@ message DisputeAcceptance {
 message Outpoint {
         string hash  = 1; // Hex encoded
         uint32 index = 2;
-        uint64 value = 3;
+        //uint64 value = 3 [json_name = ""];
+        CurrencyValue newValue = 4 [json_name = "value"];
 }
 
 message Refund {
@@ -378,7 +401,8 @@ message Refund {
 
     message TransactionInfo {
         string txid  = 1;
-        uint64 value = 2;
+        //uint64 value = 2 [json_name = ""];
+        CurrencyValue newValue = 3 [json_name = "value"];
     }
 }
 
@@ -419,3 +443,5 @@ message SignedListing {
     string hash         = 2;
     bytes signature     = 3;
 }
+
+

@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
+	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -27,7 +28,7 @@ import (
 
 const (
 	// ListingVersion - current listing version
-	ListingVersion = 4
+	ListingVersion = 5
 	// TitleMaxCharacters - max size for title
 	TitleMaxCharacters = 140
 	// ShortDescriptionLength - min length for description
@@ -69,9 +70,9 @@ const (
 )
 
 type price struct {
-	CurrencyCode string  `json:"currencyCode"`
-	Amount       uint64  `json:"amount"`
-	Modifier     float32 `json:"modifier"`
+	CurrencyCode string              `json:"currencyCode"`
+	Amount       *repo.CurrencyValue `json:"amount"`
+	Modifier     float32             `json:"modifier"`
 }
 type thumbnail struct {
 	Tiny   string `json:"tiny"`
@@ -380,6 +381,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 	if err != nil {
 		return err
 	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -486,19 +488,32 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		return false
 	}
 
-	var shipsTo []string
-	var freeShipping []string
+	shipsTo := []string{}
+	freeShipping := []string{}
 	for _, shippingOption := range listing.Listing.ShippingOptions {
 		for _, region := range shippingOption.Regions {
 			if !contains(shipsTo, region.String()) {
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				if service.Price == 0 && !contains(freeShipping, region.String()) {
+				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if !ok {
+					return ListingData{}, errors.New("invalid price amount")
+				}
+				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
 			}
 		}
+	}
+
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return ListingData{}, errors.New("invalid pricing currency")
+	}
+	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return ListingData{}, errors.New("invalid price amount")
 	}
 
 	ld := ListingData{
@@ -507,13 +522,13 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		Title:        listing.Listing.Item.Title,
 		Categories:   listing.Listing.Item.Categories,
 		NSFW:         listing.Listing.Item.Nsfw,
-		CoinType:     listing.Listing.Metadata.CoinType,
+		CoinType:     listing.Listing.Metadata.PricingCurrencyDefn.Code,
 		ContractType: listing.Listing.Metadata.ContractType.String(),
 		Description:  listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
 		Price: price{
-			CurrencyCode: listing.Listing.Metadata.PricingCurrency,
-			Amount:       listing.Listing.Item.Price,
+			CurrencyCode: listing.Listing.Metadata.PricingCurrencyDefn.Code,
+			Amount:       &repo.CurrencyValue{Currency: defn, Amount: amt},
 			Modifier:     listing.Listing.Metadata.PriceModifier,
 		},
 		ShipsTo:            shipsTo,
@@ -945,7 +960,7 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 	if listing.Item.Title == "" {
 		return errors.New("listing must have a title")
 	}
-	if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && listing.Item.Price == 0 {
+	if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && listing.Item.PriceValue.Amount == "0" {
 		return errors.New("zero price listings are not allowed")
 	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
@@ -1149,10 +1164,24 @@ func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("percent discount cannot be over 100 percent")
 		}
-		if coupon.GetPriceDiscount() > listing.Item.Price {
-			return errors.New("price discount cannot be greater than the item price")
+		n, ok := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
+		if !ok {
+			return errors.New("invalid price amount")
 		}
-		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
+		isPriceEqualToDiscount := false
+		if discountVal := coupon.GetPriceDiscountValue(); discountVal != nil {
+			discount0, ok := new(big.Int).SetString(discountVal.Amount, 10)
+			if !ok {
+				return errors.New("invalid discount amount")
+			}
+			if n.Cmp(discount0) < 0 {
+				return errors.New("price discount cannot be greater than the item price")
+			}
+			if n.Cmp(discount0) == 0 {
+				isPriceEqualToDiscount = true
+			}
+		}
+		if coupon.GetPercentDiscount() == 0 && isPriceEqualToDiscount {
 			return errors.New("coupons must have at least one positive discount value")
 		}
 	}
@@ -1221,11 +1250,11 @@ func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 }
 
 func validatePhysicalListing(listing *pb.Listing) error {
-	if listing.Metadata.PricingCurrency == "" {
+	if listing.Metadata.PricingCurrencyDefn.Code == "" {
 		return errors.New("listing pricing currency code must not be empty")
 	}
-	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
-		return fmt.Errorf("'PricingCurrency' is longer than the max of %d characters", WordMaxCharacters)
+	if len(listing.Metadata.PricingCurrencyDefn.Code) > WordMaxCharacters {
+		return fmt.Errorf("pricingCurrency is longer than the max of %d characters", WordMaxCharacters)
 	}
 	if len(listing.Item.Condition) > SentenceMaxCharacters {
 		return fmt.Errorf("'Condition' length must be less than the max of %d", SentenceMaxCharacters)
@@ -1309,20 +1338,19 @@ func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) erro
 		return ErrCryptocurrencyListingIllegalField("shippingOptions")
 	case len(listing.Item.Condition) > 0:
 		return ErrCryptocurrencyListingIllegalField("item.condition")
-	case len(listing.Metadata.PricingCurrency) > 0:
-		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
-	case listing.Metadata.CoinType == "":
-		return ErrCryptocurrencyListingCoinTypeRequired
+		//case len(listing.Metadata.PricingCurrency.Code) > 0:
+		//	return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+		//case listing.Metadata.CoinType == "":
+		//	return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	var expectedDivisibility uint32
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.CoinType); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
-	} else {
-		expectedDivisibility = uint32(wallet.ExchangeRates().UnitsPerCoin())
+	currencyDefinition, err := repo.LoadCurrencyDefinitions().Lookup(listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return errors.New("invalid pricing currency")
 	}
 
-	if listing.Metadata.CoinDivisibility != expectedDivisibility {
+	if listing.Metadata.PricingCurrencyDefn.Divisibility != uint32(currencyDefinition.Divisibility) {
+		log.Errorf("listing.Metadata.PricingCurrency.Divisibility : %d %d", listing.Metadata.PricingCurrencyDefn.Divisibility, currencyDefinition.Divisibility)
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
@@ -1330,7 +1358,11 @@ func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) erro
 }
 
 func validateMarketPriceListing(listing *pb.Listing) error {
-	if listing.Item.Price > 0 {
+	n, ok := new(big.Int).SetString(listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return errors.New("invalid price amount")
+	}
+	if n.Cmp(big.NewInt(0)) > 0 {
 		return ErrMarketPriceListingIllegalField("item.price")
 	}
 
@@ -1386,7 +1418,7 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("vendor's Bitcoin signature on GUID failed to verify")
+			return errors.New("vendor's bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}

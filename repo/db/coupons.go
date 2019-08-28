@@ -48,7 +48,7 @@ func (c *CouponDB) Get(slug string) ([]repo.Coupon, error) {
 		var code string
 		var hash string
 		rows.Scan(&slug, &code, &hash)
-		ret = append(ret, repo.Coupon{slug, code, hash})
+		ret = append(ret, repo.Coupon{Slug: slug, Code: code, Hash: hash})
 	}
 	return ret, nil
 }

@@ -1,31 +1,48 @@
-package db
+package db_test
 
 import (
 	"bytes"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"sync"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 )
 
-var kdb repo.KeyStore
-
-func init() {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	kdb = NewKeyStore(conn, new(sync.Mutex), wallet.Bitcoin)
+func buildNewKeyStore() (repo.KeyStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return db.NewKeyStore(database, new(sync.Mutex), wallet.Bitcoin), appSchema.DestroySchemaDirectories, nil
 }
 
 func TestGetAll(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -37,8 +54,14 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestPutKey(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	b := make([]byte, 32)
-	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
+	err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0})
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,6 +91,12 @@ func TestPutKey(t *testing.T) {
 }
 
 func TestKeysDB_GetImported(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Error(err)
@@ -90,6 +119,12 @@ func TestKeysDB_GetImported(t *testing.T) {
 }
 
 func TestImportKey(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Error(err)
@@ -132,17 +167,31 @@ func TestImportKey(t *testing.T) {
 }
 
 func TestPutDuplicateKey(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	b := make([]byte, 32)
-	kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
-	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
+	if err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0}); err != nil {
+		t.Fatal(err)
+	}
+	err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0})
 	if err == nil {
 		t.Error("Expected duplicate key error")
 	}
 }
 
 func TestMarkKeyAsUsed(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	b := make([]byte, 33)
-	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
+	err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 0})
 	if err != nil {
 		t.Error(err)
 	}
@@ -167,11 +216,17 @@ func TestMarkKeyAsUsed(t *testing.T) {
 }
 
 func TestGetLastKeyIndex(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	var last []byte
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -189,9 +244,15 @@ func TestGetLastKeyIndex(t *testing.T) {
 }
 
 func TestGetPathForKey(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	b := make([]byte, 32)
 	rand.Read(b)
-	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 15})
+	err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 15})
 	if err != nil {
 		t.Error(err)
 	}
@@ -205,6 +266,12 @@ func TestGetPathForKey(t *testing.T) {
 }
 
 func TestGetKey(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Error(err)
@@ -227,19 +294,31 @@ func TestGetKey(t *testing.T) {
 }
 
 func TestKeyNotFound(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	b := make([]byte, 32)
 	rand.Read(b)
-	_, err := kdb.GetPathForKey(b)
+	_, err = kdb.GetPathForKey(b)
 	if err == nil {
 		t.Error("Return key when it shouldn't have")
 	}
 }
 
 func TestGetUnsed(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, wallet.KeyPath{wallet.INTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.INTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -254,10 +333,16 @@ func TestGetUnsed(t *testing.T) {
 }
 
 func TestGetLookaheadWindows(t *testing.T) {
+	var kdb, teardown, err = buildNewKeyStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -266,7 +351,7 @@ func TestGetLookaheadWindows(t *testing.T) {
 		}
 		b = make([]byte, 32)
 		rand.Read(b)
-		err = kdb.Put(b, wallet.KeyPath{wallet.INTERNAL, i})
+		err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.INTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}

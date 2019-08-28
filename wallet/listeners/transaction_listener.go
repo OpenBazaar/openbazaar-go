@@ -1,18 +1,21 @@
 package bitcoin
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet"
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
+
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -52,6 +55,8 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
+	log.Info("Transaction received", cb.Txid, cb.Height)
+
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
@@ -101,19 +106,19 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 
 		fundsReleased := true
 		for i, r := range records {
-			if input.LinkedAddress.String() == r.Address {
+			if util.AreAddressesEqual(input.LinkedAddress.String(), r.Address) {
 				records[i].Spent = true
 			}
-			if records[i].Value > 0 && !records[i].Spent {
+			if records[i].Value.Cmp(big.NewInt(0)) > 0 && !records[i].Spent {
 				fundsReleased = false
 			}
 		}
-
+		val := new(big.Int).Mul(&input.Value, big.NewInt(-1))
 		record := &wallet.TransactionRecord{
 			Timestamp: time.Now(),
 			Txid:      cb.Txid,
 			Index:     input.OutpointIndex,
-			Value:     -input.Value,
+			Value:     *val,
 			Address:   input.LinkedAddress.String(),
 		}
 		records = append(records, record)
@@ -179,9 +184,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 }
 
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	var funding = output.Value
+	funding := output.Value
 	for _, r := range records {
-		funding += r.Value
+		funding = *new(big.Int).Add(&funding, &r.Value)
 		// If we have already seen this transaction for some reason, just return
 		if r.Txid == txid {
 			return
@@ -192,8 +197,8 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		return
 	}
 	if !funded {
-		requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
-		if funding >= requestedAmount {
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Received payment for order %s", orderId)
 			funded = true
 
@@ -211,9 +216,9 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				ListingType: contract.VendorListings[0].Metadata.ContractType.String(),
 				OrderId:     orderId,
 				Price: repo.ListingPrice{
-					Amount:           contract.BuyerOrder.Payment.Amount,
+					Amount:           contract.BuyerOrder.Payment.AmountValue.Amount,
 					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract),
-					CurrencyCode:     contract.BuyerOrder.Payment.Coin,
+					CurrencyCode:     contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
 				},
 				Slug:      contract.VendorListings[0].Slug,
@@ -252,13 +257,13 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 }
 
 func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
-	var currencyDivisibility = contract.VendorListings[0].Metadata.CoinDivisibility
+	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Divisibility
 	if currencyDivisibility != 0 {
 		return currencyDivisibility
 	}
-	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err == nil {
-		return uint32(wallet.ExchangeRates().UnitsPerCoin())
+		return uint32(wallet.ExchangeRates().UnitsPerCoin() / 10)
 	}
 	return core.DefaultCurrencyDivisibility
 }
@@ -266,7 +271,7 @@ func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.R
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
-		funding += r.Value
+		funding = *new(big.Int).Add(&funding, &r.Value)
 		// If we have already seen this transaction for some reason, just return
 		if r.Txid == txid {
 			return
@@ -277,8 +282,8 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		return
 	}
 	if !funded {
-		requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
-		if funding >= requestedAmount {
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
 			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
@@ -291,8 +296,8 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			repo.NewNotificationID(),
 			"payment",
 			orderId,
-			uint64(funding),
-			contract.BuyerOrder.Payment.Coin,
+			funding.String(),
+			contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 		}
 		l.broadcast <- n
 		l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))

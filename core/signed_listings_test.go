@@ -4,9 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/repo"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 func TestOpenBazaarSignedListings_GetSignedListingFromPath(t *testing.T) {
@@ -50,8 +49,8 @@ func TestOpenBazaarSignedListings_SetAcceptedCurrencies(t *testing.T) {
 func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
 	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
 	coupons := []repo.Coupon{
-		{"signed_listings_1", "test", "QmQ5vueeX64fsSo6fU9Z1dDFMR9rky5FjowEr7m7cSiGd8"},
-		{"signed_listings_1", "bad", "BADHASH"},
+		{Slug: "signed_listings_1", Code: "test", Hash: "QmQ5vueeX64fsSo6fU9Z1dDFMR9rky5FjowEr7m7cSiGd8"},
+		{Slug: "signed_listings_1", Code: "bad", Hash: "BADHASH"},
 	}
 
 	listing, err := core.GetSignedListingFromPath(absPath)
@@ -105,7 +104,7 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 
 	core.ApplyShippingOptions(listing)
 
-	if option.AdditionalItemPrice != 100 {
+	if option.AdditionalItemPriceValue.Amount != "100" {
 		t.Error("Shipping options were not applied properly")
 	}
 }

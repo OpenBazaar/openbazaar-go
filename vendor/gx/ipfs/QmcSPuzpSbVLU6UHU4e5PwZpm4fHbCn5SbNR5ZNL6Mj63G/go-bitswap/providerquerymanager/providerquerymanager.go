@@ -120,7 +120,7 @@ func (pqm *ProviderQueryManager) FindProvidersAsync(sessionCtx context.Context, 
 
 	select {
 	case pqm.providerQueryMessages <- &newProvideQueryMessage{
-		k: k,
+		k:                     k,
 		inProgressRequestChan: inProgressRequestChan,
 	}:
 	case <-pqm.ctx.Done():

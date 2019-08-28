@@ -40,6 +40,8 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+            listing_json["metadata"]["pricingCurrency"]["code"] = "BCH"
+            listing_json["metadata"]["pricingCurrency"]["divisibility"] = 8
             listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
             listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
@@ -59,7 +61,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("MarketPriceModifierTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("MarketPriceModifierTest - FAIL: Listing POST 2 failed. Reason: %s", resp["reason"])
         slug_with_modifier = json.loads(r.text)["slug"]
 
         # check vendor's local listings and check for modifier
@@ -115,7 +117,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         payment_address = resp["paymentAddress"]
-        payment_amount = resp["amount"]
+        payment_amount = int(resp["amount"]["amount"])
 
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
@@ -130,7 +132,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         payment_address_with_modifier = resp["paymentAddress"]
-        payment_amount_with_modifier = resp["amount"]
+        payment_amount_with_modifier = int(resp["amount"]["amount"])
 
         # Check that modified price is different than regular price
         pct_change = round((payment_amount-payment_amount_with_modifier) / payment_amount * -100, 2)

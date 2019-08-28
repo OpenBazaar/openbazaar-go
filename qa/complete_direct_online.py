@@ -27,7 +27,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(40)
+        time.sleep(20)
 
         # post profile for alice
         with open('testdata/profile.json') as profile_file:
@@ -38,7 +38,8 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -101,7 +102,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -111,7 +112,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(30)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -210,6 +211,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to order completion")
 
         print("CompleteDirectOnlineTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running CompleteDirectOnlineTest")

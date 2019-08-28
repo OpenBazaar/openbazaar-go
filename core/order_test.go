@@ -19,14 +19,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	contract := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
-				Version:            2,
+				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:              pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies:  []string{"BTC"},
+				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Version:             2,
 			},
 			Item: &pb.Listing_Item{
-				Price: 100000,
+				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -35,9 +35,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+							Name:                     "Standard shipping",
+							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},
@@ -68,7 +68,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
 		},
 	}
 	contract.BuyerOrder = order
@@ -78,8 +78,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 125000 {
-		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total)
+	if total.Int64() != 125000 {
+		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total.Int64())
 	}
 
 	// Test higher quantity
@@ -88,7 +88,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 235000 {
+	if total.Int64() != 235000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -106,8 +106,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    50000,
-			VariantCombo: []uint32{0},
+			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "50000"},
+			VariantCombo:   []uint32{0},
 		},
 	}
 	contract.BuyerOrder.Items[0].Options = []*pb.Order_Item_Option{
@@ -129,15 +129,15 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 175000 {
+	if total.Int64() != 175000 {
 		t.Error("Calculated wrong order total")
 	}
 
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    -50000,
-			VariantCombo: []uint32{0},
+			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "-50000"},
+			VariantCombo:   []uint32{0},
 		},
 	}
 	ser, err = proto.Marshal(contract.VendorListings[0])
@@ -153,7 +153,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 75000 {
+	if total.Int64() != 75000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -180,11 +180,11 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon"}
 	contract.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract)
+	total1, err := node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 70000 {
+	if total1.Int64() != 70000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -197,7 +197,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		{
 			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
 			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: 6000},
+			Discount: &pb.Listing_Coupon_PriceDiscountValue{PriceDiscountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "6000"}},
 		},
 	}
 
@@ -215,7 +215,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 69000 {
+	if total.Int64() != 69000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -241,7 +241,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 71200 {
+	if total.Int64() != 71200 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -267,7 +267,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 72450 {
+	if total.Int64() != 72450 {
 		t.Error("Calculated wrong order total")
 		return
 	}
@@ -288,21 +288,21 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 46200 {
+	if total.Int64() != 46200 {
 		t.Error("Calculated wrong order total")
 	}
 
 	contract2 := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				Version:            3,
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
+				Version:             3,
+				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:              pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies:  []string{"BTC"},
+				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
 			},
 			Item: &pb.Listing_Item{
-				Price: 100000,
+				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100000"},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -311,9 +311,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+							Name:                     "Standard shipping",
+							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "25000"},
+							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "10000"},
 						},
 					},
 				},
@@ -344,7 +344,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}},
 		},
 	}
 	contract2.BuyerOrder = order2
@@ -354,7 +354,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 1115000 {
+	if total.Int64() != 1115000 {
 		t.Error("Calculated wrong order total")
 	}
 }

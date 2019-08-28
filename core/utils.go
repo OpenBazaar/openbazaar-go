@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	util "gx/ipfs/QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz/go-ipfs-util"
@@ -71,7 +73,7 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
@@ -80,18 +82,26 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	for _, r := range records {
 		record, ok := payments[r.Txid]
 		if ok {
-			record.Value += r.Value
+			n, _ := new(big.Int).SetString(record.TxnValue.Amount, 10)
+			sum := new(big.Int).Add(n, &r.Value)
+			record.TxnValue = &pb.CurrencyValue{
+				Currency: record.TxnValue.Currency,
+				Amount:   sum.String(),
+			}
 			payments[r.Txid] = record
 		} else {
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
-			tx.Value = r.Value
+			tx.TxnValue = &pb.CurrencyValue{
+				Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
+				Amount:   r.Value.String(),
+			} // r.Value
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
 				return paymentRecords, nil, err
 			}
 			tx.Timestamp = ts
-			ch, err := chainhash.NewHashFromStr(tx.Txid)
+			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(tx.Txid, "0x"))
 			if err != nil {
 				return paymentRecords, nil, err
 			}
@@ -99,8 +109,8 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, nil, err
 			}
-			tx.Height = height
-			tx.Confirmations = confirmations
+			tx.Height = uint64(height)
+			tx.Confirmations = uint64(confirmations)
 			payments[r.Txid] = tx
 		}
 	}
@@ -112,10 +122,14 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		// For multisig we can use the outgoing from the payment address
 		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
-				if rec.Value < 0 {
+				val, _ := new(big.Int).SetString(rec.TxnValue.Amount, 10)
+				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.Value = -rec.Value
+					refundRecord.TxnValue = &pb.CurrencyValue{
+						Currency: rec.TxnValue.Currency,
+						Amount:   "-" + rec.TxnValue.Amount,
+					} //-rec.Value
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
@@ -125,7 +139,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		} else if contract.Refund != nil && contract.Refund.RefundTransaction != nil && contract.Refund.Timestamp != nil {
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
-			ch, err := chainhash.NewHashFromStr(contract.Refund.RefundTransaction.Txid)
+			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
 			if err != nil {
 				return paymentRecords, refundRecord, err
 			}
@@ -134,10 +148,10 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				return paymentRecords, refundRecord, nil
 			}
 			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.Value = int64(contract.Refund.RefundTransaction.Value)
+			refundRecord.TxnValue = contract.Refund.RefundTransaction.NewValue
 			refundRecord.Timestamp = contract.Refund.Timestamp
-			refundRecord.Confirmations = confirmations
-			refundRecord.Height = height
+			refundRecord.Confirmations = uint64(confirmations)
+			refundRecord.Height = uint64(height)
 		}
 	}
 	return paymentRecords, refundRecord, nil

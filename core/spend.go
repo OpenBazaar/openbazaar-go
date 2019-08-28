@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -14,36 +15,37 @@ import (
 
 // DefaultCurrencyDivisibility is the Divisibility of the Currency if not
 // defined otherwise
-const DefaultCurrencyDivisibility uint32 = 1e8
+const DefaultCurrencyDivisibility uint32 = 8
 
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
-	Address                string `json:"address"`
-	Amount                 int64  `json:"amount"`
-	FeeLevel               string `json:"feeLevel"`
-	Memo                   string `json:"memo"`
-	OrderID                string `json:"orderId"`
-	RequireAssociatedOrder bool   `json:"requireOrder"`
-	Wallet                 string `json:"wallet"`
-	SpendAll               bool   `json:"spendAll"`
+	Address                string              `json:"address"`
+	Value                  *repo.CurrencyValue `json:"value"`
+	FeeLevel               string              `json:"feeLevel"`
+	Memo                   string              `json:"memo"`
+	OrderID                string              `json:"orderId"`
+	RequireAssociatedOrder bool                `json:"requireOrder"`
+	Wallet                 string              `json:"wallet"`
+	SpendAll               bool                `json:"spendAll"`
 }
 
 type SpendResponse struct {
-	Amount             int64     `json:"amount"`
-	ConfirmedBalance   int64     `json:"confirmedBalance"`
-	Memo               string    `json:"memo"`
-	OrderID            string    `json:"orderId"`
-	Timestamp          time.Time `json:"timestamp"`
-	Txid               string    `json:"txid"`
-	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
-	PeerID             string    `json:"-"`
+	Amount             *repo.CurrencyValue `json:"amount"`
+	ConfirmedBalance   *repo.CurrencyValue `json:"confirmedBalance"`
+	Memo               string              `json:"memo"`
+	OrderID            string              `json:"orderId"`
+	Timestamp          time.Time           `json:"timestamp"`
+	Txid               string              `json:"txid"`
+	UnconfirmedBalance *repo.CurrencyValue `json:"unconfirmedBalance"`
+	PeerID             string              `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	var feeLevel wallet.FeeLevel
+	peerID := ""
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
 	if err != nil {
@@ -71,8 +73,11 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-
-	txid, err := wal.Spend(args.Amount, addr, feeLevel, args.OrderID, args.SpendAll)
+	if args.Value == nil {
+		return nil, errors.New("value argument is nil")
+	}
+	amt := args.Value.Amount
+	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -84,15 +89,29 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		}
 	}
 
+	txn, err := wal.GetTransaction(*txid)
+	if err != nil {
+		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
+	}
+
 	var (
 		thumbnail string
 		title     string
 		memo      = args.Memo
+		toAddress = args.Address
 	)
-	if contract != nil {
+
+	if txn.ToAddress != "" {
+		toAddress = txn.ToAddress
+	}
+
+	if contract != nil && contract.VendorListings[0] != nil {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 			title = contract.VendorListings[0].Item.Title
+		}
+		if contract.VendorListings[0].VendorID != nil {
+			peerID = contract.VendorListings[0].VendorID.PeerID
 		}
 	}
 	if memo == "" && title != "" {
@@ -101,7 +120,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	if err := n.Datastore.TxMetadata().Put(repo.Metadata{
 		Txid:       txid.String(),
-		Address:    args.Address,
+		Address:    toAddress,
 		Memo:       memo,
 		OrderId:    args.OrderID,
 		Thumbnail:  thumbnail,
@@ -111,19 +130,23 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	confirmed, unconfirmed := wal.Balance()
-	txn, err := wal.GetTransaction(*txid)
-	if err != nil {
-		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
-	}
+
+	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
+	amt0.Amount = new(big.Int).Mul(amt0.Amount, big.NewInt(-1))
+
+	conf0, _ := repo.NewCurrencyValue(confirmed.Value.String(), defn)
+	uconf0, _ := repo.NewCurrencyValue(unconfirmed.Value.String(), defn)
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
-		Amount:             -(txn.Value),
+		ConfirmedBalance:   conf0,
+		UnconfirmedBalance: uconf0,
+		Amount:             amt0,
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
+		PeerID:             peerID,
 	}, nil
 }
 

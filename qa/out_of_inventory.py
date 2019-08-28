@@ -24,7 +24,8 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         listing_json["item"]["skus"][4]["quantity"] = 0
 
         api_url = alice["gateway_url"] + "ob/listing"
@@ -100,7 +101,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -148,8 +149,8 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
+            unconfirmed = int(resp["unconfirmed"]["amount"])
             if confirmed + unconfirmed > 0:
                 raise TestFailure("OutOfInventoryTest - FAIL: Alice should have zero balance at this point")
         else:
@@ -178,7 +179,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
                 raise TestFailure("OutOfInventoryTest - FAIL: Alice failed to receive the multisig payout")

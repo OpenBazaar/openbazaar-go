@@ -38,7 +38,8 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -102,7 +103,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -169,6 +170,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to order fulfillment")
 
         print("FulfillDirectOnlineTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running FulfillDirectOnlineTest")
