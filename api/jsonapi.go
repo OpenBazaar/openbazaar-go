@@ -676,23 +676,21 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
 	type response struct {
-		Entries repo.CurrencyDictionary `json:"entries"`
+		Entries map[string]*repo.CurrencyDefinition `json:"entries"`
 	}
 	var (
 		resp      = response{}
 		_, lookup = path.Split(r.URL.Path)
 	)
 	if lookup == "currencies" {
-		resp.Entries = repo.LoadCurrencyDefinitions()
+		resp.Entries = repo.LoadCurrencyDefinitions().All()
 	} else {
 		def, err := repo.LoadCurrencyDefinitions().Lookup(lookup)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unknown definition for %s", lookup))
 			return
 		}
-		resp.Entries = repo.CurrencyDictionary{
-			lookup: def,
-		}
+		resp.Entries = map[string]*repo.CurrencyDefinition{lookup: def}
 	}
 	out, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
