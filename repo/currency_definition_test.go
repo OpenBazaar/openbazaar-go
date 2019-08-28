@@ -190,7 +190,7 @@ func TestCurrencyDictionaryLookup(t *testing.T) {
 		},
 		{ // testnet lookup
 			lookup:      testnetCode,
-			expected:    expected.AsTestnet(),
+			expected:    expected,
 			expectedErr: nil,
 		},
 		{ // undefined key

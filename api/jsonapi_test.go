@@ -500,15 +500,7 @@ func TestWallet(t *testing.T) {
 }
 
 func TestWalletCurrencyDictionary(t *testing.T) {
-	type dictionaryResponse struct {
-		Entries map[string]*repo.CurrencyDefinition `json:"entries"`
-	}
-	var (
-		resp = dictionaryResponse{
-			Entries: repo.LoadCurrencyDefinitions().All(),
-		}
-		expectedResponse, err = json.MarshalIndent(resp, "", "    ")
-	)
+	var expectedResponse, err = json.MarshalIndent(repo.LoadCurrencyDefinitions().All(), "", "    ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,9 +511,6 @@ func TestWalletCurrencyDictionary(t *testing.T) {
 }
 
 func TestWalletCurrencyDictionaryLookup(t *testing.T) {
-	type dictionaryResponse struct {
-		Entries map[string]*repo.CurrencyDefinition `json:"entries"`
-	}
 	var randomLookup string
 	for currency := range repo.LoadCurrencyDefinitions().All() {
 		// pick any currency string from the dictionary
@@ -534,7 +523,7 @@ func TestWalletCurrencyDictionaryLookup(t *testing.T) {
 		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
 	}
 	entries := map[string]*repo.CurrencyDefinition{randomLookup: def}
-	expectedResponse, err := json.MarshalIndent(dictionaryResponse{Entries: entries}, "", "    ")
+	expectedResponse, err := json.MarshalIndent(entries, "", "    ")
 	if err != nil {
 		t.Fatal(err)
 	}

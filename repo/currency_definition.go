@@ -7,13 +7,43 @@ import (
 	"strings"
 )
 
+type (
+	// CurrencyCode is a string-based currency symbol
+	CurrencyCode string
+	// CurrencyDefinition defines the characteristics of a currency
+	CurrencyDefinition struct {
+		// Name describes the colloquial term for the currency
+		Name string `json:"name,omitempty"`
+		// Code describes the currency as an uppercase string similar to ISO 4217
+		Code CurrencyCode `json:"code"`
+		// TestnetCode describes the currency as an uppercase string but for test usage
+		TestnetCode CurrencyCode `json:"testnetCode"`
+		// Divisibility indicates the number of decimal places the currency can be divided in
+		// base10. Ex: 8 suggests a maximum divisibility of 0.00000001
+		Divisibility uint `json:"divisibility"`
+		// CurrencyType indicates whether the currency is "fiat" or "crypto" currency
+		CurrencyType string `json:"currencyType,omitempty"`
+	}
+	// CurrencyDictionaryProcessingError represents a list of errors after
+	// processing a CurrencyDictionary
+	CurrencyDictionaryProcessingError map[string]error
+	// CurrencyDictionary represents a collection of CurrencyDefinitions keyed
+	// by their CurrencyCode in string form
+	CurrencyDictionary struct {
+		definitions        map[string]*CurrencyDefinition
+		mainnetDefinitions map[string]*CurrencyDefinition
+	}
+)
+
 const (
 	Fiat   = "fiat"
 	Crypto = "crypto"
+
+	NilCurrencyCode = CurrencyCode("")
 )
 
 var (
-	validatedMainnetCurrencyDefs *CurrencyDictionary
+	validatedCurrencyDictionary *CurrencyDictionary
 
 	ErrCurrencyCodeLengthInvalid       = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
 	ErrCurrencyCodeTestSymbolInvalid   = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
@@ -23,7 +53,7 @@ var (
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
 	ErrDictionaryCurrencyCodeCollision = errors.New("currency code is used by more than one currency")
 
-	mainnetCurrencyDefinitions = map[string]*CurrencyDefinition{
+	allCurrencyDefinitions = map[string]*CurrencyDefinition{
 		// Crypto
 		"BTC": {Name: "Bitcoin", Code: CurrencyCode("BTC"), TestnetCode: CurrencyCode("TBTC"), CurrencyType: Crypto, Divisibility: 8},
 		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), TestnetCode: CurrencyCode("TBCH"), CurrencyType: Crypto, Divisibility: 8},
@@ -192,33 +222,6 @@ var (
 	}
 )
 
-type (
-	// CurrencyCode is a string-based currency symbol
-	CurrencyCode string
-	// CurrencyDefinition defines the characteristics of a currency
-	CurrencyDefinition struct {
-		// Name describes the colloquial term for the currency
-		Name string `json:"name,omitempty"`
-		// Code describes the currency as an uppercase string similar to ISO 4217
-		Code CurrencyCode `json:"code"`
-		// TestnetCode describes the currency as an uppercase string but for test usage
-		TestnetCode CurrencyCode `json:"-"`
-		// Divisibility indicates the number of decimal places the currency can be divided in
-		// base10. Ex: 8 suggests a maximum divisibility of 0.00000001
-		Divisibility uint `json:"divisibility"`
-		// CurrencyType indicates whether the currency is "fiat" or "crypto" currency
-		CurrencyType string `json:"currencyType,omitempty"`
-	}
-	// CurrencyDictionaryProcessingError represents a list of errors after
-	// processing a CurrencyDictionary
-	CurrencyDictionaryProcessingError map[string]error
-	// CurrencyDictionary represents a collection of CurrencyDefinitions keyed
-	// by their CurrencyCode in string form
-	CurrencyDictionary struct {
-		definitions map[string]*CurrencyDefinition
-	}
-)
-
 // String returns a readable representation of CurrencyCode
 func (c CurrencyCode) String() string { return string(c) }
 
@@ -240,21 +243,30 @@ func (c CurrencyDictionaryProcessingError) Error() string {
 	return fmt.Sprintf("dictionary contains %d invalid definitions", len(c))
 }
 
+func (c CurrencyDictionaryProcessingError) All() []string {
+	var errs = make([]string, len(c))
+	for code, err := range c {
+		errs = append(errs, fmt.Sprintf("%s: %s", code, err.Error()))
+	}
+	return errs
+}
+
 // LoadCurrencyDefinitions returns the mainnet CurrencyDictionary singleton which
 // references all pre-defined mainnet CurrencyDefinitions
 func LoadCurrencyDefinitions() CurrencyDictionary {
-	if validatedMainnetCurrencyDefs == nil {
-		dict, _ := NewCurrencyDictionary(mainnetCurrencyDefinitions)
-		validatedMainnetCurrencyDefs = &dict
+	if validatedCurrencyDictionary == nil {
+		dict, _ := NewCurrencyDictionary(allCurrencyDefinitions)
+		validatedCurrencyDictionary = &dict
 	}
-	return *validatedMainnetCurrencyDefs
+	return *validatedCurrencyDictionary
 }
 
 // NewCurrencyDictionary returns a CurrencyDictionary for managing CurrencyDefinitions
 func NewCurrencyDictionary(defs map[string]*CurrencyDefinition) (CurrencyDictionary, error) {
 	var (
-		errs      = make(CurrencyDictionaryProcessingError)
-		validDefs = make(map[string]*CurrencyDefinition)
+		errs        = make(CurrencyDictionaryProcessingError)
+		mainnetDefs = make(map[string]*CurrencyDefinition)
+		allDefs     = make(map[string]*CurrencyDefinition)
 	)
 	for code, def := range defs {
 		if err := def.Valid(); err != nil {
@@ -269,24 +281,16 @@ func NewCurrencyDictionary(defs map[string]*CurrencyDefinition) (CurrencyDiction
 			errs[def.TestnetCode.String()] = ErrDictionaryCurrencyCodeCollision
 			continue
 		}
-		validDefs[code] = def
-		validDefs[def.TestnetCode.String()] = def.AsTestnet()
+		allDefs[code] = def
+		mainnetDefs[code] = def
+		if def.TestnetCode != NilCurrencyCode {
+			allDefs[def.TestnetCode.String()] = def
+		}
 	}
 	if len(errs) > 0 {
 		return CurrencyDictionary{}, errs
 	}
-	return CurrencyDictionary{definitions: validDefs}, nil
-}
-
-// AsTestnet returns a CurrencyDefinition with Testnet settings
-func (c *CurrencyDefinition) AsTestnet() *CurrencyDefinition {
-	return &CurrencyDefinition{
-		Name:         c.Name,
-		Code:         c.TestnetCode,
-		TestnetCode:  c.TestnetCode,
-		Divisibility: c.Divisibility,
-		CurrencyType: c.CurrencyType,
-	}
+	return CurrencyDictionary{definitions: allDefs, mainnetDefinitions: mainnetDefs}, nil
 }
 
 // Valid asserts that the CurrencyDefinition is either valid or has at least one error
@@ -345,8 +349,8 @@ func (c CurrencyDictionary) Lookup(code string) (*CurrencyDefinition, error) {
 }
 
 func (c CurrencyDictionary) All() map[string]*CurrencyDefinition {
-	if c.definitions == nil {
+	if c.mainnetDefinitions == nil {
 		return nil
 	}
-	return c.definitions
+	return c.mainnetDefinitions
 }
