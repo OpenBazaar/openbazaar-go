@@ -256,7 +256,7 @@ func TestListingAcceptedCurrencies(t *testing.T) {
 	}
 }
 
-func TestListings(t *testing.T) {
+func TestListings0(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")
 	updatedListing.Taxes = []*pb.Listing_Tax{
@@ -274,7 +274,7 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
-		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
+		{"POST", "/ob/listing", `{`, 500, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
 		{"GET", "/ob/inventory", "", 200, `{}`},

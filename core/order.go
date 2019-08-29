@@ -627,7 +627,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		contractType, err := listing.GetContractType()
 		if err != nil {
-
+			return nil, err
 		}
 
 		if contractType != pb.Listing_Metadata_CRYPTOCURRENCY.String() {

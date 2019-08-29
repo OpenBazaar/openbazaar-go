@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -56,7 +55,7 @@ type ListingData struct {
 }
 
 // SignListing Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing, error) {
+func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
 	timeout := uint32(0)
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
@@ -72,24 +71,24 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 	currencyMap := make(map[string]bool)
 	currencies, err := listing.GetAcceptedCurrencies()
 	if err != nil {
-		return nil, err
+		return repo.SignedListing{}, err
 	}
 	for _, acceptedCurrency := range currencies {
 		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
 		if err != nil {
-			return nil, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
+			return repo.SignedListing{}, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
 		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
-			return nil, errors.New("duplicate accepted currency in listing")
+			return repo.SignedListing{}, errors.New("duplicate accepted currency in listing")
 		}
 		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 	var expectedDivisibility uint32
-	currencyVal, err := listing.GetPrice()
+	currencyVal, err := listing.GetPricingCurrencyDefn() // ..GetPrice()
 	if err != nil {
-		return nil, err
+		return repo.SignedListing{}, err
 	}
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Currency.Code.String()); err != nil {
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Name); err != nil {
 		expectedDivisibility = DefaultCurrencyDivisibility
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
@@ -99,7 +98,7 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
   to make sure the inventory uses the correct variants. */
-func (n *OpenBazaarNode) SetListingInventory(l *repo.Listing) error {
+func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	err := l.ValidateSkus()
 	if err != nil {
 		return err
@@ -159,8 +158,11 @@ func (n *OpenBazaarNode) SetListingInventory(l *repo.Listing) error {
 }
 
 // CreateListing - add a listing
-func (n *OpenBazaarNode) CreateListing(r io.Reader) (string, error) {
-	listing, err := repo.CreateListing(r, n.TestNetworkEnabled(), &n.Datastore)
+func (n *OpenBazaarNode) CreateListing(r []byte) (string, error) {
+	fmt.Println("lets see the bytes : ", r)
+	listing, err := repo.CreateListing(r, n.TestNetworkEnabled(), &n.Datastore, n.RepoPath)
+	fmt.Println("create listing .... ")
+	fmt.Println("lllllll    : ", "      err:   ", err)
 	if err != nil {
 		return "", err
 	}
@@ -168,8 +170,8 @@ func (n *OpenBazaarNode) CreateListing(r io.Reader) (string, error) {
 }
 
 // UpdateListing - update the listing
-func (n *OpenBazaarNode) UpdateListing(r io.Reader, publish bool) error {
-	listing, err := repo.UpdateListing(r, n.TestNetworkEnabled(), &n.Datastore)
+func (n *OpenBazaarNode) UpdateListing(r []byte, publish bool) error {
+	listing, err := repo.UpdateListing(r, n.TestNetworkEnabled(), &n.Datastore, n.RepoPath)
 	if err != nil {
 		return err
 	}
@@ -186,7 +188,9 @@ func (n *OpenBazaarNode) getExpectedDivisibility(code string) uint32 {
 	return expectedDivisibility
 }
 
-func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
+func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
+	fmt.Println("in prep listing, listing : ")
+	//fmt.Println(listing)
 	mods, err := listing.GetModerators()
 	if err != nil {
 		return err
@@ -194,7 +198,10 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	if len(mods) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
-			listing.SetModerators(*sd.StoreModerators)
+			err = listing.SetModerators(*sd.StoreModerators)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -207,6 +214,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 		if err != nil {
 			return err
 		}
+
 		expectedDivisibility := n.getDivisibility(currencyVal.Currency.Code.String())
 		err = listing.ValidateCryptoListing(expectedDivisibility)
 		if err != nil {
@@ -228,17 +236,31 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	if err != nil {
 		return err
 	}
-	listing, err = repo.NewListingFromProtobuf(listing.ProtoListing)
-	if err != nil {
-		return err
-	}
+	//listing, err = repo.NewListingFromProtobuf(listing.ProtoListing)
+	//if err != nil {
+	//	return err
+	//}
+
+	fmt.Println("before signlisting, listing: ")
+	//fmt.Println(listing)
 
 	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
 	}
 
-	fName, err := repo.GetPathForListingSlug(signedListing.Listing.Slug, n.TestNetworkEnabled())
+	fmt.Println("after sign listing")
+	fmt.Println("signedListing : ")
+	//fmt.Println(signedListing)
+	fmt.Println("listing : ")
+	//fmt.Println(signedListing.Listing)
+	fmt.Println("protolisting : ")
+	//fmt.Println(signedListing.Listing.ProtoListing)
+
+	fmt.Println("repo path from node : ", n.RepoPath)
+
+	fName, err := repo.GetPathForListingSlug(signedListing.Listing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
+	fmt.Println("the fname is : ", fName)
 	if err != nil {
 		return err
 	}
@@ -253,7 +275,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(signedListing)
+	out, err := m.MarshalToString(signedListing.ProtoSignedListing)
 	if err != nil {
 		return err
 	}
@@ -269,9 +291,10 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) saveListing(listing *repo.Listing, publish bool) error {
+func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
 
 	err := prepListingForPublish(n, listing)
+	fmt.Println("after prep listing , err : ", err)
 	if err != nil {
 		return err
 	}
@@ -805,7 +828,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 			if err != nil {
 				return err
 			}
-			err = n.UpdateListing(rListing, false)
+			err = n.UpdateListing(rListing.ListingBytes, false)
 			if err != nil {
 				return err
 			}

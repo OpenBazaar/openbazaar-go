@@ -38,10 +38,12 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
+        print("api_url : ", api_url)
+        print(json.dumps(listing_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
@@ -135,7 +137,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice send order fulfillment
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)

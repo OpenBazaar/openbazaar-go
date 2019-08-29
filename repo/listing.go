@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -127,7 +126,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Listing{
+	listing0 := Listing{
 		Slug:               l.Slug,
 		TermsAndConditions: l.TermsAndConditions,
 		RefundPolicy:       l.RefundPolicy,
@@ -135,60 +134,73 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		ListingBytes:       []byte(out),
 		ListingVersion:     l.Metadata.Version,
 		ProtoListing:       l,
-	}, nil
+	}
+	return &listing0, nil
 }
 
 // CreateListing will create a pb Listing
-func CreateListing(r io.Reader, isTestnet bool, dstore *Datastore) (*Listing, error) {
+func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r, ld)
+	//data := make([]byte, 100000)
+	//n, err := r.Read(data)
+	//if err != nil && err != io.EOF {
+	//	return Listing{}, err
+	//}
+	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	slug := ld.Slug
-	exists, err := listingExists(slug, isTestnet)
+	exists, err := listingExists(slug, repoPath, isTestnet)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	if exists {
-		return nil, ErrListingAlreadyExists
+		return Listing{}, ErrListingAlreadyExists
 	}
 	if slug == "" {
-		slug, err = GenerateSlug(ld.Item.Title, isTestnet, dstore)
+		slug, err = GenerateSlug(ld.Item.Title, repoPath, isTestnet, dstore)
 		if err != nil {
-			return nil, err
+			return Listing{}, err
 		}
 		ld.Slug = slug
 	}
-	return NewListingFromProtobuf(ld)
+	retListing, err := NewListingFromProtobuf(ld)
+	return *retListing, err
 }
 
 // UpdateListing will update a pb Listing
-func UpdateListing(r io.Reader, isTestnet bool, dstore *Datastore) (*Listing, error) {
+func UpdateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r, ld)
+	//data := make([]byte, 100000)
+	//n, err := r.Read(data)
+	//if err != nil && err != io.EOF {
+	//	return Listing{}, err
+	//}
+	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	slug := ld.Slug
-	exists, err := listingExists(slug, isTestnet)
+	exists, err := listingExists(slug, repoPath, isTestnet)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	if !exists {
-		return nil, ErrListingDoesNotExist
+		return Listing{}, ErrListingDoesNotExist
 	}
-	return NewListingFromProtobuf(ld)
+	retListing, err := NewListingFromProtobuf(ld)
+	return *retListing, err
 }
 
 // GenerateSlug - slugify the title of the listing
-func GenerateSlug(title string, isTestnet bool, dStore *Datastore) (string, error) {
+func GenerateSlug(title, repoPath string, isTestnet bool, dStore *Datastore) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	counter := 1
 	slugBase := CreateSlugFor(title)
 	slugToTry := slugBase
 	for {
-		_, err := GetListingFromSlug(slugToTry, isTestnet, dStore)
+		_, err := GetListingFromSlug(slugToTry, repoPath, isTestnet, dStore)
 		if os.IsNotExist(err) {
 			return slugToTry, nil
 		} else if err != nil {
@@ -200,8 +212,8 @@ func GenerateSlug(title string, isTestnet bool, dStore *Datastore) (string, erro
 }
 
 // GetListingFromSlug - fetch listing for the specified slug
-func GetListingFromSlug(slug string, isTestnet bool, dStore *Datastore) (*pb.SignedListing, error) {
-	repoPath, err := GetRepoPath(isTestnet)
+func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore) (*pb.SignedListing, error) {
+	repoPath, err := GetRepoPath(isTestnet, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -237,11 +249,11 @@ func GetListingFromSlug(slug string, isTestnet bool, dStore *Datastore) (*pb.Sig
 	return sl, nil
 }
 
-func listingExists(slug string, isTestnet bool) (bool, error) {
+func listingExists(slug, repoPath string, isTestnet bool) (bool, error) {
 	if slug == "" {
 		return false, nil
 	}
-	fPath, err := GetPathForListingSlug(slug, isTestnet)
+	fPath, err := GetPathForListingSlug(slug, repoPath, isTestnet)
 	if err != nil {
 		return false, err
 	}
@@ -258,8 +270,8 @@ func listingExists(slug string, isTestnet bool) (bool, error) {
 	return true, nil
 }
 
-func GetPathForListingSlug(slug string, isTestnet bool) (string, error) {
-	repoPath, err := GetRepoPath(isTestnet)
+func GetPathForListingSlug(slug, repoPath string, isTestnet bool) (string, error) {
+	repoPath, err := GetRepoPath(isTestnet, repoPath)
 	if err != nil {
 		return "", err
 	}
@@ -339,13 +351,16 @@ func (r *Listing) readByte(n int) byte {
 }
 
 func (r *Listing) Read(p []byte) (n int, err error) {
-	if r.eof() {
-		err = io.EOF
+	if n == len(r.ListingBytes)-1 { //r.eof() {
+		//err = io.EOF
 		return
 	}
 
-	if c := cap(p); c > 0 {
+	//if c := cap(p); c > 0 {
+	if c := len(r.ListingBytes); c > 0 {
+		//fmt.Println("what is c ? ", c, "   and n : ", n)
 		for n < c {
+			//fmt.Println("now n is : ", n)
 			p[n] = r.readByte(n)
 			n++
 			if r.eof() {
@@ -1369,10 +1384,10 @@ func (l *Listing) GetProtoListing() (*pb.Listing, error) {
 
 // Sign - return signedListing
 func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
-	handle string, key *hdkeychain.ExtendedKey, dStore *Datastore) (*SignedListing, error) {
+	handle string, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
-		return nil, err
+		return SignedListing{}, err
 	}
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
@@ -1381,7 +1396,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 
 	sl := new(pb.SignedListing)
 
-	rsl := &SignedListing{
+	rsl := SignedListing{
 		ProtoSignedListing: sl,
 	}
 
@@ -1482,9 +1497,11 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 	if err != nil {
 		return rsl, err
 	}
+
 	sl.Listing = listing
 	sl.Signature = idSig
 	rsl.ProtoSignedListing = sl
+	rsl.Listing = *l
 	return rsl, nil
 }
 

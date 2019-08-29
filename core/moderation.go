@@ -238,10 +238,11 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			}
 
 			sl.Listing.ProtoListing.Moderators = moderators
-			sl, err = n.SignListing(&sl.Listing)
+			sl0, err := n.SignListing(sl.Listing)
 			if err != nil {
 				return err
 			}
+			sl = &sl0
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,

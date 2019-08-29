@@ -162,6 +162,7 @@ func (p *PeerInfo) Hash() (string, error) {
 }
 
 func (p *PeerInfo) Protobuf() *pb.ID {
+	log.Info("in peer_info protobuf : ", p)
 	peerHash, err := p.Hash()
 	if err != nil && p.protobufPeerID != "" {
 		peerHash = p.protobufPeerID

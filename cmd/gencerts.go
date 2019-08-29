@@ -29,7 +29,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	flag.Parse()
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(x.Testnet)
+	repoPath, err := repo.GetRepoPath(x.Testnet, x.DataDir)
 	if err != nil {
 		return err
 	}
