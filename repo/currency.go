@@ -45,12 +45,7 @@ func (c *CurrencyValue) MarshalJSON() ([]byte, error) {
 	}
 
 	if c.Currency != nil {
-		c0.Currency = CurrencyDefinition{
-			Code:         c.Currency.Code,
-			Divisibility: c.Currency.Divisibility,
-			Name:         c.Currency.Name,
-			CurrencyType: c.Currency.CurrencyType,
-		}
+		c0.Currency = *c.Currency
 	}
 
 	return json.Marshal(c0)
