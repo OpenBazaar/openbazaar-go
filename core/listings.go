@@ -741,7 +741,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	return sl, nil
 }
 
-func verifySignaturesOnListing(sl *repo.SignedListing) error {
+func verifySignaturesOnListing(sl repo.SignedListing) error {
 	// Verify identity signature on listing
 	if err := verifySignature(
 		sl.Listing.ProtoListing,
