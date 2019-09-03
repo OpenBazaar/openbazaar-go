@@ -82,11 +82,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	settingsData, _ := n.Datastore.Settings().Get()
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
 		}
 	} else {
 		for ct := range n.Multiwallet {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct.CurrencyCode()))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct.CurrencyCode()))
 		}
 	}
 

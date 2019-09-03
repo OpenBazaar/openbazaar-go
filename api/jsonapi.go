@@ -1110,7 +1110,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJSON))
 
 	} else {
-		rate, err := wal.ExchangeRates().GetExchangeRate(core.NormalizeCurrencyCode(currencyCode))
+		rate, err := wal.ExchangeRates().GetExchangeRate(i.node.NormalizeCurrencyCode(currencyCode))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
