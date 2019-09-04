@@ -258,7 +258,7 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 		return nil, errors.New("moderator is not capable of moderating this transaction")
 	}
 
-	if !currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
+	if !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
 		return nil, errors.New("moderator does not accept our currency")
 	}
 	contract.BuyerOrder.Payment = payment
@@ -636,7 +636,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			listing = addedListings[item.ListingHash]
 		}
 
-		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.Metadata.AcceptedCurrencies) {
+		if !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.Metadata.AcceptedCurrencies) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
@@ -826,9 +826,9 @@ func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
 	return id, nil
 }
 
-func currencyInAcceptedCurrenciesList(currencyCode string, acceptedCurrencies []string) bool {
+func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(currencyCode string, acceptedCurrencies []string) bool {
 	for _, cc := range acceptedCurrencies {
-		if NormalizeCurrencyCode(cc) == NormalizeCurrencyCode(currencyCode) {
+		if n.NormalizeCurrencyCode(cc) == n.NormalizeCurrencyCode(currencyCode) {
 			return true
 		}
 	}
@@ -1291,7 +1291,7 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 
 func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount big.Int) (big.Int, error) {
 	const reserveCurrency = "BTC"
-	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) {
+	if n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(paymentCoin) || "T"+n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(paymentCoin) {
 		return amount, nil
 	}
 
@@ -1354,7 +1354,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 }
 
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {
-	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(pricingCurrency) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(pricingCurrency) {
+	if n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(pricingCurrency) || "T"+n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(pricingCurrency) {
 		return amount, nil
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingCurrency)
@@ -1437,7 +1437,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract, checkInve
 		}
 	}
 
-	if !currencyInAcceptedCurrenciesList(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+	if !n.currencyInAcceptedCurrenciesList(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 		contract.VendorListings[0].Metadata.AcceptedCurrencies) {
 		return errors.New("payment coin not accepted")
 	}

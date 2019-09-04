@@ -156,10 +156,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		if err != nil {
 			return sl, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
-		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
+		if currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] {
 			return sl, errors.New("duplicate accepted currency in listing")
 		}
-		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
+		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 
 	// Sanitize a few critical fields

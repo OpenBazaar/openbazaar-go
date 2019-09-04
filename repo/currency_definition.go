@@ -235,6 +235,16 @@ func (c *CurrencyDefinition) String() string {
 	return c.Code.String()
 }
 
+// TestnetString returns a readable representation of the CurrencyDefinition on testnet
+func (c *CurrencyDefinition) TestnetString() string {
+	if c == nil {
+		log.Errorf("returning nil CurrencyCode, please report this bug")
+		debug.PrintStack()
+		return "nil"
+	}
+	return c.TestnetCode.String()
+}
+
 // CurrencyCode returns the CurrencyCode of the definition
 func (c *CurrencyDefinition) CurrencyCode() *CurrencyCode { return &c.Code }
 
