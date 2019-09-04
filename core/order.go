@@ -1753,8 +1753,8 @@ func validateVendorID(listing *repo.Listing) error {
 	if listing.Vendor.Protobuf().Pubkeys == nil {
 		return errors.New("vendor pubkeys is nil")
 	}
-	//vendorPubKey, err := crypto.UnmarshalPublicKey(listing.Vendor.Protobuf().Pubkeys.Identity)
-	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.ProtoListing.VendorID.Pubkeys.Identity)
+	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.Vendor.Protobuf().Pubkeys.Identity)
+	//vendorPubKey, err := crypto.UnmarshalPublicKey(listing.ProtoListing.VendorID.Pubkeys.Identity)
 	log.Info("lew    vend pub key & err   : ", vendorPubKey, "    ", err)
 	log.Info("identity []byte :  ", listing.ProtoListing.VendorID.Pubkeys.Identity)
 	if err != nil {

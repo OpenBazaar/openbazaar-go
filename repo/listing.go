@@ -111,10 +111,15 @@ type PurchaseData struct {
 
 // NewListingFromProtobuf - return Listing from pb.Listing
 func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
-	var vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
-	if err != nil {
-		return nil, fmt.Errorf("new peer info: %s", err)
+	var vendorInfo *PeerInfo
+	var err error
+	if l.VendorID != nil {
+		vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
+		if err != nil {
+			return nil, fmt.Errorf("new peer info: %s", err)
+		}
 	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -147,25 +152,31 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 	//	return Listing{}, err
 	//}
 	err := jsonpb.UnmarshalString(string(r), ld)
+	log.Info("after unmarshalling , listing : ")
+	log.Info(*ld)
 	if err != nil {
 		return Listing{}, err
 	}
 	slug := ld.Slug
 	exists, err := listingExists(slug, repoPath, isTestnet)
+	log.Info("after listingExists  : ", exists, "  err  ", err)
 	if err != nil {
 		return Listing{}, err
 	}
 	if exists {
 		return Listing{}, ErrListingAlreadyExists
 	}
+	log.Info("slug before :  ", slug)
 	if slug == "" {
 		slug, err = GenerateSlug(ld.Item.Title, repoPath, isTestnet, dstore)
+		log.Info("after gen slug  : ", slug, "  err  ", err)
 		if err != nil {
 			return Listing{}, err
 		}
 		ld.Slug = slug
 	}
 	retListing, err := NewListingFromProtobuf(ld)
+	log.Info("after new listing from pb   :  err  ", err)
 	return *retListing, err
 }
 
