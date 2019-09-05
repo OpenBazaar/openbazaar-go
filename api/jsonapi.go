@@ -3330,9 +3330,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 
-	type response struct {
-		Fee *repo.CurrencyValue `json:"estimatedFee"`
-	}
+	type response *repo.CurrencyValue
 
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
@@ -3381,9 +3379,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := &response{
-		Fee: &repo.CurrencyValue{Currency: defn, Amount: &fee},
-	}
+	resp := &repo.CurrencyValue{Currency: defn, Amount: &fee}
 	ser, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
