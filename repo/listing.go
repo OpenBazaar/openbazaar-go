@@ -356,7 +356,7 @@ func (r *Listing) readByte(n int) byte {
 }
 
 func (r *Listing) Read(p []byte) (n int, err error) {
-	if n == len(r.ListingBytes)-1 { 
+	if n == len(r.ListingBytes)-1 {
 		return
 	}
 
@@ -417,7 +417,7 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	ret.Listing.ListingBytes = []byte(out)
 	ret.Listing.ListingVersion = uint32(ret.Metadata.Version)
 	ret.Listing.ProtoListing = sl.Listing
-	
+
 	ret.Listing.Vendor, err = NewPeerInfoFromProtobuf(sl.Listing.VendorID)
 	if err != nil {
 		log.Error("err setting vendor : ", err)

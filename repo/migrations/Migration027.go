@@ -319,7 +319,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		if err != nil {
 			return err
 		}
-		
+
 		templisting := temp.Listing
 		sl.Hash = temp.Hash
 		sl.Signature = temp.Signature
