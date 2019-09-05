@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -19,14 +20,15 @@ const DefaultCurrencyDivisibility uint32 = 8
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
-	Address                string              `json:"address"`
-	Value                  *repo.CurrencyValue `json:"value"`
-	FeeLevel               string              `json:"feeLevel"`
-	Memo                   string              `json:"memo"`
-	OrderID                string              `json:"orderId"`
-	RequireAssociatedOrder bool                `json:"requireOrder"`
-	Wallet                 string              `json:"wallet"`
-	SpendAll               bool                `json:"spendAll"`
+	Amount                 string                   `json:"amount"`
+	Currency               *repo.CurrencyDefinition `json:"currency"`
+	CurrencyCode           string                   `json:"currencyCode"`
+	Address                string                   `json:"address"`
+	FeeLevel               string                   `json:"feeLevel"`
+	Memo                   string                   `json:"memo"`
+	OrderID                string                   `json:"orderId"`
+	RequireAssociatedOrder bool                     `json:"requireOrder"`
+	SpendAll               bool                     `json:"spendAll"`
 }
 
 type SpendResponse struct {
@@ -39,6 +41,7 @@ type SpendResponse struct {
 	Timestamp          time.Time                `json:"timestamp"`
 	Txid               string                   `json:"txid"`
 	PeerID             string                   `json:"-"`
+	ConsumedInput      bool                     `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
@@ -47,7 +50,11 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	var feeLevel wallet.FeeLevel
 	peerID := ""
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
+	amt, ok := new(big.Int).SetString(args.Amount, 10)
+	if !ok {
+		return nil, ErrInvalidAmount
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(args.CurrencyCode)
 	if err != nil {
 		return nil, ErrUnknownWallet
 	}
@@ -73,10 +80,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	if args.Value == nil {
-		return nil, errors.New("value argument is nil")
-	}
-	amt := args.Value.Amount
+
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {

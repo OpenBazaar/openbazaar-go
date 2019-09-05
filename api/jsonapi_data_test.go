@@ -428,25 +428,6 @@ const walletBalanceJSONResponse = `{
 // Spending
 //
 
-const spendJSON = `{
-	"wallet": "btc",
-	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"value": {
-        "amount": "1700000",
-        "currency": {
-            "code": "BTC",
-            "currencyType": "crypto",
-            "civisibility": 8
-        }
-    },
-	"feeLevel": "NORMAL"
-}`
-
-const insuffientFundsJSON = `{
-	"success": false,
-	"reason": "ERROR_INSUFFICIENT_FUNDS"
-}`
-
 const invalidCoinJSON = `{
     	"success": false,
     	"reason": "multiwallet does not contain an implementation for the given coin"

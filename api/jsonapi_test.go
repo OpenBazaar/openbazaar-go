@@ -494,7 +494,50 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
+	})
+}
+
+func TestWalletSpend(t *testing.T) {
+	var (
+		insufficientFundsRequest  = factory.NewSpendRequest()
+		insufficientFundsResponse = APIError{Reason: core.ErrInsufficientFunds.Error()}
+		invalidAmountRequest      = factory.NewSpendRequest()
+		invalidAmountResponse     = APIError{Reason: core.ErrInvalidAmount.Error()}
+	)
+
+	insufficientFundsRequest.Amount = "1700000"
+	insufficientRequestJSON, insufficientReqErr := json.MarshalIndent(insufficientFundsRequest, "", "    ")
+	if insufficientReqErr != nil {
+		t.Fatal(insufficientReqErr)
+	}
+
+	insufficientResponseJSON, insufficientRespErr := json.MarshalIndent(insufficientFundsResponse, "", "    ")
+	if insufficientRespErr != nil {
+		t.Fatal(insufficientRespErr)
+	}
+
+	invalidAmountRequest.Amount = ""
+	invalidAmountRequestJSON, invalidReqErr := json.MarshalIndent(invalidAmountRequest, "", "    ")
+	if invalidReqErr != nil {
+		t.Fatal(invalidReqErr)
+	}
+
+	invalidAmountResponseJSON, invalidRespErr := json.MarshalIndent(invalidAmountResponse, "", "    ")
+	if invalidRespErr != nil {
+		t.Fatal(invalidRespErr)
+	}
+
+	runAPITests(t, apiTests{
+		{
+			"POST", "/wallet/spend",
+			string(insufficientRequestJSON),
+			400, string(insufficientResponseJSON),
+		},
+		{
+			"POST", "/wallet/spend",
+			string(invalidAmountRequestJSON),
+			400, string(invalidAmountResponseJSON),
+		},
 		// TODO: Test successful spend on regnet with coins
 	})
 }

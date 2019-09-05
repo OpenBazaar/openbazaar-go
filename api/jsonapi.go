@@ -66,6 +66,11 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
+type APIError struct {
+	Success bool   `json:"success"`
+	Reason  string `json:"reason"`
+}
+
 var lastManualScan time.Time
 
 const OfflineMessageScanInterval = 1 * time.Minute
@@ -190,10 +195,6 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
-	type APIError struct {
-		Success bool   `json:"success"`
-		Reason  string `json:"reason"`
-	}
 	reason = strings.Replace(reason, `"`, `'`, -1)
 	err := APIError{false, reason}
 	resp, _ := json.MarshalIndent(err, "", "    ")
@@ -809,14 +810,8 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	msg := pb.OrderPaymentTxn{
-		Coin:          spendArgs.Wallet,
-		OrderID:       result.OrderID,
-		TransactionID: result.Txid,
-		WithInput:     false,
-	}
 
-	err = i.node.SendOrderPayment(result.PeerID, &msg)
+	err = i.node.SendOrderPayment(result)
 	if err != nil {
 		log.Errorf("error sending order with id %s payment: %v", result.OrderID, err)
 	}

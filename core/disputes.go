@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -1028,6 +1029,11 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
+	currencyDef, err := repo.LoadCurrencyDefinitions().Lookup(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	if err != nil {
+		return fmt.Errorf("unknown currency code (%s) in contract (%s) buyer order", contract.BuyerOrder.Payment.AmountValue.Currency.Code, orderID)
+	}
+
 	// Create inputs
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
@@ -1170,14 +1176,13 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	msg := pb.OrderPaymentTxn{
-		Coin:          contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+	err = n.SendOrderPayment(&SpendResponse{
+		Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
+		Currency:      currencyDef,
 		OrderID:       orderID,
-		TransactionID: strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
-		WithInput:     true,
-	}
-
-	err = n.SendOrderPayment(peerID, &msg)
+		PeerID:        peerID,
+		ConsumedInput: true,
+	})
 	if err != nil {
 		log.Errorf("error sending order payment: %v", err)
 	}
