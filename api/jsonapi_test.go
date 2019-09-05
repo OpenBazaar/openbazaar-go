@@ -494,51 +494,49 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
+		// TODO: Test successful spend on regnet with coins
 	})
 }
 
-func TestWalletSpend(t *testing.T) {
-	var (
-		insufficientFundsRequest  = factory.NewSpendRequest()
-		insufficientFundsResponse = APIError{Reason: core.ErrInsufficientFunds.Error()}
-		invalidAmountRequest      = factory.NewSpendRequest()
-		invalidAmountResponse     = APIError{Reason: core.ErrInvalidAmount.Error()}
-	)
-
+func TestWalletSpendFailures(t *testing.T) {
+	insufficientFundsRequest := factory.NewSpendRequest()
 	insufficientFundsRequest.Amount = "1700000"
-	insufficientRequestJSON, insufficientReqErr := json.MarshalIndent(insufficientFundsRequest, "", "    ")
-	if insufficientReqErr != nil {
-		t.Fatal(insufficientReqErr)
-	}
+	insufficientFundsResponse := APIError{Reason: core.ErrInsufficientFunds.Error()}
 
-	insufficientResponseJSON, insufficientRespErr := json.MarshalIndent(insufficientFundsResponse, "", "    ")
-	if insufficientRespErr != nil {
-		t.Fatal(insufficientRespErr)
-	}
-
+	invalidAmountRequest := factory.NewSpendRequest()
 	invalidAmountRequest.Amount = ""
-	invalidAmountRequestJSON, invalidReqErr := json.MarshalIndent(invalidAmountRequest, "", "    ")
-	if invalidReqErr != nil {
-		t.Fatal(invalidReqErr)
-	}
+	invalidAmountResponse := APIError{Reason: core.ErrInvalidAmount.Error()}
 
-	invalidAmountResponseJSON, invalidRespErr := json.MarshalIndent(invalidAmountResponse, "", "    ")
-	if invalidRespErr != nil {
-		t.Fatal(invalidRespErr)
-	}
+	missingCurrencyRequest := factory.NewSpendRequest()
+	missingCurrencyRequest.Currency = nil
+	missingCurrencyRequest.CurrencyCode = ""
+	missingCurrencyResponse := APIError{Reason: core.ErrUnknownWallet.Error()}
+
+	invalidAddrRequest := factory.NewSpendRequest()
+	invalidAddrRequest.Address = "invalid"
+	invalidAddrResponse := APIError{Reason: core.ErrInvalidSpendAddress.Error()}
 
 	runAPITests(t, apiTests{
 		{
 			"POST", "/wallet/spend",
-			string(insufficientRequestJSON),
-			400, string(insufficientResponseJSON),
+			insufficientFundsRequest,
+			400, insufficientFundsResponse,
 		},
 		{
 			"POST", "/wallet/spend",
-			string(invalidAmountRequestJSON),
-			400, string(invalidAmountResponseJSON),
+			invalidAmountRequest,
+			400, invalidAmountResponse,
 		},
-		// TODO: Test successful spend on regnet with coins
+		{
+			"POST", "/wallet/spend",
+			missingCurrencyRequest,
+			400, missingCurrencyResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAddrRequest,
+			400, invalidAddrResponse,
+		},
 	})
 }
 
