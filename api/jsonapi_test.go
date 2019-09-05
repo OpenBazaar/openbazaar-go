@@ -499,20 +499,30 @@ func TestWallet(t *testing.T) {
 }
 
 func TestWalletSpendFailures(t *testing.T) {
-	insufficientFundsRequest := factory.NewSpendRequest()
+	newSpendRequest := func() *core.SpendRequest {
+		return &core.SpendRequest{
+			CurrencyCode:           "BTC",
+			Address:                "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
+			Amount:                 "1234",
+			FeeLevel:               "PRIORITY",
+			RequireAssociatedOrder: false,
+		}
+	}
+
+	insufficientFundsRequest := newSpendRequest()
 	insufficientFundsRequest.Amount = "1700000"
 	insufficientFundsResponse := APIError{Reason: core.ErrInsufficientFunds.Error()}
 
-	invalidAmountRequest := factory.NewSpendRequest()
+	invalidAmountRequest := newSpendRequest()
 	invalidAmountRequest.Amount = ""
 	invalidAmountResponse := APIError{Reason: core.ErrInvalidAmount.Error()}
 
-	missingCurrencyRequest := factory.NewSpendRequest()
+	missingCurrencyRequest := newSpendRequest()
 	missingCurrencyRequest.Currency = nil
 	missingCurrencyRequest.CurrencyCode = ""
 	missingCurrencyResponse := APIError{Reason: core.ErrUnknownWallet.Error()}
 
-	invalidAddrRequest := factory.NewSpendRequest()
+	invalidAddrRequest := newSpendRequest()
 	invalidAddrRequest.Address = "invalid"
 	invalidAddrResponse := APIError{Reason: core.ErrInvalidSpendAddress.Error()}
 
