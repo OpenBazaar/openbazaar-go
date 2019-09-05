@@ -159,10 +159,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 // CreateListing - add a listing
 func (n *OpenBazaarNode) CreateListing(r []byte) (string, error) {
-	fmt.Println("lets see the bytes : ", r)
 	listing, err := repo.CreateListing(r, n.TestNetworkEnabled(), &n.Datastore, n.RepoPath)
-	fmt.Println("create listing .... ")
-	fmt.Println("lllllll    : ", "      err:   ", err)
 	if err != nil {
 		return "", err
 	}
@@ -189,8 +186,6 @@ func (n *OpenBazaarNode) getExpectedDivisibility(code string) uint32 {
 }
 
 func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
-	fmt.Println("in prep listing, listing : ")
-	//fmt.Println(listing)
 	mods, err := listing.GetModerators()
 	if err != nil {
 		return err
@@ -236,31 +231,13 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 	if err != nil {
 		return err
 	}
-	//listing, err = repo.NewListingFromProtobuf(listing.ProtoListing)
-	//if err != nil {
-	//	return err
-	//}
-
-	fmt.Println("before signlisting, listing: ")
-	//fmt.Println(listing)
 
 	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("after sign listing")
-	fmt.Println("signedListing : ")
-	//fmt.Println(signedListing)
-	fmt.Println("listing : ")
-	//fmt.Println(signedListing.Listing)
-	fmt.Println("protolisting : ")
-	//fmt.Println(signedListing.Listing.ProtoListing)
-
-	fmt.Println("repo path from node : ", n.RepoPath)
-
 	fName, err := repo.GetPathForListingSlug(signedListing.Listing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
-	fmt.Println("the fname is : ", fName)
 	if err != nil {
 		return err
 	}
@@ -294,7 +271,6 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
 
 	err := prepListingForPublish(n, listing)
-	fmt.Println("after prep listing , err : ", err)
 	if err != nil {
 		return err
 	}
@@ -741,13 +717,14 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	return sl, nil
 }
 
-func verifySignaturesOnListing(sl repo.SignedListing) error {
+func verifySignaturesOnListing(s repo.SignedListing) error {
+	sl := s.ProtoSignedListing
 	// Verify identity signature on listing
 	if err := verifySignature(
-		sl.Listing.ProtoListing,
-		sl.Listing.Vendor.Protobuf().Pubkeys.Identity,
+		sl.Listing,
+		sl.Listing.VendorID.Pubkeys.Identity,
 		sl.Signature,
-		sl.Listing.Vendor.Protobuf().PeerID,
+		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
@@ -761,9 +738,9 @@ func verifySignaturesOnListing(sl repo.SignedListing) error {
 
 	// Verify the bitcoin signature in the ID
 	if err := verifyBitcoinSignature(
-		sl.Listing.Vendor.Protobuf().Pubkeys.Bitcoin,
-		sl.Listing.Vendor.Protobuf().BitcoinSig,
-		sl.Listing.Vendor.Protobuf().PeerID,
+		sl.Listing.VendorID.Pubkeys.Bitcoin,
+		sl.Listing.VendorID.BitcoinSig,
+		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:

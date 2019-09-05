@@ -24,13 +24,10 @@ func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
 
 	regularListing := factory.NewListing(regularListingSlug)
 	regularListing.Metadata.AcceptedCurrencies = []string{"TBTC"}
-	//fmt.Println("before anything, there was pb listing : ")
-	//fmt.Println(regularListing)
 	regularRepoListing, err := repo.NewListingFromProtobuf(regularListing)
-	//fmt.Println("wwwhhhhyyyy   : ", err, "    listing bytes   : ", regularRepoListing.ListingBytes)
 
 	if err != nil {
-		fmt.Println("wwwhhhhyyyy   : ", err, "    listing bytes   : ", regularRepoListing.ListingBytes)
+		fmt.Error(err)
 	}
 
 	if _, err := node.CreateListing(regularRepoListing.ListingBytes); err != nil {

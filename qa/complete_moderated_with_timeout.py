@@ -67,7 +67,7 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         slug = listing_json["slug"]
         listing_json["moderators"] = [moderatorId]
-        listing_json["metadata"]["escrowTimeoutHours"] = 1000
+        listing_json["metadata"]["escrowTimeoutHours"] = 1080
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:

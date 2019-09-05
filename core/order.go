@@ -102,7 +102,6 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
-	log.Info("in purchase ...., ", data)
 	retCurrency := &repo.CurrencyValue{}
 	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
 	if err != nil {
@@ -115,9 +114,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		Name:         defn.Name,
 		CurrencyType: defn.CurrencyType,
 	}
-	log.Info("before create contract ......")
 	contract, err := n.createContractWithOrder(data)
-	log.Info("after create contract ... err: ", err)
 	if err != nil {
 		return "", "", retCurrency, false, err
 	}
@@ -531,7 +528,6 @@ func extractErrorMessage(m *pb.Message) error {
 }
 
 func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.RicardianContract, error) {
-	log.Info("in create contract ")
 	var (
 		contract = new(pb.RicardianContract)
 		order    = new(pb.Order)
@@ -567,7 +563,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 	if err != nil {
 		return nil, err
 	}
-	order.BuyerID = contractIdentity
+	order.BuyerID = &contractIdentity
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
@@ -594,16 +590,12 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		var listing *repo.Listing
 		if !exists {
-			log.Info("lets add listing with hash : ", item.ListingHash)
 			sl, err := getSignedListing(n, contract, item, expectedDivisibility)
-			log.Info("after get signed listing : ")
-			log.Info(sl)
-			log.Info("errr   : ", err)
 			if err != nil {
 				return nil, err
 			}
-			addedListings[item.ListingHash] = &sl.Listing
-			listing = &sl.Listing
+			addedListings[item.ListingHash] = sl
+			listing = sl
 		} else {
 			listing = addedListings[item.ListingHash]
 		}
@@ -613,11 +605,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
-		log.Info("qqqqqqqqqqqqqqqqqqq")
 		ser, err := proto.Marshal(listing.ProtoListing)
-		log.Info(ser)
-		log.Info("                    ")
-		log.Info(err)
 		if err != nil {
 			return nil, err
 		}
@@ -695,7 +683,7 @@ func dedupeCoupons(itemCoupons []string) []string {
 	return coupons
 }
 
-func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item, div uint32) (*repo.SignedListing, error) {
+func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item, div uint32) (*repo.Listing, error) {
 	// Let's fetch the listing, should be cached
 	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 	if err != nil {
@@ -704,24 +692,19 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 
 	//err = jsonpb.UnmarshalString(string(b), sl)
 	sl, err := repo.UnmarshalJSONSignedListing(b)
-	log.Info("111 signed listing & err  : ", sl, err)
 	if err != nil {
 		return nil, err
 	}
 	if err := validateVersionNumber(&sl.Listing); err != nil {
-		log.Info("val version failed : ", err)
 		return nil, err
 	}
 	if err := validateVendorID(&sl.Listing); err != nil {
-		log.Info("val vendor failed : ", err)
 		return nil, err
 	}
 	if err := repo.ValidateListing(&sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), div); err != nil {
-		log.Info("val listing failed : ", err)
 		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
 	}
 	if err := verifySignaturesOnListing(sl); err != nil {
-		log.Info("val signature failed : ", err)
 		return nil, err
 	}
 	contract.VendorListings = append(contract.VendorListings, sl.Listing.ProtoListing)
@@ -729,7 +712,7 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	s.Section = pb.Signature_LISTING
 	s.SignatureBytes = sl.Signature
 	contract.Signatures = append(contract.Signatures, s)
-	return &sl, nil
+	return &sl.Listing, nil
 }
 
 func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
@@ -754,8 +737,8 @@ func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *times
 	return ratingKeys, nil
 }
 
-func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
-	id := new(pb.ID)
+func getContractIdentity(n *OpenBazaarNode) (pb.ID, error) {
+	id := pb.ID{}
 	profile, err := n.GetProfile()
 	if err == nil {
 		id.Handle = profile.Handle
@@ -764,24 +747,24 @@ func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
 	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	keys := new(pb.ID_Pubkeys)
 	keys.Identity = pubkey
 	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	keys.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = keys
 	// Sign the PeerID with the Bitcoin key
 	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	id.BitcoinSig = sig.Serialize()
 	return id, nil
@@ -1754,15 +1737,10 @@ func validateVendorID(listing *repo.Listing) error {
 		return errors.New("vendor pubkeys is nil")
 	}
 	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.Vendor.Protobuf().Pubkeys.Identity)
-	//vendorPubKey, err := crypto.UnmarshalPublicKey(listing.ProtoListing.VendorID.Pubkeys.Identity)
-	log.Info("lew    vend pub key & err   : ", vendorPubKey, "    ", err)
-	log.Info("identity []byte :  ", listing.ProtoListing.VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	//vendorID, err := peer.IDB58Decode(listing.Vendor.Protobuf().PeerID)
-	vendorID, err := peer.IDB58Decode(listing.ProtoListing.VendorID.PeerID)
-	log.Info("vend id and err  :   ", vendorID, "    ", err)
+	vendorID, err := peer.IDB58Decode(listing.Vendor.Protobuf().PeerID)
 	if err != nil {
 		return err
 	}

@@ -312,7 +312,6 @@ func (c CurrencyDictionary) Lookup(code string) (*CurrencyDefinition, error) {
 		def, ok = c[upcase]
 	}
 	if !ok {
-		fmt.Println("so there is a problem with code : ", code, "   upcase : ", upcase)
 		log.Errorf("so there is a problem with code : %s   upcase : %s", code, upcase)
 		//return InvalidDefinition(), nil
 		return nil, ErrCurrencyDefinitionUndefined

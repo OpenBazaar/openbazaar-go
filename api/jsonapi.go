@@ -523,8 +523,6 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
-	log.Info("lets see in post listing ..... ")
-	log.Info(listingData)
 	slug, err := i.node.CreateListing(listingData)
 	if err != nil {
 		if err == repo.ErrListingAlreadyExists {
