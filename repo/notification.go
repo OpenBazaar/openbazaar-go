@@ -836,18 +836,17 @@ func (n ChatTyping) GetType() NotificationType                   { return Notifi
 func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 type IncomingTransaction struct {
-	Wallet        string    `json:"wallet"`
-	Txid          string    `json:"txid"`
-	Value         string    `json:"value"`
-	Address       string    `json:"address"`
-	Status        string    `json:"status"`
-	Memo          string    `json:"memo"`
-	Timestamp     time.Time `json:"timestamp"`
-	Confirmations int32     `json:"confirmations"`
-	OrderId       string    `json:"orderId"`
-	Thumbnail     string    `json:"thumbnail"`
-	Height        int32     `json:"height"`
-	CanBumpFee    bool      `json:"canBumpFee"`
+	Txid          string         `json:"txid"`
+	Value         *CurrencyValue `json:"value"`
+	Address       string         `json:"address"`
+	Status        string         `json:"status"`
+	Memo          string         `json:"memo"`
+	Timestamp     time.Time      `json:"timestamp"`
+	Confirmations int32          `json:"confirmations"`
+	OrderId       string         `json:"orderId"`
+	Thumbnail     string         `json:"thumbnail"`
+	Height        int32          `json:"height"`
+	CanBumpFee    bool           `json:"canBumpFee"`
 }
 
 func (n IncomingTransaction) Data() ([]byte, error) {
