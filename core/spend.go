@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	)
 
 	if lookupCode == "" && args.Currency != nil {
-		lookupCode = args.Currency.Code.String()
+		lookupCode = n.NormalizeCurrencyCode(args.Currency.Code.String())
 	}
 	var currencyDef, err = repo.LoadCurrencyDefinitions().Lookup(lookupCode)
 	if err != nil {
@@ -74,7 +74,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		return nil, ErrInvalidAmount
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(args.CurrencyCode)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(lookupCode)
 	if err != nil {
 		return nil, ErrUnknownWallet
 	}
