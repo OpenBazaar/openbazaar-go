@@ -1,7 +1,7 @@
 package repo_test
 
 import (
-	//"encoding/json"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -347,5 +347,44 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 			t.Logf("\tfor value: (%s) convertTo: (%s) rate: (%f)", e.value, e.convertTo, e.exchangeRate)
 			continue
 		}
+	}
+}
+
+func TestNewCurrencyValueWithLookup(t *testing.T) {
+	_, err := repo.NewCurrencyValueWithLookup("0", "")
+	if err == nil {
+		t.Errorf("expected empty code to return an error, but did not")
+	}
+
+	_, err = repo.NewCurrencyValueWithLookup("0", "invalid")
+	if err == nil {
+		t.Errorf("expected invalid/undefined code to return an error, but did not")
+	}
+
+	subject, err := repo.NewCurrencyValueWithLookup("", "USD")
+	if err != nil {
+		t.Errorf("expected empty value to be accepted, but returned error: %s", err.Error())
+	}
+	if subject.String() != "0 USD" {
+		t.Errorf("expected empty value to be set as (0 USD), but was (%s)", subject.String())
+	}
+
+	subject, err = repo.NewCurrencyValueWithLookup("1234567890987654321", "ETH")
+	if err != nil {
+		t.Errorf("expected large value to be accepted, but returned error: %s", err.Error())
+	}
+}
+
+func TestCurrencyValueAmount(t *testing.T) {
+	subject := &repo.CurrencyValue{}
+	actual := subject.AmountString()
+	if actual != "0" {
+		t.Errorf("expected zero value amount string to be (0), but was (%s)", actual)
+	}
+
+	subject = &repo.CurrencyValue{Amount: big.NewInt(100)}
+	actual = subject.AmountString()
+	if actual != "100" {
+		t.Errorf("expected set value to be (%s), but was (%s)", "100", actual)
 	}
 }
