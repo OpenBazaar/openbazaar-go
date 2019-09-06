@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	"math"
 	"math/big"
 	"sync"
 	"time"
@@ -275,11 +276,11 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint {
 	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Divisibility
 	if currencyDivisibility != 0 {
-		return currencyDivisibility
+		return uint(currencyDivisibility)
 	}
 	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err == nil {
-		return uint32(wallet.ExchangeRates().UnitsPerCoin() / 10)
+		return uint(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
 	return core.DefaultCurrencyDivisibility
 }
