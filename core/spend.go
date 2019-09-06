@@ -15,7 +15,7 @@ import (
 
 // DefaultCurrencyDivisibility is the Divisibility of the Currency if not
 // defined otherwise
-const DefaultCurrencyDivisibility uint32 = 8
+const DefaultCurrencyDivisibility uint = 8
 
 type SpendRequest struct {
 	decodedAddress btcutil.Address

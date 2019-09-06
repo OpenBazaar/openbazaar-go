@@ -399,24 +399,18 @@ type messageTypingWrapper struct {
 	MessageRead Notifier `json:"messageTyping"`
 }
 
-type ListingPrice struct {
-	Amount           string  `json:"amount"`
-	CurrencyCode     string  `json:"currencyCode"`
-	PriceModifier    float32 `json:"priceModifier"`
-	CoinDivisibility uint32  `json:"coinDivisibility"`
-}
-
 type OrderNotification struct {
-	BuyerHandle string           `json:"buyerHandle"`
-	BuyerID     string           `json:"buyerId"`
-	ID          string           `json:"notificationId"`
-	ListingType string           `json:"listingType"`
-	OrderId     string           `json:"orderId"`
-	Price       ListingPrice     `json:"price"`
-	Slug        string           `json:"slug"`
-	Thumbnail   Thumbnail        `json:"thumbnail"`
-	Title       string           `json:"title"`
-	Type        NotificationType `json:"type"`
+	BuyerHandle   string           `json:"buyerHandle"`
+	BuyerID       string           `json:"buyerId"`
+	ID            string           `json:"notificationId"`
+	ListingType   string           `json:"listingType"`
+	OrderId       string           `json:"orderId"`
+	Price         *CurrencyValue   `json:"price"`
+	PriceModifier float32          `json:"priceModifier"`
+	Slug          string           `json:"slug"`
+	Thumbnail     Thumbnail        `json:"thumbnail"`
+	Title         string           `json:"title"`
+	Type          NotificationType `json:"type"`
 }
 
 func (n OrderNotification) Data() ([]byte, error) {

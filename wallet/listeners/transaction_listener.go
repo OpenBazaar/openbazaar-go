@@ -197,8 +197,28 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		return
 	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
-		if funding.Cmp(requestedAmount) >= 0 {
+		currencyValue, err := repo.NewCurrencyValueWithLookup(contract.BuyerOrder.Payment.AmountValue.Amount, contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		if err != nil {
+			log.Errorf("Failed parsing CurrencyValue for (%s, %s): %s",
+				contract.BuyerOrder.Payment.AmountValue.Amount,
+				contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+				err.Error(),
+			)
+			return
+		}
+
+		// update divisibility from contract listing
+		customDivisibility := currencyDivisibilityFromContract(l.multiwallet, contract)
+		if customDivisibility != currencyValue.Currency.Divisibility {
+			currencyValue.Currency.Divisibility = customDivisibility
+			if err := currencyValue.Valid(); err != nil {
+				log.Errorf("Invalid currency divisibility (%d) found in contract (%s): %s", customDivisibility, orderId, err.Error())
+				return
+			}
+		}
+
+		// TODO: this comparison needs to consider the possibility of different divisibilities
+		if funding.Cmp(currencyValue.Amount) >= 0 {
 			log.Debugf("Received payment for order %s", orderId)
 			funded = true
 
@@ -210,21 +230,17 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			l.adjustInventory(contract)
 
 			n := repo.OrderNotification{
-				BuyerHandle: contract.BuyerOrder.BuyerID.Handle,
-				BuyerID:     contract.BuyerOrder.BuyerID.PeerID,
-				ID:          repo.NewNotificationID(),
-				ListingType: contract.VendorListings[0].Metadata.ContractType.String(),
-				OrderId:     orderId,
-				Price: repo.ListingPrice{
-					Amount:           contract.BuyerOrder.Payment.AmountValue.Amount,
-					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract),
-					CurrencyCode:     contract.BuyerOrder.Payment.AmountValue.Currency.Code,
-					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
-				},
-				Slug:      contract.VendorListings[0].Slug,
-				Thumbnail: repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-				Title:     contract.VendorListings[0].Item.Title,
-				Type:      "order",
+				BuyerHandle:   contract.BuyerOrder.BuyerID.Handle,
+				BuyerID:       contract.BuyerOrder.BuyerID.PeerID,
+				ID:            repo.NewNotificationID(),
+				ListingType:   contract.VendorListings[0].Metadata.ContractType.String(),
+				OrderId:       orderId,
+				Price:         currencyValue,
+				PriceModifier: contract.VendorListings[0].Metadata.PriceModifier,
+				Slug:          contract.VendorListings[0].Slug,
+				Thumbnail:     repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+				Title:         contract.VendorListings[0].Item.Title,
+				Type:          "order",
 			}
 
 			l.broadcast <- n
@@ -256,7 +272,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
 }
 
-func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
+func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint {
 	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Divisibility
 	if currencyDivisibility != 0 {
 		return currencyDivisibility
