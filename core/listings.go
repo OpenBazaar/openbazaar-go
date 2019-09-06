@@ -60,6 +60,15 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
 		//
+		escrow, err := listing.GetEscrowTimeout()
+		if err == nil {
+			if escrow == 0 {
+				timeout = 1
+			} else {
+				timeout = escrow
+			}
+		}
+
 	} else {
 		timeout = repo.EscrowTimeout
 	}

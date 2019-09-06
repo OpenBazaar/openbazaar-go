@@ -20,7 +20,7 @@
         "processingTime": "1 to 2 hours",
         "price": {
             "currency": {
-                    "code": "TETH",
+                    "code": "ETH",
                     "divisibility": 18,
                     "name": "A",
                     "currencyType": "A"
