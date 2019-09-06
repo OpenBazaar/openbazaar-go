@@ -16,8 +16,8 @@ import (
 	//"time"
 
 	//"github.com/OpenBazaar/jsonpb"
-	//"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	//"github.com/OpenBazaar/openbazaar-go/repo"
 	//"github.com/golang/protobuf/ptypes"
 )
 
@@ -645,10 +645,6 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	return nil
 }
 
-func listingCurrencyIsBTC(l *repo.Listing) bool {
-	price, err := l.GetPrice()
-	if err != nil {
-		return false
-	}
-	return NormalizeCurrencyCode(price.Currency.Code.String()) == "BTC"
+func (n *OpenBazaarNode) listingCurrencyIsBTC(l *pb.Listing) bool {
+	return n.NormalizeCurrencyCode(l.Metadata.PricingCurrencyDefn.Code) == "BTC"
 }

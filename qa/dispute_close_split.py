@@ -262,6 +262,9 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseSplitTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(30)
+
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
@@ -276,8 +279,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Unknown response")
 
-        self.send_bitcoin_cmd("generate", 1)
-        time.sleep(40)
+
 
         # Check alice received payout
         api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype

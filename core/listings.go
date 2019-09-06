@@ -78,10 +78,10 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 		if err != nil {
 			return repo.SignedListing{}, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
-		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
+		if currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] {
 			return repo.SignedListing{}, errors.New("duplicate accepted currency in listing")
 		}
-		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
+		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 	var expectedDivisibility uint32
 	currencyVal, err := listing.GetPricingCurrencyDefn() // ..GetPrice()

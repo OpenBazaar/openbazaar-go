@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -494,6 +495,41 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
 		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
+	})
+}
+
+func TestWalletCurrencyDictionary(t *testing.T) {
+	var expectedResponse, err = json.MarshalIndent(repo.LoadCurrencyDefinitions().All(), "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", "/wallet/currencies", "", 200, string(expectedResponse)},
+	})
+}
+
+func TestWalletCurrencyDictionaryLookup(t *testing.T) {
+	var randomLookup string
+	for currency := range repo.LoadCurrencyDefinitions().All() {
+		// pick any currency string from the dictionary
+		randomLookup = currency
+		break
+	}
+
+	def, err := repo.LoadCurrencyDefinitions().Lookup(randomLookup)
+	if err != nil {
+		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
+	}
+	entries := map[string]*repo.CurrencyDefinition{randomLookup: def}
+	expectedResponse, err := json.MarshalIndent(entries, "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", randomLookup), "", 200, string(expectedResponse)},
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", "INVALID"), "", 404, errorResponseJSON(errors.New("unknown definition for INVALID"))},
 	})
 }
 

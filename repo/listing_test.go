@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -19,6 +20,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 	}
 
 	for _, e := range examples {
+		fmt.Println("lets see : ", e)
 		var (
 			fixtureBytes = factory.MustLoadListingFixture(e)
 			_, err       = repo.UnmarshalJSONListing(fixtureBytes)

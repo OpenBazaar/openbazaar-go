@@ -22,6 +22,7 @@ func NewCurrencyDefinition(code string) *repo.CurrencyDefinition {
 	return &repo.CurrencyDefinition{
 		Name:         fmt.Sprintf("%scoin", code),
 		Code:         repo.CurrencyCode(code),
+		TestnetCode:  repo.CurrencyCode(fmt.Sprintf("T%s", code)),
 		Divisibility: 8,
 		CurrencyType: repo.Crypto,
 	}

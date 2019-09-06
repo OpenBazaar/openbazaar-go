@@ -671,6 +671,31 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, `{}`)
 }
 
+func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
+	var (
+		resp      map[string]*repo.CurrencyDefinition
+		_, lookup = path.Split(r.URL.Path)
+	)
+	if lookup == "currencies" {
+		resp = repo.LoadCurrencyDefinitions().All()
+	} else {
+		var upperLookup = strings.ToUpper(lookup)
+		def, err := repo.LoadCurrencyDefinitions().Lookup(upperLookup)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unknown definition for %s", lookup))
+			return
+		}
+		resp = map[string]*repo.CurrencyDefinition{upperLookup: def}
+	}
+	out, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, string(out))
+}
+
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	if coinType == "address" {
@@ -735,6 +760,7 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		SanitizedResponse(w, string(out))
 		return
 	}
+
 	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, "unknown wallet type")
@@ -1081,7 +1107,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJSON))
 
 	} else {
-		rate, err := wal.ExchangeRates().GetExchangeRate(core.NormalizeCurrencyCode(currencyCode))
+		rate, err := wal.ExchangeRates().GetExchangeRate(i.node.NormalizeCurrencyCode(currencyCode))
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
