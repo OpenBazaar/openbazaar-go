@@ -520,7 +520,7 @@ func TestWalletSpendFailures(t *testing.T) {
 	missingCurrencyRequest := newSpendRequest()
 	missingCurrencyRequest.Currency = nil
 	missingCurrencyRequest.CurrencyCode = ""
-	missingCurrencyResponse := APIError{Reason: core.ErrUnknownWallet.Error()}
+	missingCurrencyResponse := APIError{Reason: repo.ErrCurrencyDefinitionUndefined.Error()}
 
 	invalidAddrRequest := newSpendRequest()
 	invalidAddrRequest.Address = "invalid"

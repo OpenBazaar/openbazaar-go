@@ -47,13 +47,33 @@ type SpendResponse struct {
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
-	var feeLevel wallet.FeeLevel
-	peerID := ""
+	var (
+		feeLevel wallet.FeeLevel
+		peerID   string
 
-	amt, ok := new(big.Int).SetString(args.Amount, 10)
+		amt        = new(big.Int)
+		lookupCode = args.CurrencyCode
+	)
+
+	if lookupCode == "" && args.Currency != nil {
+		lookupCode = args.Currency.Code.String()
+	}
+	var currencyDef, err = repo.LoadCurrencyDefinitions().Lookup(lookupCode)
+	if err != nil {
+		return nil, repo.ErrCurrencyDefinitionUndefined
+	}
+	if args.Currency != nil && currencyDef.Divisibility != args.Currency.Divisibility {
+		currencyDef.Divisibility = args.Currency.Divisibility
+		if err := currencyDef.Valid(); err != nil {
+			return nil, err
+		}
+	}
+
+	amt, ok := amt.SetString(args.Amount, 10)
 	if !ok {
 		return nil, ErrInvalidAmount
 	}
+
 	wal, err := n.Multiwallet.WalletForCurrencyCode(args.CurrencyCode)
 	if err != nil {
 		return nil, ErrUnknownWallet

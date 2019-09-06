@@ -3325,8 +3325,6 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 
-	type response *repo.CurrencyValue
-
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
 	amount, ok := new(big.Int).SetString(amt, 10) //strconv.Atoi(amt)

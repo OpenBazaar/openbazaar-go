@@ -206,7 +206,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 	var (
 		zeroRateErr          = "rate must be greater than zero"
-		undefinedCurrencyErr = "currency definition is not defined"
+		undefinedCurrencyErr = "unknown currency"
 		invalidErr           = "cannot convert invalid value"
 
 		examples = []struct {
