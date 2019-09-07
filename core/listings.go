@@ -214,12 +214,12 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		return err
 	}
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
-		currencyVal, err := listing.GetPrice()
+		currencyVal, err := listing.GetPricingCurrencyDefn() //listing.GetPrice()
 		if err != nil {
 			return err
 		}
 
-		expectedDivisibility := n.getDivisibility(currencyVal.Currency.Code.String())
+		expectedDivisibility := currencyVal.Divisibility //n.getDivisibility(currencyVal.Currency.Code.String())
 		err = listing.ValidateCryptoListing(expectedDivisibility)
 		if err != nil {
 			return err
