@@ -17,6 +17,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 		"v4-digital-good",
 		"v4-service",
 		"v4-cryptocurrency",
+		"v5-physical-good",
 	}
 
 	for _, e := range examples {

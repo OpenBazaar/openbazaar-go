@@ -154,6 +154,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	payment.AmountValue = &pb.CurrencyValue{
 		Currency: currency,
 	}
+
 	contract.BuyerOrder.Payment = payment
 
 	// Calculate payment amount
@@ -171,6 +172,9 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		},
 		Amount: total.String(),
 	}
+
+	contract.BuyerOrder.Payment = payment
+
 	contract, err = n.SignOrder(contract)
 	if err != nil {
 		return "", "", retCurrency, false, err
@@ -616,7 +620,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		i.ListingHash = listingID.String()
 
 		// If purchasing a listing version >=3 then the Quantity64 field must be used
-		if listing.Metadata.Version < 3 {
+		if listing.ProtoListing.Metadata.Version < 3 {
 			i.Quantity = uint32(item.Quantity)
 		} else {
 			i.Quantity64 = item.Quantity

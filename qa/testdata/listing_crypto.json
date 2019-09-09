@@ -20,8 +20,8 @@
         "processingTime": "1 to 2 hours",
         "price": {
             "currency": {
-                    "code": "ETH",
-                    "divisibility": 18,
+                    "code": "BCH",
+                    "divisibility": 8,
                     "name": "A",
                     "currencyType": "A"
                 },

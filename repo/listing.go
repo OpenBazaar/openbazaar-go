@@ -146,11 +146,6 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 // CreateListing will create a pb Listing
 func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	//data := make([]byte, 100000)
-	//n, err := r.Read(data)
-	//if err != nil && err != io.EOF {
-	//	return Listing{}, err
-	//}
 	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
 		return Listing{}, err
@@ -389,34 +384,54 @@ type ListingMetadata struct {
 // UnmarshalJSONSignedListing - unmarshal signed listing
 func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	ret := SignedListing{}
-	sl := new(pb.SignedListing)
-	err := jsonpb.UnmarshalString(string(data), sl)
+	type slisting struct {
+		Hash      string      `json:"hash"`
+		Signature []byte      `json:"signature"`
+		Listing   interface{} `json:"listing"`
+	}
+	var s slisting
+	err := json.Unmarshal(data, &s)
 	if err != nil {
 		return ret, err
 	}
 
-	ret.ProtoSignedListing = sl
+	ldata, err := json.Marshal(s.Listing)
+	if err != nil {
+		return ret, err
+	}
+
+	version, err := ExtractVersionFromSignedListing(data)
+	if err != nil {
+		return ret, err
+	}
+
+	listing0 := Listing{
+		ListingBytes: ldata,
+		Metadata: ListingMetadata{
+			Version: version,
+		},
+		ListingVersion: uint32(version),
+	}
+
+	proto0, err := listing0.GetProtoListing()
+	if err != nil {
+		return ret, err
+	}
+
+	listing0.ProtoListing = proto0
+
+	sl := pb.SignedListing{
+		Listing:   proto0,
+		Hash:      s.Hash,
+		Signature: s.Signature,
+	}
+
+	ret.ProtoSignedListing = &sl
 	ret.Hash = sl.Hash
 	ret.Signature = sl.Signature
 	ret.ProtoListing = sl.Listing
 
-	ret.Listing = Listing{}
-
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-
-	out, err := m.MarshalToString(sl.Listing)
-	if err != nil {
-		return ret, err
-	}
-
-	ret.Listing.ListingBytes = []byte(out)
-	ret.Listing.ListingVersion = uint32(ret.Metadata.Version)
-	ret.Listing.ProtoListing = sl.Listing
+	ret.Listing = listing0
 
 	ret.Listing.Vendor, err = NewPeerInfoFromProtobuf(sl.Listing.VendorID)
 	if err != nil {
@@ -433,6 +448,46 @@ func UnmarshalJSONListing(data []byte) (*Listing, error) {
 		return nil, err
 	}
 	return &l.Listing, nil
+}
+
+// ExtractVersion returns the version of the listing
+func ExtractVersionFromSignedListing(data []byte) (uint, error) {
+	type sl struct {
+		Listing interface{} `json:"listing"`
+	}
+	var s sl
+	err := json.Unmarshal(data, &s)
+
+	if err != nil {
+		return 0, err
+	}
+
+	lmap, ok := s.Listing.(map[string]interface{})
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	lampMeta0, ok := lmap["metadata"]
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	lampMeta, ok := lampMeta0.(map[string]interface{})
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	ver0, ok := lampMeta["version"]
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	ver, ok := ver0.(float64)
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	return uint(ver), nil
 }
 
 // GetTitle - return listing title
@@ -885,11 +940,15 @@ func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 		switch l.ListingVersion {
 		case 3, 4:
 			{
-				surcharge, ok := elem.Surcharge.(int64)
-				if !ok {
-					return nil, errors.New("invalid surcharge value")
+				surchargeValue.Amount = "0"
+				if elem.Surcharge != nil {
+					surcharge, ok := elem.Surcharge.(float64)
+					if !ok {
+						return nil, errors.New("invalid surcharge value")
+					}
+					surchargeValue.Amount = big.NewInt(int64(surcharge)).String()
 				}
-				surchargeValue.Amount = big.NewInt(surcharge).String()
+
 				type pricingCurrency struct {
 					Metadata struct {
 						PricingCurrency string `json:"pricingCurrency"`
@@ -1238,7 +1297,7 @@ func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
 			case 3, 4:
 				{
 					if svc.Price != nil {
-						price, ok := svc.Price.(uint64)
+						price, ok := svc.Price.(float64)
 						if !ok {
 							return nil, errors.New("invalid service price value")
 						}
@@ -1248,7 +1307,7 @@ func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
 					}
 
 					if svc.AdditionalPrice != nil {
-						addnPrice, ok := svc.AdditionalPrice.(uint64)
+						addnPrice, ok := svc.AdditionalPrice.(float64)
 						if !ok {
 							return nil, errors.New("invalid service additional price value")
 						}
@@ -1507,7 +1566,7 @@ func (l *Listing) GetProtoListing() (*pb.Listing, error) {
 
 // Sign - return signedListing
 func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
-	handle string, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
+	handle string, isTestNet bool, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
 		return SignedListing{}, err
@@ -1550,8 +1609,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 	}
 
 	// Check the listing data is correct for continuing
-	testingEnabled := timeout > 1
-	if err := ValidateListing(l, testingEnabled, expectedDivisibility); err != nil {
+	if err := ValidateListing(l, isTestNet, expectedDivisibility); err != nil {
 		return rsl, err
 	}
 

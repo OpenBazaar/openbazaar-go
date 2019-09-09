@@ -56,7 +56,10 @@ type ListingData struct {
 
 // SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
+	log.Info("in sign listing ....")
 	timeout := uint32(0)
+
+	log.Info("is test net  : ", n.TestNetworkEnabled() || n.RegressionNetworkEnabled())
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
 		//
@@ -102,7 +105,7 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
-	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.MasterPrivateKey, &n.Datastore)
+	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
 
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
@@ -168,7 +171,10 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 // CreateListing - add a listing
 func (n *OpenBazaarNode) CreateListing(r []byte) (string, error) {
-	listing, err := repo.CreateListing(r, n.TestNetworkEnabled(), &n.Datastore, n.RepoPath)
+	listing, err := repo.CreateListing(r, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), &n.Datastore, n.RepoPath)
+	//log.Info("after repo create listing : ")
+	//log.Info(listing.ProtoListing)
+	//log.Info("err   : ", err, "  slug   ", listing.ProtoListing.Slug)
 	if err != nil {
 		return "", err
 	}
@@ -214,6 +220,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		return err
 	}
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
+		//log.Info("should not appear ... this is crypto")
 		currencyVal, err := listing.GetPricingCurrencyDefn() //listing.GetPrice()
 		if err != nil {
 			return err
@@ -231,17 +238,24 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		}
 	}
 
+	log.Info("before set inventory : ", listing.ProtoListing)
 	err = n.SetListingInventory(listing)
+	log.Info("after set inv err : ", err)
 	if err != nil {
 		return err
 	}
 
 	err = n.maybeMigrateImageHashes(listing.ProtoListing)
+	log.Info("after migrate img hashes err : ", err)
 	if err != nil {
 		return err
 	}
 
 	signedListing, err := n.SignListing(listing)
+	log.Info("after sign listing err : ", err)
+	log.Info(signedListing.ProtoListing)
+	log.Info(signedListing.Signature)
+	log.Info(signedListing.Hash)
 	if err != nil {
 		return err
 	}
@@ -279,7 +293,9 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 
 func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
 
+	log.Info("in save listing ...")
 	err := prepListingForPublish(n, listing)
+	log.Info("after prep listing : err : ", err)
 	if err != nil {
 		return err
 	}
