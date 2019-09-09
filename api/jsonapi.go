@@ -736,9 +736,10 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   *repo.CurrencyValue `json:"confirmed"`
-		Unconfirmed *repo.CurrencyValue `json:"unconfirmed"`
-		Height      uint32              `json:"height"`
+		Confirmed   string                   `json:"confirmed"`
+		Unconfirmed string                   `json:"unconfirmed"`
+		Currency    *repo.CurrencyDefinition `json:"currency"`
+		Height      uint32                   `json:"height"`
 	}
 	if coinType == "balance" {
 		ret := make(map[string]interface{})
@@ -751,8 +752,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 			}
 			confirmed, unconfirmed := wal.Balance()
 			ret[ct.CurrencyCode()] = balance{
-				Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
-				Unconfirmed: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
+				Confirmed:   confirmed.Value.String(),
+				Unconfirmed: unconfirmed.Value.String(),
+				Currency:    defn,
 				Height:      height,
 			}
 		}
@@ -778,8 +780,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bal := balance{
-		Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
-		Unconfirmed: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
+		Confirmed:   confirmed.Value.String(),
+		Unconfirmed: unconfirmed.Value.String(),
+		Currency:    defn,
 		Height:      height,
 	}
 	out, err := json.MarshalIndent(bal, "", "    ")

@@ -331,96 +331,52 @@ const walletAddressJSONResponse = `{
 
 const walletBalanceJSONResponse = `{
     "TBCH": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "BCH",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin Cash",
-                "testnetCode": "TBCH"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "BCH",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Bitcoin Cash",
+						"testnetCode": "TBCH"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "BCH",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin Cash",
-                "testnetCode": "TBCH"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TBTC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "BTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin",
-                "testnetCode": "TBTC"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "BTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Bitcoin",
+						"testnetCode": "TBTC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "BTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin",
-                "testnetCode": "TBTC"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TLTC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "LTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Litecoin",
-                "testnetCode": "TLTC"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "LTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Litecoin",
+						"testnetCode": "TLTC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "LTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Litecoin",
-                "testnetCode": "TLTC"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TZEC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "ZEC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Zcash",
-                "testnetCode": "TZEC"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "ZEC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Zcash",
+						"testnetCode": "TZEC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "ZEC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Zcash",
-                "testnetCode": "TZEC"
-            }
-        }
+        "unconfirmed": "0"
     }
 }`
 
