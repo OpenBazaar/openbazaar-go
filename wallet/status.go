@@ -7,13 +7,14 @@ import (
 
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/op/go-logging"
 )
 
 type StatusUpdater struct {
 	mw  multiwallet.MultiWallet
 	c   chan repo.Notifier
 	ctx context.Context
-	log logger.LogBackend
+	log *logging.Logger
 }
 
 type walletUpdateWrapper struct {
@@ -56,10 +57,10 @@ func (s *StatusUpdater) Start() {
 					continue
 				}
 				u := walletUpdate{
-					Height:             height,
-					Unconfirmed:        unconfirmed.Value.String(),
-					Confirmed:          confirmed.Value.String(),
-					CurrencyDefinition: def,
+					Height:      height,
+					Unconfirmed: unconfirmed.Value.String(),
+					Confirmed:   confirmed.Value.String(),
+					Currency:    def,
 				}
 				ret[ct.CurrencyCode()] = u
 			}
