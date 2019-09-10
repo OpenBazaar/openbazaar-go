@@ -369,7 +369,7 @@ func TestNewCurrencyValueWithLookup(t *testing.T) {
 		t.Errorf("expected empty value to be set as (0 USD), but was (%s)", subject.String())
 	}
 
-	subject, err = repo.NewCurrencyValueWithLookup("1234567890987654321", "ETH")
+	_, err = repo.NewCurrencyValueWithLookup("1234567890987654321", "ETH")
 	if err != nil {
 		t.Errorf("expected large value to be accepted, but returned error: %s", err.Error())
 	}
