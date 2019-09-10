@@ -494,10 +494,16 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	if funded {
 		// Set message state to AWAITING_FULFILLMENT
-		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+		if err != nil {
+			log.Errorf("failed setting order (%) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
+		}
 	} else {
 		// Set message state to AWAITING_PAYMENT
-		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if err != nil {
+			log.Errorf("failed setting order (%) to AWAITING_PAYMENT: %s", orderId, err.Error())
+		}
 	}
 
 	var thumbnailTiny string

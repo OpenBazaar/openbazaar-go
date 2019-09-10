@@ -104,26 +104,40 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 }
 
 // ConfirmOfflineOrder - confirm offline order
-func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	contract, err := n.NewOrderConfirmation(contract, false, false)
+func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	confirmedContract, err := n.NewOrderConfirmation(contract, false, false)
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(confirmedContract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
-	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+	err = n.Datastore.Sales().Put(confirmedContract.VendorOrderConfirmation.OrderID, *confirmedContract, pb.OrderState_AWAITING_FULFILLMENT, false)
+	if err != nil {
+		return err
+	}
+
+	recoverState := func() {
+		err = n.Datastore.Sales().Put(confirmedContract.VendorOrderConfirmation.OrderID, *contract, oldState, false)
+		if err != nil {
+			log.Errorf("failed to recover state on order (%s): %s", confirmedContract.VendorOrderConfirmation.OrderID, err.Error())
+		}
+	}
+
+	if confirmedContract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
+					recoverState()
 					return err
 				}
 				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
+					recoverState()
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
 				txInput := wallet.TransactionInput{
@@ -137,35 +151,42 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		}
 
 		if len(txInputs) == 0 {
+			recoverState()
 			return errors.New("no unspent transactions found to fund order")
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(confirmedContract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
+			recoverState()
 			return err
 		}
 		mECKey, err := n.MasterPrivateKey.ECPrivKey()
 		if err != nil {
+			recoverState()
 			return err
 		}
 		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
+			recoverState()
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(confirmedContract.BuyerOrder.Payment.RedeemScript)
 		if err != nil {
+			recoverState()
 			return err
 		}
 		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
+			recoverState()
 			return err
 		}
 	}
-	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.PeerID, contract)
+	err = n.SendOrderConfirmation(confirmedContract.BuyerOrder.BuyerID.PeerID, confirmedContract)
 	if err != nil {
-		return err
+		// TODO: local order state is accurate, remote order state needs to be retransmitted
+		log.Errorf("failed sending confirmation for order (%s): %s", confirmedContract.VendorOrderConfirmation.OrderID, err.Error())
+		return nil
 	}
-	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 	return nil
 }
 
