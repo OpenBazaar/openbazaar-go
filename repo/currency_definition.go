@@ -218,7 +218,7 @@ func (c *CurrencyDefinition) String() string {
 		debug.PrintStack()
 		return "nil"
 	}
-	return c.Code.String()
+	return fmt.Sprintf("%s(div%d)", c.Code.String(), c.Divisibility)
 }
 
 // CurrencyCode returns the CurrencyCode of the definition

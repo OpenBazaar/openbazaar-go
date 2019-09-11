@@ -75,6 +75,19 @@ func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// NewCurrencyValueWithLookup accepts a string value as a base10 integer
+// and uses the currency code to lookup the CurrencyDefinition
+func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, error) {
+	def, err := LoadCurrencyDefinitions().Lookup(currencyCode)
+	if err != nil {
+		return nil, err
+	}
+	if amount == "" {
+		return NewCurrencyValue("0", def)
+	}
+	return NewCurrencyValue(amount, def)
+}
+
 // NewCurrencyValueFromInt is a convenience function which converts an int64
 // into a string and passes the arguments to NewCurrencyValue
 func NewCurrencyValueFromInt(amount int64, currency *CurrencyDefinition) (*CurrencyValue, error) {
@@ -144,34 +157,39 @@ func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
 }
 
 // ConvertTo will perform the following math given its arguments are valid:
-// v.Amount * exchangeRate * (final.Currency.Divisibility/v.Currency.Divisibility)
-// where v is the receiver, exchangeRate is the ratio of (1 final.Currency/v.Currency)
-// v and final must both be Valid() and exchangeRate must not be zero.
-func (v *CurrencyValue) ConvertTo(final *CurrencyDefinition, exchangeRate float64) (*CurrencyValue, error) {
+// v.Amount * exchangeRatio * (final.Currency.Divisibility/v.Currency.Divisibility)
+// where v is the receiver, exchangeRatio is the ratio of (1 final.Currency/v.Currency)
+// v and final must both be Valid() and exchangeRatio must not be zero.
+func (v *CurrencyValue) ConvertTo(final *CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, error) {
 	if err := v.Valid(); err != nil {
 		return nil, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}
 	if err := final.Valid(); err != nil {
 		return nil, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
 	}
-	if exchangeRate <= 0 {
+	if exchangeRatio <= 0 {
 		return nil, ErrCurrencyValueNegativeRate
 	}
 
-	var (
-		j                = new(big.Float)
-		currencyRate     = new(big.Float)
-		divisibilityRate = new(big.Float)
+	amt := new(big.Float).SetInt(v.Amount)
+	exRatio := new(big.Float).SetFloat64(exchangeRatio)
+	if exRatio == nil {
+		return nil, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
+	}
+	newAmount := new(big.Float).Mul(amt, exRatio)
 
-		divRateFloat = math.Pow10(int(final.Divisibility)) / math.Pow10(int(v.Currency.Divisibility))
-	)
+	if v.Currency.Divisibility != final.Divisibility {
+		initMagnitude := math.Pow10(int(v.Currency.Divisibility))
+		finalMagnitude := math.Pow10(int(final.Divisibility))
+		divisibilityRatio := new(big.Float).SetFloat64(finalMagnitude / initMagnitude)
+		newAmount.Mul(newAmount, divisibilityRatio)
 
-	currencyRate.SetFloat64(exchangeRate)
-	divisibilityRate.SetFloat64(divRateFloat)
+		// confirm no significant figures will be lost in the decimal
+		if !newAmount.IsInt() {
+			return nil, ErrCurrencyValueInsufficientPrecision
+		}
+	}
 
-	j.SetInt(v.Amount)
-	j.Mul(j, currencyRate)
-	j.Mul(j, divisibilityRate)
-	result, _ := j.Int(nil)
+	result, _ := newAmount.Int(nil)
 	return &CurrencyValue{Amount: result, Currency: final}, nil
 }
