@@ -126,6 +126,26 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 		other    *repo.CurrencyValue
 		expected bool
 	}{
+		{ // value and currency divisibility different but
+			// equal after normalizing
+			value: &repo.CurrencyValue{
+				Amount: big.NewInt(1234),
+				Currency: &repo.CurrencyDefinition{
+					Code:         "BTC",
+					Divisibility: 2,
+					CurrencyType: "crypto",
+				},
+			},
+			other: &repo.CurrencyValue{
+				Amount: big.NewInt(123400),
+				Currency: &repo.CurrencyDefinition{
+					Code:         "BTC",
+					Divisibility: 4,
+					CurrencyType: "crypto",
+				},
+			},
+			expected: true,
+		},
 		{ // value and currency matching should be equal
 			value: &repo.CurrencyValue{
 				Amount:   big.NewInt(1),
@@ -199,6 +219,15 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 				t.Errorf("expected %s to equal %s but did not", c.value.String(), c.other.String())
 			} else {
 				t.Errorf("expected %s to not equal %s but did", c.value.String(), c.other.String())
+			}
+		}
+
+		// test that equal is communitive
+		if c.other.Equal(c.value) != c.expected {
+			if c.expected {
+				t.Errorf("expected %s to equal %s but did not", c.other.String(), c.value.String())
+			} else {
+				t.Errorf("expected %s to not equal %s but did", c.other.String(), c.value.String())
 			}
 		}
 	}
@@ -395,5 +424,41 @@ func TestNewCurrencyValueWithLookup(t *testing.T) {
 	_, err = repo.NewCurrencyValueWithLookup("1234567890987654321", "ETH")
 	if err != nil {
 		t.Errorf("expected large value to be accepted, but returned error: %s", err.Error())
+	}
+}
+
+func TestCurrencyValueAmount(t *testing.T) {
+	subject := &repo.CurrencyValue{}
+	actual := subject.AmountString()
+	if actual != "0" {
+		t.Errorf("expected zero value amount string to be (0), but was (%s)", actual)
+	}
+
+	subject = &repo.CurrencyValue{Amount: big.NewInt(100)}
+	actual = subject.AmountString()
+	if actual != "100" {
+		t.Errorf("expected set value to be (%s), but was (%s)", "100", actual)
+	}
+}
+
+func TestCurrencyValueAdjustDivisibility(t *testing.T) {
+	sameDiv := uint(8)
+	subject := factory.MustNewCurrencyValue("123000000", "BTC")
+	subject.Currency.Divisibility = sameDiv
+
+	if newValue, err := subject.AdjustDivisibility(sameDiv); err != nil {
+		t.Fatalf("expected same divisibility to not return an error, but did: %s", err.Error())
+	} else {
+		if !newValue.Currency.Equal(subject.Currency) {
+			t.Errorf("expected same divisibility to produce equal currencies, but did not")
+		}
+	}
+
+	if newValue, err := subject.AdjustDivisibility(2); err != nil {
+		t.Fatalf("expected new divisibility to not return an error, but did: %s", err.Error())
+	} else {
+		if newValue.Currency.Equal(subject.Currency) {
+			t.Errorf("expected new divisibility to produce different currency, but did not")
+		}
 	}
 }
