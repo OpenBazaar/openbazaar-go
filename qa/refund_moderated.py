@@ -63,7 +63,8 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
@@ -128,7 +129,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -208,9 +209,9 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
             #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= 50 - payment_amount:
+            if confirmed <= 50 - int(payment_amount["amount"]):
                 raise TestFailure("RefundModeratedTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RefundModeratedTest - FAIL: Failed to query Bob's balance")

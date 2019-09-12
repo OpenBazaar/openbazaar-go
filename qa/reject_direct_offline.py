@@ -38,7 +38,9 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -99,7 +101,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -175,9 +177,9 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
             #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= 50 - payment_amount:
+            if confirmed <= 50 - int(payment_amount["amount"]):
                 raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Failed to query Bob's balance")

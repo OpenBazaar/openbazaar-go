@@ -11,7 +11,7 @@
 			"name": "A",
 			"currencyType": "A"
 		},
-		"acceptedCurrencies": []
+		"acceptedCurrencies": ["TBTC"]
 	},
 	"item": {
 		"title": "Ron Swanson Tshirt",
@@ -270,21 +270,21 @@
 	}
 	],
 	"taxes": [
-	{
-		"taxType": "Sales tax",
-		"taxRegions": [
-			"UNITED_STATES"
-		],
-		"taxShipping": true,
-		"percentage": 7
-	}
+		{
+			"taxType": "Sales tax",
+			"taxRegions": [
+				"UNITED_STATES"
+			],
+			"taxShipping": true,
+			"percentage": 7
+		}
 	],
 	"coupons": [
-	{
-		"title": "10% off",
-		"discountCode": "radio",
-		"percentDiscount": 10.0
-	}
+		{
+			"title": "10% off",
+			"discountCode": "radio",
+			"percentDiscount": 10.0
+		}
 	],
 	"moderators": [],
 	"termsAndConditions": "NA",

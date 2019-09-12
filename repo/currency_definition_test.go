@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -159,38 +160,45 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 
 func TestCurrencyDictionaryLookup(t *testing.T) {
 	var (
-		expected = factory.NewCurrencyDefinition("ABC")
-		dict     = repo.CurrencyDictionary{
+		code        = "ABC"
+		testnetCode = "XYZ"
+		expected    = factory.NewCurrencyDefinition(code)
+		defs        = map[string]*repo.CurrencyDefinition{
 			expected.Code.String(): expected,
 		}
-
-		examples = []struct {
-			lookup      string
-			expected    *repo.CurrencyDefinition
-			expectedErr error
-		}{
-			{ // upcase lookup
-				lookup:      "ABC",
-				expected:    expected,
-				expectedErr: nil,
-			},
-			{ // lowercase lookup
-				lookup:      "abc",
-				expected:    expected,
-				expectedErr: nil,
-			},
-			{ // testnet lookup
-				lookup:      "TABC",
-				expected:    factory.NewCurrencyDefinition("TABC"),
-				expectedErr: nil,
-			},
-			{ // undefined key
-				lookup:      "FAIL",
-				expected:    nil,
-				expectedErr: repo.ErrCurrencyDefinitionUndefined,
-			},
-		}
 	)
+	expected.TestnetCode = repo.CurrencyCode(testnetCode)
+	dict, err := repo.NewCurrencyDictionary(defs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var examples = []struct {
+		lookup      string
+		expected    *repo.CurrencyDefinition
+		expectedErr error
+	}{
+		{ // upcase lookup
+			lookup:      code,
+			expected:    expected,
+			expectedErr: nil,
+		},
+		{ // lowercase lookup
+			lookup:      strings.ToLower(code),
+			expected:    expected,
+			expectedErr: nil,
+		},
+		{ // testnet lookup
+			lookup:      testnetCode,
+			expected:    expected,
+			expectedErr: nil,
+		},
+		{ // undefined key
+			lookup:      "FAIL",
+			expected:    nil,
+			expectedErr: repo.ErrCurrencyDefinitionUndefined,
+		},
+	}
 
 	for _, e := range examples {
 		var def, err = dict.Lookup(e.lookup)
@@ -215,13 +223,16 @@ func TestCurrencyDictionaryLookup(t *testing.T) {
 }
 
 func TestCurrencyDictionaryValid(t *testing.T) {
-	var (
-		valid      = factory.NewCurrencyDefinition("BTC")
-		invalidOne = factory.NewCurrencyDefinition("LTC")
-		invalidTwo = factory.NewCurrencyDefinition("BCH")
-	)
+	valid := factory.NewCurrencyDefinition("BTC")
+	// invalidOne is invalid because the divisibility is 0
+	invalidOne := factory.NewCurrencyDefinition("LTC")
 	invalidOne.Divisibility = 0
+	// invalidTwo is invalid because the code is too short
+	invalidTwo := factory.NewCurrencyDefinition("BCH")
 	invalidTwo.Code = "X"
+	// colliding is invalid because the testnet code collides with BTC above
+	colliding := factory.NewCurrencyDefinition("COL")
+	colliding.TestnetCode = repo.CurrencyCode("BTC")
 
 	errOne := invalidOne.Valid()
 	if errOne == nil {
@@ -233,12 +244,14 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 	}
 
 	expectedErrs := map[string]error{
-		invalidOne.Code.String(): errOne,
-		invalidTwo.Code.String(): errTwo,
-		"DIF":                    repo.ErrDictionaryIndexMismatchedCode,
+		invalidOne.Code.String():       errOne,
+		invalidTwo.Code.String():       errTwo,
+		colliding.TestnetCode.String(): repo.ErrDictionaryCurrencyCodeCollision,
+		"DIF":                          repo.ErrDictionaryIndexMismatchedCode,
 	}
 	_, err := repo.NewCurrencyDictionary(map[string]*repo.CurrencyDefinition{
 		valid.Code.String():      valid,
+		colliding.Code.String():  colliding,
 		invalidOne.Code.String(): invalidOne,
 		invalidTwo.Code.String(): invalidTwo,
 		"DIF":                    valid,

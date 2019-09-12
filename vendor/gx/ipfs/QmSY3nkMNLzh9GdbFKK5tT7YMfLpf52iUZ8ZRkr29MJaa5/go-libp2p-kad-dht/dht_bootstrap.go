@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"sync"
 	"time"
 
 	u "gx/ipfs/QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz/go-ipfs-util"
@@ -137,14 +136,10 @@ func (dht *IpfsDHT) randomWalk(ctx context.Context) error {
 	}
 }
 
-// OpenBazaar: this once is used to guard the closing of the bootstrap chan so that
-// it is only closed after the first bootstrap round completes.
-var bootstrapOnce sync.Once
-
 // runBootstrap builds up list of peers by requesting random peer IDs
 func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error {
 	// OpenBazaar: close bootstrap chan
-	defer bootstrapOnce.Do(func() {
+	defer dht.bootstrapOnce.Do(func() {
 		close(dht.BootstrapChan)
 	})
 

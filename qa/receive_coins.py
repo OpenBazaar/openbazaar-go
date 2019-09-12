@@ -28,8 +28,8 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
+            confirmed = int(resp["confirmed"]["amount"])
+            unconfirmed = int(resp["unconfirmed"]["amount"])
             if confirmed + unconfirmed <= 0:
                 raise TestFailure("ReceiveCoinsTest - FAIL: Wallet is empty")
         elif r.status_code == 404:

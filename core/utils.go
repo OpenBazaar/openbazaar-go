@@ -111,11 +111,14 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 }
 
 // NormalizeCurrencyCode standardizes the format for the given currency code
-func NormalizeCurrencyCode(currencyCode string) string {
+func (n *OpenBazaarNode) NormalizeCurrencyCode(currencyCode string) string {
 	var c, err = repo.LoadCurrencyDefinitions().Lookup(currencyCode)
 	if err != nil {
 		log.Errorf("invalid currency code (%s): %s", currencyCode, err.Error())
 		return ""
+	}
+	if n.TestnetEnable {
+		return c.TestnetString()
 	}
 	return c.String()
 }

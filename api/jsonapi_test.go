@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -492,8 +493,94 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
+	})
+}
+
+func TestWalletSpendFailures(t *testing.T) {
+	newSpendRequest := func() *core.SpendRequest {
+		return &core.SpendRequest{
+			CurrencyCode:           "BTC",
+			Address:                "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
+			Amount:                 "1234",
+			FeeLevel:               "PRIORITY",
+			RequireAssociatedOrder: false,
+		}
+	}
+
+	insufficientFundsRequest := newSpendRequest()
+	insufficientFundsRequest.Amount = "1700000"
+	insufficientFundsResponse := APIError{Reason: core.ErrInsufficientFunds.Error()}
+
+	invalidAmountRequest := newSpendRequest()
+	invalidAmountRequest.Amount = ""
+	invalidAmountResponse := APIError{Reason: core.ErrInvalidAmount.Error()}
+
+	missingCurrencyRequest := newSpendRequest()
+	missingCurrencyRequest.Currency = nil
+	missingCurrencyRequest.CurrencyCode = ""
+	missingCurrencyResponse := APIError{Reason: repo.ErrCurrencyDefinitionUndefined.Error()}
+
+	invalidAddrRequest := newSpendRequest()
+	invalidAddrRequest.Address = "invalid"
+	invalidAddrResponse := APIError{Reason: core.ErrInvalidSpendAddress.Error()}
+
+	runAPITests(t, apiTests{
+		{
+			"POST", "/wallet/spend",
+			insufficientFundsRequest,
+			400, insufficientFundsResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAmountRequest,
+			400, invalidAmountResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			missingCurrencyRequest,
+			400, missingCurrencyResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAddrRequest,
+			400, invalidAddrResponse,
+		},
+	})
+}
+
+func TestWalletCurrencyDictionary(t *testing.T) {
+	var expectedResponse, err = json.MarshalIndent(repo.LoadCurrencyDefinitions().All(), "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", "/wallet/currencies", "", 200, string(expectedResponse)},
+	})
+}
+
+func TestWalletCurrencyDictionaryLookup(t *testing.T) {
+	var randomLookup string
+	for currency := range repo.LoadCurrencyDefinitions().All() {
+		// pick any currency string from the dictionary
+		randomLookup = currency
+		break
+	}
+
+	def, err := repo.LoadCurrencyDefinitions().Lookup(randomLookup)
+	if err != nil {
+		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
+	}
+	entries := map[string]*repo.CurrencyDefinition{randomLookup: def}
+	expectedResponse, err := json.MarshalIndent(entries, "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", randomLookup), "", 200, string(expectedResponse)},
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", "INVALID"), "", 404, errorResponseJSON(errors.New("unknown definition for INVALID"))},
 	})
 }
 
@@ -855,6 +942,19 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 		{"GET", "/ob/notifications?limit=-1", "", 200, sameTimestampsAreReturnedInReverse},
 		{"GET", "/ob/notifications?limit=-1&offsetId=notif3", "", 200, sameTimestampsAreReturnedInReverseAndRespectOffsetID},
 	}, dbSetup, dbTeardown)
+}
+
+func TestResendOrderMessage(t *testing.T) {
+	runAPITests(t, apiTests{
+		// supports missing messageType
+		{"POST", "/ob/resendordermessage", `{"orderID":"123"}`, http.StatusBadRequest, errorResponseJSON(fmt.Errorf("missing messageType argument"))},
+		// supports missing order ID
+		{"POST", "/ob/resendordermessage", `{"messageType":"nonexistant"}`, http.StatusBadRequest, errorResponseJSON(fmt.Errorf("missing orderID argument"))},
+		// supports nonexistant message types
+		{"POST", "/ob/resendordermessage", `{"orderID":"123","messageType":"nonexistant"}`, http.StatusBadRequest, errorResponseJSON(fmt.Errorf("unknown messageType (nonexistant)"))},
+		// supports downcased message types, expected not to find order ID
+		{"POST", "/ob/resendordermessage", `{"orderID":"123","messageType":"order"}`, http.StatusInternalServerError, errorResponseJSON(fmt.Errorf("unable to find message for order ID (123) and message type (ORDER)"))},
+	})
 }
 
 // TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work

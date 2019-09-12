@@ -6,7 +6,7 @@
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
         "pricingCurrency": {
-            "code": "",
+            "code": "BCH",
             "divisibility": 8,
             "name": "A",
             "currencyType": "A"
@@ -18,11 +18,13 @@
         "description": "",
         "processingTime": "1 to 2 hours",
         "price": {
-            "code": "TETH",
-            "divisibility": 8,
-            "name": "A",
-            "currencyType": "A",
-            "amount": "0"
+            "currency": {
+                    "code": "TETH",
+                    "divisibility": 18,
+                    "name": "A",
+                    "currencyType": "A"
+                },
+                "amount": "0"
         },
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",

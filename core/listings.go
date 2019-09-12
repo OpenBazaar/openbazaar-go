@@ -79,10 +79,10 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 		if err != nil {
 			return nil, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
-		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
+		if currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] {
 			return nil, errors.New("duplicate accepted currency in listing")
 		}
-		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
+		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 	var expectedDivisibility uint32
 	currencyVal, err := listing.GetPrice()
@@ -90,7 +90,7 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 		return nil, err
 	}
 	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Currency.Code.String()); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
+		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
@@ -179,7 +179,7 @@ func (n *OpenBazaarNode) UpdateListing(r io.Reader, publish bool) error {
 func (n *OpenBazaarNode) getExpectedDivisibility(code string) uint32 {
 	var expectedDivisibility uint32
 	if wallet, err := n.Multiwallet.WalletForCurrencyCode(code); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
+		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
@@ -333,7 +333,10 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				servicePrice, _ := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if !ok {
+					return ListingData{}, errors.New("invalid price amount")
+				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
@@ -341,8 +344,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		}
 	}
 
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
-	amt, _ := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return ListingData{}, errors.New("invalid pricing currency")
+	}
+	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return ListingData{}, errors.New("invalid price amount")
+	}
 
 	ld := ListingData{
 		Hash:         listingHash,
@@ -744,7 +753,7 @@ func verifySignaturesOnListing(sl *repo.SignedListing) error {
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			return errors.New("vendor's bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}

@@ -102,7 +102,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = buyer["gateway_url"] + "wallet/spend"

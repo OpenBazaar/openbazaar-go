@@ -11,15 +11,16 @@ import (
 
 var log = logging.MustGetLogger("ResyncManager")
 
-var ResyncInterval = time.Hour
+var ResyncInterval = time.Minute * 15
 
 type ResyncManager struct {
-	sales repo.SaleStore
-	mw    multiwallet.MultiWallet
+	sales     repo.SaleStore
+	purchases repo.PurchaseStore
+	mw        multiwallet.MultiWallet
 }
 
-func NewResyncManager(salesDB repo.SaleStore, mw multiwallet.MultiWallet) *ResyncManager {
-	return &ResyncManager{salesDB, mw}
+func NewResyncManager(salesDB repo.SaleStore, purchaseDB repo.PurchaseStore, mw multiwallet.MultiWallet) *ResyncManager {
+	return &ResyncManager{sales: salesDB, purchases: purchaseDB, mw: mw}
 }
 
 func (r *ResyncManager) Start() {
@@ -30,42 +31,49 @@ func (r *ResyncManager) Start() {
 }
 
 func (r *ResyncManager) CheckUnfunded() {
-	unfunded, err := r.sales.GetNeedsResync()
+	unfundedSales, err := r.sales.GetUnfunded()
 	if err != nil {
 		log.Error(err)
 		return
 	}
+	unfundedPurchases, err := r.purchases.GetUnfunded()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	unfunded := append(unfundedSales, unfundedPurchases...)
 	if len(unfunded) == 0 {
 		return
 	}
-	wallets := make(map[string]time.Time)
-	rollbackTime := time.Unix(2147483647, 0)
-	if r.mw != nil {
-		for cc := range r.mw {
-			wallets[strings.ToUpper(cc.CurrencyCode())] = rollbackTime
-		}
-	}
+	wallets := make(map[string][]string)
 	for _, uf := range unfunded {
-		t, ok := wallets[strings.ToUpper(uf.PaymentCoin)]
+		addrs, ok := wallets[strings.ToUpper(uf.PaymentCoin)]
 		if !ok {
-			log.Warningf("ResyncManager: no wallet for sale with payment coin %s", uf.PaymentCoin)
-			continue
+			addrs = []string{}
 		}
-		if uf.Timestamp.Before(t) {
-			t = uf.Timestamp.Add(-time.Hour * 24)
-			wallets[strings.ToUpper(uf.PaymentCoin)] = t
-		}
-		r.sales.SetNeedsResync(uf.OrderId, false)
+		addrs = append(addrs, uf.PaymentAddress)
+		wallets[strings.ToUpper(uf.PaymentCoin)] = addrs
 	}
 	if r.mw != nil {
-		for cc, rbt := range wallets {
+		for cc, addrs := range wallets {
 			wal, err := r.mw.WalletForCurrencyCode(cc)
 			if err != nil {
 				log.Warningf("ResyncManager: no wallet for sale with payment coin %s", cc)
 				continue
 			}
-			log.Infof("Rolling back %s blockchain %s looking for payments for %d orders\n", cc, time.Since(rbt), len(unfunded))
-			wal.ReSyncBlockchain(rbt)
+			for _, addr := range addrs {
+				iaddr, err := wal.DecodeAddress(addr)
+				if err != nil {
+					log.Errorf("Error decoding unfunded payment address(%s): %s", addr, err)
+					continue
+				}
+				if err := wal.AddWatchedAddress(iaddr); err != nil {
+					log.Errorf("Error adding watched address(%s): %s", iaddr, err)
+				}
+			}
+
+			log.Infof("Rescanning %s wallet looking for %d orders", cc, len(unfunded))
+			wal.ReSyncBlockchain(time.Time{})
 		}
 	}
 }

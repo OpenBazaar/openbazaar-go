@@ -1,11 +1,10 @@
 run:
   skip-dirs:
     - vendor
-    - pb
 
 issues:
-  max-per-linter: 999999
-  max-same: 999999
+  max-per-linter: 99999
+  max-same: 99999
   exclude:
     - composite literal uses unkeyed fields
 
@@ -22,8 +21,6 @@ linters-settings:
     locale: US
   dupl:
     threshold: 600
-  goconst:
-    min-occurrences: 10
   gocyclo:
     min-complexity: 180
   lll:
@@ -37,19 +34,19 @@ linters:
     - staticcheck
     - structcheck
     - unused
-    - unparam
     - varcheck
     - deadcode
     - gosimple
-    - dupl
     - gocyclo
-    - nakedret
     - lll
     - goconst
     - govet
     - megacheck
-    - errcheck
   disable:
+    - dupl
+    - nakedret
+    - unparam
     - goimports
+    - errcheck
     - golint
     - prealloc

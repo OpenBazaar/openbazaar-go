@@ -130,7 +130,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         spend = {
             "wallet": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
+            "value": payment_amount,
             "feeLevel": "NORMAL"
         }
         api_url = bob["gateway_url"] + "wallet/spend"
@@ -140,7 +140,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseSplitTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(30)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -262,6 +262,9 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseSplitTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(30)
+
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
@@ -276,16 +279,16 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Unknown response")
 
-        self.send_bitcoin_cmd("generate", 1)
-        time.sleep(4)
+
 
         # Check alice received payout
         api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
+        time.sleep(20)
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"]["amount"])
-            #unconfirmed = int(resp["unconfirmed"])
+            unconfirmed = int(resp["unconfirmed"]["amount"])
             if confirmed <= 0:
                 raise TestFailure("DisputeCloseSplitTest - FAIL: Alice failed to detect dispute payout")
         elif r.status_code == 404:

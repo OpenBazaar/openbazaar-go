@@ -331,113 +331,58 @@ const walletAddressJSONResponse = `{
 
 const walletBalanceJSONResponse = `{
     "TBCH": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TBCH",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin Cash"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "BCH",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Bitcoin Cash",
+						"testnetCode": "TBCH"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TBCH",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin Cash"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TBTC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TBTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "BTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Bitcoin",
+						"testnetCode": "TBTC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TBTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Bitcoin"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TLTC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TLTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Litecoin"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "LTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Litecoin",
+						"testnetCode": "TLTC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TLTC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Litecoin"
-            }
-        }
+        "unconfirmed": "0"
     },
     "TZEC": {
-        "confirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TZEC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Zcash"
-            }
+        "confirmed": "0",
+				"currency": {
+						"code": "ZEC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Zcash",
+						"testnetCode": "TZEC"
         },
         "height": 0,
-        "unconfirmed": {
-            "amount": "0",
-            "currency": {
-                "code": "TZEC",
-                "currencyType": "crypto",
-                "divisibility": 8,
-                "name": "Zcash"
-            }
-        }
+        "unconfirmed": "0"
     }
 }`
 
 //
 // Spending
 //
-
-const spendJSON = `{
-	"wallet": "btc",
-	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"amount": {
-        "amount": "1700000",
-        "currency": {
-            "code": "BTC",
-            "currencyType": "crypto",
-            "civisibility": 8
-        }
-    },
-	"feeLevel": "NORMAL"
-}`
-
-const insuffientFundsJSON = `{
-	"success": false,
-	"reason": "ERROR_INSUFFICIENT_FUNDS"
-}`
 
 const invalidCoinJSON = `{
     	"success": false,

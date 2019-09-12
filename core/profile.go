@@ -63,12 +63,12 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 
 // UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
-	mPubkey, err := n.MasterPrivateKey.ECPubKey()
-	if err != nil {
+	if err := ValidateProfile(profile); err != nil {
 		return err
 	}
 
-	if err := ValidateProfile(profile); err != nil {
+	mPubkey, err := n.MasterPrivateKey.ECPubKey()
+	if err != nil {
 		return err
 	}
 
@@ -84,11 +84,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	settingsData, _ := n.Datastore.Settings().Get()
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
 		}
 	} else {
 		for ct := range n.Multiwallet {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct.CurrencyCode()))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct.CurrencyCode()))
 		}
 	}
 
@@ -332,13 +332,14 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
-				if len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
-					return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
-				}
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil &&
+				profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil &&
+				len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
+				return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
 	}
+
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
 		_, err := cid.Decode(profile.AvatarHashes.Tiny)

@@ -27,10 +27,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/OpenBazaar/go-ethwallet"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/OpenBazaar/golang-socketio"
 
 [[constraint]]
@@ -56,10 +52,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/btcsuite/golangcrypto"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/cpacia/BitcoinCash-Wallet"
 
 [[constraint]]
   branch = "master"

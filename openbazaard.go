@@ -37,7 +37,7 @@ func main() {
 					core.Node.MessageRetriever.Wait()
 				}
 				core.OfflineMessageWaitGroup.Wait()
-				core.PublishLock.Lock()
+				core.Node.PublishLock.Lock()
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 				os.Remove(repoLockFile)
