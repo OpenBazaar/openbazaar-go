@@ -250,7 +250,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		return err
 	}
 
-	fName, err := repo.GetPathForListingSlug(signedListing.Listing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
+	fName, err := repo.GetPathForListingSlug(signedListing.RListing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
 	if err != nil {
 		return err
 	}
@@ -743,7 +743,7 @@ func verifySignaturesOnListing(s repo.SignedListing) error {
 	sl := s.ProtoSignedListing
 	// Verify identity signature on listing
 	if err := verifySignature(
-		sl.Listing,
+		s.RListing.ProtoListing,
 		sl.Listing.VendorID.Pubkeys.Identity,
 		sl.Signature,
 		sl.Listing.VendorID.PeerID,

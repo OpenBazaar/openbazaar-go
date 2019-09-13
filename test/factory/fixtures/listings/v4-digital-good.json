@@ -19,7 +19,7 @@
             ],
             "pricingCurrency": "USD",
             "escrowTimeoutHours": 1080,
-            "coinDivisibility": 100000000
+            "coinDivisibility": 100
         },
         "item": {
             "title": "Digital Good Listing",

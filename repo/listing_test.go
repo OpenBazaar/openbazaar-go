@@ -2,7 +2,6 @@ package repo_test
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -50,6 +49,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BCH"},
@@ -64,6 +64,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BTC", "BCH"},
@@ -77,7 +78,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(1320),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC"},
@@ -92,6 +94,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
@@ -106,6 +109,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("XMR"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"LTC"},
@@ -119,7 +123,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(100),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BTC", "BCH", "ZEC", "LTC", "ETH"},

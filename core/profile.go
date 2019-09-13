@@ -338,7 +338,6 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 	}
-
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
 		_, err := cid.Decode(profile.AvatarHashes.Tiny)
