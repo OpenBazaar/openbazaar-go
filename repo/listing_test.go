@@ -51,6 +51,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BCH"},
@@ -65,6 +66,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BTC", "BCH"},
@@ -78,7 +80,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(1320),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC"},
@@ -93,6 +96,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
@@ -107,6 +111,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("XMR"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"LTC"},
@@ -120,7 +125,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(100),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BTC", "BCH", "ZEC", "LTC", "ETH"},
@@ -145,7 +151,8 @@ func TestListingAttributes(t *testing.T) {
 		if slug, _ := l.GetSlug(); slug != e.expectedSlug {
 			t.Errorf("expected example (%s) to have slug response (%+v), but instead was (%+v)", e.fixtureName, e.expectedSlug, slug)
 		}
-		if price, _ := l.GetPrice(); !price.Equal(&e.expectedPrice) {
+		if price, err := l.GetPrice(); !price.Equal(&e.expectedPrice) {
+			fmt.Println("lets see ", price.Amount.String(), price.Currency.String(), "   err  ", err)
 			t.Errorf("expected example (%s) to have price response (%+v), but instead was (%+v)", e.fixtureName, e.expectedPrice, price)
 		}
 		if acceptedCurrencies, _ := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {

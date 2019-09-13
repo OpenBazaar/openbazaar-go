@@ -129,9 +129,14 @@ func (v *CurrencyValue) Valid() error {
 
 // Equal indicates if the amount and variety of currency is equivalent
 func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
+	log.Info("in curr equal .... ")
+	log.Info(v)
+	log.Info(other)
 	if v == nil || other == nil {
 		return false
 	}
+	log.Info(v.Currency.Equal(other.Currency))
+	log.Info(v.Amount.Cmp(other.Amount))
 	if !v.Currency.Equal(other.Currency) {
 		return false
 	}

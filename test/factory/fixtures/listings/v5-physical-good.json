@@ -23,7 +23,8 @@
             ],
             "pricingCurrency": {
                 "code": "USD",
-                "divisibility": 8
+                "divisibility": 2,
+                "currencyType": "fiat"
             },
             "escrowTimeoutHours": 1
         },
@@ -34,7 +35,8 @@
             "price": {
                 "currency": {
                     "code": "USD",
-                    "divisibility": 8
+                    "divisibility": 2,
+                    "currencyType": "fiat"
                 },
                 "amount": "100"
             },
@@ -124,7 +126,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -138,7 +141,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "100"
                     }
@@ -152,7 +156,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -166,7 +171,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -180,7 +186,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -194,7 +201,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -208,7 +216,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -222,7 +231,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -236,7 +246,8 @@
                     "surcharge": {
                         "currency": {
                             "code": "USD",
-                            "divisibility": 8
+                            "divisibility": 2,
+                            "currencyType": "fiat"
                         },
                         "amount": "0"
                     }
@@ -256,7 +267,8 @@
                         "price": {
                             "currency": {
                                 "code": "USD",
-                                "divisibility": 8
+                                "divisibility": 2,
+                                "currencyType": "fiat"
                             },
                             "amount": "0"
                         },
@@ -264,7 +276,8 @@
                         "additionalItemPrice": {
                             "currency": {
                                 "code": "USD",
-                                "divisibility": 8
+                                "divisibility": 2,
+                                "currencyType": "fiat"
                             },
                             "amount": "0"
                         }
@@ -274,7 +287,8 @@
                         "price": {
                             "currency": {
                                 "code": "USD",
-                                "divisibility": 8
+                                "divisibility": 2,
+                                "currencyType": "fiat"
                             },
                             "amount": "100"
                         },
@@ -282,7 +296,8 @@
                         "additionalItemPrice": {
                             "currency": {
                                 "code": "USD",
-                                "divisibility": 8
+                                "divisibility": 2,
+                                "currencyType": "fiat"
                             },
                             "amount": "0"
                         }

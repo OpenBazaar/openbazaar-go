@@ -327,9 +327,16 @@ func (c *CurrencyDefinition) Valid() error {
 // Equal indicates if the receiver and other have the same code
 // and divisibility
 func (c *CurrencyDefinition) Equal(other *CurrencyDefinition) bool {
+	log.Info("in curr def eq")
+
 	if c == nil || other == nil {
 		return false
 	}
+	//log.Info(c)
+	//log.Info(other)
+	log.Info("code    : ", c.Code, "   ", other.Code, "  ", c.Code != other.Code)
+	log.Info("divsi   : ", c.Divisibility, "    ", other.Divisibility, "   ", c.Divisibility != other.Divisibility)
+	log.Info("currt   : ", c.CurrencyType, "    ", other.CurrencyType, "   ", c.CurrencyType != other.CurrencyType)
 	if c.Code != other.Code {
 		return false
 	}

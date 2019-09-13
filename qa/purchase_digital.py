@@ -64,6 +64,8 @@ class PurchaseDigital(OpenBazaarTestFramework):
         order_json["items"][0]["listingHash"] = listingId
         order_json["paymentCoin"] = "t" + self.cointype
         api_url = bob["gateway_url"] + "ob/purchase"
+        print("before purchase : ", api_url)
+        print(json.dumps(order_json, indent=4))
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("PurchaseDigital - FAIL: Purchase post endpoint not found")

@@ -222,7 +222,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			coupons, err := n.Datastore.Coupons().Get(sl.RListing.Slug)
 			if err != nil {
 				return err
 			}
@@ -230,15 +230,15 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.Listing.ProtoListing.Coupons {
+			for _, coupon := range sl.RListing.ProtoListing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.Listing.ProtoListing.Moderators = moderators
-			sl0, err := n.SignListing(sl.Listing)
+			sl.RListing.ProtoListing.Moderators = moderators
+			sl0, err := n.SignListing(sl.RListing)
 			if err != nil {
 				return err
 			}
@@ -264,7 +264,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			hashes[sl.Listing.Slug] = hash
+			hashes[sl.RListing.Slug] = hash
 
 			return nil
 		}

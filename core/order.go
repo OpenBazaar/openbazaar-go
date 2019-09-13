@@ -699,24 +699,24 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	if err != nil {
 		return nil, err
 	}
-	if err := validateVersionNumber(&sl.Listing); err != nil {
+	if err := validateVersionNumber(&sl.RListing); err != nil {
 		return nil, err
 	}
-	if err := validateVendorID(&sl.Listing); err != nil {
+	if err := validateVendorID(&sl.RListing); err != nil {
 		return nil, err
 	}
-	if err := repo.ValidateListing(&sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), div); err != nil {
+	if err := repo.ValidateListing(&sl.RListing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), div); err != nil {
 		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
 	}
 	if err := verifySignaturesOnListing(sl); err != nil {
 		return nil, err
 	}
-	contract.VendorListings = append(contract.VendorListings, sl.Listing.ProtoListing)
+	contract.VendorListings = append(contract.VendorListings, sl.RListing.ProtoListing)
 	s := new(pb.Signature)
 	s.Section = pb.Signature_LISTING
 	s.SignatureBytes = sl.Signature
 	contract.Signatures = append(contract.Signatures, s)
-	return &sl.Listing, nil
+	return &sl.RListing, nil
 }
 
 func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
@@ -1729,22 +1729,24 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	return contract, nil
 }
 
-func validateVendorID(listing *repo.Listing) error {
+func validateVendorID(l *repo.Listing) error {
+
+	listing := l.ProtoListing
 
 	if listing == nil {
 		return errors.New("listing is nil")
 	}
-	if listing.Vendor.Protobuf() == nil {
+	if listing.VendorID == nil {
 		return errors.New("vendorID is nil")
 	}
-	if listing.Vendor.Protobuf().Pubkeys == nil {
+	if listing.VendorID.Pubkeys == nil {
 		return errors.New("vendor pubkeys is nil")
 	}
-	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.Vendor.Protobuf().Pubkeys.Identity)
+	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	vendorID, err := peer.IDB58Decode(listing.Vendor.Protobuf().PeerID)
+	vendorID, err := peer.IDB58Decode(listing.VendorID.PeerID)
 	if err != nil {
 		return err
 	}
