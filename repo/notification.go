@@ -399,6 +399,13 @@ type messageTypingWrapper struct {
 	MessageRead Notifier `json:"messageTyping"`
 }
 
+type ListingPrice struct {
+	Amount           string  `json:"amount"`
+	CurrencyCode     string  `json:"currencyCode"`
+	PriceModifier    float32 `json:"priceModifier"`
+	CoinDivisibility uint32  `json:"coinDivisibility"`
+}
+
 type OrderNotification struct {
 	BuyerHandle   string           `json:"buyerHandle"`
 	BuyerID       string           `json:"buyerId"`

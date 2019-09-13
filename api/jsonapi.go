@@ -519,7 +519,12 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 
-	slug, err := i.node.CreateListing(r.Body)
+	listingData, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		ErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	slug, err := i.node.CreateListing(listingData)
 	if err != nil {
 		if err == repo.ErrListingAlreadyExists {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
@@ -534,7 +539,12 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
-	err := i.node.UpdateListing(r.Body, true)
+	listingData, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		ErrorResponse(w, http.StatusConflict, err.Error())
+		return
+	}
+	err = i.node.UpdateListing(listingData, true)
 	if err != nil {
 		if err == repo.ErrListingDoesNotExist {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")

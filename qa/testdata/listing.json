@@ -1,7 +1,7 @@
 {
 	"slug": "",
 	"metadata": {
-		"version": 1,
+		"version": 5,
 		"contractType": "PHYSICAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
@@ -11,7 +11,8 @@
 			"name": "A",
 			"currencyType": "A"
 		},
-		"acceptedCurrencies": ["TBTC"]
+		"acceptedCurrencies": ["TBTC"],
+		"escrowTimeoutHours": 1080
 	},
 	"item": {
 		"title": "Ron Swanson Tshirt",

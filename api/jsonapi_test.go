@@ -275,7 +275,7 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
-		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
+		{"POST", "/ob/listing", `{`, 500, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
 		{"GET", "/ob/inventory", "", 200, `{}`},

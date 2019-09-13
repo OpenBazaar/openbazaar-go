@@ -118,7 +118,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(isTestnet)
+	repoPath, err := repo.GetRepoPath(isTestnet, x.DataDir)
 	if err != nil {
 		return err
 	}

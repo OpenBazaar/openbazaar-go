@@ -460,13 +460,25 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		return wi.Txn{}, err
 	}
 
+	chainID, err := wallet.client.NetworkID(context.Background())
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
+	msg, err := tx.AsMessage(types.NewEIP155Signer(chainID)) // HomesteadSigner{})
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
 	return wi.Txn{
-		Txid:      tx.Hash().String(),
-		Value:     tx.Value().String(),
-		Height:    0,
-		Timestamp: time.Now(),
-		WatchOnly: false,
-		Bytes:     tx.Data(),
+		Txid:        tx.Hash().Hex(),
+		Value:       tx.Value().String(),
+		Height:      0,
+		Timestamp:   time.Now(),
+		WatchOnly:   false,
+		Bytes:       tx.Data(),
+		ToAddress:   tx.To().String(),
+		FromAddress: msg.From().Hex(),
 		Outputs: []wi.TransactionOutput{
 			{
 				Address: wallet.address,
@@ -565,7 +577,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(hash.Hex(), referenceID, addr, amount, time.Now(), false))
+				go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now(), false))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
@@ -658,8 +670,12 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 				return nil, err
 			}
 			wallet.db.Txns().Delete(chash)
-			amt, _ := new(big.Int).SetString(pTxn.Amount, 10)
-			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, wallet.address, *amt, time.Now(), false))
+			toAddr := common.HexToAddress(pTxn.To)
+			n := new(big.Int)
+			n, _ = n.SetString(pTxn.Amount, 10)
+			go wallet.AssociateTransactionWithOrder(
+				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
+					*n, time.Now(), pTxn.WithInput))
 		}
 	}
 

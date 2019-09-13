@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -16,6 +17,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 		"v4-digital-good",
 		"v4-service",
 		"v4-cryptocurrency",
+		"v5-physical-good",
 	}
 
 	for _, e := range examples {
@@ -174,11 +176,11 @@ func TestListingFromProtobuf(t *testing.T) {
 	}
 	if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
 		t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
-		if err != nil {
-			t.Logf("hash had an error: %s", err)
-		}
+		t.Logf("hash had an error: %s", err)
+
 	}
 	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
 		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
 	}
+
 }

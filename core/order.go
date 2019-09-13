@@ -102,7 +102,6 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
-
 	retCurrency := &repo.CurrencyValue{}
 	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
 	if err != nil {
@@ -155,6 +154,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	payment.AmountValue = &pb.CurrencyValue{
 		Currency: currency,
 	}
+
 	contract.BuyerOrder.Payment = payment
 
 	// Calculate payment amount
@@ -172,6 +172,9 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		},
 		Amount: total.String(),
 	}
+
+	contract.BuyerOrder.Payment = payment
+
 	contract, err = n.SignOrder(contract)
 	if err != nil {
 		return "", "", retCurrency, false, err
@@ -564,7 +567,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 	if err != nil {
 		return nil, err
 	}
-	order.BuyerID = contractIdentity
+	order.BuyerID = &contractIdentity
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
@@ -595,17 +598,18 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 			if err != nil {
 				return nil, err
 			}
-			addedListings[item.ListingHash] = &sl.Listing
-			listing = &sl.Listing
+			addedListings[item.ListingHash] = sl
+			listing = sl
 		} else {
 			listing = addedListings[item.ListingHash]
 		}
 
-		if !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.ProtoListing.Metadata.AcceptedCurrencies) {
+		acceptedCurrencies, err := listing.GetAcceptedCurrencies()
+		if err != nil || !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, acceptedCurrencies) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
-		ser, err := proto.Marshal(listing)
+		ser, err := proto.Marshal(listing.ProtoListing)
 		if err != nil {
 			return nil, err
 		}
@@ -616,7 +620,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		i.ListingHash = listingID.String()
 
 		// If purchasing a listing version >=3 then the Quantity64 field must be used
-		if listing.Metadata.Version < 3 {
+		if listing.ProtoListing.Metadata.Version < 3 {
 			i.Quantity = uint32(item.Quantity)
 		} else {
 			i.Quantity64 = item.Quantity
@@ -626,7 +630,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		contractType, err := listing.GetContractType()
 		if err != nil {
-
+			return nil, err
 		}
 
 		if contractType != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
@@ -683,15 +687,15 @@ func dedupeCoupons(itemCoupons []string) []string {
 	return coupons
 }
 
-func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item, div uint32) (*repo.SignedListing, error) {
+func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item, div uint32) (*repo.Listing, error) {
 	// Let's fetch the listing, should be cached
 	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 	if err != nil {
 		return nil, err
 	}
-	sl := new(repo.SignedListing)
+
 	//err = jsonpb.UnmarshalString(string(b), sl)
-	sl, err = repo.UnmarshalJSONSignedListing(b)
+	sl, err := repo.UnmarshalJSONSignedListing(b)
 	if err != nil {
 		return nil, err
 	}
@@ -712,7 +716,7 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	s.Section = pb.Signature_LISTING
 	s.SignatureBytes = sl.Signature
 	contract.Signatures = append(contract.Signatures, s)
-	return sl, nil
+	return &sl.Listing, nil
 }
 
 func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
@@ -737,8 +741,8 @@ func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *times
 	return ratingKeys, nil
 }
 
-func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
-	id := new(pb.ID)
+func getContractIdentity(n *OpenBazaarNode) (pb.ID, error) {
+	id := pb.ID{}
 	profile, err := n.GetProfile()
 	if err == nil {
 		id.Handle = profile.Handle
@@ -747,24 +751,24 @@ func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
 	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	keys := new(pb.ID_Pubkeys)
 	keys.Identity = pubkey
 	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	keys.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = keys
 	// Sign the PeerID with the Bitcoin key
 	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	if err != nil {
-		return nil, err
+		return id, err
 	}
 	id.BitcoinSig = sig.Serialize()
 	return id, nil
