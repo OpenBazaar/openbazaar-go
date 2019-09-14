@@ -238,7 +238,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			}
 
 			sl.RListing.ProtoListing.Moderators = moderators
-			sl0, err := n.SignListing(&sl.RListing)
+			sl0, err := n.SignListing(sl.RListing)
 			if err != nil {
 				return err
 			}

@@ -55,7 +55,7 @@ type ListingData struct {
 }
 
 // SignListing Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (repo.SignedListing, error) {
+func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
 	timeout := uint32(0)
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
@@ -240,12 +240,8 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 	if err != nil {
 		return err
 	}
-	listing0, err := repo.NewListingFromProtobuf(listing.ProtoListing)
-	if err != nil {
-		return err
-	}
 
-	signedListing, err := n.SignListing(listing0)
+	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
 	}
