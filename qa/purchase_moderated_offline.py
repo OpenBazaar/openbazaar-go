@@ -126,10 +126,11 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "value": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
@@ -176,8 +177,8 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"]["amount"])
-            unconfirmed = int(resp["unconfirmed"]["amount"])
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed > 0:
                 raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice should have zero balance at this point")
         else:

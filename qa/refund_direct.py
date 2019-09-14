@@ -113,10 +113,11 @@ class RefundDirectTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "value": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
@@ -190,7 +191,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"]["amount"])
+            confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 50 - int(payment_amount["amount"]):
                 raise TestFailure("RefundDirectTest - FAIL: Bob failed to receive the multisig payout")

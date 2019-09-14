@@ -47,7 +47,7 @@ var (
 
 	ErrCurrencyCodeLengthInvalid       = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
 	ErrCurrencyCodeTestSymbolInvalid   = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
-	ErrCurrencyDefinitionUndefined     = errors.New("currency definition is not defined")
+	ErrCurrencyDefinitionUndefined     = errors.New("unknown currency")
 	ErrCurrencyTypeInvalid             = errors.New("currency type must be crypto or fiat")
 	ErrCurrencyDivisibilityNonPositive = errors.New("currency divisibility most be greater than zero")
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
@@ -327,16 +327,9 @@ func (c *CurrencyDefinition) Valid() error {
 // Equal indicates if the receiver and other have the same code
 // and divisibility
 func (c *CurrencyDefinition) Equal(other *CurrencyDefinition) bool {
-	log.Info("in curr def eq")
-
 	if c == nil || other == nil {
 		return false
 	}
-	//log.Info(c)
-	//log.Info(other)
-	log.Info("code    : ", c.Code, "   ", other.Code, "  ", c.Code != other.Code)
-	log.Info("divsi   : ", c.Divisibility, "    ", other.Divisibility, "   ", c.Divisibility != other.Divisibility)
-	log.Info("currt   : ", c.CurrencyType, "    ", other.CurrencyType, "   ", c.CurrencyType != other.CurrencyType)
 	if c.Code != other.Code {
 		return false
 	}

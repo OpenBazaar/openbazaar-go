@@ -102,12 +102,16 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "value": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
+        print("################################")
+        print("before spend post : ", api_url)
+        print(json.dumps(spend, indent=4))        
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend post endpoint not found")

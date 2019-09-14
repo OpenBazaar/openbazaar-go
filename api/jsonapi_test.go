@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
@@ -257,7 +258,7 @@ func TestListingAcceptedCurrencies(t *testing.T) {
 	}
 }
 
-func TestListings0(t *testing.T) {
+func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")
 	updatedListing.Taxes = []*pb.Listing_Tax{
@@ -493,8 +494,59 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
+	})
+}
+
+func TestWalletSpendFailures(t *testing.T) {
+	newSpendRequest := func() *core.SpendRequest {
+		return &core.SpendRequest{
+			CurrencyCode:           "BTC",
+			Address:                "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
+			Amount:                 "1234",
+			FeeLevel:               "PRIORITY",
+			RequireAssociatedOrder: false,
+		}
+	}
+
+	insufficientFundsRequest := newSpendRequest()
+	insufficientFundsRequest.Amount = "1700000"
+	insufficientFundsResponse := APIError{Reason: core.ErrInsufficientFunds.Error()}
+
+	invalidAmountRequest := newSpendRequest()
+	invalidAmountRequest.Amount = ""
+	invalidAmountResponse := APIError{Reason: core.ErrInvalidAmount.Error()}
+
+	missingCurrencyRequest := newSpendRequest()
+	missingCurrencyRequest.Currency = nil
+	missingCurrencyRequest.CurrencyCode = ""
+	missingCurrencyResponse := APIError{Reason: repo.ErrCurrencyDefinitionUndefined.Error()}
+
+	invalidAddrRequest := newSpendRequest()
+	invalidAddrRequest.Address = "invalid"
+	invalidAddrResponse := APIError{Reason: core.ErrInvalidSpendAddress.Error()}
+
+	runAPITests(t, apiTests{
+		{
+			"POST", "/wallet/spend",
+			insufficientFundsRequest,
+			400, insufficientFundsResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAmountRequest,
+			400, invalidAmountResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			missingCurrencyRequest,
+			400, missingCurrencyResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAddrRequest,
+			400, invalidAddrResponse,
+		},
 	})
 }
 

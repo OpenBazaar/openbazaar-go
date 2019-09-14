@@ -6,6 +6,8 @@ import (
 	//"errors"
 	//"fmt"
 	"io"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	//"math/big"
 	//"net/url"
 	//"os"
@@ -14,9 +16,8 @@ import (
 	//"strings"
 	//"sync"
 	//"time"
-
 	//"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	//"github.com/OpenBazaar/openbazaar-go/pb"
 	//"github.com/OpenBazaar/openbazaar-go/repo"
 	//"github.com/golang/protobuf/ptypes"
 )
@@ -165,7 +166,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 						errChan <- fmt.Errorf("error in record %d: %s", i, "price is a mandatory field")
 						return
 					}
-					if !listingCurrencyIsBTC(listing) {
+					if !n.listingCurrencyIsBTC(listing) {
 						//f, err := strconv.ParseFloat(record[pos], 64)
 						f, ok := new(big.Int).SetString(record[pos], 10)
 						if !ok {
@@ -306,7 +307,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 								errChan <- fmt.Errorf("error in record %d: %s", i, "shipping_option1_service1_estimated_price is a mandatory field")
 								return
 							}
-							if !listingCurrencyIsBTC(listing) {
+							if !n.listingCurrencyIsBTC(listing) {
 								f, err := strconv.ParseFloat(record[pos], 64)
 								if err != nil {
 									errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
@@ -343,7 +344,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 								errChan <- errors.New("shipping_option1_service2_estimated_price is a mandatory field")
 								return
 							}
-							if !listingCurrencyIsBTC(listing) {
+							if !n.listingCurrencyIsBTC(listing) {
 								f, err := strconv.ParseFloat(record[pos], 64)
 								if err != nil {
 									errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
@@ -380,7 +381,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 								errChan <- fmt.Errorf("error in record %d: %s", i, "shipping_option1_service3_estimated_price is a mandatory field")
 								return
 							}
-							if !listingCurrencyIsBTC(listing) {
+							if !n.listingCurrencyIsBTC(listing) {
 								f, err := strconv.ParseFloat(record[pos], 64)
 								if err != nil {
 									errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
@@ -451,7 +452,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 									errChan <- fmt.Errorf("error in record %d: %s", i, soService1EstPrice+" is a mandatory field")
 									return
 								}
-								if !listingCurrencyIsBTC(listing) {
+								if !n.listingCurrencyIsBTC(listing) {
 									f, err := strconv.ParseFloat(record[pos], 64)
 									if err != nil {
 										errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
@@ -488,7 +489,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 									errChan <- fmt.Errorf("error in record %d: %s", i, soService2EstPrice+" is a mandatory field")
 									return
 								}
-								if !listingCurrencyIsBTC(listing) {
+								if !n.listingCurrencyIsBTC(listing) {
 									f, err := strconv.ParseFloat(record[pos], 64)
 									if err != nil {
 										errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())
@@ -525,7 +526,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 									errChan <- fmt.Errorf("error in record %d: %s", i, soService3EstPrice+" is a mandatory field")
 									return
 								}
-								if !listingCurrencyIsBTC(listing) {
+								if !n.listingCurrencyIsBTC(listing) {
 									f, err := strconv.ParseFloat(record[pos], 64)
 									if err != nil {
 										errChan <- fmt.Errorf("error in record %d: %s", i, err.Error())

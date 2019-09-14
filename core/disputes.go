@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -13,11 +14,6 @@ import (
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -26,6 +22,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
 // ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
@@ -1029,6 +1031,11 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
+	currencyDef, err := repo.LoadCurrencyDefinitions().Lookup(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	if err != nil {
+		return fmt.Errorf("unknown currency code (%s) in contract (%s) buyer order", contract.BuyerOrder.Payment.AmountValue.Currency.Code, orderID)
+	}
+
 	// Create inputs
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
@@ -1171,14 +1178,13 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	msg := pb.OrderPaymentTxn{
-		Coin:          contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+	err = n.SendOrderPayment(&SpendResponse{
+		Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
+		Currency:      currencyDef,
 		OrderID:       orderID,
-		TransactionID: strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
-		WithInput:     true,
-	}
-
-	err = n.SendOrderPayment(peerID, &msg)
+		PeerID:        peerID,
+		ConsumedInput: true,
+	})
 	if err != nil {
 		log.Errorf("error sending order payment: %v", err)
 	}

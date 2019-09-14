@@ -70,6 +70,19 @@ func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// NewCurrencyValueWithLookup accepts a string value as a base10 integer
+// and uses the currency code to lookup the CurrencyDefinition
+func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, error) {
+	def, err := LoadCurrencyDefinitions().Lookup(currencyCode)
+	if err != nil {
+		return nil, err
+	}
+	if amount == "" {
+		return NewCurrencyValue("0", def)
+	}
+	return NewCurrencyValue(amount, def)
+}
+
 // NewCurrencyValueFromInt is a convenience function which converts an int64
 // into a string and passes the arguments to NewCurrencyValue
 func NewCurrencyValueFromInt(amount int64, currency *CurrencyDefinition) (*CurrencyValue, error) {
@@ -85,11 +98,8 @@ func NewCurrencyValueFromUint(amount uint64, currency *CurrencyDefinition) (*Cur
 // NewCurrencyValue accepts string amounts and currency codes, and creates
 // a valid CurrencyValue
 func NewCurrencyValue(amount string, currency *CurrencyDefinition) (*CurrencyValue, error) {
-	var (
-		i  = new(big.Int)
-		ok bool
-	)
-	if _, ok = i.SetString(amount, 0); !ok {
+	var i, ok = new(big.Int).SetString(amount, 10)
+	if !ok {
 		return nil, ErrCurrencyValueAmountInvalid
 	}
 	return &CurrencyValue{Amount: i, Currency: currency}, nil
@@ -111,8 +121,19 @@ func (v *CurrencyValue) AmountUint64() (uint64, error) {
 	return v.Amount.Uint64(), nil
 }
 
+// AmountString returns the string representation of the amount
+func (v *CurrencyValue) AmountString() string {
+	if v == nil || v.Amount == nil {
+		return "0"
+	}
+	return v.Amount.String()
+}
+
 // String returns a string representation of a CurrencyValue
 func (v *CurrencyValue) String() string {
+	if v == nil {
+		return new(CurrencyValue).String()
+	}
 	return fmt.Sprintf("%s %s", v.Amount.String(), v.Currency.String())
 }
 
@@ -129,14 +150,9 @@ func (v *CurrencyValue) Valid() error {
 
 // Equal indicates if the amount and variety of currency is equivalent
 func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
-	log.Info("in curr equal .... ")
-	log.Info(v)
-	log.Info(other)
 	if v == nil || other == nil {
 		return false
 	}
-	log.Info(v.Currency.Equal(other.Currency))
-	log.Info(v.Amount.Cmp(other.Amount))
 	if !v.Currency.Equal(other.Currency) {
 		return false
 	}

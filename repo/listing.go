@@ -186,11 +186,6 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 // UpdateListing will update a pb Listing
 func UpdateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	//data := make([]byte, 100000)
-	//n, err := r.Read(data)
-	//if err != nil && err != io.EOF {
-	//	return Listing{}, err
-	//}
 	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
 		return Listing{}, err
@@ -328,22 +323,6 @@ type Listing struct {
 
 	Vendor   *PeerInfo       //`json:"vendorID"`
 	Metadata ListingMetadata //`json:"metadata"`
-	//Hash               string    `json:"hash"`
-	//Title              string    `json:"title"`
-	//Categories         []string  `json:"categories"`
-	//NSFW               bool      `json:"nsfw"`
-	//ContractType       string    `json:"contractType"`
-	//Description        string    `json:"description"`
-	//Thumbnail          thumbnail `json:"thumbnail"`
-	//Price              price     `json:"price"`
-	//ShipsTo            []string  `json:"shipsTo"`
-	//FreeShipping       []string  `json:"freeShipping"`
-	//Language           string    `json:"language"`
-	//AverageRating      float32   `json:"averageRating"`
-	//RatingCount        uint32    `json:"ratingCount"`
-	//ModeratorIDs       []string  `json:"moderators"`
-	//AcceptedCurrencies []string  `json:"acceptedCurrencies"`
-	//CoinType           string    `json:"coinType"`
 
 	ListingBytes     []byte `json:"-"`
 	OrigListingBytes []byte `json:"-"`
@@ -755,21 +734,6 @@ func ExtractIDFromSignedListing(data []byte) (*pb.ID, error) {
 	}
 
 	lbytes := *objmap["listing"]
-	/*
-		err = json.Unmarshal(lbytes, &lmap)
-		if err != nil {
-			log.Error(err)
-			return vendorPlay, err
-		}
-
-		err = json.Unmarshal(*lmap["vendorID"], &vendorPlay)
-		if err != nil {
-			log.Error(err)
-			return vendorPlay, err
-		}
-
-		return vendorPlay, nil
-	*/
 	return ExtractIDFromListing(lbytes)
 }
 
@@ -958,17 +922,6 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 			}
 			var p price
 			json.Unmarshal(l.ListingBytes, &p)
-			/*
-				curr, err := LoadCurrencyDefinitions().Lookup(p.Item.Price.Currency.Code)
-				if err != nil {
-					curr = &CurrencyDefinition{
-						Code:         CurrencyCode(p.Item.Price.Currency.Code),
-						Divisibility: 8,
-						Name:         "A",
-						CurrencyType: "A",
-					}
-				}
-			*/
 			retVal.Amount, _ = new(big.Int).SetString(p.Item.Price.Amount, 10)
 			retVal.Currency = &CurrencyDefinition{
 				Code:         CurrencyCode(p.Item.Price.Currency.Code),
@@ -1034,31 +987,6 @@ func (l *Listing) GetRefundPolicy() (string, error) {
 // GetVendorID - return vendorID
 func (l *Listing) GetVendorID() (*pb.ID, error) {
 	if l.Vendor == nil {
-		/*
-			type pbID struct {
-				VendorID struct {
-					PeerID     string `json:"peerID"`
-					BitcoinSig string `json:"bitcoinSig"`
-					PubKeys    struct {
-						Identity string `json:"identity"`
-						Bitcoin  string `json:"bitcoin"`
-					} `json:"pubkeys"`
-				} `json:"vendorID"`
-			}
-			var s pbID
-			err := json.Unmarshal(l.ListingBytes, &s)
-			if err != nil {
-				return nil, err
-			}
-			pid := &pb.ID{
-				PeerID:     s.VendorID.PeerID,
-				BitcoinSig: []byte(s.VendorID.BitcoinSig),
-				Pubkeys: &pb.ID_Pubkeys{
-					Identity: []byte(s.VendorID.PubKeys.Identity),
-					Bitcoin:  []byte(s.VendorID.PubKeys.Bitcoin),
-				},
-			}
-		*/
 		pid, err := ExtractIDFromListing(l.ListingBytes)
 		l.Vendor, err = NewPeerInfoFromProtobuf(pid)
 		if err != nil {

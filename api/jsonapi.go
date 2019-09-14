@@ -66,6 +66,11 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
+type APIError struct {
+	Success bool   `json:"success"`
+	Reason  string `json:"reason"`
+}
+
 var lastManualScan time.Time
 
 const OfflineMessageScanInterval = 1 * time.Minute
@@ -190,10 +195,6 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
-	type APIError struct {
-		Success bool   `json:"success"`
-		Reason  string `json:"reason"`
-	}
 	reason = strings.Replace(reason, `"`, `'`, -1)
 	err := APIError{false, reason}
 	resp, _ := json.MarshalIndent(err, "", "    ")
@@ -732,9 +733,10 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   *repo.CurrencyValue `json:"confirmed"`
-		Unconfirmed *repo.CurrencyValue `json:"unconfirmed"`
-		Height      uint32              `json:"height"`
+		Confirmed   string                   `json:"confirmed"`
+		Unconfirmed string                   `json:"unconfirmed"`
+		Currency    *repo.CurrencyDefinition `json:"currency"`
+		Height      uint32                   `json:"height"`
 	}
 	if coinType == "balance" {
 		ret := make(map[string]interface{})
@@ -747,8 +749,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 			}
 			confirmed, unconfirmed := wal.Balance()
 			ret[ct.CurrencyCode()] = balance{
-				Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
-				Unconfirmed: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
+				Confirmed:   confirmed.Value.String(),
+				Unconfirmed: unconfirmed.Value.String(),
+				Currency:    defn,
 				Height:      height,
 			}
 		}
@@ -774,8 +777,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bal := balance{
-		Confirmed:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
-		Unconfirmed: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
+		Confirmed:   confirmed.Value.String(),
+		Unconfirmed: unconfirmed.Value.String(),
+		Currency:    defn,
 		Height:      height,
 	}
 	out, err := json.MarshalIndent(bal, "", "    ")
@@ -806,14 +810,8 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	msg := pb.OrderPaymentTxn{
-		Coin:          spendArgs.Wallet,
-		OrderID:       result.OrderID,
-		TransactionID: result.Txid,
-		WithInput:     false,
-	}
 
-	err = i.node.SendOrderPayment(result.PeerID, &msg)
+	err = i.node.SendOrderPayment(result)
 	if err != nil {
 		log.Errorf("error sending order with id %s payment: %v", result.OrderID, err)
 	}
@@ -1602,7 +1600,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if !conf.Reject {
-		err := i.node.ConfirmOfflineOrder(contract, records)
+		err := i.node.ConfirmOfflineOrder(state, contract, records)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -3327,10 +3325,6 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 
-	type response struct {
-		Fee *repo.CurrencyValue `json:"estimatedFee"`
-	}
-
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
 	amount, ok := new(big.Int).SetString(amt, 10) //strconv.Atoi(amt)
@@ -3378,9 +3372,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := &response{
-		Fee: &repo.CurrencyValue{Currency: defn, Amount: &fee},
-	}
+	resp := &repo.CurrencyValue{Currency: defn, Amount: &fee}
 	ser, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
