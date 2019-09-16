@@ -132,7 +132,10 @@ func (n *OpenBazaarNode) RegressionNetworkEnabled() bool { return n.RegressionTe
 // SeedNode - publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
 	n.seedLock.Lock()
-	ipfs.UnPinDir(n.IpfsNode, n.RootHash)
+	err := ipfs.UnPinDir(n.IpfsNode, n.RootHash)
+	if err != nil {
+		log.Error(err)
+	}
 	var aerr error
 	var rootHash string
 	// There's an IPFS bug on Windows that might be related to the Windows indexer that could cause this to fail
@@ -256,8 +259,14 @@ func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for range ticker.C {
-			n.UpdateFollow()
-			n.SeedNode()
+			err := n.UpdateFollow()
+			if err != nil {
+				log.Error(err)
+			}
+			err = n.SeedNode()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}()
 }

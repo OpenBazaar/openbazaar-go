@@ -109,8 +109,15 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	if err != nil {
 		return err
 	}
-	n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
-	n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_REFUNDED, true)
+	err = n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
+	if err != nil {
+		// TODO: do we retry a failed refund send?
+		log.Error(err)
+	}
+	err = n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_REFUNDED, true)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

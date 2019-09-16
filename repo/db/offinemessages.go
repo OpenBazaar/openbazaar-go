@@ -30,10 +30,16 @@ func (o *OfflineMessagesDB) Put(url string) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(url, int(time.Now().Unix()))
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -75,7 +81,10 @@ func (o *OfflineMessagesDB) GetMessages() (map[string][]byte, error) {
 	for rows.Next() {
 		var url string
 		var message []byte
-		rows.Scan(&url, &message)
+		err = rows.Scan(&url, &message)
+		if err != nil {
+			log.Error(err)
+		}
 		ret[url] = message
 	}
 	return ret, nil

@@ -24,7 +24,7 @@ func NewContract() *pb.RicardianContract {
 			},
 			Payment: &pb.Order_Payment{
 				AmountValue: &pb.CurrencyValue{
-					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+					Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8, CurrencyType: "crypto"},
 					Amount:   "10",
 				},
 				Method:  pb.Order_Payment_DIRECT,

@@ -184,16 +184,6 @@ func (n *OpenBazaarNode) UpdateListing(r []byte, publish bool) error {
 	return n.saveListing(listing, publish)
 }
 
-func (n *OpenBazaarNode) getExpectedDivisibility(code string) uint32 {
-	var expectedDivisibility uint32
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(code); err != nil {
-		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
-	} else {
-		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
-	}
-	return expectedDivisibility
-}
-
 func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 	mods, err := listing.GetModerators()
 	if err != nil {

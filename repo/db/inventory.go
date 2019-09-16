@@ -32,10 +32,16 @@ func (i *InventoryDB) Put(slug string, variantIndex int, count int64) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(id[:]), slug, variantIndex, count)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -73,7 +79,10 @@ func (i *InventoryDB) Get(slug string) (map[int]int64, error) {
 		var slug string
 		var count int64
 		var variantIndex int
-		rows.Scan(&slug, &variantIndex, &count)
+		err = rows.Scan(&slug, &variantIndex, &count)
+		if err != nil {
+			log.Error(err)
+		}
 		ret[variantIndex] = count
 	}
 	return ret, nil
@@ -94,7 +103,10 @@ func (i *InventoryDB) GetAll() (map[string]map[int]int64, error) {
 		var slug string
 		var count int64
 		var variantIndex int
-		rows.Scan(&slug, &variantIndex, &count)
+		err = rows.Scan(&slug, &variantIndex, &count)
+		if err != nil {
+			log.Error(err)
+		}
 		m, ok := ret[slug]
 		if !ok {
 			r := make(map[int]int64)

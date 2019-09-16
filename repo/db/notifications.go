@@ -143,10 +143,16 @@ func (n *NotficationsDB) MarkAsRead(notifID string) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(notifID)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

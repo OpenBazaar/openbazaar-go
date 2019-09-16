@@ -59,7 +59,10 @@ func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
 	}
 	//old_coupons := listing.Listing.Coupons
 
-	core.AssignMatchingCoupons(coupons, listing)
+	err = core.AssignMatchingCoupons(coupons, listing)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if listing.Listing.Coupons[0].GetDiscountCode() != "test" {
 		t.Error("Coupons were not assigned")
@@ -102,7 +105,10 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 
 	option := listing.Listing.ShippingOptions[0].Services[0]
 
-	core.ApplyShippingOptions(listing)
+	err = core.ApplyShippingOptions(listing)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if option.AdditionalItemPriceValue.Amount != "100" {
 		t.Error("Shipping options were not applied properly")

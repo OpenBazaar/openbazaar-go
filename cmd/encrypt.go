@@ -118,7 +118,11 @@ func (x *EncryptDatabase) Execute(args []string) error {
 		return err
 	}
 
-	tmpDB.InitTables(pw)
+	err = tmpDB.InitTables(pw)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	if err := sqlliteDB.Copy(path.Join(tmpPath, "datastore", filename), pw); err != nil {
 		fmt.Println(err)
 		return err

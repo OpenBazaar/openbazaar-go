@@ -164,9 +164,15 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		}
 	}
 	if n.IsFulfilled(rc) {
-		n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
+		err = n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
+		if err != nil {
+			log.Error(err)
+		}
 	} else {
-		n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
+		err = n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }

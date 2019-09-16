@@ -139,9 +139,15 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 
 	// Update database
 	if isPurchase {
-		n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		if err != nil {
+			log.Error(err)
+		}
 	} else {
-		n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		err = n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
@@ -446,7 +452,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		Buyer:          buyer,
 	}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+	err = n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -560,14 +569,13 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	var buyerAddr btcutil.Address
-	buyerValue := big.NewInt(0)
 	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
 		}
-		buyerValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(buyerPercentage)))
+		buyerValue := new(big.Int).Mul(effectiveVal, big.NewInt(int64(buyerPercentage)))
 		buyerValue = buyerValue.Div(buyerValue, big.NewInt(100))
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
@@ -577,13 +585,12 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
-	vendorValue := big.NewInt(0)
 	if payDivision.VendorAny() {
 		vendorAddr, err = wal.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err
 		}
-		vendorValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(vendorPercentage)))
+		vendorValue := new(big.Int).Mul(effectiveVal, big.NewInt(int64(vendorPercentage)))
 		vendorValue = vendorValue.Div(vendorValue, big.NewInt(100))
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,

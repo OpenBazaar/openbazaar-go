@@ -112,7 +112,10 @@ func (x *Convert) Execute(args []string) error {
 	}
 	if x.Password != "" {
 		p := "pragma key='" + x.Password + "';"
-		sqlitedb.Exec(p)
+		_, err = sqlitedb.Exec(p)
+		if err != nil {
+			return err
+		}
 	}
 
 	_, err = sqlitedb.Exec("DELETE FROM txns;")
@@ -138,7 +141,10 @@ func (x *Convert) Execute(args []string) error {
 		return err
 	}
 	var cfgIface interface{}
-	json.Unmarshal(cf, &cfgIface)
+	err = json.Unmarshal(cf, &cfgIface)
+	if err != nil {
+		return err
+	}
 	cfgObj, ok := cfgIface.(map[string]interface{})
 	if !ok {
 		return errors.New("invalid config file")
@@ -360,7 +366,10 @@ func (x *Convert) Execute(args []string) error {
 	settings, err := sqliteDB.Settings().Get()
 	if err == nil {
 		settings.StoreModerators = &[]string{}
-		sqliteDB.Settings().Put(settings)
+		err = sqliteDB.Settings().Put(settings)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	// Remove headers.bin

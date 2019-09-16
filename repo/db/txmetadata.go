@@ -21,7 +21,10 @@ func (t *TxMetadataDB) Put(m repo.Metadata) error {
 	tx, _ := t.db.Begin()
 	stmt, err := tx.Prepare("insert or replace into txmetadata(txid, address, memo, orderID, thumbnail, canBumpFee) values(?,?,?,?,?,?)")
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	defer stmt.Close()
@@ -31,10 +34,16 @@ func (t *TxMetadataDB) Put(m repo.Metadata) error {
 	}
 	_, err = stmt.Exec(m.Txid, m.Address, m.Memo, m.OrderId, m.Thumbnail, bumpable)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

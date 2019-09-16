@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -132,7 +133,10 @@ func (Migration007) Down(repoPath, databasePassword string, testnetEnabled bool)
 		return err
 	}
 	if _, err = tx.Exec(dropColumnOperation); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {

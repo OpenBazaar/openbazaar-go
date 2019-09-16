@@ -21,7 +21,10 @@ import (
 
 func mustNewPointer() ipfs.Pointer {
 	randBytes := make([]byte, 32)
-	rand.Read(randBytes)
+	_, err := rand.Read(randBytes)
+	if err != nil {
+		panic(err)
+	}
 	h, err := multihash.Encode(randBytes, multihash.SHA2_256)
 	if err != nil {
 		panic(err)
@@ -115,7 +118,10 @@ func TestDeletePointer(t *testing.T) {
 	defer teardown()
 
 	pointer := mustNewPointer()
-	pdb.Put(pointer)
+	err = pdb.Put(pointer)
+	if err != nil {
+		t.Log(err)
+	}
 	err = pdb.Delete(pointer.Value.ID)
 	if err != nil {
 		t.Error("Pointer delete failed")
@@ -139,7 +145,10 @@ func TestDeleteAllPointers(t *testing.T) {
 
 	p := mustNewPointer()
 	p.Purpose = ipfs.MODERATOR
-	pdb.Put(p)
+	err = pdb.Put(p)
+	if err != nil {
+		t.Log(err)
+	}
 	err = pdb.DeleteAll(ipfs.MODERATOR)
 	if err != nil {
 		t.Error("Pointer delete failed")
@@ -162,7 +171,10 @@ func TestGetAllPointers(t *testing.T) {
 	defer teardown()
 
 	pointer := mustNewPointer()
-	pdb.Put(pointer)
+	err = pdb.Put(pointer)
+	if err != nil {
+		t.Log(err)
+	}
 	pointers, err := pdb.GetAll()
 	if err != nil {
 		t.Error("Get all pointers returned error")
@@ -190,9 +202,15 @@ func TestPointersDB_GetByPurpose(t *testing.T) {
 	}
 	defer teardown()
 
-	pdb.Put(mustNewPointer())
+	err = pdb.Put(mustNewPointer())
+	if err != nil {
+		t.Log(err)
+	}
 	randBytes := make([]byte, 32)
-	rand.Read(randBytes)
+	_, err = rand.Read(randBytes)
+	if err != nil {
+		t.Log(err)
+	}
 	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
 	id, _ := peer.IDFromBytes(h)
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
@@ -241,9 +259,15 @@ func TestPointersDB_Get(t *testing.T) {
 	}
 	defer teardown()
 
-	pdb.Put(mustNewPointer())
+	err = pdb.Put(mustNewPointer())
+	if err != nil {
+		t.Log(err)
+	}
 	randBytes := make([]byte, 32)
-	rand.Read(randBytes)
+	_, err = rand.Read(randBytes)
+	if err != nil {
+		t.Log(err)
+	}
 	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
 	id, _ := peer.IDFromBytes(h)
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
