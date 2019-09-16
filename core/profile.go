@@ -71,7 +71,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	var acceptedCurrencies []string
 	settingsData, err := n.Datastore.Settings().Get()
 	if err != nil {
-		return fmt.Errorf("getting local settings: %s", err.Error())
+		log.Debug("settings not set, using default preferred currencies")
 	}
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
