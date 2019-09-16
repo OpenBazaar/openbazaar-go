@@ -13,14 +13,12 @@ import (
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 type Migration027 struct{}
@@ -259,7 +257,6 @@ func Migration027_GetIdentityKey(repoPath, databasePassword string, testnetEnabl
 }
 
 func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	fmt.Println("in mig 27 up ")
 	listingsIndexFilePath := path.Join(repoPath, "root", "listings.json")
 
 	// Find all crypto listings
@@ -267,7 +264,6 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		// Finish early if no listings are found
 		return writeRepoVer(repoPath, 28)
 	}
-	fmt.Println("file is :", listingsIndexFilePath)
 	listingsIndexJSONBytes, err := ioutil.ReadFile(listingsIndexFilePath)
 	if err != nil {
 		return err
@@ -275,7 +271,6 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 	var listingsIndex []interface{}
 	err = json.Unmarshal(listingsIndexJSONBytes, &listingsIndex)
-	fmt.Println("after unmarshal listing : ", err)
 	if err != nil {
 		return err
 	}
@@ -294,11 +289,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Check each crypto listing for markup
 	var markupListings []*pb.SignedListing
 	for _, listingAbstract := range cryptoListings {
-		fmt.Println("listing is :")
-		spew.Dump(listingAbstract)
-		//listing0 := listingAbstract.(Migration027_filterListing)
 		listSlug := (listingAbstract.(map[string]interface{})["slug"]).(string)
-		fmt.Println("file path is : ", migration027_listingFilePath(repoPath, listSlug))
 		listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listSlug))
 		if err != nil {
 			return err
@@ -317,7 +308,9 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			b, _ := json.Marshal(listingAbstract)
 			//indexBytes0 = append(indexBytes0, b...)
 			var n Migration027_ListingDatav5
-			json.Unmarshal(b, &n)
+			if err := json.Unmarshal(b, &n); err != nil {
+				return fmt.Errorf("failed unmarshaling (%s): %s", listSlug, err.Error())
+			}
 			indexv5 = append(indexv5, n)
 			continue
 		}
@@ -326,8 +319,6 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		if err != nil {
 			return err
 		}
-		fmt.Println("lets see ******************")
-		spew.Dump(temp)
 
 		templisting := temp.Listing
 		sl.Hash = temp.Hash
@@ -512,27 +503,6 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		}
 
 		sl.Listing.Coupons = coupons
-
-		/*
-			for _, coupon := range listingAbstract.Coupons {
-				for i, c0 := range sl.Listing.Coupons {
-					if coupon.Title != c0.Title {
-						continue
-					}
-					if c0.Discount != nil {
-						switch c0.Discount.(type) {
-						case *pb.Listing_Coupon_PriceDiscount:
-							{
-								sl.Listing.Coupons[i].Discount.(*pb.Listing_Coupon_PriceDiscount).PriceDiscount = &pb.CurrencyValue{
-									Currency: sl.Listing.Metadata.PricingCurrency,
-									Amount:   strconv.FormatUint(coupon.Price, 10),
-								}
-							}
-						}
-					}
-				}
-			}
-		*/
 
 		markupListings = append(markupListings, sl)
 

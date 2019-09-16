@@ -17,11 +17,12 @@ func TestEnsureNoOmissionsInMessageProcessingOrder(t *testing.T) {
 
 	// Add deliberate omissions to this list
 	blackList := map[pb.Message_MessageType]struct{}{
-		pb.Message_PING:          {},
-		pb.Message_OFFLINE_RELAY: {},
-		pb.Message_STORE:         {},
-		pb.Message_BLOCK:         {},
-		pb.Message_ERROR:         {},
+		pb.Message_PING:                     {},
+		pb.Message_OFFLINE_RELAY:            {},
+		pb.Message_STORE:                    {},
+		pb.Message_BLOCK:                    {},
+		pb.Message_ORDER_PROCESSING_FAILURE: {},
+		pb.Message_ERROR:                    {},
 	}
 
 	// Inclusion check

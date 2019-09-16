@@ -1,9 +1,12 @@
 package core_test
 
 import (
+	"log"
+	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"testing"
 )
 
 func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
@@ -21,15 +24,20 @@ func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
 
 	regularListing := factory.NewListing(regularListingSlug)
 	regularListing.Metadata.AcceptedCurrencies = []string{"TBTC"}
+	regularRepoListing, err := repo.NewListingFromProtobuf(regularListing)
+	if err != nil {
+		log.Printf("err creating repo listing: %v\n", err)
+	}
 
-	if err := node.CreateListing(regularListing); err != nil {
+	if _, err := node.CreateListing(regularRepoListing.ListingBytes); err != nil {
 		t.Fatal(err)
 	}
 
 	cryptoListing := factory.NewCryptoListing(cryptoListingSlug)
 	regularListing.Metadata.AcceptedCurrencies = []string{cryptoListingCurrency}
+	cryptoRepoListing, _ := repo.NewListingFromProtobuf(cryptoListing)
 
-	if err := node.CreateListing(cryptoListing); err != nil {
+	if _, err := node.CreateListing(cryptoRepoListing.ListingBytes); err != nil {
 		t.Fatal(err)
 	}
 

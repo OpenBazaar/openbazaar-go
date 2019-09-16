@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -56,11 +55,20 @@ type ListingData struct {
 }
 
 // SignListing Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing, error) {
+func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
 	timeout := uint32(0)
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
 		//
+		escrow, err := listing.GetEscrowTimeout()
+		if err == nil {
+			if escrow == 0 {
+				timeout = 1
+			} else {
+				timeout = escrow
+			}
+		}
+
 	} else {
 		timeout = repo.EscrowTimeout
 	}
@@ -72,34 +80,34 @@ func (n *OpenBazaarNode) SignListing(listing *repo.Listing) (*repo.SignedListing
 	currencyMap := make(map[string]bool)
 	currencies, err := listing.GetAcceptedCurrencies()
 	if err != nil {
-		return nil, err
+		return repo.SignedListing{}, err
 	}
 	for _, acceptedCurrency := range currencies {
 		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
 		if err != nil {
-			return nil, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
+			return repo.SignedListing{}, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
-		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
-			return nil, errors.New("duplicate accepted currency in listing")
+		if currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] {
+			return repo.SignedListing{}, errors.New("duplicate accepted currency in listing")
 		}
-		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
+		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 	var expectedDivisibility uint32
-	currencyVal, err := listing.GetPrice()
+	currencyVal, err := listing.GetPricingCurrencyDefn() // ..GetPrice()
 	if err != nil {
-		return nil, err
+		return repo.SignedListing{}, err
 	}
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Currency.Code.String()); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Name); err != nil {
+		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
 	} else {
 		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
-	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.MasterPrivateKey)
+	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
 
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
   to make sure the inventory uses the correct variants. */
-func (n *OpenBazaarNode) SetListingInventory(l *repo.Listing) error {
+func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	err := l.ValidateSkus()
 	if err != nil {
 		return err
@@ -159,8 +167,8 @@ func (n *OpenBazaarNode) SetListingInventory(l *repo.Listing) error {
 }
 
 // CreateListing - add a listing
-func (n *OpenBazaarNode) CreateListing(r io.Reader) (string, error) {
-	listing, err := repo.CreateListing(r, n.TestNetworkEnabled(), &n.Datastore)
+func (n *OpenBazaarNode) CreateListing(r []byte) (string, error) {
+	listing, err := repo.CreateListing(r, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), &n.Datastore, n.RepoPath)
 	if err != nil {
 		return "", err
 	}
@@ -168,25 +176,15 @@ func (n *OpenBazaarNode) CreateListing(r io.Reader) (string, error) {
 }
 
 // UpdateListing - update the listing
-func (n *OpenBazaarNode) UpdateListing(r io.Reader, publish bool) error {
-	listing, err := repo.UpdateListing(r, n.TestNetworkEnabled(), &n.Datastore)
+func (n *OpenBazaarNode) UpdateListing(r []byte, publish bool) error {
+	listing, err := repo.UpdateListing(r, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), &n.Datastore, n.RepoPath)
 	if err != nil {
 		return err
 	}
 	return n.saveListing(listing, publish)
 }
 
-func (n *OpenBazaarNode) getExpectedDivisibility(code string) uint32 {
-	var expectedDivisibility uint32
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(code); err != nil {
-		expectedDivisibility = DefaultCurrencyDivisibility
-	} else {
-		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
-	}
-	return expectedDivisibility
-}
-
-func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
+func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 	mods, err := listing.GetModerators()
 	if err != nil {
 		return err
@@ -194,7 +192,10 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	if len(mods) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
-			listing.SetModerators(*sd.StoreModerators)
+			err = listing.SetModerators(*sd.StoreModerators)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -203,11 +204,12 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 		return err
 	}
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
-		currencyVal, err := listing.GetPrice()
+		currencyVal, err := listing.GetPricingCurrencyDefn() //listing.GetPrice()
 		if err != nil {
 			return err
 		}
-		expectedDivisibility := n.getDivisibility(currencyVal.Currency.Code.String())
+
+		expectedDivisibility := currencyVal.Divisibility
 		err = listing.ValidateCryptoListing(expectedDivisibility)
 		if err != nil {
 			return err
@@ -228,17 +230,13 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	if err != nil {
 		return err
 	}
-	listing, err = repo.NewListingFromProtobuf(listing.ProtoListing)
-	if err != nil {
-		return err
-	}
 
 	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
 	}
 
-	fName, err := repo.GetPathForListingSlug(signedListing.Listing.Slug, n.TestNetworkEnabled())
+	fName, err := repo.GetPathForListingSlug(signedListing.RListing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
 	if err != nil {
 		return err
 	}
@@ -253,7 +251,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(signedListing)
+	out, err := m.MarshalToString(signedListing.ProtoSignedListing)
 	if err != nil {
 		return err
 	}
@@ -269,7 +267,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing *repo.Listing) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) saveListing(listing *repo.Listing, publish bool) error {
+func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
 
 	err := prepListingForPublish(n, listing)
 	if err != nil {
@@ -333,7 +331,10 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				servicePrice, _ := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if !ok {
+					return ListingData{}, errors.New("invalid price amount")
+				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
@@ -341,8 +342,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		}
 	}
 
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
-	amt, _ := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return ListingData{}, errors.New("invalid pricing currency")
+	}
+	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
+	if !ok {
+		return ListingData{}, errors.New("invalid price amount")
+	}
 
 	ld := ListingData{
 		Hash:         listingHash,
@@ -718,13 +725,14 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	return sl, nil
 }
 
-func verifySignaturesOnListing(sl *repo.SignedListing) error {
+func verifySignaturesOnListing(s repo.SignedListing) error {
+	sl := s.ProtoSignedListing
 	// Verify identity signature on listing
 	if err := verifySignature(
-		sl.Listing.ProtoListing,
-		sl.Listing.Vendor.Protobuf().Pubkeys.Identity,
+		s.RListing.ProtoListing,
+		sl.Listing.VendorID.Pubkeys.Identity,
 		sl.Signature,
-		sl.Listing.Vendor.Protobuf().PeerID,
+		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
@@ -738,13 +746,13 @@ func verifySignaturesOnListing(sl *repo.SignedListing) error {
 
 	// Verify the bitcoin signature in the ID
 	if err := verifyBitcoinSignature(
-		sl.Listing.Vendor.Protobuf().Pubkeys.Bitcoin,
-		sl.Listing.Vendor.Protobuf().BitcoinSig,
-		sl.Listing.Vendor.Protobuf().PeerID,
+		sl.Listing.VendorID.Pubkeys.Bitcoin,
+		sl.Listing.VendorID.BitcoinSig,
+		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			return errors.New("vendor's bitcoin signature on GUID failed to verify")
 		default:
 			return err
 		}
@@ -805,7 +813,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 			if err != nil {
 				return err
 			}
-			err = n.UpdateListing(rListing, false)
+			err = n.UpdateListing(rListing.ListingBytes, false)
 			if err != nil {
 				return err
 			}

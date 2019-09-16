@@ -28,7 +28,10 @@ func (u *UtxoDB) Put(utxo wallet.Utxo) error {
 	tx, _ := u.db.Begin()
 	stmt, err := tx.Prepare("insert or replace into utxos(coin, outpoint, value, height, scriptPubKey, watchOnly) values(?,?,?,?,?,?)")
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	defer stmt.Close()
@@ -39,10 +42,16 @@ func (u *UtxoDB) Put(utxo wallet.Utxo) error {
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
 	_, err = stmt.Exec(u.coinType.CurrencyCode(), outpoint, utxo.Value, int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), watchOnlyInt)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

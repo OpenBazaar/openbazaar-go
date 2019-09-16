@@ -479,6 +479,13 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		Bytes:       tx.Data(),
 		ToAddress:   tx.To().String(),
 		FromAddress: msg.From().Hex(),
+		Outputs: []wi.TransactionOutput{
+			{
+				Address: wallet.address,
+				Value:   *tx.Value(),
+				Index:   1,
+			},
+		},
 	}, nil
 }
 

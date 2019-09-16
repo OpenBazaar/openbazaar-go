@@ -263,6 +263,36 @@ func (n *OpenBazaarNode) Unfollow(peerID string) error {
 	return nil
 }
 
+// ResendCachedOrderMessage will retrieve the ORDER message from the datastore and resend it to the peerID
+// for which it was originally intended
+func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Message_MessageType) error {
+	if _, ok := pb.Message_MessageType_name[int32(msgType)]; !ok {
+		return fmt.Errorf("invalid order message type (%d)", int(msgType))
+	}
+
+	msg, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
+	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
+		return fmt.Errorf("unable to find message for order ID (%s) and message type (%s)", orderID, msgType.String())
+	}
+
+	p, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		return fmt.Errorf("unable to decode invalid peer ID for order (%s) and message type (%s)", orderID, msgType.String())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	defer cancel()
+
+	if err = n.Service.SendMessage(ctx, p, &msg.Msg); err != nil {
+		go func() {
+			if err := n.SendOfflineMessage(p, nil, &msg.Msg); err != nil {
+				log.Errorf("error resending offline message for order id (%s) and message type (%+v): %s", orderID, msgType, err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
 // SendOrder - send order created msg to peer
 func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract) (resp *pb.Message, err error) {
 	p, err := peer.IDB58Decode(peerID)
@@ -751,8 +781,15 @@ func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte
 }
 
 // SendOrderPayment - send order payment msg to seller from buyer
-func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.OrderPaymentTxn) error {
-	a, err := ptypes.MarshalAny(paymentMessage)
+func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
+	var msg = &pb.OrderPaymentTxn{
+		Coin:          spend.Currency.String(),
+		OrderID:       spend.OrderID,
+		TransactionID: spend.Txid,
+		WithInput:     spend.ConsumedInput,
+	}
+
+	a, err := ptypes.MarshalAny(msg)
 	if err != nil {
 		return err
 	}
@@ -761,13 +798,13 @@ func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.Orde
 		Payload:     a,
 	}
 
-	p, err := peer.IDB58Decode(peerID)
+	p, err := peer.IDB58Decode(spend.PeerID)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
+	cancel()
 	if err != nil {
 		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err

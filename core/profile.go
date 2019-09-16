@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 
@@ -76,11 +75,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	}
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
 		}
 	} else {
 		for ct := range n.Multiwallet {
-			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct.CurrencyCode()))
+			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct.CurrencyCode()))
 		}
 	}
 
@@ -356,14 +355,10 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
-				if profile.ModeratorInfo.Fee.FixedFeeValue.Currency == nil {
-					return fmt.Errorf("moderator fee currency must be defined with fixed fee amount")
-				} else {
-					if len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
-						return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
-					}
-				}
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil &&
+				profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil &&
+				len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
+				return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
 	}

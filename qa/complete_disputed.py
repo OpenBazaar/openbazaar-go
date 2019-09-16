@@ -129,10 +129,11 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
@@ -285,8 +286,8 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"]["amount"])
-            #unconfirmed = int(resp["unconfirmed"]["amount"])
+            confirmed = int(resp["confirmed"])
+            #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= (generated_coins*100000000) - int(payment_amount["amount"]):
                 raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to detect dispute payout")
         elif r.status_code == 404:

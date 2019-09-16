@@ -106,7 +106,10 @@ func addPointer(dht *routing.IpfsDHT, ctx context.Context, k *cid.Cid, pi ps.Pee
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			putPointer(ctx, dht, p, pi, k.Bytes())
+			err := putPointer(ctx, dht, p, pi, k.Bytes())
+			if err != nil {
+				log.Error(err)
+			}
 		}(p)
 	}
 	wg.Wait()
@@ -151,7 +154,10 @@ func getMagicID(entropy []byte) (peer.ID, error) {
 		return "", err
 	}
 	hash := sha256.New()
-	hash.Write(entropy)
+	_, err = hash.Write(entropy)
+	if err != nil {
+		return "", err
+	}
 	hashedEntropy := hash.Sum(nil)
 	magicBytes = append(magicBytes, hashedEntropy[:20]...)
 	h, err := multihash.Encode(magicBytes, multihash.SHA2_256)

@@ -254,7 +254,11 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		contract := new(pb.RicardianContract)
 		err := jsonpb.UnmarshalString(string(buyerContract), contract)
 		if err != nil {
-			jsonpb.UnmarshalString(string(vendorContract), contract)
+			err = jsonpb.UnmarshalString(string(vendorContract), contract)
+			if err != nil {
+				//return ret, 0, err
+				log.Error(err)
+			}
 		}
 		var slug string
 		if len(contract.VendorListings) > 0 {
@@ -489,7 +493,10 @@ func (c *CasesDB) Count() int {
 	defer c.lock.Unlock()
 	row := c.db.QueryRow("select Count(*) from cases")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 

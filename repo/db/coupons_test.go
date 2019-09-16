@@ -54,7 +54,10 @@ func TestPutCoupons(t *testing.T) {
 		var slug string
 		var code string
 		var hash string
-		rows.Scan(&slug, &code, &hash)
+		err = rows.Scan(&slug, &code, &hash)
+		if err != nil {
+			t.Log(err)
+		}
 		ret = append(ret, repo.Coupon{Slug: slug, Code: code, Hash: hash})
 	}
 	if len(ret) != 2 {

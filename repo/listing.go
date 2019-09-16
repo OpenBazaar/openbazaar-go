@@ -1,10 +1,10 @@
 package repo
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -21,6 +21,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/microcosm-cc/bluemonday"
@@ -111,10 +112,15 @@ type PurchaseData struct {
 
 // NewListingFromProtobuf - return Listing from pb.Listing
 func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
-	var vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
-	if err != nil {
-		return nil, fmt.Errorf("new peer info: %s", err)
+	var vendorInfo *PeerInfo
+	var err error
+	if l.VendorID != nil {
+		vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
+		if err != nil {
+			return nil, fmt.Errorf("new peer info: %s", err)
+		}
 	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -122,72 +128,88 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		OrigName:     false,
 	}
 
+	var b bytes.Buffer
+	err = m.Marshal(&b, l)
+	if err != nil {
+		return nil, err
+	}
+
 	out, err := m.MarshalToString(l)
 	if err != nil {
 		return nil, err
 	}
-	return &Listing{
+
+	out1, err := json.Marshal(out)
+	if err != nil {
+		return nil, err
+	}
+	log.Info(len(out1))
+
+	listing0 := Listing{
 		Slug:               l.Slug,
 		TermsAndConditions: l.TermsAndConditions,
 		RefundPolicy:       l.RefundPolicy,
 		Vendor:             vendorInfo,
-		ListingBytes:       []byte(out),
+		ListingBytes:       b.Bytes(), //out1, //[]byte(out),
 		ListingVersion:     l.Metadata.Version,
 		ProtoListing:       l,
-	}, nil
+	}
+	return &listing0, nil
 }
 
 // CreateListing will create a pb Listing
-func CreateListing(r io.Reader, isTestnet bool, dstore *Datastore) (*Listing, error) {
+func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r, ld)
+	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	slug := ld.Slug
-	exists, err := listingExists(slug, isTestnet)
+	exists, err := listingExists(slug, repoPath, isTestnet)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	if exists {
-		return nil, ErrListingAlreadyExists
+		return Listing{}, ErrListingAlreadyExists
 	}
 	if slug == "" {
-		slug, err = GenerateSlug(ld.Item.Title, isTestnet, dstore)
+		slug, err = GenerateSlug(ld.Item.Title, repoPath, isTestnet, dstore)
 		if err != nil {
-			return nil, err
+			return Listing{}, err
 		}
 		ld.Slug = slug
 	}
-	return NewListingFromProtobuf(ld)
+	retListing, err := NewListingFromProtobuf(ld)
+	return *retListing, err
 }
 
 // UpdateListing will update a pb Listing
-func UpdateListing(r io.Reader, isTestnet bool, dstore *Datastore) (*Listing, error) {
+func UpdateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string) (Listing, error) {
 	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r, ld)
+	err := jsonpb.UnmarshalString(string(r), ld)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	slug := ld.Slug
-	exists, err := listingExists(slug, isTestnet)
+	exists, err := listingExists(slug, repoPath, isTestnet)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	if !exists {
-		return nil, ErrListingDoesNotExist
+		return Listing{}, ErrListingDoesNotExist
 	}
-	return NewListingFromProtobuf(ld)
+	retListing, err := NewListingFromProtobuf(ld)
+	return *retListing, err
 }
 
 // GenerateSlug - slugify the title of the listing
-func GenerateSlug(title string, isTestnet bool, dStore *Datastore) (string, error) {
+func GenerateSlug(title, repoPath string, isTestnet bool, dStore *Datastore) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	counter := 1
 	slugBase := CreateSlugFor(title)
 	slugToTry := slugBase
 	for {
-		_, err := GetListingFromSlug(slugToTry, isTestnet, dStore)
+		_, err := GetListingFromSlug(slugToTry, repoPath, isTestnet, dStore)
 		if os.IsNotExist(err) {
 			return slugToTry, nil
 		} else if err != nil {
@@ -199,8 +221,8 @@ func GenerateSlug(title string, isTestnet bool, dStore *Datastore) (string, erro
 }
 
 // GetListingFromSlug - fetch listing for the specified slug
-func GetListingFromSlug(slug string, isTestnet bool, dStore *Datastore) (*pb.SignedListing, error) {
-	repoPath, err := GetRepoPath(isTestnet)
+func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore) (*pb.SignedListing, error) {
+	repoPath, err := GetRepoPath(isTestnet, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -236,11 +258,11 @@ func GetListingFromSlug(slug string, isTestnet bool, dStore *Datastore) (*pb.Sig
 	return sl, nil
 }
 
-func listingExists(slug string, isTestnet bool) (bool, error) {
+func listingExists(slug, repoPath string, isTestnet bool) (bool, error) {
 	if slug == "" {
 		return false, nil
 	}
-	fPath, err := GetPathForListingSlug(slug, isTestnet)
+	fPath, err := GetPathForListingSlug(slug, repoPath, isTestnet)
 	if err != nil {
 		return false, err
 	}
@@ -257,8 +279,8 @@ func listingExists(slug string, isTestnet bool) (bool, error) {
 	return true, nil
 }
 
-func GetPathForListingSlug(slug string, isTestnet bool) (string, error) {
-	repoPath, err := GetRepoPath(isTestnet)
+func GetPathForListingSlug(slug, repoPath string, isTestnet bool) (string, error) {
+	repoPath, err := GetRepoPath(isTestnet, repoPath)
 	if err != nil {
 		return "", err
 	}
@@ -301,25 +323,10 @@ type Listing struct {
 
 	Vendor   *PeerInfo       //`json:"vendorID"`
 	Metadata ListingMetadata //`json:"metadata"`
-	//Hash               string    `json:"hash"`
-	//Title              string    `json:"title"`
-	//Categories         []string  `json:"categories"`
-	//NSFW               bool      `json:"nsfw"`
-	//ContractType       string    `json:"contractType"`
-	//Description        string    `json:"description"`
-	//Thumbnail          thumbnail `json:"thumbnail"`
-	//Price              price     `json:"price"`
-	//ShipsTo            []string  `json:"shipsTo"`
-	//FreeShipping       []string  `json:"freeShipping"`
-	//Language           string    `json:"language"`
-	//AverageRating      float32   `json:"averageRating"`
-	//RatingCount        uint32    `json:"ratingCount"`
-	//ModeratorIDs       []string  `json:"moderators"`
-	//AcceptedCurrencies []string  `json:"acceptedCurrencies"`
-	//CoinType           string    `json:"coinType"`
 
-	ListingBytes   []byte `json:"-"`
-	ListingVersion uint32 `json:"-"`
+	ListingBytes     []byte `json:"-"`
+	OrigListingBytes []byte `json:"-"`
+	ListingVersion   uint32 `json:"-"`
 
 	ProtoListing *pb.Listing `json:"-"`
 }
@@ -338,12 +345,11 @@ func (r *Listing) readByte(n int) byte {
 }
 
 func (r *Listing) Read(p []byte) (n int, err error) {
-	if r.eof() {
-		err = io.EOF
+	if n == len(r.ListingBytes)-1 {
 		return
 	}
 
-	if c := cap(p); c > 0 {
+	if c := len(r.ListingBytes); c > 0 {
 		for n < c {
 			p[n] = r.readByte(n)
 			n++
@@ -352,16 +358,21 @@ func (r *Listing) Read(p []byte) (n int, err error) {
 			}
 		}
 	}
-	return
+	return n, nil
 }
 
 type SignedListing struct {
-	Hash      string `json:"hash"`
-	Signature []byte `json:"signature"`
-	Listing   `json:"listing"`
+	Hash         string      `json:"hash"`
+	Signature    []byte      `json:"signature"`
+	RListing     Listing     `json:"listing"`
+	ProtoListing *pb.Listing `json:"-"`
 
 	ProtoSignedListing *pb.SignedListing `json:"-"`
 }
+
+func (l *SignedListing) Reset()         { *l = SignedListing{} }
+func (l *SignedListing) String() string { return proto.CompactTextString(l) }
+func (*SignedListing) ProtoMessage()    {}
 
 // ListingMetadata -
 type ListingMetadata struct {
@@ -369,27 +380,149 @@ type ListingMetadata struct {
 }
 
 // UnmarshalJSONSignedListing - unmarshal signed listing
-func UnmarshalJSONSignedListing(data []byte) (*SignedListing, error) {
-	var l SignedListing
-	var v interface{}
-	if err := json.Unmarshal(data, &l); err != nil {
-		return nil, fmt.Errorf("unmarshal listing: %s", err.Error())
+func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
+
+	retSL := SignedListing{}
+	var err error
+
+	var objmap map[string]*json.RawMessage
+
+	err = json.Unmarshal(data, &objmap)
+	if err != nil {
+		fmt.Println(err)
 	}
-	if err := json.Unmarshal(data, &v); err != nil {
-		return nil, fmt.Errorf("unmarshal listing: %s", err.Error())
+
+	lbytes := *objmap["listing"]
+
+	m1 := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
 	}
-	listingData, ok := v.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unmarshal listing: %s", "incorrect data")
+
+	vendorID, err := ExtractIDFromSignedListing(data)
+	if err != nil {
+		return retSL, err
 	}
-	listing, ok := listingData["listing"]
-	if !ok {
-		return nil, fmt.Errorf("unmarshal listing: %s", "incorrect data")
+
+	peerInfo, err := NewPeerInfoFromProtobuf(vendorID)
+	if err != nil {
+		return retSL, err
 	}
-	out, _ := json.Marshal(listing)
-	l.Listing.ListingBytes = out
-	l.Listing.ListingVersion = uint32(l.Metadata.Version)
-	return &l, nil
+
+	version, err := ExtractVersionFromSignedListing(data)
+	if err != nil {
+		return retSL, err
+	}
+
+	if version == 5 {
+		sl := new(pb.SignedListing)
+		err = jsonpb.UnmarshalString(string(data), sl)
+		if err != nil {
+			return retSL, err
+		}
+		b0, err := m1.MarshalToString(sl.Listing)
+		if err != nil {
+			return retSL, err
+		}
+		retSL.Hash = sl.Hash
+		retSL.ProtoListing = sl.Listing
+		retSL.RListing = Listing{
+			Slug: sl.Listing.Slug,
+			Metadata: ListingMetadata{
+				Version: 5,
+			},
+			ListingVersion:   5,
+			ListingBytes:     []byte(b0),
+			OrigListingBytes: lbytes,
+			ProtoListing:     sl.Listing,
+			Vendor:           peerInfo,
+		}
+		retSL.Signature = sl.Signature
+		retSL.ProtoSignedListing = sl
+		return retSL, nil
+	}
+
+	listing0 := Listing{
+		ListingBytes:     lbytes,
+		OrigListingBytes: lbytes,
+		Metadata: ListingMetadata{
+			Version: version,
+		},
+		ListingVersion: uint32(version),
+		Vendor:         peerInfo,
+	}
+
+	type slisting struct {
+		Hash      string          `json:"hash"`
+		Signature []byte          `json:"signature"`
+		Listing   json.RawMessage `json:"listing"`
+	}
+	var s1 slisting
+	err = json.Unmarshal(data, &s1)
+	if err != nil {
+		return retSL, err
+	}
+
+	proto0, err := listing0.GetProtoListing()
+	if err != nil {
+		return retSL, err
+	}
+
+	proto0.VendorID = vendorID
+
+	listing0.ProtoListing = proto0
+
+	retSL.Signature = s1.Signature
+	retSL.Hash = s1.Hash
+	retSL.RListing = listing0
+
+	retSL.ProtoListing = proto0
+	retSL.ProtoSignedListing = &pb.SignedListing{
+		Listing:   proto0,
+		Hash:      s1.Hash,
+		Signature: s1.Signature,
+	}
+
+	out0, err := m1.MarshalToString(proto0)
+	if err != nil {
+		//return ret, err
+		log.Info(err)
+	}
+
+	log.Info(len(out0))
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+
+	outSL, err := m.MarshalToString(retSL.RListing.ProtoListing)
+	if err != nil {
+		return retSL, err
+	}
+	retSL.RListing.ListingBytes = []byte(outSL)
+
+	proto1 := &pb.Listing{
+		Slug:               proto0.Slug,
+		VendorID:           vendorID,
+		Metadata:           proto0.Metadata,
+		Item:               proto0.Item,
+		ShippingOptions:    proto0.ShippingOptions,
+		Taxes:              proto0.Taxes,
+		Coupons:            proto0.Coupons,
+		Moderators:         proto0.Moderators,
+		TermsAndConditions: proto0.TermsAndConditions,
+		RefundPolicy:       proto0.RefundPolicy,
+	}
+
+	log.Info(proto1.Slug)
+
+	return retSL, nil
+
 }
 
 // UnmarshalJSONListing - unmarshal listing
@@ -398,7 +531,82 @@ func UnmarshalJSONListing(data []byte) (*Listing, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &l.Listing, nil
+	return &l.RListing, nil
+}
+
+// ExtractVersion returns the version of the listing
+func ExtractVersionFromSignedListing(data []byte) (uint, error) {
+	type sl struct {
+		Listing interface{} `json:"listing"`
+	}
+	var s sl
+	err := json.Unmarshal(data, &s)
+
+	if err != nil {
+		return 0, err
+	}
+
+	lmap, ok := s.Listing.(map[string]interface{})
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	lampMeta0, ok := lmap["metadata"]
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	lampMeta, ok := lampMeta0.(map[string]interface{})
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	ver0, ok := lampMeta["version"]
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	ver, ok := ver0.(float64)
+	if !ok {
+		return 0, errors.New("malformed listing")
+	}
+
+	return uint(ver), nil
+}
+
+// ExtractIDFromSignedListing returns pb.ID of the listing
+func ExtractIDFromSignedListing(data []byte) (*pb.ID, error) {
+	var objmap map[string]*json.RawMessage
+	vendorPlay := new(pb.ID)
+
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
+		log.Error(err)
+		return vendorPlay, err
+	}
+
+	lbytes := *objmap["listing"]
+	return ExtractIDFromListing(lbytes)
+}
+
+// ExtractIDFromListing returns pb.ID of the listing
+func ExtractIDFromListing(data []byte) (*pb.ID, error) {
+	var lmap map[string]*json.RawMessage
+	vendorPlay := new(pb.ID)
+
+	err := json.Unmarshal(data, &lmap)
+	if err != nil {
+		log.Error(err)
+		return vendorPlay, err
+	}
+
+	err = json.Unmarshal(*lmap["vendorID"], &vendorPlay)
+	if err != nil {
+		log.Error(err)
+		return vendorPlay, err
+	}
+
+	return vendorPlay, nil
 }
 
 // GetTitle - return listing title
@@ -460,9 +668,36 @@ func (l *Listing) GetContractType() (string, error) {
 	return ct.Metadata.ContractType, nil
 }
 
+// GetFormat - return listing's format
+func (l *Listing) GetFormat() (string, error) {
+	retVal := ""
+	type format struct {
+		Metadata struct {
+			Format string `json:"format"`
+		} `json:"metadata"`
+	}
+	var ct format
+	err := json.Unmarshal(l.ListingBytes, &ct)
+	if err != nil {
+		return retVal, err
+	}
+	return ct.Metadata.Format, nil
+}
+
 // GetPrice - return listing price
 func (l *Listing) GetPrice() (CurrencyValue, error) {
 	retVal := CurrencyValue{}
+	if l.ProtoListing != nil {
+		retVal.Amount, _ = new(big.Int).SetString(l.ProtoListing.Item.PriceValue.Amount, 10)
+		retVal.Currency = &CurrencyDefinition{
+			Name:         l.ProtoListing.Item.PriceValue.Currency.Name,
+			Code:         CurrencyCode(l.ProtoListing.Item.PriceValue.Currency.Code),
+			Divisibility: uint(l.ProtoListing.Item.PriceValue.Currency.Divisibility),
+			CurrencyType: l.ProtoListing.Item.PriceValue.Currency.CurrencyType,
+		}
+		return retVal, nil
+	}
+
 	contractType, err := l.GetContractType()
 	if err != nil {
 		return retVal, err
@@ -478,11 +713,20 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 					} `json:"metadata"`
 				}
 				var c coinType
-				json.Unmarshal(l.ListingBytes, &c)
-				retVal.Currency = &CurrencyDefinition{
-					Code:         CurrencyCode(c.Metadata.CoinType),
-					Divisibility: 8,
+				err = json.Unmarshal(l.ListingBytes, &c)
+				if err != nil {
+					return retVal, err
 				}
+				curr, err := LoadCurrencyDefinitions().Lookup(c.Metadata.CoinType)
+				if err != nil {
+					curr = &CurrencyDefinition{
+						Code:         CurrencyCode(c.Metadata.CoinType),
+						Divisibility: 8,
+						Name:         "A",
+						CurrencyType: "crypto",
+					}
+				}
+				retVal.Currency = curr
 			} else {
 				type price struct {
 					Item struct {
@@ -490,7 +734,10 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 					} `json:"item"`
 				}
 				var p price
-				json.Unmarshal(l.ListingBytes, &p)
+				err = json.Unmarshal(l.ListingBytes, &p)
+				if err != nil {
+					return retVal, err
+				}
 				retVal.Amount = big.NewInt(p.Item.Price)
 				type pricingCurrency struct {
 					Metadata struct {
@@ -498,11 +745,20 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 					} `json:"metadata"`
 				}
 				var pc pricingCurrency
-				json.Unmarshal(l.ListingBytes, &pc)
-				retVal.Currency = &CurrencyDefinition{
-					Code:         CurrencyCode(pc.Metadata.PricingCurrency),
-					Divisibility: 8,
+				err = json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return retVal, err
 				}
+				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
+				if err != nil {
+					curr = &CurrencyDefinition{
+						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
+						Divisibility: 8,
+						Name:         "A",
+						CurrencyType: "crypto",
+					}
+				}
+				retVal.Currency = curr
 			}
 		}
 	case 5:
@@ -513,17 +769,24 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 						Currency struct {
 							Code         string `json:"code"`
 							Divisibility uint   `json:"divisibility"`
+							Name         string `json:"name"`
+							CurrencyType string `json:"currencyType"`
 						} `json:"currency"`
 						Amount string `json:"amount"`
 					} `json:"price"`
 				} `json:"item"`
 			}
 			var p price
-			json.Unmarshal(l.ListingBytes, &p)
+			err = json.Unmarshal(l.ListingBytes, &p)
+			if err != nil {
+				return retVal, err
+			}
 			retVal.Amount, _ = new(big.Int).SetString(p.Item.Price.Amount, 10)
 			retVal.Currency = &CurrencyDefinition{
 				Code:         CurrencyCode(p.Item.Price.Currency.Code),
 				Divisibility: p.Item.Price.Currency.Divisibility,
+				Name:         p.Item.Price.Currency.Name,
+				CurrencyType: p.Item.Price.Currency.CurrencyType,
 			}
 		}
 	}
@@ -582,37 +845,835 @@ func (l *Listing) GetRefundPolicy() (string, error) {
 
 // GetVendorID - return vendorID
 func (l *Listing) GetVendorID() (*pb.ID, error) {
+	if l.Vendor == nil {
+		pid, err := ExtractIDFromListing(l.ListingBytes)
+		if err != nil {
+			return nil, err
+		}
+		l.Vendor, err = NewPeerInfoFromProtobuf(pid)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return l.Vendor.Protobuf(), nil
+}
+
+// GetDescription - return item description
+func (l *Listing) GetDescription() (string, error) {
+	type desc struct {
+		Item struct {
+			Description string `json:"description"`
+		} `json:"item"`
+	}
+	var t desc
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return "", err
+	}
+	return t.Item.Description, nil
+}
+
+// GetProcessingTime - return item processing time
+func (l *Listing) GetProcessingTime() (string, error) {
+	type ptime struct {
+		Item struct {
+			ProcessingTime string `json:"processingTime"`
+		} `json:"item"`
+	}
+	var t ptime
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return "", err
+	}
+	return t.Item.ProcessingTime, nil
+}
+
+// GetNsfw - return item nstw
+func (l *Listing) GetNsfw() (bool, error) {
+	type nsfw struct {
+		Item struct {
+			Nsfw bool `json:"nsfw"`
+		} `json:"item"`
+	}
+	var t nsfw
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return false, err
+	}
+	return t.Item.Nsfw, nil
+}
+
+// GetTags - return item tags
+func (l *Listing) GetTags() ([]string, error) {
+	type tags struct {
+		Item struct {
+			Tags []string `json:"tags"`
+		} `json:"item"`
+	}
+	var t tags
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return nil, err
+	}
+	return t.Item.Tags, nil
+}
+
+// GetCategories - return item categories
+func (l *Listing) GetCategories() ([]string, error) {
+	type categories struct {
+		Item struct {
+			Categories []string `json:"categories"`
+		} `json:"item"`
+	}
+	var t categories
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return nil, err
+	}
+	return t.Item.Categories, nil
+}
+
+// GetGrams - return item wt in grams
+func (l *Listing) GetGrams() (float32, error) {
+	type grams struct {
+		Item struct {
+			Grams float32 `json:"grams"`
+		} `json:"item"`
+	}
+	var t grams
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return 0, err
+	}
+	return t.Item.Grams, nil
+}
+
+// GetCondition - return item condition
+func (l *Listing) GetCondition() (string, error) {
+	type condition struct {
+		Item struct {
+			Condition string `json:"condition"`
+		} `json:"item"`
+	}
+	var t condition
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return "", err
+	}
+	return t.Item.Condition, nil
+}
+
+// GetImages - return item images
+func (l *Listing) GetImages() ([]*pb.Listing_Item_Image, error) {
+	type images struct {
+		Item struct {
+			Images []struct {
+				Filename string `json:"filename"`
+				Original string `json:"original"`
+				Large    string `json:"large"`
+				Medium   string `json:"medium"`
+				Small    string `json:"small"`
+				Tiny     string `json:"tiny"`
+			} `json:"images"`
+		} `json:"item"`
+	}
+	var i images
+	err := json.Unmarshal(l.ListingBytes, &i)
+	if err != nil {
+		return nil, err
+	}
+	img := []*pb.Listing_Item_Image{}
+	for _, elem := range i.Item.Images {
+		img0 := pb.Listing_Item_Image{
+			Filename: elem.Filename,
+			Original: elem.Original,
+			Large:    elem.Large,
+			Medium:   elem.Medium,
+			Small:    elem.Small,
+			Tiny:     elem.Tiny,
+		}
+		img = append(img, &img0)
+	}
+	return img, nil
+}
+
+// GetOptions - return item options
+func (l *Listing) GetOptions() ([]*pb.Listing_Item_Option, error) {
+	type options struct {
+		Item struct {
+			Options []struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+				Variants    []struct {
+					Name  string `json:"name"`
+					Image struct {
+						Filename string `json:"filename"`
+						Original string `json:"original"`
+						Large    string `json:"large"`
+						Medium   string `json:"medium"`
+						Small    string `json:"small"`
+						Tiny     string `json:"tiny"`
+					} `json:"image"`
+				} `json:"variants"`
+			} `json:"options"`
+		} `json:"item"`
+	}
+	var o options
+	err := json.Unmarshal(l.ListingBytes, &o)
+	if err != nil {
+		return nil, err
+	}
+	opts := []*pb.Listing_Item_Option{}
+	for _, elem := range o.Item.Options {
+		opt := pb.Listing_Item_Option{
+			Name:        elem.Name,
+			Description: elem.Description,
+		}
+		variants := []*pb.Listing_Item_Option_Variant{}
+		for _, v := range elem.Variants {
+			var0 := pb.Listing_Item_Option_Variant{
+				Name: v.Name,
+				Image: &pb.Listing_Item_Image{
+					Filename: v.Image.Filename,
+					Original: v.Image.Original,
+					Large:    v.Image.Large,
+					Medium:   v.Image.Medium,
+					Small:    v.Image.Small,
+					Tiny:     v.Image.Tiny,
+				},
+			}
+			variants = append(variants, &var0)
+		}
+		opt.Variants = variants
+		opts = append(opts, &opt)
+	}
+	return opts, nil
+}
+
+// GetSkus - return item skus
+func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
+	retSkus := []*pb.Listing_Item_Sku{}
+	type skus struct {
+		Item struct {
+			Skus []struct {
+				VariantCombo []uint32    `json:"variantcombo"`
+				ProductID    string      `json:"productID"`
+				Quantity     int64       `json:"quantity"`
+				Surcharge    interface{} `json:"surcharge"`
+			} `json:"skus"`
+		} `json:"item"`
+	}
+	var s skus
+	err := json.Unmarshal(l.ListingBytes, &s)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range s.Item.Skus {
+		sku := pb.Listing_Item_Sku{
+			VariantCombo: elem.VariantCombo,
+			ProductID:    elem.ProductID,
+			Quantity:     elem.Quantity,
+		}
+		surchargeValue := &pb.CurrencyValue{}
+		//var ok bool
+		switch l.ListingVersion {
+		case 3, 4:
+			{
+				surchargeValue.Amount = "0"
+				if elem.Surcharge != nil {
+					surcharge, ok := elem.Surcharge.(float64)
+					if !ok {
+						return nil, errors.New("invalid surcharge value")
+					}
+					surchargeValue.Amount = big.NewInt(int64(surcharge)).String()
+				}
+
+				type pricingCurrency struct {
+					Metadata struct {
+						PricingCurrency string `json:"pricingCurrency"`
+					} `json:"metadata"`
+				}
+				var pc pricingCurrency
+				err = json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return nil, err
+				}
+				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
+				if err != nil {
+					curr = &CurrencyDefinition{
+						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
+						Divisibility: 8,
+						Name:         "A",
+						CurrencyType: "A",
+					}
+				}
+				surchargeValue.Currency = &pb.CurrencyDefinition{
+					Code:         curr.Code.String(),
+					Divisibility: uint32(curr.Divisibility),
+					Name:         curr.Name,
+					CurrencyType: curr.CurrencyType,
+				}
+			}
+		case 5:
+			{
+				surchargeValue, err = extractCurrencyValue(elem.Surcharge)
+				if err != nil {
+					return nil, errors.New("invalid surcharge value")
+				}
+			}
+		}
+		sku.SurchargeValue = surchargeValue
+		retSkus = append(retSkus, &sku)
+	}
+	return retSkus, nil
 }
 
 // GetItem - return item
 func (l *Listing) GetItem() (*pb.Listing_Item, error) {
-	i := pb.Listing_Item{}
+	title, err := l.GetTitle()
+	if err != nil {
+		return nil, err
+	}
+	description, err := l.GetDescription()
+	if err != nil {
+		return nil, err
+	}
+	processingtime, err := l.GetProcessingTime()
+	if err != nil {
+		return nil, err
+	}
+	nsfw, err := l.GetNsfw()
+	if err != nil {
+		return nil, err
+	}
+	tags, err := l.GetTags()
+	if err != nil {
+		return nil, err
+	}
+	images, err := l.GetImages()
+	if err != nil {
+		return nil, err
+	}
+	categories, err := l.GetCategories()
+	if err != nil {
+		return nil, err
+	}
+	grams, err := l.GetGrams()
+	if err != nil {
+		return nil, err
+	}
+	condition, err := l.GetCondition()
+	if err != nil {
+		return nil, err
+	}
+	options, err := l.GetOptions()
+	if err != nil {
+		return nil, err
+	}
+	skus, err := l.GetSkus()
+	if err != nil {
+		return nil, err
+	}
+	price, err := l.GetPrice()
+	if err != nil {
+		return nil, err
+	}
+	curr0 := new(CurrencyDefinition)
+	curr, err := l.GetPricingCurrencyDefn()
+	if err != nil {
+		return nil, err
+	}
+	if price.Currency == nil {
+
+		curr0.Code = CurrencyCode(curr.Code)
+		curr0.Divisibility = uint(curr.Divisibility)
+		curr0.Name = curr.Name
+		curr0.CurrencyType = curr.CurrencyType
+		price.Currency = curr0
+		price.Amount = big.NewInt(0)
+	}
+	i := pb.Listing_Item{
+		Title:          title,
+		Description:    description,
+		ProcessingTime: processingtime,
+		Nsfw:           nsfw,
+		Tags:           tags,
+		Images:         images,
+		Categories:     categories,
+		Grams:          grams,
+		Condition:      condition,
+		Options:        options,
+		Skus:           skus,
+		PriceValue: &pb.CurrencyValue{
+			Amount: price.Amount.String(),
+			Currency: &pb.CurrencyDefinition{
+				Code:         price.Currency.Code.String(),
+				Divisibility: uint32(price.Currency.Divisibility),
+				Name:         price.Currency.Name,
+				CurrencyType: price.Currency.CurrencyType,
+			},
+		},
+	}
 	return &i, nil
 }
 
-// GetMetadata - return metadata
+// GetExpiry return listing expiry
+func (l *Listing) GetExpiry() (*timestamp.Timestamp, error) {
+	type expiry struct {
+		Metadata struct {
+			Expiry string `json:"expiry"`
+		} `json:"metadata"`
+	}
+	var exp expiry
+	err := json.Unmarshal(l.ListingBytes, &exp)
+	if err != nil {
+		return nil, err
+	}
+	t := new(timestamp.Timestamp)
+
+	t0, err := time.Parse(time.RFC3339Nano, exp.Metadata.Expiry)
+	if err != nil {
+		return nil, err
+	}
+
+	t.Seconds = t0.Unix()
+	t.Nanos = int32(t0.Nanosecond())
+
+	return t, nil
+}
+
+// GetLanguage return listing's language
+func (l *Listing) GetLanguage() (string, error) {
+	retVal := ""
+	type lang struct {
+		Metadata struct {
+			Language string `json:"language"`
+		} `json:"metadata"`
+	}
+	var ll lang
+	err := json.Unmarshal(l.ListingBytes, &ll)
+	if err != nil {
+		return retVal, err
+	}
+	return ll.Metadata.Language, nil
+}
+
+// GetEscrowTimeout return listing's escrow timeout in hours
+func (l *Listing) GetEscrowTimeout() (uint32, error) {
+	type escrow struct {
+		Metadata struct {
+			EscrowTimeout uint32 `json:"escrowTimeoutHours"`
+		} `json:"metadata"`
+	}
+	var e escrow
+	err := json.Unmarshal(l.ListingBytes, &e)
+	if err != nil {
+		return 0, err
+	}
+	return e.Metadata.EscrowTimeout, nil
+}
+
+// GetPriceModifier return listing's price modifier
+func (l *Listing) GetPriceModifier() (float32, error) {
+	type priceMod struct {
+		Metadata struct {
+			PriceModifier float32 `json:"priceModifier"`
+		} `json:"metadata"`
+	}
+	var p priceMod
+	err := json.Unmarshal(l.ListingBytes, &p)
+	if err != nil {
+		return 0, err
+	}
+	return p.Metadata.PriceModifier, nil
+}
+
+// GetPricingCurrencyDefn return the listing currency definition
+func (l *Listing) GetPricingCurrencyDefn() (*pb.CurrencyDefinition, error) {
+	retVal := &pb.CurrencyDefinition{}
+	contractType, err := l.GetContractType()
+	if err != nil {
+		return nil, err
+	}
+	switch l.ListingVersion {
+	case 3, 4:
+		{
+			if contractType == "CRYPTOCURRENCY" {
+				type coinType struct {
+					Metadata struct {
+						CoinType string `json:"coinType"`
+					} `json:"metadata"`
+				}
+				var c coinType
+				err := json.Unmarshal(l.ListingBytes, &c)
+				if err != nil {
+					return nil, err
+				}
+				curr, err := LoadCurrencyDefinitions().Lookup(c.Metadata.CoinType)
+				if err != nil {
+					curr = &CurrencyDefinition{
+						Code:         CurrencyCode(c.Metadata.CoinType),
+						Divisibility: 8,
+						Name:         "A",
+						CurrencyType: "A",
+					}
+				}
+				retVal = &pb.CurrencyDefinition{
+					Code:         curr.Code.String(),
+					Divisibility: uint32(curr.Divisibility),
+					Name:         curr.Name,
+					CurrencyType: curr.CurrencyType,
+				}
+			} else {
+				type pricingCurrency struct {
+					Metadata struct {
+						PricingCurrency string `json:"pricingCurrency"`
+					} `json:"metadata"`
+				}
+				var pc pricingCurrency
+				err := json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return nil, err
+				}
+				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
+				if err != nil {
+					curr = &CurrencyDefinition{
+						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
+						Divisibility: 8,
+						Name:         "A",
+						CurrencyType: "A",
+					}
+				}
+				retVal = &pb.CurrencyDefinition{
+					Code:         curr.Code.String(),
+					Divisibility: uint32(curr.Divisibility),
+					Name:         curr.Name,
+					CurrencyType: curr.CurrencyType,
+				}
+			}
+		}
+	case 5:
+		{
+			type currdefn struct {
+				Metadata struct {
+					PricingCurrencyDefn struct {
+						Code         string `json:"code"`
+						Divisibility uint   `json:"divisibility"`
+						Name         string `json:"name"`
+						CurrencyType string `json:"currencyType"`
+					} `json:"pricingCurrency"`
+				} `json:"metadata"`
+			}
+			var p currdefn
+			err = json.Unmarshal(l.ListingBytes, &p)
+			if err != nil {
+				return nil, err
+			}
+			retVal = &pb.CurrencyDefinition{
+				Code:         p.Metadata.PricingCurrencyDefn.Code,
+				Divisibility: uint32(p.Metadata.PricingCurrencyDefn.Divisibility),
+				Name:         p.Metadata.PricingCurrencyDefn.Name,
+				CurrencyType: p.Metadata.PricingCurrencyDefn.CurrencyType,
+			}
+		}
+	}
+	return retVal, nil
+}
+
+// GetMetadata return metadata
 func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
-	m := pb.Listing_Metadata{}
+	ct, err := l.GetContractType()
+	if err != nil {
+		return nil, err
+	}
+	ct0, exists := pb.Listing_Metadata_ContractType_value[ct]
+	if !exists {
+		return nil, errors.New("invalid metadata contractType")
+	}
+	frmt, err := l.GetFormat()
+	if err != nil {
+		return nil, err
+	}
+	frmt0, exists := pb.Listing_Metadata_Format_value[frmt]
+	if !exists {
+		return nil, errors.New("invalid metadata format")
+	}
+	expiry, err := l.GetExpiry()
+	if err != nil {
+		return nil, err
+	}
+	currs, err := l.GetAcceptedCurrencies()
+	if err != nil {
+		return nil, err
+	}
+	lang, err := l.GetLanguage()
+	if err != nil {
+		return nil, err
+	}
+	escrowTimout, err := l.GetEscrowTimeout()
+	if err != nil {
+		return nil, err
+	}
+	priceMod, err := l.GetPriceModifier()
+	if err != nil {
+		return nil, err
+	}
+	currDefn, err := l.GetPricingCurrencyDefn()
+	if err != nil {
+		return nil, err
+	}
+	m := pb.Listing_Metadata{
+		Version:             l.ListingVersion,
+		ContractType:        pb.Listing_Metadata_ContractType(ct0),
+		Format:              pb.Listing_Metadata_Format(frmt0),
+		Expiry:              expiry,
+		AcceptedCurrencies:  currs,
+		Language:            lang,
+		EscrowTimeoutHours:  escrowTimout,
+		PriceModifier:       priceMod,
+		PricingCurrencyDefn: currDefn,
+	}
 	return &m, nil
 }
+
+// GetSOName returns shipping option name
 
 // GetShippingOptions - return shippingOptions
 func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
 	options := []*pb.Listing_ShippingOption{}
+	type shippingOptions struct {
+		ShippingOptions []struct {
+			Name     string   `json:"name"`
+			Type     string   `json:"type"`
+			Regions  []string `json:"regions"`
+			Services []struct {
+				Name              string      `json:"name"`
+				EstimatedDelivery string      `json:"estimatedDelivery"`
+				Price             interface{} `json:"price"`
+				AdditionalPrice   interface{} `json:"addtionalPrice"`
+			} `json:"services"`
+		} `json:"shippingOptions"`
+	}
+	var sopts shippingOptions
+	err := json.Unmarshal(l.ListingBytes, &sopts)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range sopts.ShippingOptions {
+		sType, ok := pb.Listing_ShippingOption_ShippingType_value[elem.Type]
+		if !ok {
+			return nil, errors.New("invalid shipping option type specified")
+		}
+		countryCodes := []pb.CountryCode{}
+		for _, c := range elem.Regions {
+			cCode, ok := pb.CountryCode_value[c]
+			if ok {
+				countryCodes = append(countryCodes, pb.CountryCode(cCode))
+			}
+		}
+		services := []*pb.Listing_ShippingOption_Service{}
+
+		for _, svc := range elem.Services {
+			priceValue := new(pb.CurrencyValue)
+			addnPriceValue := new(pb.CurrencyValue)
+			//var ok bool
+			switch l.ListingVersion {
+			case 3, 4:
+				{
+					if svc.Price != nil {
+						price, ok := svc.Price.(float64)
+						if !ok {
+							return nil, errors.New("invalid service price value")
+						}
+						priceValue.Amount = big.NewInt(int64(price)).String()
+					} else {
+						priceValue.Amount = big.NewInt(0).String()
+					}
+
+					if svc.AdditionalPrice != nil {
+						addnPrice, ok := svc.AdditionalPrice.(float64)
+						if !ok {
+							return nil, errors.New("invalid service additional price value")
+						}
+						addnPriceValue.Amount = big.NewInt(int64(addnPrice)).String()
+					} else {
+						addnPriceValue.Amount = big.NewInt(0).String()
+					}
+
+					type pricingCurrency struct {
+						Metadata struct {
+							PricingCurrency string `json:"pricingCurrency"`
+						} `json:"metadata"`
+					}
+					var pc pricingCurrency
+					err = json.Unmarshal(l.ListingBytes, &pc)
+					if err != nil {
+						return nil, err
+					}
+					priceValue.Currency = &pb.CurrencyDefinition{
+						Code:         pc.Metadata.PricingCurrency,
+						Divisibility: 8,
+					}
+					addnPriceValue.Currency = &pb.CurrencyDefinition{
+						Code:         pc.Metadata.PricingCurrency,
+						Divisibility: 8,
+					}
+				}
+			case 5:
+				{
+					priceValue, err = extractCurrencyValue(svc.Price) //.(pb.CurrencyValue)
+					if err != nil {
+						return nil, errors.New("invalid price value")
+					}
+					addnPriceValue, err = extractCurrencyValue(svc.AdditionalPrice) //.(pb.CurrencyValue)
+					if err != nil {
+						return nil, errors.New("invalid price value")
+					}
+				}
+			}
+			srv := pb.Listing_ShippingOption_Service{
+				Name:                     svc.Name,
+				EstimatedDelivery:        svc.EstimatedDelivery,
+				PriceValue:               priceValue,
+				AdditionalItemPriceValue: addnPriceValue,
+			}
+			services = append(services, &srv)
+		}
+		shipOption := pb.Listing_ShippingOption{
+			Name:     elem.Name,
+			Type:     pb.Listing_ShippingOption_ShippingType(sType),
+			Regions:  countryCodes,
+			Services: services,
+		}
+		options = append(options, &shipOption)
+	}
 	return options, nil
+}
+
+func extractCurrencyValue(v interface{}) (*pb.CurrencyValue, error) {
+	value := new(pb.CurrencyValue)
+	if v == nil {
+		return value, nil
+	}
+	vMap, ok := v.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	amt0, ok := vMap["amount"]
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	amt, ok := amt0.(string)
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	value.Amount = amt
+	curr0, ok := vMap["currency"]
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	curr, ok := curr0.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	code0, ok := curr["code"]
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	code, ok := code0.(string)
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	div0, ok := curr["divisibility"]
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	div, ok := div0.(float64)
+	if !ok {
+		return nil, errors.New("invalid currency value")
+	}
+	value.Currency = &pb.CurrencyDefinition{
+		Code:         code,
+		Divisibility: uint32(div),
+	}
+	name0, ok := curr["name"]
+	if ok {
+		name, ok := name0.(string)
+		if ok {
+			value.Currency.Name = name
+		}
+	}
+
+	ct0, ok := curr["currencyType"]
+	if ok {
+		ct, ok := ct0.(string)
+		if ok {
+			value.Currency.CurrencyType = ct
+		}
+	}
+
+	return value, nil
 }
 
 // GetTaxes - return taxes
 func (l *Listing) GetTaxes() ([]*pb.Listing_Tax, error) {
-	taxes := []*pb.Listing_Tax{}
-	return taxes, nil
+	ret := []*pb.Listing_Tax{}
+	type taxes struct {
+		Taxes []struct {
+			Type       string   `json:"taxtype"`
+			Regions    []string `json:"taxRegions"`
+			Shipping   bool     `json:"taxShipping"`
+			Percentage float32  `json:"Percentage"`
+		} `json:"taxes"`
+	}
+	var t taxes
+	err := json.Unmarshal(l.ListingBytes, &t)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range t.Taxes {
+		countryCodes := []pb.CountryCode{}
+		for _, c := range elem.Regions {
+			cCode, ok := pb.CountryCode_value[c]
+			if ok {
+				countryCodes = append(countryCodes, pb.CountryCode(cCode))
+			}
+		}
+		tax := pb.Listing_Tax{
+			TaxType:     elem.Type,
+			TaxRegions:  countryCodes,
+			TaxShipping: elem.Shipping,
+			Percentage:  elem.Percentage,
+		}
+		ret = append(ret, &tax)
+	}
+	return ret, nil
 }
 
 // GetCoupons - return coupons
 func (l *Listing) GetCoupons() ([]*pb.Listing_Coupon, error) {
-	coupons := []*pb.Listing_Coupon{}
-	return coupons, nil
+	ret := []*pb.Listing_Coupon{}
+	type coupons struct {
+		Coupons []interface{} `json:"coupons"`
+	}
+	var c coupons
+	err := json.Unmarshal(l.ListingBytes, &c)
+	if err != nil {
+		return nil, err
+	}
+	for _, elem := range c.Coupons {
+		ret1 := new(pb.Listing_Coupon)
+		b, err := json.Marshal(elem)
+		if err != nil {
+			return nil, err
+		}
+		err = jsonpb.UnmarshalString(string(b), ret1)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, ret1)
+	}
+	return ret, nil
 }
 
 /*
@@ -703,10 +1764,11 @@ func (l *Listing) GetProtoListing() (*pb.Listing, error) {
 }
 
 // Sign - return signedListing
-func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, handle string, key *hdkeychain.ExtendedKey) (*SignedListing, error) {
+func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
+	handle string, isTestNet bool, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
-		return nil, err
+		return SignedListing{}, err
 	}
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
@@ -715,7 +1777,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, h
 
 	sl := new(pb.SignedListing)
 
-	rsl := &SignedListing{
+	rsl := SignedListing{
 		ProtoSignedListing: sl,
 	}
 
@@ -746,8 +1808,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, h
 	}
 
 	// Check the listing data is correct for continuing
-	testingEnabled := timeout > 1
-	if err := ValidateListing(l, testingEnabled, expectedDivisibility); err != nil {
+	if err := ValidateListing(l, isTestNet, expectedDivisibility); err != nil {
 		return rsl, err
 	}
 
@@ -784,7 +1845,10 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, h
 	id.BitcoinSig = sig.Serialize()
 
 	// Update coupon db
-	//n.Datastore.Coupons().Delete(listing.Slug)
+	err = (*dStore).Coupons().Delete(listing.Slug)
+	if err != nil {
+		log.Error(err)
+	}
 	var couponsToStore []Coupon
 	for i, coupon := range listing.Coupons {
 		hash := coupon.GetHash()
@@ -802,7 +1866,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, h
 		c := Coupon{Slug: listing.Slug, Code: code, Hash: hash}
 		couponsToStore = append(couponsToStore, c)
 	}
-	//err = n.Datastore.Coupons().Put(couponsToStore)
+	err = (*dStore).Coupons().Put(couponsToStore)
 	if err != nil {
 		return rsl, err
 	}
@@ -816,9 +1880,11 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32, h
 	if err != nil {
 		return rsl, err
 	}
+
 	sl.Listing = listing
 	sl.Signature = idSig
 	rsl.ProtoSignedListing = sl
+	rsl.RListing = *l
 	return rsl, nil
 }
 
@@ -1290,7 +2356,6 @@ func validateCryptocurrencyListing(listing *pb.Listing, expectedDivisibility uin
 	}
 
 	if listing.Metadata.PricingCurrencyDefn.Divisibility != expectedDivisibility {
-		fmt.Println("listing.Metadata.PricingCurrency.Divisibility : ", listing.Metadata.PricingCurrencyDefn.Divisibility, "  ", expectedDivisibility)
 		return ErrListingCoinDivisibilityIncorrect
 	}
 

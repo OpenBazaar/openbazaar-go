@@ -61,7 +61,10 @@ func GetHash(n *core.IpfsNode, reader io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f.Write(b)
+	_, err = f.Write(b)
+	if err != nil {
+		return "", err
+	}
 	defer f.Close()
 	return GetHashOfFile(n, f.Name())
 }

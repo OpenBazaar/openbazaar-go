@@ -15,39 +15,66 @@ import (
 
 // DefaultCurrencyDivisibility is the Divisibility of the Currency if not
 // defined otherwise
-const DefaultCurrencyDivisibility uint32 = 8
+const DefaultCurrencyDivisibility uint = 8
 
 type SpendRequest struct {
 	decodedAddress btcutil.Address
 
-	Address                string              `json:"address"`
-	Amount                 *repo.CurrencyValue `json:"amount"`
-	FeeLevel               string              `json:"feeLevel"`
-	Memo                   string              `json:"memo"`
-	OrderID                string              `json:"orderId"`
-	RequireAssociatedOrder bool                `json:"requireOrder"`
-	Wallet                 string              `json:"wallet"`
-	SpendAll               bool                `json:"spendAll"`
+	Amount                 string                   `json:"amount"`
+	Currency               *repo.CurrencyDefinition `json:"currency"`
+	CurrencyCode           string                   `json:"currencyCode"`
+	Address                string                   `json:"address"`
+	FeeLevel               string                   `json:"feeLevel"`
+	Memo                   string                   `json:"memo"`
+	OrderID                string                   `json:"orderId"`
+	RequireAssociatedOrder bool                     `json:"requireOrder"`
+	SpendAll               bool                     `json:"spendAll"`
 }
 
 type SpendResponse struct {
-	Amount             *repo.CurrencyValue `json:"amount"`
-	ConfirmedBalance   *repo.CurrencyValue `json:"confirmedBalance"`
-	Memo               string              `json:"memo"`
-	OrderID            string              `json:"orderId"`
-	Timestamp          time.Time           `json:"timestamp"`
-	Txid               string              `json:"txid"`
-	UnconfirmedBalance *repo.CurrencyValue `json:"unconfirmedBalance"`
-	PeerID             string              `json:"-"`
+	Amount             string                   `json:"amount"`
+	ConfirmedBalance   string                   `json:"confirmedBalance"`
+	UnconfirmedBalance string                   `json:"unconfirmedBalance"`
+	Currency           *repo.CurrencyDefinition `json:"currency"`
+	Memo               string                   `json:"memo"`
+	OrderID            string                   `json:"orderId"`
+	Timestamp          time.Time                `json:"timestamp"`
+	Txid               string                   `json:"txid"`
+	PeerID             string                   `json:"-"`
+	ConsumedInput      bool                     `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
-	var feeLevel wallet.FeeLevel
-	peerID := ""
+	var (
+		feeLevel wallet.FeeLevel
+		peerID   string
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
+		amt        = new(big.Int)
+		lookupCode = args.CurrencyCode
+	)
+
+	if lookupCode == "" && args.Currency != nil {
+		lookupCode = n.NormalizeCurrencyCode(args.Currency.Code.String())
+	}
+	var currencyDef, err = repo.LoadCurrencyDefinitions().Lookup(lookupCode)
+	if err != nil {
+		return nil, repo.ErrCurrencyDefinitionUndefined
+	}
+	if args.Currency != nil && currencyDef.Divisibility != args.Currency.Divisibility {
+		currencyDef.Divisibility = args.Currency.Divisibility
+		if err := currencyDef.Valid(); err != nil {
+			return nil, err
+		}
+	}
+
+	amt, ok := amt.SetString(args.Amount, 10)
+	if !ok {
+		return nil, ErrInvalidAmount
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(lookupCode)
 	if err != nil {
 		return nil, ErrUnknownWallet
 	}
@@ -73,7 +100,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	amt := args.Amount.Amount //new(big.Int).SetString(args.Amount, 10)
+
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
@@ -127,19 +154,17 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	confirmed, unconfirmed := wal.Balance()
-
-	defn, _ := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
-	amt0, _ := repo.NewCurrencyValue(txn.Value, defn)
-	amt0.Amount = new(big.Int).Mul(amt0.Amount, big.NewInt(-1))
-
-	conf0, _ := repo.NewCurrencyValue(confirmed.Value.String(), defn)
-	uconf0, _ := repo.NewCurrencyValue(unconfirmed.Value.String(), defn)
+	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	if err != nil {
+		return nil, fmt.Errorf("wallet currency not found in dictionary")
+	}
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   conf0,
-		UnconfirmedBalance: uconf0,
-		Amount:             amt0,
+		ConfirmedBalance:   confirmed.Value.String(),
+		UnconfirmedBalance: unconfirmed.Value.String(),
+		Currency:           defn,
+		Amount:             strings.TrimPrefix(txn.Value, "-"),
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,

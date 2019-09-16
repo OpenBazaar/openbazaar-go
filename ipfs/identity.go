@@ -43,7 +43,10 @@ func IdentityFromKey(privkey []byte) (config.Identity, error) {
 
 func IdentityKeyFromSeed(seed []byte, bits int) ([]byte, error) {
 	hm := hmac.New(sha256.New, []byte("OpenBazaar seed"))
-	hm.Write(seed)
+	_, err := hm.Write(seed)
+	if err != nil {
+		return nil, err
+	}
 	reader := bytes.NewReader(hm.Sum(nil))
 	sk, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, bits, reader)
 	if err != nil {

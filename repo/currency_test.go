@@ -1,7 +1,6 @@
 package repo_test
 
 import (
-	//"encoding/json"
 	"math/big"
 	"strings"
 	"testing"
@@ -49,13 +48,12 @@ func TestCurrencyValueMarshalsToJSON(t *testing.T) {
 			t.Errorf("unable to parse valid input '%s': %s", e.value, err.Error())
 			continue
 		}
-		j, err := example.MarshalJSON() // json.Marshal(example)
+		j, err := example.MarshalJSON()
 		if err != nil {
 			t.Errorf("marshaling %s: %s", example.String(), err)
 			continue
 		}
 
-		//if err := json.Unmarshal(j, &actual); err != nil {
 		if err := actual.UnmarshalJSON(j); err != nil {
 			t.Errorf("unmarhsaling %s, %s", example.String(), err)
 			continue
@@ -236,7 +234,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 	var (
 		zeroRateErr             = "rate must be greater than zero"
-		undefinedCurrencyErr    = "currency definition is not defined"
+		undefinedCurrencyErr    = "unknown currency"
 		invalidErr              = "cannot convert invalid value"
 		insufficentPrecisionErr = repo.ErrCurrencyValueInsufficientPrecision.Error()
 

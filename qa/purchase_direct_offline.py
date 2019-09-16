@@ -25,7 +25,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]       
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -98,10 +98,11 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
@@ -126,7 +127,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # generate one more block containing this tx
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generate", 1)
 
         # startup alice again
         self.start_node(alice)
@@ -148,8 +149,8 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"]["amount"])
-            unconfirmed = int(resp["unconfirmed"]["amount"])
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed > 0:
                 raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice should have zero balance at this point")
         else:
@@ -170,7 +171,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: order confirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generate", 1)
         time.sleep(2)
 
         # Check the funds moved into alice's wallet
@@ -178,7 +179,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            confirmed = int(resp["confirmed"]["amount"])
+            confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
                 raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice failed to receive the multisig payout")

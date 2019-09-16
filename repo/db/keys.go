@@ -35,10 +35,16 @@ func (k *KeysDB) Put(scriptAddress []byte, keyPath wallet.KeyPath) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(k.coinType.CurrencyCode(), hex.EncodeToString(scriptAddress), int(keyPath.Purpose), keyPath.Index, 0)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -56,10 +62,16 @@ func (k *KeysDB) ImportKey(scriptAddress []byte, key *btcec.PrivateKey) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(k.coinType.CurrencyCode(), hex.EncodeToString(scriptAddress), -1, 0, hex.EncodeToString(key.Serialize()))
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -78,10 +90,16 @@ func (k *KeysDB) MarkKeyAsUsed(scriptAddress []byte) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), k.coinType.CurrencyCode())
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

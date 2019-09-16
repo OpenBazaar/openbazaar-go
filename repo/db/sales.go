@@ -89,7 +89,10 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 
@@ -306,7 +309,10 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	json.Unmarshal(serializedTransactions, &records)
+	err = json.Unmarshal(serializedTransactions, &records)
+	if err != nil {
+		log.Error(err)
+	}
 	return rc, pb.OrderState(stateInt), funded, records, read, def.CurrencyCode(), nil
 }
 
@@ -315,24 +321,27 @@ func (s *SalesDB) Count() int {
 	defer s.lock.Unlock()
 	row := s.db.QueryRow("select Count(*) from sales")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 
-func (s *SalesDB) GetNeedsResync() ([]repo.UnfundedSale, error) {
+func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	var ret []repo.UnfundedSale
-	rows, err := s.db.Query(`select orderID, contract, timestamp from sales where state=? and needsSync=?`, 1, 1)
+	var ret []repo.UnfundedOrder
+	rows, err := s.db.Query(`select orderID, contract, timestamp, paymentAddr from sales where state=?`, 1)
 	if err != nil {
 		return ret, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var orderID string
+		var orderID, paymentAddr string
 		var timestamp int
 		var contractBytes []byte
-		err := rows.Scan(&orderID, &contractBytes, &timestamp)
+		err := rows.Scan(&orderID, &contractBytes, &timestamp, &paymentAddr)
 		if err != nil {
 			return ret, err
 		}
@@ -342,25 +351,10 @@ func (s *SalesDB) GetNeedsResync() ([]repo.UnfundedSale, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedSale{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountValue.Currency.Code})
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountValue.Currency.Code, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil
-}
-
-func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	resyncInt := 0
-	if needsResync {
-		resyncInt = 1
-	}
-	_, err := s.db.Exec("update sales set needsSync=? where orderID=?", resyncInt, orderId)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // GetSalesForDisputeTimeoutNotification returns []*SaleRecord including

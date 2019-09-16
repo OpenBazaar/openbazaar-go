@@ -5,14 +5,27 @@
 		"contractType": "DIGITAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
-		"pricingCurrency": "tbtc",
+		"pricingCurrency": {
+			"code": "TBTC",
+			"divisibility": 8,
+			"name": "A",
+			"currencyType": "A"
+		},
 		"acceptedCurrencies": ["tbtc", "tbch", "tltc", "tzec"]
 	},
 	"item": {
 		"title": "Citizenfour",
 		"description": "A documentarian and a reporter travel to Hong Kong for the first of many meetings with Edward Snowden.",
 		"processingTime": "1 confirmation",
-		"price": 12000000,
+		"price": {
+			"currency": {
+				"code": "TBTC",
+				"divisibility": 8,
+				"name": "A",
+				"currencyType": "A"
+			},
+			"amount": "12000000"
+		},
 		"tags": [
 			"documentary"
 		],
@@ -34,14 +47,14 @@
 		]
 	},
 	"taxes": [
-	{
-		"taxType": "Sales tax",
-		"taxRegions": [
-			"UNITED_STATES"
-		],
-		"taxShipping": false,
-		"percentage": 7
-	}
+		{
+			"taxType": "Sales tax",
+			"taxRegions": [
+				"UNITED_STATES"
+			],
+			"taxShipping": false,
+			"percentage": 7
+		}
 	],
 	"moderators": [],
 	"termsAndConditions": "NA",

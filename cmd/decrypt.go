@@ -29,7 +29,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 	var testnet bool
 	var err error
 	if x.DataDir == "" {
-		repoPath, err = repo.GetRepoPath(false)
+		repoPath, err = repo.GetRepoPath(false, "")
 		if err != nil {
 			fmt.Println(err)
 			return nil
@@ -90,7 +90,11 @@ func (x *DecryptDatabase) Execute(args []string) error {
 		fmt.Println(err)
 		return err
 	}
-	tmpDB.InitTables("")
+	err = tmpDB.InitTables("")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	if err := sqlliteDB.Copy(path.Join(repoPath, "tmp", "datastore", filename), ""); err != nil {
 		fmt.Println(err)
 		return err

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/mobile"
 	"github.com/jessevdk/go-flags"
@@ -43,9 +44,17 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	wg.Add(1)
 	if err := n.Start(); err != nil {
 		fmt.Println(err.Error())
 	}
+
+	time.Sleep(time.Second * 10)
+	fmt.Println("restarting...", time.Now())
+	go func() {
+		err := n.Restart()
+		fmt.Println(err.Error())
+	}()
+
+	wg.Add(1)
 	wg.Wait()
 }

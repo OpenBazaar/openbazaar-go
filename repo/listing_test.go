@@ -16,6 +16,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 		"v4-digital-good",
 		"v4-service",
 		"v4-cryptocurrency",
+		"v5-physical-good",
 	}
 
 	for _, e := range examples {
@@ -48,6 +49,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BCH"},
@@ -62,6 +64,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BTC", "BCH"},
@@ -75,7 +78,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(1320),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC"},
@@ -90,6 +94,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
@@ -104,6 +109,7 @@ func TestListingAttributes(t *testing.T) {
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("XMR"),
 					Divisibility: 8,
+					CurrencyType: "crypto",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"LTC"},
@@ -117,7 +123,8 @@ func TestListingAttributes(t *testing.T) {
 				Amount: big.NewInt(100),
 				Currency: &repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
-					Divisibility: 8,
+					Divisibility: 2,
+					CurrencyType: "fiat",
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BTC", "BCH", "ZEC", "LTC", "ETH"},
@@ -174,11 +181,11 @@ func TestListingFromProtobuf(t *testing.T) {
 	}
 	if hash, err := actual.Vendor.Hash(); err != nil && subject.VendorID.PeerID != hash {
 		t.Errorf("expected hash to be (%s), but was (%s)", subject.VendorID.PeerID, hash)
-		if err != nil {
-			t.Logf("hash had an error: %s", err)
-		}
+		t.Logf("hash had an error: %s", err)
+
 	}
 	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature()) {
 		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.Vendor.BitcoinSignature())
 	}
+
 }

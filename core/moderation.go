@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+	routing "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
@@ -74,7 +75,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 			}
 		}
 		for _, cc := range currencies {
-			moderator.AcceptedCurrencies = append(moderator.AcceptedCurrencies, NormalizeCurrencyCode(cc))
+			moderator.AcceptedCurrencies = append(moderator.AcceptedCurrencies, n.NormalizeCurrencyCode(cc))
 		}
 
 		profile.Moderator = true
@@ -97,14 +98,24 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		go ipfs.PublishPointer(n.DHT, ctx, pointer)
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointer)
 		pointer.Purpose = ipfs.MODERATOR
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err
 		}
 	} else {
-		go ipfs.PublishPointer(n.DHT, ctx, pointers[0])
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointers[0])
 	}
 	return nil
 }
@@ -150,14 +161,20 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		total, _ := t.Int(nil)
 		return *total, nil
 	case pb.Moderator_Fee_FIXED:
-		fixedFee, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
-		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
+		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		if !ok {
+			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+		}
+		if n.NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == n.NormalizeCurrencyCode(currencyCode) {
 			if fixedFee.Cmp(&transactionTotal) > 0 {
-				return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
+				return *big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
 			}
 			return *fixedFee, nil
 		}
-		amt, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		amt, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		if !ok {
+			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+		}
 		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
 		if err != nil {
 			return *big.NewInt(0), err
@@ -168,10 +185,17 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
-		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == NormalizeCurrencyCode(currencyCode) {
-			fixed, _ = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		var ok bool
+		if n.NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == n.NormalizeCurrencyCode(currencyCode) {
+			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			if !ok {
+				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			}
 		} else {
-			f, _ := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			f, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			if !ok {
+				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			}
 			f0, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
 			if err != nil {
 				return *big.NewInt(0), err
@@ -182,7 +206,6 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		f.Mul(f, big.NewFloat(0.01))
 		t.Mul(t, f)
 		total, _ := t.Int(&transactionTotal)
-		//percentage := uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100))
 		if fixed.Add(fixed, total).Cmp(&transactionTotal) > 0 {
 			return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
@@ -210,7 +233,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			coupons, err := n.Datastore.Coupons().Get(sl.RListing.Slug)
 			if err != nil {
 				return err
 			}
@@ -218,18 +241,19 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.Listing.ProtoListing.Coupons {
+			for _, coupon := range sl.RListing.ProtoListing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.Listing.ProtoListing.Moderators = moderators
-			sl, err = n.SignListing(&sl.Listing)
+			sl.RListing.ProtoListing.Moderators = moderators
+			sl0, err := n.SignListing(sl.RListing)
 			if err != nil {
 				return err
 			}
+			sl = &sl0
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,
@@ -251,7 +275,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			hashes[sl.Listing.Slug] = hash
+			hashes[sl.RListing.Slug] = hash
 
 			return nil
 		}
@@ -278,10 +302,20 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 func (n *OpenBazaarNode) NotifyModerators(addedMods, removedMods []string) error {
 	n.Service.WaitForReady()
 	for _, mod := range addedMods {
-		go n.SendModeratorAdd(mod)
+		go func(mod string) {
+			err := n.SendModeratorAdd(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	for _, mod := range removedMods {
-		go n.SendModeratorRemove(mod)
+		go func(mod string) {
+			err := n.SendModeratorRemove(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	return nil
 }

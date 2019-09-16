@@ -185,14 +185,20 @@ func (Migration020) Down(repoPath string, dbPassword string, testnet bool) error
 
 	dstore := r.Datastore()
 
-	revertForKey(dstore, sk, sk)
+	err = revertForKey(dstore, sk, sk)
+	if err != nil {
+		return err
+	}
 
 	for _, keyName := range keys {
 		k, err := ks.Get(keyName)
 		if err != nil {
 			return err
 		}
-		revertForKey(dstore, sk, k)
+		err = revertForKey(dstore, sk, k)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Migrate the OpenBazaar and IPFS repo versions

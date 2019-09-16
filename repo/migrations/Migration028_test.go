@@ -32,45 +32,47 @@ var stmt = `PRAGMA key = 'letmein';
 
 func TestMigration028(t *testing.T) {
 	var dbPath string
-	os.Mkdir("./datastore", os.ModePerm)
+	if err := os.Mkdir("./datastore", os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 	dbPath = path.Join("./", "datastore", "mainnet.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	db.Exec(stmt)
-	_, err = db.Exec("INSERT INTO sales (orderID, total) values (?,?)", "asdf", 3)
-	if err != nil {
-		t.Error(err)
-		return
+	if _, err := db.Exec(stmt); err != nil {
+		t.Fatal(err)
 	}
-	_, err = db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3)
-	if err != nil {
-		t.Error(err)
-		return
+	if _, err := db.Exec("INSERT INTO sales (orderID, total) values (?,?)", "asdf", 3); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3); err != nil {
+		t.Fatal(err)
 	}
 	var m migrations.Migration028
-	err = m.Up("./", "letmein", false)
-	if err != nil {
-		t.Error(err)
+	if err := m.Up("./", "letmein", false); err != nil {
+		t.Fatal(err)
 	}
 
-	var orderID string
-	var total string
-	var total1 int
+	var (
+		orderID string
+		total   string
+		total1  int
+	)
 
 	r := db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
-
-	if err := r.Scan(&orderID, &total); err != nil || total != "3" {
+	if err := r.Scan(&orderID, &total); err != nil {
 		t.Error(err)
-		return
 	}
-
+	if total != "3" {
+		t.Errorf("expected total to be 3, but was %s", total)
+	}
 	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
-
-	if err := r.Scan(&orderID, &total); err != nil || total != "3" {
+	if err := r.Scan(&orderID, &total); err != nil {
 		t.Error(err)
-		return
+	}
+	if total != "3" {
+		t.Errorf("expected total to be 3, but was %s", total)
 	}
 
 	repoVer, err := ioutil.ReadFile("./repover")
@@ -83,22 +85,23 @@ func TestMigration028(t *testing.T) {
 
 	err = m.Down("./", "letmein", false)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	r = db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
-
-	if err := r.Scan(&orderID, &total1); err != nil || total1 != 3 {
+	if err := r.Scan(&orderID, &total1); err != nil {
 		t.Error(err)
-		return
+	}
+	if total1 != 3 {
+		t.Errorf("expected total to be 3, but was %d", total1)
 	}
 
 	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
-
-	if err := r.Scan(&orderID, &total1); err != nil || total1 != 3 {
+	if err := r.Scan(&orderID, &total1); err != nil {
 		t.Error(err)
-		return
+	}
+	if total1 != 3 {
+		t.Errorf("expected total to be 3, but was %d", total1)
 	}
 
 	repoVer, err = ioutil.ReadFile("./repover")

@@ -113,7 +113,10 @@ func encryptCurve25519(pubKey *libp2p.Ed25519PublicKey, plaintext []byte) ([]byt
 func encryptRSA(pubKey *libp2p.RsaPublicKey, plaintext []byte) ([]byte, error) {
 	// Encrypt random secret key with RSA pubkey
 	secretKey := make([]byte, SecretKeyBytes)
-	rand.Read(secretKey)
+	_, err := rand.Read(secretKey)
+	if err != nil {
+		return nil, err
+	}
 
 	encKey, err := pubKey.Encrypt(secretKey)
 	if err != nil {
@@ -155,7 +158,10 @@ func encryptRSA(pubKey *libp2p.RsaPublicKey, plaintext []byte) ([]byte, error) {
 
 	// Create the HMAC
 	mac := hmac.New(sha256.New, macKey)
-	mac.Write(ciphertext)
+	_, err = mac.Write(ciphertext)
+	if err != nil {
+		return nil, err
+	}
 	messageMac := mac.Sum(nil)
 
 	// Prepend the ciphertext with the encrypted secret key
@@ -239,7 +245,10 @@ func decryptRSA(privKey *libp2p.RsaPrivateKey, ciphertext []byte) ([]byte, error
 
 	// Calculate the HMAC and verify it is correct
 	mac := hmac.New(sha256.New, macKey)
-	mac.Write(ciphertext[CiphertextVersionBytes+EncryptedSecretKeyBytes : len(ciphertext)-MacBytes])
+	_, err = mac.Write(ciphertext[CiphertextVersionBytes+EncryptedSecretKeyBytes : len(ciphertext)-MacBytes])
+	if err != nil {
+		return nil, err
+	}
 	messageMac := mac.Sum(nil)
 	if !hmac.Equal(messageMac, ciphertext[len(ciphertext)-MacBytes:]) {
 		return nil, ErrInvalidHmac

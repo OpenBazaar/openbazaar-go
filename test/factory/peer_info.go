@@ -9,11 +9,11 @@ import (
 )
 
 func MustNewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey([]byte(NewPubkeysIdentityKeyBytes()))
+	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
 }
 
 func NewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey([]byte(NewPubkeysIdentityKeyBytes()))
+	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
 }
 
 func NewPeerIDProtobuf() *pb.ID {
@@ -35,7 +35,7 @@ func NewPubkeysIdentityKeyBytes() []byte {
 
 func NewPubkeysProtobuf() *pb.ID_Pubkeys {
 	return &pb.ID_Pubkeys{
-		Identity: []byte(NewPubkeysIdentityKeyBytes()),
+		Identity: NewPubkeysIdentityKeyBytes(),
 		//Bitcoin:  []byte("AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"),
 	}
 }

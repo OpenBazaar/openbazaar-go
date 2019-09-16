@@ -1,6 +1,7 @@
 # Test artifacts
 
 repo/testdata/
+./config*
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
@@ -39,6 +40,7 @@ dist
 .tags*
 *.sw?
 openbazaar-go*
+config_*
 
 # macOS
 .DS_Store

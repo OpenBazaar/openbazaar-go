@@ -136,7 +136,7 @@ func (p *PeerInfo) Valid() (result bool, errs []error) {
 		}
 	}
 	// TODO: validate BitcoinSignature comes from bitcoin identity
-	return
+	return result, errs
 }
 
 // Hash returns the public hash based on the PeerKeychain.Identity key material

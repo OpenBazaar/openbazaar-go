@@ -1,97 +1,79 @@
 package migrations
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/core/mock"
+	"log"
+	"strings"
 )
 
-// Migration025 will update the hashes of each listing in the listing index with
-// the newest hash format.
 type Migration025 struct{}
 
-type Migration025_Price struct {
-	CurrencyCode string  `json:"currencyCode"`
-	Amount       uint64  `json:"amount"`
-	Modifier     float32 `json:"modifier"`
-}
-type Migration025_Thumbnail struct {
-	Tiny   string `json:"tiny"`
-	Small  string `json:"small"`
-	Medium string `json:"medium"`
-}
-
-type Migration025_ListingData struct {
-	Hash               string                 `json:"hash"`
-	Slug               string                 `json:"slug"`
-	Title              string                 `json:"title"`
-	Categories         []string               `json:"categories"`
-	NSFW               bool                   `json:"nsfw"`
-	ContractType       string                 `json:"contractType"`
-	Description        string                 `json:"description"`
-	Thumbnail          Migration025_Thumbnail `json:"thumbnail"`
-	Price              Migration025_Price     `json:"price"`
-	ShipsTo            []string               `json:"shipsTo"`
-	FreeShipping       []string               `json:"freeShipping"`
-	Language           string                 `json:"language"`
-	AverageRating      float32                `json:"averageRating"`
-	RatingCount        uint32                 `json:"ratingCount"`
-	ModeratorIDs       []string               `json:"moderators"`
-	AcceptedCurrencies []string               `json:"acceptedCurrencies"`
-	CoinType           string                 `json:"coinType"`
-}
-
 func (Migration025) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	listingsFilePath := path.Join(repoPath, "root", "listings.json")
-
-	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
-	indexExists := true
-	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
-		indexExists = false
-		fmt.Println(listingsFilePath)
+	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
+	if err != nil {
+		return fmt.Errorf("opening db: %s", err.Error())
 	}
 
-	if indexExists {
-		var listingIndex []Migration025_ListingData
-		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
-		if err != nil {
-			return err
-		}
-		if err = json.Unmarshal(listingsJSON, &listingIndex); err != nil {
-			return err
-		}
-		n, err := coremock.NewMockNode()
-		if err != nil {
-			return err
-		}
-		for i, listing := range listingIndex {
-			hash, err := ipfs.GetHashOfFile(n, path.Join(repoPath, "root", "listings", listing.Slug+".json"))
-			if err != nil {
-				return err
-			}
+	const (
+		alterSalesSQL     = "alter table sales rename to sales_old;"
+		createNewSalesSQL = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
+		insertSalesSQL    = "insert into sales select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, coinType, paymentCoin from sales_old;"
+		dropSalesTableSQL = "drop table sales_old;"
+	)
 
-			listingIndex[i].Hash = hash
-		}
-		migratedJSON, err := json.MarshalIndent(&listingIndex, "", "    ")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
-		if err != nil {
-			return err
-		}
+	migration := strings.Join([]string{
+		alterSalesSQL,
+		createNewSalesSQL,
+		insertSalesSQL,
+		dropSalesTableSQL,
+	}, " ")
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
 	}
-
-	return writeRepoVer(repoPath, 26)
+	if _, err = tx.Exec(migration); err != nil {
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	if err := writeRepoVer(repoPath, 26); err != nil {
+		return fmt.Errorf("bumping repover to 26: %s", err.Error())
+	}
+	return nil
 }
 
 func (Migration025) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	// Down migration is a no-op (outside of updating the version)
-	// We can't calculate the old style hash format anymore.
-	return writeRepoVer(repoPath, 25)
+	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
+	if err != nil {
+		return fmt.Errorf("opening db: %s", err.Error())
+	}
+
+	const (
+		alterSalesSQL = "alter table sales add needsSync integer;"
+	)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err = tx.Exec(alterSalesSQL); err != nil {
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	if err := writeRepoVer(repoPath, 25); err != nil {
+		return fmt.Errorf("dropping repover to 25: %s", err.Error())
+	}
+	return nil
 }
