@@ -488,6 +488,7 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	out0, err := m1.MarshalToString(proto0)
 	if err != nil {
 		//return ret, err
+		log.Info(err)
 	}
 
 	log.Info(len(out0))
@@ -745,6 +746,9 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 				}
 				var pc pricingCurrency
 				err = json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return retVal, err
+				}
 				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
 				if err != nil {
 					curr = &CurrencyDefinition{
