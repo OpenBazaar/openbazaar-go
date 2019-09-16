@@ -3,6 +3,7 @@ package selfhosted
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
@@ -54,7 +55,12 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	}
 
 	for _, peer := range s.pushNodes {
-		go s.store(peer.Pretty(), []cid.Cid{id})
+		go func(peerID string, cid []cid.Cid) {
+			err := s.store(peerID, cid)
+			if err != nil {
+				log.Println(err)
+			}
+		}(peer.Pretty(), []cid.Cid{id})
 	}
 	maAddr, err := ma.NewMultiaddr("/ipfs/" + addr + "/")
 	if err != nil {

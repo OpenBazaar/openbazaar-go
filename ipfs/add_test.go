@@ -17,9 +17,15 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	os.MkdirAll(path.Join(os.TempDir(), "root"), os.ModePerm)
+	err := os.MkdirAll(path.Join(os.TempDir(), "root"), os.ModePerm)
+	if err != nil {
+		log.Error(err)
+	}
 	d := []byte("hello world")
-	ioutil.WriteFile(path.Join(os.TempDir(), "root", "test"), d, os.ModePerm)
+	err = ioutil.WriteFile(path.Join(os.TempDir(), "root", "test"), d, os.ModePerm)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func teardown() {

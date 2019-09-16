@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -32,7 +33,10 @@ func (Migration025) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 	if _, err = tx.Exec(migration); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -59,7 +63,10 @@ func (Migration025) Down(repoPath, databasePassword string, testnetEnabled bool)
 		return err
 	}
 	if _, err = tx.Exec(alterSalesSQL); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {

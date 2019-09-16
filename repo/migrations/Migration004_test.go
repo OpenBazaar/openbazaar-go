@@ -12,13 +12,19 @@ var stm = `PRAGMA key = 'letmein';create table sales (orderID text primary key n
 
 func TestMigration004(t *testing.T) {
 	var dbPath string
-	os.Mkdir("./datastore", os.ModePerm)
+	err := os.Mkdir("./datastore", os.ModePerm)
+	if err != nil {
+		t.Error(err)
+	}
 	dbPath = path.Join("./", "datastore", "mainnet.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		t.Error(err)
 	}
-	db.Exec(stm)
+	_, err = db.Exec(stm)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = db.Exec("INSERT INTO sales (orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", "asdf", "{}", 3, 1, 12345, 100000, "zasfd", "Qm...", "name.id", "Listing title", "Peter Griffin", "1234 Quhog st.", "1btc..", 0, []byte("[]"))
 	if err != nil {
 		t.Error(err)

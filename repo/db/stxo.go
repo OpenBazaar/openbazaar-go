@@ -28,7 +28,10 @@ func (s *StxoDB) Put(stxo wallet.Stxo) error {
 	tx, _ := s.db.Begin()
 	stmt, err := tx.Prepare("insert or replace into stxos(coin, outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid) values(?,?,?,?,?,?,?,?)")
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	defer stmt.Close()
@@ -39,10 +42,16 @@ func (s *StxoDB) Put(stxo wallet.Stxo) error {
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
 	_, err = stmt.Exec(s.coinType.CurrencyCode(), outpoint, stxo.Utxo.Value, int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), watchOnly, int(stxo.SpendHeight), stxo.SpendTxid.String())
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

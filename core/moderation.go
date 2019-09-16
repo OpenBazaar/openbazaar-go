@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+	routing "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
@@ -97,14 +98,24 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		go ipfs.PublishPointer(n.DHT, ctx, pointer)
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointer)
 		pointer.Purpose = ipfs.MODERATOR
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err
 		}
 	} else {
-		go ipfs.PublishPointer(n.DHT, ctx, pointers[0])
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointers[0])
 	}
 	return nil
 }
@@ -291,10 +302,20 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 func (n *OpenBazaarNode) NotifyModerators(addedMods, removedMods []string) error {
 	n.Service.WaitForReady()
 	for _, mod := range addedMods {
-		go n.SendModeratorAdd(mod)
+		go func(mod string) {
+			err := n.SendModeratorAdd(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	for _, mod := range removedMods {
-		go n.SendModeratorRemove(mod)
+		go func(mod string) {
+			err := n.SendModeratorRemove(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	return nil
 }

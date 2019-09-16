@@ -92,9 +92,15 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.UnreadChatMessages = uint64(unread)
 
 	if isSale {
-		n.Datastore.Sales().MarkAsRead(orderID)
+		err = n.Datastore.Sales().MarkAsRead(orderID)
+		if err != nil {
+			log.Error(err)
+		}
 	} else {
-		n.Datastore.Purchases().MarkAsRead(orderID)
+		err = n.Datastore.Purchases().MarkAsRead(orderID)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	return resp, nil
@@ -507,7 +513,10 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}
-	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	if err != nil {
+		log.Error(err)
+	}
 	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
@@ -659,7 +668,10 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		if contractType == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 			i.PaymentAddress = item.PaymentAddress
-			validateCryptocurrencyOrderItem(i)
+			err = validateCryptocurrencyOrderItem(i)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		order.Items = append(order.Items, i)
@@ -827,14 +839,6 @@ func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) getDivisibility(code string) uint32 {
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(code)
-	if err != nil {
-		return 0
-	}
-	return uint32(defn.Divisibility)
-}
-
 // GetCurrencyDefinition - return the currency defn for a coin
 func (n *OpenBazaarNode) GetCurrencyDefinition(code string) (*repo.CurrencyDefinition, error) {
 	return repo.LoadCurrencyDefinitions().Lookup(code)
@@ -925,7 +929,10 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_CANCELED, true)
+	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_CANCELED, true)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -949,7 +956,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		return *big.NewInt(0), err
 	}
 	if wal.ExchangeRates() != nil {
-		wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
+		_, err = wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	var total big.Int

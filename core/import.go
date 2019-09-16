@@ -6,8 +6,7 @@ import (
 	//"errors"
 	//"fmt"
 	"io"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	//"github.com/OpenBazaar/openbazaar-go/pb"
 	//"math/big"
 	//"net/url"
 	//"os"
@@ -22,7 +21,7 @@ import (
 	//"github.com/golang/protobuf/ptypes"
 )
 
-const bufferSize = 5
+//const bufferSize = 5
 
 // ImportListings - upload/read listings
 func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
@@ -646,6 +645,6 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) listingCurrencyIsBTC(l *pb.Listing) bool {
-	return n.NormalizeCurrencyCode(l.Metadata.PricingCurrencyDefn.Code) == "BTC"
-}
+//func (n *OpenBazaarNode) listingCurrencyIsBTC(l *pb.Listing) bool {
+//	return n.NormalizeCurrencyCode(l.Metadata.PricingCurrencyDefn.Code) == "BTC"
+//}

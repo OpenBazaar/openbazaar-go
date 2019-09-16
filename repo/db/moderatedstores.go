@@ -25,10 +25,16 @@ func (m *ModeratedDB) Put(peerId string) error {
 	defer stmt.Close()
 	_, err := stmt.Exec(peerId)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -50,7 +56,10 @@ func (m *ModeratedDB) Get(offsetId string, limit int) ([]string, error) {
 
 	for rows.Next() {
 		var peerID string
-		rows.Scan(&peerID)
+		err = rows.Scan(&peerID)
+		if err != nil {
+			log.Error(err)
+		}
 		ret = append(ret, peerID)
 	}
 	return ret, nil
@@ -59,6 +68,9 @@ func (m *ModeratedDB) Get(offsetId string, limit int) ([]string, error) {
 func (m *ModeratedDB) Delete(follower string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.db.Exec("delete from moderatedstores where peerID=?", follower)
+	_, err := m.db.Exec("delete from moderatedstores where peerID=?", follower)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }

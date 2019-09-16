@@ -69,7 +69,10 @@ func (service *OpenBazaarService) messageSenderForPeer(ctx context.Context, p pe
 func (ms *messageSender) invalidate() {
 	ms.invalid = true
 	if ms.s != nil {
-		ms.s.Reset()
+		err := ms.s.Reset()
+		if err != nil {
+			log.Error(err)
+		}
 		ms.s = nil
 	}
 }
@@ -132,13 +135,19 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) erro
 		err := ms.ctxWriteMsg(ctx, pmes)
 		switch err {
 		case ErrWriteTimeout:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return err
 		case nil:
 			break
 		default:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 
 			if retry {
@@ -180,13 +189,19 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 		err := ms.ctxWriteMsg(ctx, pmes)
 		switch err {
 		case ErrWriteTimeout:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return nil, err
 		case nil:
 			break
 		default:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 
 			if retry {
@@ -199,7 +214,10 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 
 		mes, err := ms.ctxReadMsg(ctx, returnChan)
 		if err != nil {
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return nil, err
 		}

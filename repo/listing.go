@@ -551,6 +551,7 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	//log.Info("5555   : ", out0, err)
 	if err != nil {
 		//return ret, err
+		log.Error(err)
 	}
 
 	log.Info(len(out0))
@@ -864,7 +865,10 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 					} `json:"metadata"`
 				}
 				var c coinType
-				json.Unmarshal(l.ListingBytes, &c)
+				err = json.Unmarshal(l.ListingBytes, &c)
+				if err != nil {
+					return retVal, err
+				}
 				curr, err := LoadCurrencyDefinitions().Lookup(c.Metadata.CoinType)
 				if err != nil {
 					curr = &CurrencyDefinition{
@@ -921,7 +925,10 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 				} `json:"item"`
 			}
 			var p price
-			json.Unmarshal(l.ListingBytes, &p)
+			err = json.Unmarshal(l.ListingBytes, &p)
+			if err != nil {
+				return retVal, err
+			}
 			retVal.Amount, _ = new(big.Int).SetString(p.Item.Price.Amount, 10)
 			retVal.Currency = &CurrencyDefinition{
 				Code:         CurrencyCode(p.Item.Price.Currency.Code),
@@ -988,6 +995,9 @@ func (l *Listing) GetRefundPolicy() (string, error) {
 func (l *Listing) GetVendorID() (*pb.ID, error) {
 	if l.Vendor == nil {
 		pid, err := ExtractIDFromListing(l.ListingBytes)
+		if err != nil {
+			return nil, err
+		}
 		l.Vendor, err = NewPeerInfoFromProtobuf(pid)
 		if err != nil {
 			return nil, err
@@ -1232,7 +1242,10 @@ func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 					} `json:"metadata"`
 				}
 				var pc pricingCurrency
-				json.Unmarshal(l.ListingBytes, &pc)
+				err = json.Unmarshal(l.ListingBytes, &pc)
+				if err != nil {
+					return nil, err
+				}
 				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
 				if err != nil {
 					curr = &CurrencyDefinition{
@@ -1980,7 +1993,10 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 	id.BitcoinSig = sig.Serialize()
 
 	// Update coupon db
-	(*dStore).Coupons().Delete(listing.Slug)
+	err = (*dStore).Coupons().Delete(listing.Slug)
+	if err != nil {
+		log.Error(err)
+	}
 	var couponsToStore []Coupon
 	for i, coupon := range listing.Coupons {
 		hash := coupon.GetHash()

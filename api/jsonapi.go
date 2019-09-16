@@ -45,6 +45,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -916,7 +917,11 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, nil)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -973,7 +978,11 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -1033,7 +1042,11 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -1847,7 +1860,12 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				// TODO: if this happens, len(idBytes) != 16
+				// how to handle this
+				log.Error(err)
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -2175,7 +2193,10 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	i.node.Datastore.Cases().MarkAsRead(orderID)
+	err = i.node.Datastore.Cases().MarkAsRead(orderID)
+	if err != nil {
+		log.Error(err)
+	}
 	SanitizedResponseM(w, out, new(pb.CaseRespApi))
 }
 
@@ -2566,11 +2587,20 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 		}
 	}
 	if subject != "" {
-		go func() {
-			i.node.Datastore.Purchases().MarkAsRead(subject)
-			i.node.Datastore.Sales().MarkAsRead(subject)
-			i.node.Datastore.Cases().MarkAsRead(subject)
-		}()
+		go func(subject string) {
+			err := i.node.Datastore.Purchases().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+			err = i.node.Datastore.Sales().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+			err = i.node.Datastore.Cases().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+		}(subject)
 	}
 	SanitizedResponse(w, `{}`)
 }
@@ -2809,7 +2839,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				// TODO: if this happens, len(idBytes) != 16
+				// how to handle this
+				log.Error(err)
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -3031,6 +3066,7 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cases, queryCount, err := i.node.Datastore.Cases().GetAll(orderStates, searchTerm, sortByAscending, sortByRead, limit, []string{})
+	fmt.Println("in get cases .. : ", err, "   cases : ", cases, "   qc  ", queryCount)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3184,7 +3220,12 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
-	go ipfs.RemoveAll(i.node.IpfsNode, peerID, i.node.IPNSQuorumSize)
+	go func(nd *ipfscore.IpfsNode, peerID string, quorum uint) {
+		err := ipfs.RemoveAll(nd, peerID, quorum)
+		if err != nil {
+			log.Error(err)
+		}
+	}(i.node.IpfsNode, peerID, i.node.IPNSQuorumSize)
 	nodes = append(nodes, peerID)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
@@ -3625,7 +3666,12 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				// TODO: if this happens, len(idBytes) != 16
+				// how to handle this
+				log.Error(err)
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -3853,7 +3899,12 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
+	go func(nd *ipfscore.IpfsNode, pid peer.ID, timeout time.Duration, quorum uint, useCache bool) {
+		_, err := ipfs.Resolve(nd, pid, timeout, quorum, useCache)
+		if err != nil {
+			log.Error(err)
+		}
+	}(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
 	fmt.Fprint(w, string(retBytes))
 }
 

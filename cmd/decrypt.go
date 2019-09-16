@@ -90,7 +90,11 @@ func (x *DecryptDatabase) Execute(args []string) error {
 		fmt.Println(err)
 		return err
 	}
-	tmpDB.InitTables("")
+	err = tmpDB.InitTables("")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	if err := sqlliteDB.Copy(path.Join(repoPath, "tmp", "datastore", filename), ""); err != nil {
 		fmt.Println(err)
 		return err

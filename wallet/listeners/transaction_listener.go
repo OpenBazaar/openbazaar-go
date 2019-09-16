@@ -125,7 +125,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 		records = append(records, record)
 		if isForSale {
-			l.db.Sales().UpdateFunding(orderId, funded, records)
+			err = l.db.Sales().UpdateFunding(orderId, funded, records)
+			if err != nil {
+				log.Error(err)
+			}
 			// This is a dispute payout. We should set the order state.
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
@@ -137,24 +140,30 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					buyerHandle := contract.BuyerOrder.BuyerID.Handle
 
 					n := repo.DisputeAcceptedNotification{
-						repo.NewNotificationID(),
-						"disputeAccepted",
-						orderId,
-						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-						accept.ClosedBy,
-						buyerHandle,
-						accept.ClosedBy,
+						ID:               repo.NewNotificationID(),
+						Type:             "disputeAccepted",
+						OrderId:          orderId,
+						Thumbnail:        repo.Thumbnail{Tiny: contract.VendorListings[0].Item.Images[0].Tiny, Small: contract.VendorListings[0].Item.Images[0].Small},
+						OherPartyID:      accept.ClosedBy,
+						OtherPartyHandle: buyerHandle,
+						Buyer:            accept.ClosedBy,
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+					err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+					if err != nil {
+						log.Error(err)
+					}
 				}
 				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
 					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 				}
 			}
 		} else {
-			l.db.Purchases().UpdateFunding(orderId, funded, records)
+			err = l.db.Purchases().UpdateFunding(orderId, funded, records)
+			if err != nil {
+				log.Error(err)
+			}
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
@@ -169,17 +178,20 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					}
 
 					n := repo.DisputeAcceptedNotification{
-						repo.NewNotificationID(),
-						"disputeAccepted",
-						orderId,
-						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-						accept.ClosedBy,
-						vendorHandle,
-						buyer,
+						ID:               repo.NewNotificationID(),
+						Type:             "disputeAccepted",
+						OrderId:          orderId,
+						Thumbnail:        repo.Thumbnail{Tiny: contract.VendorListings[0].Item.Images[0].Tiny, Small: contract.VendorListings[0].Item.Images[0].Small},
+						OherPartyID:      accept.ClosedBy,
+						OtherPartyHandle: vendorHandle,
+						Buyer:            buyer,
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+					err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+					if err != nil {
+						log.Error(err)
+					}
 				}
 				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
 					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
@@ -248,13 +260,16 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				Price:         currencyValue,
 				PriceModifier: contract.VendorListings[0].Metadata.PriceModifier,
 				Slug:          contract.VendorListings[0].Slug,
-				Thumbnail:     repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+				Thumbnail:     repo.Thumbnail{Tiny: contract.VendorListings[0].Item.Images[0].Tiny, Small: contract.VendorListings[0].Item.Images[0].Small},
 				Title:         contract.VendorListings[0].Item.Title,
 				Type:          "order",
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+			err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 
@@ -266,7 +281,10 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		Address:   output.Address.String(),
 	}
 	records = append(records, record)
-	l.db.Sales().UpdateFunding(orderId, funded, records)
+	err = l.db.Sales().UpdateFunding(orderId, funded, records)
+	if err != nil {
+		log.Error(err)
+	}
 
 	// Save tx metadata
 	var thumbnail string
@@ -279,7 +297,14 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		bumpable = true
 	}
-	if err := l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable}); err != nil {
+	if err := l.db.TxMetadata().Put(repo.Metadata{
+		Txid:       txid,
+		Address:    "",
+		Memo:       title,
+		OrderId:    orderId,
+		Thumbnail:  thumbnail,
+		CanBumpFee: bumpable,
+	}); err != nil {
 		log.Errorf("failed updating tx metadata (%s): %s", txid, err.Error())
 	}
 }
@@ -325,14 +350,17 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			}
 		}
 		n := repo.PaymentNotification{
-			repo.NewNotificationID(),
-			"payment",
-			orderId,
-			funding.String(),
-			contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+			ID:           repo.NewNotificationID(),
+			Type:         "payment",
+			OrderId:      orderId,
+			FundingTotal: funding.String(),
+			CoinType:     contract.BuyerOrder.Payment.AmountValue.Currency.Code,
 		}
 		l.broadcast <- n
-		l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+		err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	record := &wallet.TransactionRecord{
@@ -343,7 +371,10 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		Timestamp: time.Now(),
 	}
 	records = append(records, record)
-	l.db.Purchases().UpdateFunding(orderId, funded, records)
+	err = l.db.Purchases().UpdateFunding(orderId, funded, records)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
@@ -374,7 +405,7 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 				continue
 			}
 			log.Warningf("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
-			l.broadcast <- repo.PremarshalledNotifier{[]byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)}
+			l.broadcast <- repo.PremarshalledNotifier{Payload: []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)}
 		}
 		if err := l.db.Inventory().Put(listing.Slug, variant, newCount); err != nil {
 			log.Errorf("failed updating inventory for listing (%s, %d): %s", listing.Slug, variant, err.Error())
