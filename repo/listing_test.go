@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
@@ -20,12 +22,18 @@ func TestListingUnmarshalJSON(t *testing.T) {
 	}
 
 	for _, e := range examples {
+		t.Logf("unmarshaling fixture (%s)", e)
 		var (
 			fixtureBytes = factory.MustLoadListingFixture(e)
 			_, err       = repo.UnmarshalJSONListing(fixtureBytes)
+			pbListing    = new(pb.SignedListing)
+			pbErr        = jsonpb.UnmarshalString(string(fixtureBytes), pbListing)
 		)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+		}
+		if pbErr != nil {
+			t.Error(pbErr)
 		}
 	}
 }
