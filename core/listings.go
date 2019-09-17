@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"os"
 	"path"
@@ -85,17 +84,7 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 		}
 		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
-	var expectedDivisibility uint32
-	currencyVal, err := listing.GetPricingCurrencyDefn() // ..GetPrice()
-	if err != nil {
-		return repo.SignedListing{}, err
-	}
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Name); err != nil {
-		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
-	} else {
-		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
-	}
-	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
+	return listing.Sign(n.IpfsNode, timeout, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
 
 /*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
@@ -197,13 +186,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		return err
 	}
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
-		currencyVal, err := listing.GetPricingCurrencyDefn() //listing.GetPrice()
-		if err != nil {
-			return err
-		}
-
-		expectedDivisibility := currencyVal.Divisibility
-		err = listing.ValidateCryptoListing(expectedDivisibility)
+		err = listing.ValidateCryptoListing()
 		if err != nil {
 			return err
 		}

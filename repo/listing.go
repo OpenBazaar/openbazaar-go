@@ -19,16 +19,15 @@ import (
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/microcosm-cc/bluemonday"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 const (
@@ -1760,7 +1759,7 @@ func (l *Listing) GetProtoListing() (*pb.Listing, error) {
 }
 
 // Sign - return signedListing
-func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
+func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	handle string, isTestNet bool, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
@@ -1804,7 +1803,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 	}
 
 	// Check the listing data is correct for continuing
-	if err := ValidateListing(l, isTestNet, expectedDivisibility); err != nil {
+	if err := ValidateListing(l, isTestNet); err != nil {
 		return rsl, err
 	}
 
@@ -1885,12 +1884,12 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout, expectedDivisibility uint32,
 }
 
 // ValidateCryptoListing - check cryptolisting
-func (l *Listing) ValidateCryptoListing(div uint32) error {
+func (l *Listing) ValidateCryptoListing() error {
 	listing, err := l.GetProtoListing()
 	if err != nil {
 		return err
 	}
-	return validateCryptocurrencyListing(listing, div)
+	return validateCryptocurrencyListing(listing)
 }
 
 // ValidateSkus - check listing skus
@@ -1918,7 +1917,7 @@ func (l *Listing) GetInventory() (map[int]int64, error) {
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func ValidateListing(l *Listing, testnet bool, expectedDivisibility uint32) (err error) {
+func ValidateListing(l *Listing, testnet bool) (err error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
 		return err
@@ -2239,7 +2238,7 @@ func ValidateListing(l *Listing, testnet bool, expectedDivisibility uint32) (err
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing, expectedDivisibility)
+		err := validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -2335,7 +2334,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing, expectedDivisibility uint32) error {
+func validateCryptocurrencyListing(listing *pb.Listing) error {
 	switch {
 	case len(listing.Coupons) > 0:
 		return ErrCryptocurrencyListingIllegalField("coupons")
@@ -2351,10 +2350,13 @@ func validateCryptocurrencyListing(listing *pb.Listing, expectedDivisibility uin
 		//	return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.PricingCurrencyDefn.Divisibility != expectedDivisibility {
+	localDef, err := LoadCurrencyDefinitions().Lookup(listing.Metadata.PricingCurrencyDefn.Code)
+	if err != nil {
+		return ErrCurrencyDefinitionUndefined
+	}
+	if uint(listing.Metadata.PricingCurrencyDefn.Divisibility) != localDef.Divisibility {
 		return ErrListingCoinDivisibilityIncorrect
 	}
-
 	return nil
 }
 
