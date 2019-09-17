@@ -81,9 +81,12 @@ func (i *InventoryDB) Get(slug string) (map[int]int64, error) {
 		var variantIndex int
 		err = rows.Scan(&slug, &variantIndex, &count)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("scanning inventory for (%s): %s", slug, err.Error())
 		}
 		ret[variantIndex] = count
+	}
+	if err := rows.Err(); err != nil {
+		log.Errorf("scanning inventory for (%s): %s", slug, err.Error())
 	}
 	return ret, nil
 }
