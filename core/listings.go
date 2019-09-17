@@ -56,28 +56,21 @@ type ListingData struct {
 
 // SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
-	timeout := uint32(0)
+	var (
+		handle      string
+		timeout     = listing.GetEscrowTimeout()
+		currencyMap = make(map[string]bool)
+	)
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
-		//
-		escrow, err := listing.GetEscrowTimeout()
-		if err == nil {
-			if escrow == 0 {
-				timeout = 1
-			} else {
-				timeout = escrow
-			}
+		if timeout == 0 {
+			timeout = 1
 		}
-
-	} else {
-		timeout = repo.EscrowTimeout
 	}
 	profile, err := n.GetProfile()
-	handle := ""
 	if err == nil {
 		handle = profile.Handle
 	}
-	currencyMap := make(map[string]bool)
 	currencies, err := listing.GetAcceptedCurrencies()
 	if err != nil {
 		return repo.SignedListing{}, err

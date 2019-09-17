@@ -64,8 +64,8 @@ const (
 	URLMaxCharacters = 2000
 	// MaxCountryCodes - max country codes
 	MaxCountryCodes = 255
-	// EscrowTimeout - escrow timeout in hours
-	EscrowTimeout = 1080
+	// DefaultEscrowTimeout - escrow timeout in hours
+	DefaultEscrowTimeout = 1080
 	// SlugBuffer - buffer size for slug
 	SlugBuffer = 5
 	// PriceModifierMin - min price modifier
@@ -1259,7 +1259,7 @@ func (l *Listing) GetLanguage() (string, error) {
 }
 
 // GetEscrowTimeout return listing's escrow timeout in hours
-func (l *Listing) GetEscrowTimeout() (uint32, error) {
+func (l *Listing) GetEscrowTimeout() uint32 {
 	type escrow struct {
 		Metadata struct {
 			EscrowTimeout uint32 `json:"escrowTimeoutHours"`
@@ -1268,9 +1268,9 @@ func (l *Listing) GetEscrowTimeout() (uint32, error) {
 	var e escrow
 	err := json.Unmarshal(l.ListingBytes, &e)
 	if err != nil {
-		return 0, err
+		return DefaultEscrowTimeout
 	}
-	return e.Metadata.EscrowTimeout, nil
+	return e.Metadata.EscrowTimeout
 }
 
 // GetPriceModifier return listing's price modifier
@@ -1410,10 +1410,6 @@ func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	escrowTimout, err := l.GetEscrowTimeout()
-	if err != nil {
-		return nil, err
-	}
 	priceMod, err := l.GetPriceModifier()
 	if err != nil {
 		return nil, err
@@ -1429,7 +1425,7 @@ func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 		Expiry:              expiry,
 		AcceptedCurrencies:  currs,
 		Language:            lang,
-		EscrowTimeoutHours:  escrowTimout,
+		EscrowTimeoutHours:  l.GetEscrowTimeout(),
 		PriceModifier:       priceMod,
 		PricingCurrencyDefn: currDefn,
 	}
@@ -1975,8 +1971,8 @@ func ValidateListing(l *Listing, testnet bool, expectedDivisibility uint32) (err
 		return fmt.Errorf("language is longer than the max of %d characters", WordMaxCharacters)
 	}
 
-	if !testnet && listing.Metadata.EscrowTimeoutHours != EscrowTimeout {
-		return fmt.Errorf("escrow timeout must be %d hours", EscrowTimeout)
+	if !testnet && listing.Metadata.EscrowTimeoutHours != DefaultEscrowTimeout {
+		return fmt.Errorf("escrow timeout must be %d hours", DefaultEscrowTimeout)
 	}
 	if len(listing.Metadata.AcceptedCurrencies) == 0 {
 		return errors.New("at least one accepted currency must be provided")
