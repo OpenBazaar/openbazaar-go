@@ -87,8 +87,8 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 	return listing.Sign(n.IpfsNode, timeout, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
 
-/*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
-  to make sure the inventory uses the correct variants. */
+// SetListingInventory sets the inventory for the listing in the database. Does some basic validation
+// to make sure the inventory uses the correct variants.
 func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	err := l.ValidateSkus()
 	if err != nil {
@@ -110,18 +110,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 		return err
 	}
 
-	// Update inventory
-	for i, s := range listingInv {
-		err = n.Datastore.Inventory().Put(slug, i, s)
-		if err != nil {
-			return err
-		}
-		_, ok := currentInv[i]
-		if ok {
-			delete(currentInv, i)
-		}
-	}
-	// If SKUs were omitted, set a default with unlimited inventry
+	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
 		err = n.Datastore.Inventory().Put(slug, 0, -1)
 		if err != nil {
@@ -131,7 +120,20 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 		if ok {
 			delete(currentInv, 0)
 		}
+	} else {
+		// Update w provided inventory
+		for i, s := range listingInv {
+			err = n.Datastore.Inventory().Put(slug, i, s)
+			if err != nil {
+				return err
+			}
+			_, ok := currentInv[i]
+			if ok {
+				delete(currentInv, i)
+			}
+		}
 	}
+
 	// Delete anything that did not update
 	for i := range currentInv {
 		err = n.Datastore.Inventory().Delete(slug, i)

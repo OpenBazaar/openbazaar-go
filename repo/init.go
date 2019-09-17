@@ -224,8 +224,7 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 	return mnemonic, nil
 }
 
-/* Returns the directory to store repo data in.
-   It depends on the OS and whether or not we are on testnet. */
+// GetRepoPath returns the directory to store repo data in.
 func GetRepoPath(isTestnet bool, repoPath string) (string, error) {
 	ctx := schema.SchemaContext{
 		TestModeEnabled: isTestnet,
