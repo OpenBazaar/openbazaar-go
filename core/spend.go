@@ -113,6 +113,8 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		}
 	}
 
+	time.Sleep(30 * time.Second)
+
 	txn, err := wal.GetTransaction(*txid)
 	if err != nil {
 		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)

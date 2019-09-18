@@ -48,7 +48,7 @@ class OpenBazaarTestFramework(object):
             self.start_node(self.nodes[i])
 
     def setup_network(self):
-        if self.bitcoind is not None:
+        if self.bitcoind is not None and self.cointype == "BTC":
             self.start_bitcoind()
         self.setup_nodes()
 
@@ -188,7 +188,7 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
-        parser.add_argument('-c', '--cointype', help="cointype to test", action='store_true', default="BTC")
+        parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir

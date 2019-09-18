@@ -59,7 +59,7 @@ var (
 		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), TestnetCode: CurrencyCode("TBCH"), CurrencyType: Crypto, Divisibility: 8},
 		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), TestnetCode: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8},
 		"ZEC": {Name: "Zcash", Code: CurrencyCode("ZEC"), TestnetCode: CurrencyCode("TZEC"), CurrencyType: Crypto, Divisibility: 8},
-		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18},
+		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18, TestnetCode: CurrencyCode("ETHT")},
 
 		// Fiat
 		"AED": {Name: "UAE Dirham", Code: CurrencyCode("AED"), CurrencyType: Fiat, Divisibility: 2},

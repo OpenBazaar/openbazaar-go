@@ -3066,7 +3066,6 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cases, queryCount, err := i.node.Datastore.Cases().GetAll(orderStates, searchTerm, sortByAscending, sortByRead, limit, []string{})
-	fmt.Println("in get cases .. : ", err, "   cases : ", cases, "   qc  ", queryCount)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

@@ -1,12 +1,12 @@
 #!/bin/bash
-for SCRIPT in `ls | grep -v "eth_"`
+for SCRIPT in `ls | grep "eth_"`
 do
    b=$(basename $SCRIPT)
    extension="${b##*.}"
    p="py"
    if [ $extension = $p ]
    then
-      python3 $SCRIPT -b $1 -d $2 $3
-      ### echo $SCRIPT
+      python3 $SCRIPT -b $1 -c "ETH" $2
+      ## echo $SCRIPT
    fi
 done

@@ -42,7 +42,7 @@ import (
 
 const (
 	// InfuraAPIKey is the hard coded Infura API key
-	InfuraAPIKey = "openbazaar"
+	InfuraAPIKey = "PPA251WIHYesPSSgzLQj"
 )
 
 var (
@@ -455,17 +455,23 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 
 // GetTransaction - Get info on a specific transaction
 func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
+	log.Info("in eth wallet get txn ... : ", txid.String(), "   ", common.HexToHash(txid.String()))
 	tx, _, err := wallet.client.GetTransaction(common.HexToHash(txid.String()))
+	log.Info("after get txn  , err  : ", err, "   tx  : ", tx)
 	if err != nil {
 		return wi.Txn{}, err
 	}
 
+	log.Info("before chain id ")
 	chainID, err := wallet.client.NetworkID(context.Background())
+	log.Info("after chain id :  ", chainID, err)
 	if err != nil {
 		return wi.Txn{}, err
 	}
 
+	log.Info("before as message ...", types.NewEIP155Signer(chainID))
 	msg, err := tx.AsMessage(types.NewEIP155Signer(chainID)) // HomesteadSigner{})
+	log.Info("after as message .. ", msg, err)
 	if err != nil {
 		return wi.Txn{}, err
 	}
@@ -507,7 +513,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 
 // Spend - Send ether to an external wallet
 func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
-
+	log.Info("in eth wallet spend ....")
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
@@ -600,6 +606,8 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			}
 		}
 	}
+
+	log.Info("after the spend is done : err ", err, "  hash : ", hash.Hex())
 
 	if err == nil {
 		h, err = chainhash.NewHashFromStr(strings.TrimPrefix(hash.Hex(), "0x"))
