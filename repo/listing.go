@@ -1671,21 +1671,6 @@ func (l *Listing) GetCoupons() ([]*pb.Listing_Coupon, error) {
 	return ret, nil
 }
 
-/*
-	type Listing struct {
-		Slug                 string                    `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
-		VendorID             *ID                       `protobuf:"bytes,2,opt,name=vendorID,proto3" json:"vendorID,omitempty"`
-		Metadata             *Listing_Metadata         `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
-		Item                 *Listing_Item             `protobuf:"bytes,4,opt,name=item,proto3" json:"item,omitempty"`
-		ShippingOptions      []*Listing_ShippingOption `protobuf:"bytes,5,rep,name=shippingOptions,proto3" json:"shippingOptions,omitempty"`
-		Taxes                []*Listing_Tax            `protobuf:"bytes,6,rep,name=taxes,proto3" json:"taxes,omitempty"`
-		Coupons              []*Listing_Coupon         `protobuf:"bytes,7,rep,name=coupons,proto3" json:"coupons,omitempty"`
-		Moderators           []string                  `protobuf:"bytes,8,rep,name=moderators,proto3" json:"moderators,omitempty"`
-		TermsAndConditions   string                    `protobuf:"bytes,9,opt,name=termsAndConditions,proto3" json:"termsAndConditions,omitempty"`
-		RefundPolicy         string                    `protobuf:"bytes,10,opt,name=refundPolicy,proto3" json:"refundPolicy,omitempty"`
-	}
-*/
-
 // GetProtoListing - return pb.Listing
 func (l *Listing) GetProtoListing() (*pb.Listing, error) {
 	if l.ProtoListing != nil {
