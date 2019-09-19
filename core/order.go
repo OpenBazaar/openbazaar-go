@@ -130,7 +130,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
-
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
 			return "", "", retCurrency, false, err
