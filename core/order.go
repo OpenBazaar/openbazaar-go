@@ -829,7 +829,7 @@ func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 	if item.PaymentAddress == "" {
 		return ErrCryptocurrencyPurchasePaymentAddressRequired
 	}
-	if len(item.PaymentAddress) < CryptocurrencyPurchasePaymentAddressMaxLength {
+	if len(item.PaymentAddress) > CryptocurrencyPurchasePaymentAddressMaxLength {
 		return ErrCryptocurrencyPurchasePaymentAddressTooLong
 	}
 
