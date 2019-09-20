@@ -395,7 +395,10 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		fmt.Println(err)
 	}
 
-	lbytes := *objmap["listing"]
+	lbytes, ok := objmap["listing"]
+	if !ok {
+		fmt.Println("expected to find listing, but was not present")
+	}
 
 	m1 := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -438,7 +441,7 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 			},
 			ListingVersion:   5,
 			ListingBytes:     []byte(b0),
-			OrigListingBytes: lbytes,
+			OrigListingBytes: *lbytes,
 			ProtoListing:     sl.Listing,
 			Vendor:           peerInfo,
 		}
@@ -448,8 +451,8 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	}
 
 	listing0 := Listing{
-		ListingBytes:     lbytes,
-		OrigListingBytes: lbytes,
+		ListingBytes:     *lbytes,
+		OrigListingBytes: *lbytes,
 		Metadata: ListingMetadata{
 			Version: version,
 		},
@@ -588,8 +591,12 @@ func ExtractIDFromSignedListing(data []byte) (*pb.ID, error) {
 		return vendorPlay, err
 	}
 
-	lbytes := *objmap["listing"]
-	return ExtractIDFromListing(lbytes)
+	lbytes, ok := objmap["listing"]
+	if !ok {
+		fmt.Println("expected to find listing, but was not present")
+		return nil, errors.New("listing json not found")
+	}
+	return ExtractIDFromListing(*lbytes)
 }
 
 // ExtractIDFromListing returns pb.ID of the listing
