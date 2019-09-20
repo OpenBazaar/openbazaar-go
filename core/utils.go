@@ -120,7 +120,7 @@ func (n *OpenBazaarNode) NormalizeCurrencyCode(currencyCode string) string {
 	if n.TestnetEnable {
 		return c.TestnetString()
 	}
-	return c.String()
+	return c.MainnetString()
 }
 
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {

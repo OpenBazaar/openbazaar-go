@@ -62,25 +62,17 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 
 // UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
-	if err := ValidateProfile(profile); err != nil {
-		return err
-	}
-
 	mPubkey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting public key: %s", err.Error())
 	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-
 	var acceptedCurrencies []string
-	settingsData, _ := n.Datastore.Settings().Get()
+	settingsData, err := n.Datastore.Settings().Get()
+	if err != nil {
+		log.Debug("settings not set, using default preferred currencies")
+	}
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
 			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
@@ -94,6 +86,28 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	profile.Currencies = acceptedCurrencies
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
+
+		// Update moderator info fixed fee details
+		if profile.ModeratorInfo.Fee != nil {
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
+				if profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil {
+					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFeeValue)
+					if err != nil {
+						return fmt.Errorf("unable to parse fixed fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.String(), err.Error())
+					}
+					normalizedFee, err := fixedFee.Normalize()
+					if err != nil {
+						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Divisibility)
+						return fmt.Errorf("converting divisibility for fixed fee (%s) from (%d) to (%d): %s", fixedFee.Currency.String(), fixedFee.Currency.Divisibility, feeDivisibility, err.Error())
+					}
+					pbNormalizedFee, err := normalizedFee.Protobuf()
+					if err != nil {
+						return fmt.Errorf("setting moderator fixed fee value: %s", err.Error())
+					}
+					profile.ModeratorInfo.Fee.FixedFeeValue = pbNormalizedFee
+				}
+			}
+		}
 	}
 
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
@@ -102,6 +116,16 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return err
 	}
 	profile.LastModified = ts
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	out, err := m.MarshalToString(profile)
 	if err != nil {
 		return err

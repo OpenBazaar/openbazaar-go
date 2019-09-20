@@ -41,8 +41,6 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = vendor["gateway_url"] + "ob/listing"
-        print("api_url   ", api_url)
-        print(json.dumps(listing_json, indent=4))
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Listing post endpoint not found")

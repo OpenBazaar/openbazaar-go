@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"os"
 	"path"
@@ -56,31 +55,21 @@ type ListingData struct {
 
 // SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
-	log.Info("in sign listing ....")
-	timeout := uint32(0)
-
-	log.Info("is test net  : ", n.TestNetworkEnabled() || n.RegressionNetworkEnabled())
+	var (
+		handle      string
+		timeout     = listing.GetEscrowTimeout()
+		currencyMap = make(map[string]bool)
+	)
 	// Temporary hack to work around test env shortcomings
 	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
-		//
-		escrow, err := listing.GetEscrowTimeout()
-		if err == nil {
-			if escrow == 0 {
-				timeout = 1
-			} else {
-				timeout = escrow
-			}
+		if timeout == 0 {
+			timeout = 1
 		}
-
-	} else {
-		timeout = repo.EscrowTimeout
 	}
 	profile, err := n.GetProfile()
-	handle := ""
 	if err == nil {
 		handle = profile.Handle
 	}
-	currencyMap := make(map[string]bool)
 	currencies, err := listing.GetAcceptedCurrencies()
 	if err != nil {
 		return repo.SignedListing{}, err
@@ -95,21 +84,11 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 		}
 		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
-	var expectedDivisibility uint32
-	currencyVal, err := listing.GetPricingCurrencyDefn() // ..GetPrice()
-	if err != nil {
-		return repo.SignedListing{}, err
-	}
-	if wallet, err := n.Multiwallet.WalletForCurrencyCode(currencyVal.Name); err != nil {
-		expectedDivisibility = uint32(DefaultCurrencyDivisibility)
-	} else {
-		expectedDivisibility = uint32(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
-	}
-	return listing.Sign(n.IpfsNode, timeout, expectedDivisibility, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
+	return listing.Sign(n.IpfsNode, timeout, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
 
-/*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
-  to make sure the inventory uses the correct variants. */
+// SetListingInventory sets the inventory for the listing in the database. Does some basic validation
+// to make sure the inventory uses the correct variants.
 func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	err := l.ValidateSkus()
 	if err != nil {
@@ -131,18 +110,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 		return err
 	}
 
-	// Update inventory
-	for i, s := range listingInv {
-		err = n.Datastore.Inventory().Put(slug, i, s)
-		if err != nil {
-			return err
-		}
-		_, ok := currentInv[i]
-		if ok {
-			delete(currentInv, i)
-		}
-	}
-	// If SKUs were omitted, set a default with unlimited inventry
+	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
 		err = n.Datastore.Inventory().Put(slug, 0, -1)
 		if err != nil {
@@ -152,7 +120,20 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 		if ok {
 			delete(currentInv, 0)
 		}
+	} else {
+		// Update w provided inventory
+		for i, s := range listingInv {
+			err = n.Datastore.Inventory().Put(slug, i, s)
+			if err != nil {
+				return err
+			}
+			_, ok := currentInv[i]
+			if ok {
+				delete(currentInv, i)
+			}
+		}
 	}
+
 	// Delete anything that did not update
 	for i := range currentInv {
 		err = n.Datastore.Inventory().Delete(slug, i)
@@ -210,14 +191,7 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 		return err
 	}
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
-		//log.Info("should not appear ... this is crypto")
-		currencyVal, err := listing.GetPricingCurrencyDefn() //listing.GetPrice()
-		if err != nil {
-			return err
-		}
-
-		expectedDivisibility := currencyVal.Divisibility
-		err = listing.ValidateCryptoListing(expectedDivisibility)
+		err = listing.ValidateCryptoListing()
 		if err != nil {
 			return err
 		}

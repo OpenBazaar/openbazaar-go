@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -131,7 +130,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
-
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
 			return "", "", retCurrency, false, err
@@ -564,7 +562,6 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 	order.Version = 2
 	order.Shipping = shipping
 	order.AlternateContactInfo = data.AlternateContactInfo
-	expectedDivisibility := uint32(math.Log10(float64(wal.ExchangeRates().UnitsPerCoin())))
 
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
@@ -603,7 +600,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		var listing *repo.Listing
 		if !exists {
-			sl, err := getSignedListing(n, contract, item, expectedDivisibility)
+			sl, err := getSignedListing(n, contract, item)
 			if err != nil {
 				return nil, err
 			}
@@ -699,7 +696,7 @@ func dedupeCoupons(itemCoupons []string) []string {
 	return coupons
 }
 
-func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item, div uint32) (*repo.Listing, error) {
+func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item) (*repo.Listing, error) {
 	// Let's fetch the listing, should be cached
 	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 	if err != nil {
@@ -717,7 +714,7 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	if err := validateVendorID(&sl.RListing); err != nil {
 		return nil, err
 	}
-	if err := repo.ValidateListing(&sl.RListing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), div); err != nil {
+	if err := repo.ValidateListing(&sl.RListing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
 		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
 	}
 	if err := verifySignaturesOnListing(sl); err != nil {
