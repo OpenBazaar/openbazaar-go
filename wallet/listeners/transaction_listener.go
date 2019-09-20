@@ -58,6 +58,9 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	log.Info("Transaction received", cb.Txid, cb.Height)
+	log.Info("inputs : ", cb.Inputs)
+	log.Info("outputs : ", cb.Outputs)
+	log.Info("value : ", cb.Value)
 
 	l.Lock()
 	defer l.Unlock()
@@ -85,9 +88,12 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 	}
 	for _, input := range cb.Inputs {
+
 		if input.LinkedAddress == nil {
 			continue
 		}
+		log.Info("for each input : ")
+		log.Info("linked address : ", input.LinkedAddress.String())
 		isForSale := true
 		contract, state, funded, records, err := l.getOrderDetails(input.OrderID, input.LinkedAddress, true)
 		if err != nil {
@@ -101,6 +107,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 
+		log.Info("isfor sale : ", isForSale)
+		log.Info("records : ")
+		log.Info(records)
+
 		orderId, err := calcOrderId(contract.BuyerOrder)
 		if err != nil {
 			continue
@@ -108,6 +118,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 
 		fundsReleased := true
 		for i, r := range records {
+			log.Info("record detail : ")
+			log.Info("r.addr : ", r.Address)
+			log.Info(input.LinkedAddress.String())
+			log.Info("rec val : ", records[i].Value.String())
 			if util.AreAddressesEqual(input.LinkedAddress.String(), r.Address) {
 				records[i].Spent = true
 			}
@@ -115,6 +129,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 				fundsReleased = false
 			}
 		}
+		log.Info("after recs parsing : fund released : ", fundsReleased)
 		val := new(big.Int).Mul(&input.Value, big.NewInt(-1))
 		record := &wallet.TransactionRecord{
 			Timestamp: time.Now(),

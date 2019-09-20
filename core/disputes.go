@@ -541,7 +541,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if !ok {
 			return errors.New("invalid total out amount")
 		}
-		totalOut.Add(totalOut, n)
+		totalOut = new(big.Int).Add(totalOut, n)
 	}
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
@@ -563,6 +563,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: modAddr,
 			Value:   modValue,
+			Index:   0,
 		}
 		outputs = append(outputs, out)
 		outMap["moderator"] = out
@@ -580,6 +581,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
 			Value:   *buyerValue,
+			Index:   1,
 		}
 		outputs = append(outputs, out)
 		outMap["buyer"] = out
@@ -595,10 +597,16 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,
 			Value:   *vendorValue,
+			Index:   2,
 		}
 		outputs = append(outputs, out)
 		outMap["vendor"] = out
 	}
+
+	log.Info("outmap : ")
+	log.Info(outMap)
+	log.Info("outputs  : ")
+	log.Info(outputs)
 
 	if len(outputs) == 0 {
 		return errors.New("transaction has no outputs")
@@ -626,6 +634,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if len(inputs) == 0 {
 		return errors.New("transaction has no inputs")
 	}
+
+	log.Info("inputs  : ")
+	log.Info(inputs)
 
 	// Calculate total fee
 	defaultFee := wal.GetFeePerByte(wallet.NORMAL)
@@ -1033,6 +1044,9 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 
 // ReleaseFunds - release funds
 func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	log.Info("in release funds .... ")
+	log.Info("records : ")
+	log.Info(records)
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
@@ -1044,6 +1058,8 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create inputs
+	log.Info("creating inputs .... ")
+	log.Info(contract.DisputeResolution.Payout.Inputs)
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
 		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
@@ -1060,8 +1076,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 			Value:         *n,
 			OrderID:       orderID,
 		}
+		log.Info("the input is : ", input)
 		inputs = append(inputs, input)
 	}
+
+	log.Info("the total inputs : ")
+	log.Info(inputs)
 
 	if len(inputs) == 0 {
 		return errors.New("transaction has no inputs")
@@ -1072,6 +1092,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create outputs
+	log.Info("before create outputs ... ")
+	log.Info("buyer : ", contract.DisputeResolution.Payout.BuyerOutput)
+	log.Info("vendor : ", contract.DisputeResolution.Payout.VendorOutput)
+	log.Info("mod : ", contract.DisputeResolution.Payout.ModeratorOutput)
 	var outputs []wallet.TransactionOutput
 	if contract.DisputeResolution.Payout.BuyerOutput != nil {
 		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.BuyerOutput)
@@ -1121,6 +1145,9 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		}
 		outputs = append(outputs, output)
 	}
+
+	log.Info("outputs : ")
+	log.Info(outputs)
 
 	// Create signing key
 	chaincodeBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
