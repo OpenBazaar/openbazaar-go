@@ -21,38 +21,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-type price struct {
-	CurrencyCode string             `json:"currencyCode"`
-	Amount       repo.CurrencyValue `json:"amount"`
-	Modifier     float32            `json:"modifier"`
-}
-type thumbnail struct {
-	Tiny   string `json:"tiny"`
-	Small  string `json:"small"`
-	Medium string `json:"medium"`
-}
-
-// ListingData - represent a listing
-type ListingData struct {
-	Hash               string    `json:"hash"`
-	Slug               string    `json:"slug"`
-	Title              string    `json:"title"`
-	Categories         []string  `json:"categories"`
-	NSFW               bool      `json:"nsfw"`
-	ContractType       string    `json:"contractType"`
-	Description        string    `json:"description"`
-	Thumbnail          thumbnail `json:"thumbnail"`
-	Price              price     `json:"price"`
-	ShipsTo            []string  `json:"shipsTo"`
-	FreeShipping       []string  `json:"freeShipping"`
-	Language           string    `json:"language"`
-	AverageRating      float32   `json:"averageRating"`
-	RatingCount        uint32    `json:"ratingCount"`
-	ModeratorIDs       []string  `json:"moderators"`
-	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
-	CoinType           string    `json:"coinType"`
-}
-
 // SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
 	var (
