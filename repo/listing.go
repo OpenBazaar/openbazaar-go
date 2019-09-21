@@ -328,6 +328,8 @@ type Listing struct {
 	ListingVersion   uint32 `json:"-"`
 
 	ProtoListing *pb.Listing `json:"-"`
+
+	proto.Message
 }
 
 func (l *Listing) Reset()         { *l = Listing{} }
@@ -367,6 +369,8 @@ type SignedListing struct {
 	ProtoListing *pb.Listing `json:"-"`
 
 	ProtoSignedListing *pb.SignedListing `json:"-"`
+
+	proto.Message
 }
 
 func (l *SignedListing) Reset()         { *l = SignedListing{} }
