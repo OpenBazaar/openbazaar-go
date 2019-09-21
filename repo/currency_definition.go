@@ -232,7 +232,7 @@ func (c *CurrencyDefinition) String() string {
 		debug.PrintStack()
 		return "nil"
 	}
-	return fmt.Sprintf("%s-%d", c.Code.String(), c.Divisibility)
+	return fmt.Sprintf("%s(div%d)", c.Code.String(), c.Divisibility)
 }
 
 // MainnetString returns a readable representation of the CurrencyDefinition on mainnet
