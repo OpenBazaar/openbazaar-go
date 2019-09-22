@@ -133,17 +133,6 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		return nil, err
 	}
 
-	out, err := m.MarshalToString(l)
-	if err != nil {
-		return nil, err
-	}
-
-	out1, err := json.Marshal(out)
-	if err != nil {
-		return nil, err
-	}
-	log.Info(len(out1))
-
 	listing0 := Listing{
 		Slug:               l.Slug,
 		TermsAndConditions: l.TermsAndConditions,
