@@ -26,49 +26,41 @@ var (
 // CurrencyValue represents the amount and variety of currency
 type CurrencyValue struct {
 	Amount   *big.Int
-	Currency *CurrencyDefinition
+	Currency CurrencyDefinition
 }
 
 func (c *CurrencyValue) MarshalJSON() ([]byte, error) {
-	type currencyJson struct {
+	var value = struct {
 		Amount   string             `json:"amount"`
 		Currency CurrencyDefinition `json:"currency"`
-	}
-
-	c0 := currencyJson{
+	}{
 		Amount:   "0",
-		Currency: CurrencyDefinition{},
-		//Amount:   c.Amount.String(),
-		//Currency: *c.Currency,
+		Currency: c.Currency,
 	}
-
 	if c.Amount != nil {
-		c0.Amount = c.Amount.String()
+		value.Amount = c.Amount.String()
 	}
 
-	if c.Currency != nil {
-		c0.Currency = *c.Currency
-	}
-
-	return json.Marshal(c0)
+	return json.Marshal(value)
 
 }
 
 func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
-	type currencyJson struct {
+	var value struct {
 		Amount   string             `json:"amount"`
 		Currency CurrencyDefinition `json:"currency"`
 	}
-
-	var c0 currencyJson
-
-	err := json.Unmarshal(b, &c0)
-	if err == nil {
-		c.Amount, _ = new(big.Int).SetString(c0.Amount, 10)
-		//c.Currency, err = LoadCurrencyDefinitions().Lookup(c0.Currency.Code.String())
-		c.Currency = &c0.Currency
+	err := json.Unmarshal(b, &value)
+	if err != nil {
+		return err
+	}
+	amt, ok := new(big.Int).SetString(value.Amount, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount (%s)", value.Amount)
 	}
 
+	c.Amount = amt
+	c.Currency = value.Currency
 	return err
 }
 
@@ -77,16 +69,16 @@ func NewCurrencyValueFromProtobuf(value *pb.CurrencyValue) (*CurrencyValue, erro
 	if err != nil {
 		return nil, err
 	}
-	newCurrencyDef := *(cv.Currency)
+	newCurrencyDef := cv.Currency
 	newCurrencyDef.Divisibility = uint(value.Currency.Divisibility)
-	cv.Currency = &newCurrencyDef
+	cv.Currency = newCurrencyDef
 	return cv, nil
 }
 
 // NewCurrencyValueWithLookup accepts a string value as a base10 integer
 // and uses the currency code to lookup the CurrencyDefinition
 func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, error) {
-	def, err := LoadCurrencyDefinitions().Lookup(currencyCode)
+	def, err := AllCurrencies().Lookup(currencyCode)
 	if err != nil {
 		return nil, err
 	}
@@ -98,19 +90,19 @@ func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, er
 
 // NewCurrencyValueFromInt is a convenience function which converts an int64
 // into a string and passes the arguments to NewCurrencyValue
-func NewCurrencyValueFromInt(amount int64, currency *CurrencyDefinition) (*CurrencyValue, error) {
+func NewCurrencyValueFromInt(amount int64, currency CurrencyDefinition) (*CurrencyValue, error) {
 	return NewCurrencyValue(strconv.FormatInt(amount, 10), currency)
 }
 
 // NewCurrencyValueFromUint is a convenience function which converts an int64
 // into a string and passes the arguments to NewCurrencyValue
-func NewCurrencyValueFromUint(amount uint64, currency *CurrencyDefinition) (*CurrencyValue, error) {
+func NewCurrencyValueFromUint(amount uint64, currency CurrencyDefinition) (*CurrencyValue, error) {
 	return NewCurrencyValue(strconv.FormatUint(amount, 10), currency)
 }
 
 // NewCurrencyValue accepts string amounts and currency codes, and creates
 // a valid CurrencyValue
-func NewCurrencyValue(amount string, currency *CurrencyDefinition) (*CurrencyValue, error) {
+func NewCurrencyValue(amount string, currency CurrencyDefinition) (*CurrencyValue, error) {
 	var i, ok = new(big.Int).SetString(amount, 10)
 	if !ok {
 		return nil, ErrCurrencyValueAmountInvalid
@@ -181,9 +173,6 @@ func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
 	if v == nil || other == nil {
 		return false
 	}
-	if v.Currency == nil || other.Currency == nil {
-		return false
-	}
 	if !v.Currency.Equal(other.Currency) {
 		if v.Currency.Code == other.Currency.Code {
 			vN, err := v.Normalize()
@@ -203,7 +192,7 @@ func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
 
 // Normalize updates the CurrencyValue to match the divisibility of the locally defined CurrencyDefinition
 func (v *CurrencyValue) Normalize() (*CurrencyValue, error) {
-	localDef, err := LoadCurrencyDefinitions().Lookup(string(v.Currency.Code))
+	localDef, err := AllCurrencies().Lookup(string(v.Currency.Code))
 	if err != nil {
 		return nil, err
 	}
@@ -218,16 +207,16 @@ func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, error) {
 	if v.Currency.Divisibility == div {
 		return v, nil
 	}
-	defWithNewDivisibility := *(v.Currency)
+	defWithNewDivisibility := v.Currency
 	defWithNewDivisibility.Divisibility = div
-	return v.ConvertTo(&defWithNewDivisibility, 1.0)
+	return v.ConvertTo(defWithNewDivisibility, 1.0)
 }
 
 // ConvertTo will perform the following math given its arguments are valid:
 // v.Amount * exchangeRatio * (final.Currency.Divisibility/v.Currency.Divisibility)
 // where v is the receiver, exchangeRatio is the ratio of (1 final.Currency/v.Currency)
 // v and final must both be Valid() and exchangeRatio must not be zero.
-func (v *CurrencyValue) ConvertTo(final *CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, error) {
+func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, error) {
 	if err := v.Valid(); err != nil {
 		return nil, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}

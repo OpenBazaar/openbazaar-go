@@ -46,7 +46,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "physical-listing",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(1235000000),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
 					CurrencyType: "crypto",
@@ -61,7 +61,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "physical-good-listing",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(12345678000),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
 					Divisibility: 8,
 					CurrencyType: "crypto",
@@ -76,7 +76,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "digital-good-listing",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(1320),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
 					Divisibility: 2,
 					CurrencyType: "fiat",
@@ -91,7 +91,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "service-listing",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(9877000000),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
 					Divisibility: 8,
 					CurrencyType: "crypto",
@@ -106,7 +106,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "ltc-xmr",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(0),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("XMR"),
 					Divisibility: 8,
 					CurrencyType: "crypto",
@@ -121,7 +121,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedSlug:     "eth-1",
 			expectedPrice: repo.CurrencyValue{
 				Amount: big.NewInt(100),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
 					Divisibility: 2,
 					CurrencyType: "fiat",

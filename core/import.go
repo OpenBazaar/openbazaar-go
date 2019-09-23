@@ -646,5 +646,9 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 }
 
 //func (n *OpenBazaarNode) listingCurrencyIsBTC(l *pb.Listing) bool {
-//	return n.NormalizeCurrencyCode(l.Metadata.PricingCurrencyDefn.Code) == "BTC"
+//def, err := n.LookupCurrency(l.Metadata.PricingCurrencyDefn.CurrencyCode())
+//if err != nil {
+//return false
+//}
+//return def.CurrencyCode() == "BTC"
 //}
