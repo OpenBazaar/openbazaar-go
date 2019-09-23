@@ -3742,11 +3742,8 @@ func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Reque
 	}
 	defer file.Close()
 
-	err = i.node.ImportListings(file)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// TODO: add the import listings function call
+
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
