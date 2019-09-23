@@ -1252,7 +1252,7 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount big.Int) (big.Int, error) {
-	const reserveCurrency = "BTC"
+	var reserveCurrency = n.reserveCurrency()
 	var (
 		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
 		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
@@ -1312,6 +1312,13 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		return *big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
 	}
 	return *resultValue.Amount, nil
+}
+
+func (n *OpenBazaarNode) reserveCurrency() string {
+	if n.TestnetEnable {
+		return "TBTC"
+	}
+	return "BTC"
 }
 
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {

@@ -11,7 +11,7 @@ import (
 
 func TestListingIndexUnmarshalJSON(t *testing.T) {
 	var examples = map[string][]repo.ListingIndexData{
-		"v4-index": []repo.ListingIndexData{
+		"v4-index": {
 			{
 				Hash:         "QmbAhieQdN7WzDktpkZ3ZDuv3AKF3DxG3SMFyEcVg3HGcP",
 				Slug:         "test-service",
@@ -53,7 +53,7 @@ func TestListingIndexUnmarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		"v5-index": []repo.ListingIndexData{
+		"v5-index": {
 			{
 				Hash:         "QmcCcbMysMUY4jFUoyYzgrLhJX6N6y5NhRpauCAr8etYn5",
 				Slug:         "ron-swanson-tshirt",
