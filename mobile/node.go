@@ -28,6 +28,8 @@ import (
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
+	_ "net/http/pprof"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -55,7 +57,6 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -167,7 +168,10 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
-	ioutil.WriteFile(path.Join(config.RepoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	err = ioutil.WriteFile(path.Join(config.RepoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	if err != nil {
+		log.Error(err)
+	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(config.RepoPath)
@@ -489,9 +493,15 @@ func (n *Node) start() error {
 
 		n.OpenBazaarNode.PublishLock.Unlock()
 		publishUnlocked = true
-		n.OpenBazaarNode.UpdateFollow()
+		err = n.OpenBazaarNode.UpdateFollow()
+		if err != nil {
+			log.Error(err)
+		}
 		if !n.OpenBazaarNode.InitalPublishComplete {
-			n.OpenBazaarNode.SeedNode()
+			err = n.OpenBazaarNode.SeedNode()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		n.OpenBazaarNode.SetUpRepublisher(republishInterval)
 	}()

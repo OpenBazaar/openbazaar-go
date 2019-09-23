@@ -41,7 +41,10 @@ func TestGetAll(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
-		rand.Read(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			t.Log(err)
+		}
 		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
@@ -225,7 +228,10 @@ func TestGetLastKeyIndex(t *testing.T) {
 	var last []byte
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
-		rand.Read(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			t.Log(err)
+		}
 		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
@@ -236,7 +242,10 @@ func TestGetLastKeyIndex(t *testing.T) {
 	if err != nil || idx != 99 || used {
 		t.Error("Failed to fetch correct last index")
 	}
-	kdb.MarkKeyAsUsed(last)
+	err = kdb.MarkKeyAsUsed(last)
+	if err != nil {
+		t.Log(err)
+	}
 	_, used, err = kdb.GetLastKeyIndex(wallet.EXTERNAL)
 	if err != nil || !used {
 		t.Error("Failed to fetch correct last index")
@@ -251,7 +260,10 @@ func TestGetPathForKey(t *testing.T) {
 	defer teardown()
 
 	b := make([]byte, 32)
-	rand.Read(b)
+	_, err = rand.Read(b)
+	if err != nil {
+		t.Log(err)
+	}
 	err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: 15})
 	if err != nil {
 		t.Error(err)
@@ -301,7 +313,10 @@ func TestKeyNotFound(t *testing.T) {
 	defer teardown()
 
 	b := make([]byte, 32)
-	rand.Read(b)
+	_, err = rand.Read(b)
+	if err != nil {
+		t.Log(err)
+	}
 	_, err = kdb.GetPathForKey(b)
 	if err == nil {
 		t.Error("Return key when it shouldn't have")
@@ -317,7 +332,10 @@ func TestGetUnsed(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
-		rand.Read(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			t.Log(err)
+		}
 		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.INTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
@@ -341,22 +359,34 @@ func TestGetLookaheadWindows(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
-		rand.Read(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			t.Log(err)
+		}
 		err := kdb.Put(b, wallet.KeyPath{Purpose: wallet.EXTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
 		if i < 50 {
-			kdb.MarkKeyAsUsed(b)
+			err = kdb.MarkKeyAsUsed(b)
+			if err != nil {
+				t.Log(err)
+			}
 		}
 		b = make([]byte, 32)
-		rand.Read(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			t.Log(err)
+		}
 		err = kdb.Put(b, wallet.KeyPath{Purpose: wallet.INTERNAL, Index: i})
 		if err != nil {
 			t.Error(err)
 		}
 		if i < 50 {
-			kdb.MarkKeyAsUsed(b)
+			err = kdb.MarkKeyAsUsed(b)
+			if err != nil {
+				t.Log(err)
+			}
 		}
 	}
 	windows := kdb.GetLookaheadWindows()

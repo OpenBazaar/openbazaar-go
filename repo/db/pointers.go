@@ -42,10 +42,16 @@ func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 	}
 	_, err = stmt.Exec(pointer.Value.ID.Pretty(), pointer.Cid.String(), pointer.Value.Addrs[0].String(), cancelID, pointer.Purpose, int(time.Now().Unix()))
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

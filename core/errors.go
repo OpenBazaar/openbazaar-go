@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
@@ -17,12 +16,6 @@ var (
 	// ErrPurchaseUnknownListing - unavailable listing err
 	ErrPurchaseUnknownListing = errors.New("order contains a hash of a listing that is not currently for sale")
 
-	// ErrListingDoesNotExist - non-existent listing err
-	ErrListingDoesNotExist = errors.New("listing doesn't exist")
-	// ErrListingAlreadyExists - duplicate listing err
-	ErrListingAlreadyExists = errors.New("listing already exists")
-	// ErrListingCoinDivisibilityIncorrect - coin divisibility err
-	ErrListingCoinDivisibilityIncorrect = errors.New("incorrect coinDivisibility")
 	// ErrPriceCalculationRequiresExchangeRates - exchange rates dependency err
 	ErrPriceCalculationRequiresExchangeRates = errors.New("can't calculate price with exchange rates disabled")
 
@@ -32,9 +25,6 @@ var (
 	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
 	// ErrCryptocurrencyPurchasePaymentAddressTooLong - invalid payment address
 	ErrCryptocurrencyPurchasePaymentAddressTooLong = errors.New("paymentAddress required is too long")
-
-	// ErrCryptocurrencySkuQuantityInvalid - invalid sku qty err
-	ErrCryptocurrencySkuQuantityInvalid = errors.New("cryptocurrency listing quantity must be a non-negative integer")
 
 	// ErrFulfillIncorrectDeliveryType - incorrect delivery type err
 	ErrFulfillIncorrectDeliveryType = errors.New("incorrect delivery type for order")
@@ -94,41 +84,6 @@ func NewErrOutOfInventory(inventoryRemaining int64) ErrOutOfInventory {
 func (err ErrOutOfInventory) Error() string {
 	jsonBytes, _ := json.Marshal(&err)
 	return string(jsonBytes)
-}
-
-// ErrPriceModifierOutOfRange - customize limits for price modifier
-type ErrPriceModifierOutOfRange struct {
-	Min float64
-	Max float64
-}
-
-func (e ErrPriceModifierOutOfRange) Error() string {
-	return fmt.Sprintf("priceModifier out of range: [%.2f, %.2f]", e.Min, e.Max)
-}
-
-// ErrCryptocurrencyListingIllegalField - invalid field err
-type ErrCryptocurrencyListingIllegalField string
-
-func (e ErrCryptocurrencyListingIllegalField) Error() string {
-	return illegalFieldString("cryptocurrency listing", string(e))
-}
-
-// ErrCryptocurrencyPurchaseIllegalField - invalid purchase field err
-type ErrCryptocurrencyPurchaseIllegalField string
-
-func (e ErrCryptocurrencyPurchaseIllegalField) Error() string {
-	return illegalFieldString("cryptocurrency purchase", string(e))
-}
-
-// ErrMarketPriceListingIllegalField - invalid listing field err
-type ErrMarketPriceListingIllegalField string
-
-func (e ErrMarketPriceListingIllegalField) Error() string {
-	return illegalFieldString("market price listing", string(e))
-}
-
-func illegalFieldString(objectType string, field string) string {
-	return fmt.Sprintf("Illegal %s field: %s", objectType, field)
 }
 
 // SendProcessingError will encapsulate the failing state in a message to be sent back to pid

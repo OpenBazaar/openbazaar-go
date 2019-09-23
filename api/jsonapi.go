@@ -45,6 +45,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -518,16 +519,15 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r.Body, ld)
+
+	listingData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
-
-	err = i.node.CreateListing(ld)
+	slug, err := i.node.CreateListing(listingData)
 	if err != nil {
-		if err == core.ErrListingAlreadyExists {
+		if err == repo.ErrListingAlreadyExists {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
@@ -536,20 +536,18 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, ld.Slug))
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, slug))
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.Listing)
-	err := jsonpb.Unmarshal(r.Body, ld)
+	listingData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusConflict, err.Error())
 		return
 	}
-
-	err = i.node.UpdateListing(ld, true)
+	err = i.node.UpdateListing(listingData, true)
 	if err != nil {
-		if err == core.ErrListingDoesNotExist {
+		if err == repo.ErrListingDoesNotExist {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 			return
 		}
@@ -588,7 +586,7 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var data core.PurchaseData
+	var data repo.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -919,7 +917,11 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, nil)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -976,7 +978,11 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -1036,7 +1042,11 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if settings.StoreModerators != nil {
 		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go i.node.NotifyModerators(modsToAdd, modsToDelete)
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
@@ -1782,7 +1792,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
-			id, err := core.ExtractIDFromPointer(p)
+			id, err := ipfs.ExtractIDFromPointer(p)
 			if err != nil {
 				continue
 			}
@@ -1850,7 +1860,12 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				// TODO: if this happens, len(idBytes) != 16
+				// how to handle this
+				log.Error(err)
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -1868,7 +1883,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			foundMu := sync.Mutex{}
 			for p := range peerChan {
 				go func(pi ps.PeerInfo) {
-					pid, err := core.ExtractIDFromPointer(pi)
+					pid, err := ipfs.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
@@ -2178,7 +2193,10 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	i.node.Datastore.Cases().MarkAsRead(orderID)
+	err = i.node.Datastore.Cases().MarkAsRead(orderID)
+	if err != nil {
+		log.Error(err)
+	}
 	SanitizedResponseM(w, out, new(pb.CaseRespApi))
 }
 
@@ -2569,11 +2587,20 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 		}
 	}
 	if subject != "" {
-		go func() {
-			i.node.Datastore.Purchases().MarkAsRead(subject)
-			i.node.Datastore.Sales().MarkAsRead(subject)
-			i.node.Datastore.Cases().MarkAsRead(subject)
-		}()
+		go func(subject string) {
+			err := i.node.Datastore.Purchases().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+			err = i.node.Datastore.Sales().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+			err = i.node.Datastore.Cases().MarkAsRead(subject)
+			if err != nil {
+				log.Error(err)
+			}
+		}(subject)
 	}
 	SanitizedResponse(w, `{}`)
 }
@@ -2812,7 +2839,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				// TODO: if this happens, len(idBytes) != 16
+				// how to handle this
+				log.Error(err)
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -3187,7 +3219,12 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
-	go ipfs.RemoveAll(i.node.IpfsNode, peerID, i.node.IPNSQuorumSize)
+	go func(nd *ipfscore.IpfsNode, peerID string, quorum uint) {
+		err := ipfs.RemoveAll(nd, peerID, quorum)
+		if err != nil {
+			log.Error(err)
+		}
+	}(i.node.IpfsNode, peerID, i.node.IPNSQuorumSize)
 	nodes = append(nodes, peerID)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
@@ -3444,7 +3481,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var data core.PurchaseData
+	var data repo.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -3705,11 +3742,8 @@ func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Reque
 	}
 	defer file.Close()
 
-	err = i.node.ImportListings(file)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// TODO: add the import listings function call
+
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3856,7 +3890,12 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
+	go func(nd *ipfscore.IpfsNode, pid peer.ID, timeout time.Duration, quorum uint, useCache bool) {
+		_, err := ipfs.Resolve(nd, pid, timeout, quorum, useCache)
+		if err != nil {
+			log.Error(err)
+		}
+	}(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
 	fmt.Fprint(w, string(retBytes))
 }
 

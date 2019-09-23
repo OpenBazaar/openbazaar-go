@@ -58,10 +58,16 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		outgoingInt,
 	)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		if err != nil {
+			log.Error(err)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -94,10 +100,16 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 			stm    = "select Count(*) from chat where peerID='" + peerId + "' and read=0 and subject='' and outgoing=0;"
 			row    = c.db.QueryRow(stm)
 		)
-		row.Scan(&count)
+		err = row.Scan(&count)
+		if err != nil {
+			log.Error(err)
+		}
 		stm = "select max(timestamp), message, outgoing from chat where peerID='" + peerId + "' and subject=''"
 		row = c.db.QueryRow(stm)
-		row.Scan(&ts, &m, &outInt)
+		err = row.Scan(&ts, &m, &outInt)
+		if err != nil {
+			log.Error(err)
+		}
 		outgoing := false
 		if outInt > 0 {
 			outgoing = true
@@ -250,13 +262,17 @@ func (c *ChatDB) GetUnreadCount(subject string) (int, error) {
 func (c *ChatDB) DeleteMessage(msgID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.db.Exec("delete from chat where messageID=?", msgID)
+	_, err := c.db.Exec("delete from chat where messageID=?", msgID)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
 func (c *ChatDB) DeleteConversation(peerId string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.db.Exec("delete from chat where peerId=? and subject=''", peerId)
+	_, err := c.db.Exec("delete from chat where peerId=? and subject=''", peerId)
+	log.Error(err)
 	return nil
 }

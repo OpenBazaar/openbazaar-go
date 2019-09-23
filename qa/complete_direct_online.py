@@ -38,8 +38,8 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -100,10 +100,11 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": self.cointype,
             "address": payment_address,
-            "value": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))

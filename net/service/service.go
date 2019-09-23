@@ -102,7 +102,10 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			if err == io.EOF {
 				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
 			}
@@ -127,14 +130,20 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 				log.Debug("received response message with unknown request id: requesting function may have timed out")
 			}
 			ms.requestlk.Unlock()
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			return
 		}
 
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			log.Debug("Got back nil handler from handlerForMsgType")
 			return
 		}
@@ -156,7 +165,10 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 
 		// send out response msg
 		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			log.Debugf("send response error: %s", err)
 			return
 		}

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 
@@ -61,25 +62,17 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 
 // UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
-	if err := ValidateProfile(profile); err != nil {
-		return err
-	}
-
 	mPubkey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting public key: %s", err.Error())
 	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-
 	var acceptedCurrencies []string
-	settingsData, _ := n.Datastore.Settings().Get()
+	settingsData, err := n.Datastore.Settings().Get()
+	if err != nil {
+		log.Debug("settings not set, using default preferred currencies")
+	}
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
 			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
@@ -93,6 +86,28 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	profile.Currencies = acceptedCurrencies
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
+
+		// Update moderator info fixed fee details
+		if profile.ModeratorInfo.Fee != nil {
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
+				if profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil {
+					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFeeValue)
+					if err != nil {
+						return fmt.Errorf("unable to parse fixed fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.String(), err.Error())
+					}
+					normalizedFee, err := fixedFee.Normalize()
+					if err != nil {
+						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Divisibility)
+						return fmt.Errorf("converting divisibility for fixed fee (%s) from (%d) to (%d): %s", fixedFee.Currency.String(), fixedFee.Currency.Divisibility, feeDivisibility, err.Error())
+					}
+					pbNormalizedFee, err := normalizedFee.Protobuf()
+					if err != nil {
+						return fmt.Errorf("setting moderator fixed fee value: %s", err.Error())
+					}
+					profile.ModeratorInfo.Fee.FixedFeeValue = pbNormalizedFee
+				}
+			}
+		}
 	}
 
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
@@ -101,6 +116,16 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return err
 	}
 	profile.LastModified = ts
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	out, err := m.MarshalToString(profile)
 	if err != nil {
 		return err
@@ -271,69 +296,70 @@ func ValidateProfile(profile *pb.Profile) error {
 	if strings.Contains(profile.Handle, "@") {
 		return errors.New("handle should not contain @")
 	}
-	if len(profile.Handle) > WordMaxCharacters {
-		return fmt.Errorf("handle character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Handle) > repo.WordMaxCharacters {
+		return fmt.Errorf("handle character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
 	if len(profile.Name) == 0 {
 		return errors.New("profile name not set")
 	}
-	if len(profile.Name) > WordMaxCharacters {
-		return fmt.Errorf("name character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Name) > repo.WordMaxCharacters {
+		return fmt.Errorf("name character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
-	if len(profile.Location) > WordMaxCharacters {
-		return fmt.Errorf("location character length is greater than the max of %d", WordMaxCharacters)
+	if len(profile.Location) > repo.WordMaxCharacters {
+		return fmt.Errorf("location character length is greater than the max of %d", repo.WordMaxCharacters)
 	}
-	if len(profile.About) > AboutMaxCharacters {
-		return fmt.Errorf("about character length is greater than the max of %d", AboutMaxCharacters)
+	if len(profile.About) > repo.AboutMaxCharacters {
+		return fmt.Errorf("about character length is greater than the max of %d", repo.AboutMaxCharacters)
 	}
-	if len(profile.ShortDescription) > ShortDescriptionLength {
-		return fmt.Errorf("short description character length is greater than the max of %d", ShortDescriptionLength)
+	if len(profile.ShortDescription) > repo.ShortDescriptionLength {
+		return fmt.Errorf("short description character length is greater than the max of %d", repo.ShortDescriptionLength)
 	}
 	if profile.ContactInfo != nil {
-		if len(profile.ContactInfo.Website) > URLMaxCharacters {
-			return fmt.Errorf("website character length is greater than the max of %d", URLMaxCharacters)
+		if len(profile.ContactInfo.Website) > repo.URLMaxCharacters {
+			return fmt.Errorf("website character length is greater than the max of %d", repo.URLMaxCharacters)
 		}
-		if len(profile.ContactInfo.Email) > SentenceMaxCharacters {
-			return fmt.Errorf("email character length is greater than the max of %d", SentenceMaxCharacters)
+		if len(profile.ContactInfo.Email) > repo.SentenceMaxCharacters {
+			return fmt.Errorf("email character length is greater than the max of %d", repo.SentenceMaxCharacters)
 		}
-		if len(profile.ContactInfo.PhoneNumber) > WordMaxCharacters {
-			return fmt.Errorf("phone number character length is greater than the max of %d", WordMaxCharacters)
+		if len(profile.ContactInfo.PhoneNumber) > repo.WordMaxCharacters {
+			return fmt.Errorf("phone number character length is greater than the max of %d", repo.WordMaxCharacters)
 		}
-		if len(profile.ContactInfo.Social) > MaxListItems {
-			return fmt.Errorf("number of social accounts is greater than the max of %d", MaxListItems)
+		if len(profile.ContactInfo.Social) > repo.MaxListItems {
+			return fmt.Errorf("number of social accounts is greater than the max of %d", repo.MaxListItems)
 		}
 		for _, s := range profile.ContactInfo.Social {
-			if len(s.Username) > WordMaxCharacters {
-				return fmt.Errorf("social username character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Username) > repo.WordMaxCharacters {
+				return fmt.Errorf("social username character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
-			if len(s.Type) > WordMaxCharacters {
-				return fmt.Errorf("social account type character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Type) > repo.WordMaxCharacters {
+				return fmt.Errorf("social account type character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
-			if len(s.Proof) > URLMaxCharacters {
-				return fmt.Errorf("social proof character length is greater than the max of %d", WordMaxCharacters)
+			if len(s.Proof) > repo.URLMaxCharacters {
+				return fmt.Errorf("social proof character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
 	}
 	if profile.ModeratorInfo != nil {
-		if len(profile.ModeratorInfo.Description) > AboutMaxCharacters {
-			return fmt.Errorf("moderator description character length is greater than the max of %d", AboutMaxCharacters)
+		if len(profile.ModeratorInfo.Description) > repo.AboutMaxCharacters {
+			return fmt.Errorf("moderator description character length is greater than the max of %d", repo.AboutMaxCharacters)
 		}
-		if len(profile.ModeratorInfo.TermsAndConditions) > PolicyMaxCharacters {
-			return fmt.Errorf("moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
+		if len(profile.ModeratorInfo.TermsAndConditions) > repo.PolicyMaxCharacters {
+			return fmt.Errorf("moderator terms and conditions character length is greater than the max of %d", repo.PolicyMaxCharacters)
 		}
-		if len(profile.ModeratorInfo.Languages) > MaxListItems {
-			return fmt.Errorf("moderator number of languages greater than the max of %d", MaxListItems)
+		if len(profile.ModeratorInfo.Languages) > repo.MaxListItems {
+			return fmt.Errorf("moderator number of languages greater than the max of %d", repo.MaxListItems)
 		}
 		for _, l := range profile.ModeratorInfo.Languages {
-			if len(l) > WordMaxCharacters {
-				return fmt.Errorf("moderator language character length is greater than the max of %d", WordMaxCharacters)
+			if len(l) > repo.WordMaxCharacters {
+				return fmt.Errorf("moderator language character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}
-		if profile.ModeratorInfo.Fee != nil &&
-			profile.ModeratorInfo.Fee.FixedFeeValue != nil &&
-			profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil &&
-			len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > WordMaxCharacters {
-			return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
+		if profile.ModeratorInfo.Fee != nil {
+			if profile.ModeratorInfo.Fee.FixedFeeValue != nil &&
+				profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil &&
+				len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
+				return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
+			}
 		}
 	}
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||

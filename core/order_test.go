@@ -1,14 +1,14 @@
 package core_test
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/core"
+	"fmt"
+	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
-
-	"fmt"
-	"testing"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -49,7 +49,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err := core.EncodeCID(ser)
+	listingID, err := ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,7 +120,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -144,7 +144,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -158,7 +158,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 
 	// Test with coupon percent discount
-	couponHash, err := core.EncodeMultihash([]byte("testcoupon"))
+	couponHash, err := ipfs.EncodeMultihash([]byte("testcoupon"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +174,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -189,7 +189,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 
 	// Test with coupon percent discount
-	couponHash, err = core.EncodeMultihash([]byte("testcoupon2"))
+	couponHash, err = ipfs.EncodeMultihash([]byte("testcoupon2"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -205,7 +205,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -232,7 +232,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -258,7 +258,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -279,7 +279,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -325,7 +325,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}

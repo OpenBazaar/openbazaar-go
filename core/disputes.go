@@ -14,10 +14,6 @@ import (
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -26,6 +22,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
 // ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
@@ -137,9 +139,15 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 
 	// Update database
 	if isPurchase {
-		n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		if err != nil {
+			log.Error(err)
+		}
 	} else {
-		n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		err = n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
@@ -444,7 +452,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		Buyer:          buyer,
 	}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+	err = n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -558,14 +569,13 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	var buyerAddr btcutil.Address
-	buyerValue := big.NewInt(0)
 	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
 		}
-		buyerValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(buyerPercentage)))
+		buyerValue := new(big.Int).Mul(effectiveVal, big.NewInt(int64(buyerPercentage)))
 		buyerValue = buyerValue.Div(buyerValue, big.NewInt(100))
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
@@ -575,13 +585,12 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
-	vendorValue := big.NewInt(0)
 	if payDivision.VendorAny() {
 		vendorAddr, err = wal.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err
 		}
-		vendorValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(vendorPercentage)))
+		vendorValue := new(big.Int).Mul(effectiveVal, big.NewInt(int64(vendorPercentage)))
 		vendorValue = vendorValue.Div(vendorValue, big.NewInt(100))
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,
@@ -809,7 +818,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		if err != nil {
 			continue
 		}
-		listingMH, err := EncodeCID(ser)
+		listingMH, err := ipfs.EncodeCID(ser)
 		if err != nil {
 			continue
 		}

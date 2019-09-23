@@ -52,7 +52,7 @@ func NewListing(slug string) *pb.Listing {
 		RefundPolicy:       "Sample Refund policy",
 		VendorID:           vendorID,
 		Metadata: &pb.Listing_Metadata{
-			Version:             1,
+			Version:             5,
 			AcceptedCurrencies:  []string{"TBTC"},
 			PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
 			Expiry:              &timestamp.Timestamp{Seconds: 2147483647},

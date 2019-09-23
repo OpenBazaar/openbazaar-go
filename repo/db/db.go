@@ -54,7 +54,10 @@ func Create(repoPath, password string, testnet bool, coinType wallet.CoinType) (
 	}
 	if password != "" {
 		p := "pragma key='" + password + "';"
-		conn.Exec(p)
+		_, err := conn.Exec(p)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	l := new(sync.Mutex)
 	return NewSQLiteDatastore(conn, l, coinType), nil
@@ -259,20 +262,32 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, cr
 	defer stmt.Close()
 	_, err = stmt.Exec("mnemonic", mnemonic)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		if err != nil {
+			log.Error(err)
+		}
 		return err
 	}
 	_, err = stmt.Exec("identityKey", identityKey)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		if err != nil {
+			log.Error(err)
+		}
 		return err
 	}
 	_, err = stmt.Exec("creationDate", creationDate.Format(time.RFC3339))
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		if err != nil {
+			log.Error(err)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

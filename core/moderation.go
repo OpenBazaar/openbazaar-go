@@ -3,18 +3,20 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
-	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
-
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"path/filepath"
 
+	routing "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
+	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
+	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"golang.org/x/net/context"
 )
 
@@ -96,14 +98,24 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		go ipfs.PublishPointer(n.DHT, ctx, pointer)
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointer)
 		pointer.Purpose = ipfs.MODERATOR
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err
 		}
 	} else {
-		go ipfs.PublishPointer(n.DHT, ctx, pointers[0])
+		go func(dht *routing.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+			err := ipfs.PublishPointer(dht, ctx, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+		}(n.DHT, ctx, pointers[0])
 	}
 	return nil
 }
@@ -216,12 +228,12 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			sl := new(pb.SignedListing)
+			sl := new(repo.SignedListing)
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			coupons, err := n.Datastore.Coupons().Get(sl.RListing.Slug)
 			if err != nil {
 				return err
 			}
@@ -229,18 +241,19 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.Listing.Coupons {
+			for _, coupon := range sl.RListing.ProtoListing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.Listing.Moderators = moderators
-			sl, err = n.SignListing(sl.Listing)
+			sl.RListing.ProtoListing.Moderators = moderators
+			sl0, err := n.SignListing(sl.RListing)
 			if err != nil {
 				return err
 			}
+			sl = &sl0
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,
@@ -262,7 +275,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			hashes[sl.Listing.Slug] = hash
+			hashes[sl.RListing.Slug] = hash
 
 			return nil
 		}
@@ -289,10 +302,20 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 func (n *OpenBazaarNode) NotifyModerators(addedMods, removedMods []string) error {
 	n.Service.WaitForReady()
 	for _, mod := range addedMods {
-		go n.SendModeratorAdd(mod)
+		go func(mod string) {
+			err := n.SendModeratorAdd(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	for _, mod := range removedMods {
-		go n.SendModeratorRemove(mod)
+		go func(mod string) {
+			err := n.SendModeratorRemove(mod)
+			if err != nil {
+				log.Error(err)
+			}
+		}(mod)
 	}
 	return nil
 }

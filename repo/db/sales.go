@@ -89,7 +89,10 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 
@@ -306,7 +309,10 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	json.Unmarshal(serializedTransactions, &records)
+	err = json.Unmarshal(serializedTransactions, &records)
+	if err != nil {
+		log.Error(err)
+	}
 	return rc, pb.OrderState(stateInt), funded, records, read, def.CurrencyCode(), nil
 }
 
@@ -315,7 +321,10 @@ func (s *SalesDB) Count() int {
 	defer s.lock.Unlock()
 	row := s.db.QueryRow("select Count(*) from sales")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 

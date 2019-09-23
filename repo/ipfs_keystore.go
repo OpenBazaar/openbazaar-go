@@ -47,7 +47,10 @@ func GetObjectFromIPFS(n *core.IpfsNode, p peer.ID, name string, maxCacheLen tim
 	go func() {
 		getObjectFromIPFSCacheMu.Lock()
 		defer getObjectFromIPFSCacheMu.Unlock()
-		fetchAndUpdateCache()
+		_, err := fetchAndUpdateCache()
+		if err != nil {
+			log.Error(err)
+		}
 	}()
 
 	return entry.bytes, nil

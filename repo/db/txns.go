@@ -29,7 +29,10 @@ func (t *TxnsDB) Put(raw []byte, txid, value string, height int, timestamp time.
 	}
 	stmt, err := tx.Prepare("insert or replace into txns(coin, txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?,?)")
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	defer stmt.Close()
@@ -39,10 +42,16 @@ func (t *TxnsDB) Put(raw []byte, txid, value string, height int, timestamp time.
 	}
 	_, err = stmt.Exec(t.coinType.CurrencyCode(), txid, value, height, int(timestamp.Unix()), watchOnlyInt, raw)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

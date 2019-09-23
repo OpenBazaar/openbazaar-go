@@ -129,7 +129,10 @@ func TestDeletePurchase(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.Delete("orderID")
 	if err != nil {
 		t.Error("Purchase delete failed")
@@ -156,7 +159,10 @@ func TestMarkPurchaseAsRead(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -182,7 +188,10 @@ func TestMarkPurchaseAsUnread(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -301,7 +310,10 @@ func TestPurchasesGetByPaymentAddress(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Error(err)
@@ -361,15 +373,24 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	c0 := factory.NewContract()
 	ts, _ := ptypes.TimestampProto(time.Now())
 	c0.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID", *c0, 0, false)
+	err = purdb.Put("orderID", *c0, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c1 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Minute))
 	c1.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID2", *c1, 1, false)
+	err = purdb.Put("orderID2", *c1, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c2 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Hour))
 	c2.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID3", *c2, 1, false)
+	err = purdb.Put("orderID3", *c2, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	// Test no offset no limit
 	purchases, ct, err := purdb.GetAll([]pb.OrderState{}, "", false, false, -1, []string{})
 	if err != nil {

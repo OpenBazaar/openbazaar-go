@@ -1,0 +1,62 @@
+{
+    "listing": {
+        "slug": "ltc-xmr",
+        "vendorID": {
+            "peerID": "QmVisrQ9apmvTLnq9FSNKbP8dYvBvkP4AeeysHZg89oB9q",
+            "pubkeys": {
+                "identity": "CAESIBHz9BLX+9JlUN7cfPdaoh1QFN/a4gjJBzmVOZfSFD5G",
+                "bitcoin": "Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"
+            },
+            "bitcoinSig": "MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="
+        },
+        "metadata": {
+            "version": 4,
+            "contractType": "CRYPTOCURRENCY",
+            "format": "MARKET_PRICE",
+            "expiry": "2037-12-31T05:00:00.000Z",
+            "acceptedCurrencies": [
+                "LTC"
+            ],
+            "escrowTimeoutHours": 1080,
+            "coinType": "XMR",
+            "coinDivisibility": 100000000,
+            "priceModifier": 0.05
+        },
+        "item": {
+            "title": "LTC-XMR",
+            "description": "Cryptocurrency listing with 0.05% markup.",
+            "tags": [
+                "test"
+            ],
+            "images": [
+                {
+                    "filename": "sanic-too-slow.gif",
+                    "original": "QmXyed6vsnUWxxC97Uo8eb2j91tVUgu4y6d8htSAHXjLEQ",
+                    "large": "QmQieQ8yUx98wzXmgW8mYyAA824dGFA6NYLMAnNjGUkjtS",
+                    "medium": "QmZAVH8cRE8rTydrg9aTgkXtNroGpq53hAcwo1jSTaXM83",
+                    "small": "QmTgMSgckmBFat6noQrg3f3A1LZMkujSsnqYwoJ4uhPi8Q",
+                    "tiny": "QmdKLLsLGpYTmzNePPuJsRNcchqQNXqA5VQYinVvUH7VJd"
+                }
+            ],
+            "categories": [
+                "cheap-goods"
+            ],
+            "options": [
+            ],
+            "skus": [
+                {
+
+                }
+            ]
+        },
+        "shippingOptions": [
+        ],
+        "coupons": [
+        ],
+        "moderators": [
+        ],
+        "termsAndConditions": "Terms and Conditions",
+        "refundPolicy": "Return policy"
+    },
+    "signature": "9AAIv/qr6qo8nDgZhlVmkhkEs7cnM38xWE4TC4ivBaVyrLXz/fSXsA4MOpk1E8HSKaEDl/kqU7Ndyh9prDpiCA=="
+}

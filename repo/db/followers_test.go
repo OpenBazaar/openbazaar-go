@@ -83,16 +83,34 @@ func TestCountFollowers(t *testing.T) {
 	}
 	defer teardown()
 
-	fdb.Put("abc", []byte("proof"))
-	fdb.Put("123", []byte("proof"))
-	fdb.Put("xyz", []byte("proof"))
+	err = fdb.Put("abc", []byte("proof"))
+	if err != nil {
+		t.Error(err)
+	}
+	err = fdb.Put("123", []byte("proof"))
+	if err != nil {
+		t.Error(err)
+	}
+	err = fdb.Put("xyz", []byte("proof"))
+	if err != nil {
+		t.Error(err)
+	}
 	x := fdb.Count()
 	if x != 3 {
 		t.Errorf("Expected 3 got %d", x)
 	}
-	fdb.Delete("abc")
-	fdb.Delete("123")
-	fdb.Delete("xyz")
+	err = fdb.Delete("abc")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fdb.Delete("123")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fdb.Delete("xyz")
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestDeleteFollower(t *testing.T) {
@@ -102,15 +120,24 @@ func TestDeleteFollower(t *testing.T) {
 	}
 	defer teardown()
 
-	fdb.Put("abc", []byte("proof"))
+	err = fdb.Put("abc", []byte("proof"))
+	if err != nil {
+		t.Error(err)
+	}
 	err = fdb.Delete("abc")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := fdb.PrepareQuery("select peerID from followers where peerID=?")
+	stmt, err := fdb.PrepareQuery("select peerID from followers where peerID=?")
+	if err != nil {
+		t.Log(err)
+	}
 	defer stmt.Close()
 	var follower string
-	stmt.QueryRow("abc").Scan(&follower)
+	err = stmt.QueryRow("abc").Scan(&follower)
+	if err != nil {
+		t.Log(err)
+	}
 	if follower != "" {
 		t.Error("Failed to delete follower")
 	}
@@ -124,7 +151,10 @@ func TestGetFollowers(t *testing.T) {
 	defer teardown()
 
 	for i := 0; i < 100; i++ {
-		fdb.Put(strconv.Itoa(i), []byte("proof"))
+		err = fdb.Put(strconv.Itoa(i), []byte("proof"))
+		if err != nil {
+			t.Log(err)
+		}
 	}
 	followers, err := fdb.Get("", 100)
 	if err != nil {
@@ -173,7 +203,10 @@ func TestFollowsMe(t *testing.T) {
 	}
 	defer teardown()
 
-	fdb.Put("abc", []byte("proof"))
+	err = fdb.Put("abc", []byte("proof"))
+	if err != nil {
+		t.Log(err)
+	}
 	if !fdb.FollowsMe("abc") {
 		t.Error("Follows Me failed to return correctly")
 	}

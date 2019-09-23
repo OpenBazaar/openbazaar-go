@@ -15,13 +15,14 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 const (
@@ -457,7 +458,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 			continue
 		}
 
-		mh, err := EncodeMultihash([]byte(ratingJSON))
+		mh, err := ipfs.EncodeMultihash([]byte(ratingJSON))
 		if err != nil {
 			retErr = err
 			continue
