@@ -29,6 +29,8 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+const maxInfightQueries = 25
+
 var Log = logging.MustGetLogger("client")
 
 type wsWatchdog struct {
@@ -344,14 +346,19 @@ func (i *BlockBookClient) GetTransactions(addrs []btcutil.Address) ([]model.Tran
 		Txs []model.Transaction
 		Err error
 	}
-	txChan := make(chan txsOrError)
+	var (
+		txChan    = make(chan txsOrError)
+		queryChan = make(chan struct{}, maxInfightQueries)
+		wg        sync.WaitGroup
+	)
+	wg.Add(len(addrs))
 	go func() {
-		var wg sync.WaitGroup
-		wg.Add(len(addrs))
 		for _, addr := range addrs {
+			queryChan <- struct{}{}
 			go func(a btcutil.Address) {
 				txs, err := i.getTransactions(maybeConvertCashAddress(a))
 				txChan <- txsOrError{txs, err}
+				<-queryChan
 				wg.Done()
 			}(addr)
 		}
@@ -429,13 +436,20 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 		Utxo *model.Utxo
 		Err  error
 	}
-	utxoChan := make(chan utxoOrError)
-	var wg sync.WaitGroup
+	var (
+		wg        sync.WaitGroup
+		queryChan = make(chan struct{}, maxInfightQueries)
+		utxoChan  = make(chan utxoOrError)
+	)
 	wg.Add(len(addrs))
 	go func() {
 		for _, addr := range addrs {
+			queryChan <- struct{}{}
 			go func(addr btcutil.Address) {
 				defer wg.Done()
+				defer func() {
+					<-queryChan
+				}()
 				resp, err := i.RequestFunc("/utxo/"+maybeConvertCashAddress(addr), http.MethodGet, nil, nil)
 				if err != nil {
 					utxoChan <- utxoOrError{nil, err}
