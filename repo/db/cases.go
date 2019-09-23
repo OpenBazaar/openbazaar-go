@@ -256,8 +256,8 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		if err != nil {
 			err = jsonpb.UnmarshalString(string(vendorContract), contract)
 			if err != nil {
-				//return ret, 0, err
-				log.Error(err)
+				log.Errorf("Error unmarshaling case contract: %s", err)
+				continue
 			}
 		}
 		var slug string
