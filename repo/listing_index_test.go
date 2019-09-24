@@ -25,18 +25,16 @@ func TestListingIndexUnmarshalJSON(t *testing.T) {
 					Small:  "zb2rhfMZFaaWZxZGvkqAPCMUbmdxNHhAaCby5XCkRrV13bew8",
 					Medium: "zb2rhnppMGkZYp6Zg7Qf2irDH9z1ZM5jc2VcAXfy6mEnifoEy",
 				},
-				Price: repo.ListingPrice{
-					Amount: repo.CurrencyValue{
-						Amount: big.NewInt(25),
-						Currency: repo.CurrencyDefinition{
-							Name:         "United States Dollar",
-							Code:         "USD",
-							Divisibility: 2,
-							CurrencyType: "fiat",
-						},
+				Price: repo.CurrencyValue{
+					Amount: big.NewInt(25),
+					Currency: repo.CurrencyDefinition{
+						Name:         "United States Dollar",
+						Code:         "USD",
+						Divisibility: 2,
+						CurrencyType: "fiat",
 					},
-					Modifier: 0,
 				},
+				Modifier:      0,
 				ShipsTo:       []string{},
 				FreeShipping:  []string{},
 				Language:      "English",
@@ -67,18 +65,16 @@ func TestListingIndexUnmarshalJSON(t *testing.T) {
 					Small:  "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV",
 					Medium: "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV",
 				},
-				Price: repo.ListingPrice{
-					Amount: repo.CurrencyValue{
-						Amount: big.NewInt(500000),
-						Currency: repo.CurrencyDefinition{
-							Name:         "Litecoin",
-							Code:         "TLTC",
-							Divisibility: 8,
-							CurrencyType: "crypto",
-						},
+				Price: repo.CurrencyValue{
+					Amount: big.NewInt(500000),
+					Currency: repo.CurrencyDefinition{
+						Name:         "Litecoin",
+						Code:         "TLTC",
+						Divisibility: 8,
+						CurrencyType: "crypto",
 					},
-					Modifier: 0,
 				},
+				Modifier:      0,
 				ShipsTo:       []string{"ALL"},
 				FreeShipping:  []string{},
 				Language:      "Klingon",

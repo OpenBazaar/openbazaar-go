@@ -302,18 +302,16 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 	}
 
 	ld := repo.ListingIndexData{
-		Hash:         listingHash,
-		Slug:         listing.Listing.Slug,
-		Title:        listing.Listing.Item.Title,
-		Categories:   listing.Listing.Item.Categories,
-		NSFW:         listing.Listing.Item.Nsfw,
-		ContractType: listing.Listing.Metadata.ContractType.String(),
-		Description:  listing.Listing.Item.Description[:descriptionLength],
-		Thumbnail:    repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price: repo.ListingPrice{
-			Amount:   repo.CurrencyValue{Currency: defn, Amount: amt},
-			Modifier: listing.Listing.Metadata.PriceModifier,
-		},
+		Hash:               listingHash,
+		Slug:               listing.Listing.Slug,
+		Title:              listing.Listing.Item.Title,
+		Categories:         listing.Listing.Item.Categories,
+		NSFW:               listing.Listing.Item.Nsfw,
+		ContractType:       listing.Listing.Metadata.ContractType.String(),
+		Description:        listing.Listing.Item.Description[:descriptionLength],
+		Thumbnail:          repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
+		Price:              repo.CurrencyValue{Currency: defn, Amount: amt},
+		Modifier:           listing.Listing.Metadata.PriceModifier,
 		ShipsTo:            shipsTo,
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,

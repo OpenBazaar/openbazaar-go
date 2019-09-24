@@ -14,19 +14,17 @@
             "small": "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV",
             "medium": "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV"
         },
+        "currencyCode": "TLTC",
         "price": {
-            "currencyCode": "TLTC",
-            "amount": {
-                "amount": "500000",
-                "currency": {
-                    "name": "Litecoin",
-                    "code": "TLTC",
-                    "divisibility": 8,
-                    "currencyType": "crypto"
-                }
-            },
-            "modifier": 0
+            "amount": "500000",
+            "currency": {
+                "name": "Litecoin",
+                "code": "TLTC",
+                "divisibility": 8,
+                "currencyType": "crypto"
+            }
         },
+        "modifier": 0,
         "shipsTo": [
             "ALL"
         ],
@@ -38,7 +36,6 @@
         "acceptedCurrencies": [
             "TBTC",
             "TLTC"
-        ],
-        "coinType": "TLTC"
+        ]
     }
 ]

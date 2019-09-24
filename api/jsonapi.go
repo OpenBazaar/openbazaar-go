@@ -673,13 +673,18 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, `{}`)
 }
 
+var allCurrencyMapCache map[string]repo.CurrencyDefinition
+
 func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
 	var (
 		resp      map[string]repo.CurrencyDefinition
 		_, lookup = path.Split(r.URL.Path)
 	)
 	if lookup == "currencies" {
-		resp = repo.AllCurrencies().AsMap()
+		if allCurrencyMapCache == nil {
+			allCurrencyMapCache = repo.AllCurrencies().AsMap()
+		}
+		resp = allCurrencyMapCache
 	} else {
 		var upperLookup = strings.ToUpper(lookup)
 		def, err := i.node.LookupCurrency(upperLookup)
@@ -1434,8 +1439,20 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
+		normalizedIndex, err := repo.UnmarshalJSONSignedListingIndex(listingsBytes)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("failed to parse listing index: %s", err.Error()))
+			return
+		}
+
+		normalizedBytes, err := json.MarshalIndent(normalizedIndex, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("failed to normalize listing index: %s", err.Error()))
+			return
+		}
+
 		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%s, immutable", maxAge))
-		SanitizedResponse(w, string(listingsBytes))
+		SanitizedResponse(w, string(normalizedBytes))
 	}
 }
 

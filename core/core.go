@@ -134,7 +134,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 	n.seedLock.Lock()
 	err := ipfs.UnPinDir(n.IpfsNode, n.RootHash)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("unpinning old root: %s", err.Error())
 	}
 	var aerr error
 	var rootHash string
