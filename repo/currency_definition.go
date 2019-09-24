@@ -409,7 +409,7 @@ func (c CurrencyDictionary) Lookup(code string) (CurrencyDefinition, error) {
 
 // AsMap returns a cloned map of all known the definitions
 func (c CurrencyDictionary) AsMap() map[string]CurrencyDefinition {
-	var defCopy = make(map[string]CurrencyDefinition)
+	var defCopy = make(map[string]CurrencyDefinition, len(c.definitions))
 	for i, d := range c.definitions {
 		defCopy[i] = d
 	}
