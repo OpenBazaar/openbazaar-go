@@ -673,13 +673,18 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, `{}`)
 }
 
+var allCurrencyMapCache map[string]repo.CurrencyDefinition
+
 func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
 	var (
 		resp      map[string]repo.CurrencyDefinition
 		_, lookup = path.Split(r.URL.Path)
 	)
 	if lookup == "currencies" {
-		resp = repo.AllCurrencies().AsMap()
+		if allCurrencyMapCache == nil {
+			allCurrencyMapCache = repo.AllCurrencies().AsMap()
+		}
+		resp = allCurrencyMapCache
 	} else {
 		var upperLookup = strings.ToUpper(lookup)
 		def, err := i.node.LookupCurrency(upperLookup)

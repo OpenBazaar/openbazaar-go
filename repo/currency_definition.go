@@ -407,8 +407,11 @@ func (c CurrencyDictionary) Lookup(code string) (CurrencyDefinition, error) {
 	return def, nil
 }
 
-// AsMap returns a mutable map of all known the definitions. Note: This map is not threadsafe and
-// care should be taken to not mutate this.
+// AsMap returns a cloned map of all known the definitions
 func (c CurrencyDictionary) AsMap() map[string]CurrencyDefinition {
-	return c.definitions
+	var defCopy = make(map[string]CurrencyDefinition)
+	for i, d := range c.definitions {
+		defCopy[i] = d
+	}
+	return defCopy
 }
