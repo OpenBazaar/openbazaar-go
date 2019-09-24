@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -300,7 +299,7 @@ func (x *Convert) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	var index []core.ListingData
+	var index []repo.ListingIndexData
 
 	err = json.Unmarshal(indexBytes, &index)
 	if err != nil {

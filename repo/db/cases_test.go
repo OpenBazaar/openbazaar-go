@@ -1066,6 +1066,11 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 			t.Error(err)
 		}
 
+		err = casesdb.UpdateBuyerInfo("paymentCoinTest", contract, nil, "", nil)
+		if err != nil {
+			t.Error(err)
+		}
+
 		cases, count, err := casesdb.GetAll(nil, "", false, false, 1, nil)
 		if err != nil {
 			t.Error(err)
@@ -1103,6 +1108,10 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			CoinType:         testCoin,
 			PaymentCoin:      &paymentCoin,
 		})
+		if err != nil {
+			t.Error(err)
+		}
+		err = casesdb.UpdateBuyerInfo("paymentCoinTest", contract, nil, "", nil)
 		if err != nil {
 			t.Error(err)
 		}

@@ -25,7 +25,7 @@ func TestCurrencyValueMarshalsToJSON(t *testing.T) {
 	var (
 		examples = []struct {
 			value    string
-			currency *repo.CurrencyDefinition
+			currency repo.CurrencyDefinition
 		}{
 			{ // valid currency value
 				value:    "123456789012345678",
@@ -85,7 +85,7 @@ func TestCurrencyValuesAreValid(t *testing.T) {
 		{ // invalid nil currency
 			value: func() *repo.CurrencyValue {
 				var value = factory.MustNewCurrencyValue("123", "BTC")
-				value.Currency = nil
+				value.Currency = repo.NilCurrencyDefinition
 				return value
 			},
 			expectedErr: repo.ErrCurrencyDefinitionUndefined,
@@ -128,7 +128,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 			// equal after normalizing
 			value: &repo.CurrencyValue{
 				Amount: big.NewInt(1234),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         "BTC",
 					Divisibility: 2,
 					CurrencyType: "crypto",
@@ -136,7 +136,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 			},
 			other: &repo.CurrencyValue{
 				Amount: big.NewInt(123400),
-				Currency: &repo.CurrencyDefinition{
+				Currency: repo.CurrencyDefinition{
 					Code:         "BTC",
 					Divisibility: 4,
 					CurrencyType: "crypto",
@@ -201,7 +201,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 		{ // currency code missing
 			value: &repo.CurrencyValue{
 				Amount:   big.NewInt(1),
-				Currency: nil,
+				Currency: repo.NilCurrencyDefinition,
 			},
 			other: &repo.CurrencyValue{
 				Amount:   big.NewInt(1),
@@ -240,14 +240,14 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 
 		examples = []struct {
 			value        *repo.CurrencyValue
-			convertTo    *repo.CurrencyDefinition
+			convertTo    repo.CurrencyDefinition
 			exchangeRate float64
 			expected     *repo.CurrencyValue
 			expectedErr  *string
 		}{
 			{ // errors when definition is nil
 				value:        factory.MustNewCurrencyValue("0", "BTC"),
-				convertTo:    nil,
+				convertTo:    repo.NilCurrencyDefinition,
 				exchangeRate: 0.99999,
 				expected:     nil,
 				expectedErr:  &undefinedCurrencyErr,
@@ -290,7 +290,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 			{ // handles invalid value
 				value: &repo.CurrencyValue{
 					Amount:   big.NewInt(1000),
-					Currency: nil,
+					Currency: repo.NilCurrencyDefinition,
 				},
 				convertTo:    factory.NewCurrencyDefinition("BTC"),
 				exchangeRate: 0.5,
@@ -300,14 +300,14 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 			{ // handles conversions between different divisibility
 				value: &repo.CurrencyValue{
 					Amount: big.NewInt(1000),
-					Currency: &repo.CurrencyDefinition{
+					Currency: repo.CurrencyDefinition{
 						Name:         "United States Dollar",
 						Code:         "USD",
 						Divisibility: 2,
 						CurrencyType: repo.Fiat,
 					},
 				},
-				convertTo: &repo.CurrencyDefinition{
+				convertTo: repo.CurrencyDefinition{
 					Name:         "SimpleCoin",
 					Code:         "SPC",
 					Divisibility: 6,
@@ -316,7 +316,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				exchangeRate: 0.5,
 				expected: &repo.CurrencyValue{
 					Amount: big.NewInt(5000000),
-					Currency: &repo.CurrencyDefinition{
+					Currency: repo.CurrencyDefinition{
 						Name:         "SimpleCoin",
 						Code:         "SPC",
 						Divisibility: 6,
@@ -329,14 +329,14 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				// divisibility
 				value: &repo.CurrencyValue{ // 99.123456 SPC
 					Amount: big.NewInt(99120000),
-					Currency: &repo.CurrencyDefinition{
+					Currency: repo.CurrencyDefinition{
 						Name:         "SimpleCoin",
 						Code:         "SPC",
 						Divisibility: 6,
 						CurrencyType: repo.Crypto,
 					},
 				},
-				convertTo: &repo.CurrencyDefinition{
+				convertTo: repo.CurrencyDefinition{
 					Name:         "United States Dollar",
 					Code:         "USD",
 					Divisibility: 2,
@@ -345,7 +345,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				exchangeRate: 2,
 				expected: &repo.CurrencyValue{ // 99.123456 SPC * (2 USD/SPC)
 					Amount: big.NewInt(19824),
-					Currency: &repo.CurrencyDefinition{
+					Currency: repo.CurrencyDefinition{
 						Name:         "United States Dollar",
 						Code:         "USD",
 						Divisibility: 2,
@@ -358,14 +358,14 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				// with an error
 				value: &repo.CurrencyValue{
 					Amount: big.NewInt(7654321),
-					Currency: &repo.CurrencyDefinition{
+					Currency: repo.CurrencyDefinition{
 						Name:         "SimpleCoin",
 						Code:         "SPC",
 						Divisibility: 4,
 						CurrencyType: repo.Crypto,
 					},
 				},
-				convertTo: &repo.CurrencyDefinition{
+				convertTo: repo.CurrencyDefinition{
 					Name:         "SimpleCoin",
 					Code:         "SPC",
 					Divisibility: 2,
@@ -415,8 +415,8 @@ func TestNewCurrencyValueWithLookup(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected empty value to be accepted, but returned error: %s", err.Error())
 	}
-	if subject.String() != "0 USD(div2)" {
-		t.Errorf("expected empty value to be set as (0 USD(div2)), but was (%s)", subject.String())
+	if subject.String() != "0 United States Dollar (USDdiv2)" {
+		t.Errorf("expected empty value to be set as (0 United State Dollar (USDdiv2)), but was (%s)", subject.String())
 	}
 
 	_, err = repo.NewCurrencyValueWithLookup("1234567890987654321", "ETH")

@@ -40,8 +40,7 @@ func NewStatusUpdater(mw multiwallet.MultiWallet, c chan repo.Notifier, ctx cont
 
 func (s *StatusUpdater) Start() {
 	var (
-		t                  = time.NewTicker(time.Second * 15)
-		currencyDictionary = repo.LoadCurrencyDefinitions()
+		t = time.NewTicker(time.Second * 15)
 	)
 
 	for {
@@ -51,18 +50,21 @@ func (s *StatusUpdater) Start() {
 			for ct, wal := range s.mw {
 				confirmed, unconfirmed := wal.Balance()
 				height, _ := wal.ChainTip()
-				def, err := currencyDictionary.Lookup(ct.CurrencyCode())
+				def, err := repo.MainnetCurrencies().Lookup(ct.CurrencyCode())
 				if err != nil {
-					s.log.Errorf("unable to find definition (%s): %s", ct.CurrencyCode(), err.Error())
-					continue
+					def, err = repo.TestnetCurrencies().Lookup(ct.CurrencyCode())
+					if err != nil {
+						s.log.Errorf("unable to find definition (%s): %s", ct.CurrencyCode(), err.Error())
+						continue
+					}
 				}
 				u := walletUpdate{
 					Height:      height,
 					Unconfirmed: unconfirmed.Value.String(),
 					Confirmed:   confirmed.Value.String(),
-					Currency:    def,
+					Currency:    &def,
 				}
-				ret[ct.CurrencyCode()] = u
+				ret[def.CurrencyCode().String()] = u
 			}
 			ser, err := json.MarshalIndent(walletUpdateWrapper{ret}, "", "    ")
 			if err != nil {
