@@ -501,7 +501,7 @@ func TestWallet(t *testing.T) {
 func TestWalletSpendFailures(t *testing.T) {
 	newSpendRequest := func() *core.SpendRequest {
 		return &core.SpendRequest{
-			CurrencyCode:           "BTC",
+			CurrencyCode:           "TBTC",
 			Address:                "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
 			Amount:                 "1234",
 			FeeLevel:               "PRIORITY",
@@ -551,7 +551,7 @@ func TestWalletSpendFailures(t *testing.T) {
 }
 
 func TestWalletCurrencyDictionary(t *testing.T) {
-	var expectedResponse, err = json.MarshalIndent(repo.LoadCurrencyDefinitions().All(), "", "    ")
+	var expectedResponse, err = json.MarshalIndent(repo.AllCurrencies().AsMap(), "", "    ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,17 +563,17 @@ func TestWalletCurrencyDictionary(t *testing.T) {
 
 func TestWalletCurrencyDictionaryLookup(t *testing.T) {
 	var randomLookup string
-	for currency := range repo.LoadCurrencyDefinitions().All() {
+	for currency := range repo.AllCurrencies().AsMap() {
 		// pick any currency string from the dictionary
 		randomLookup = currency
 		break
 	}
 
-	def, err := repo.LoadCurrencyDefinitions().Lookup(randomLookup)
+	def, err := repo.AllCurrencies().Lookup(randomLookup)
 	if err != nil {
 		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
 	}
-	entries := map[string]*repo.CurrencyDefinition{randomLookup: def}
+	entries := map[string]repo.CurrencyDefinition{randomLookup: def}
 	expectedResponse, err := json.MarshalIndent(entries, "", "    ")
 	if err != nil {
 		t.Fatal(err)

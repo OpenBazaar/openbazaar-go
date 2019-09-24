@@ -56,9 +56,9 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	)
 
 	if lookupCode == "" && args.Currency != nil {
-		lookupCode = n.NormalizeCurrencyCode(args.Currency.Code.String())
+		lookupCode = args.Currency.Code.String()
 	}
-	var currencyDef, err = repo.LoadCurrencyDefinitions().Lookup(lookupCode)
+	var currencyDef, err = n.LookupCurrency(lookupCode)
 	if err != nil {
 		return nil, repo.ErrCurrencyDefinitionUndefined
 	}
@@ -154,7 +154,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	confirmed, unconfirmed := wal.Balance()
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	defn, err := n.LookupCurrency(wal.CurrencyCode())
 	if err != nil {
 		return nil, fmt.Errorf("wallet currency not found in dictionary")
 	}
@@ -163,7 +163,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Txid:               txid.String(),
 		ConfirmedBalance:   confirmed.Value.String(),
 		UnconfirmedBalance: unconfirmed.Value.String(),
-		Currency:           defn,
+		Currency:           &defn,
 		Amount:             strings.TrimPrefix(txn.Value, "-"),
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,

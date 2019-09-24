@@ -1,0 +1,36 @@
+[
+    {
+        "hash": "QmbAhieQdN7WzDktpkZ3ZDuv3AKF3DxG3SMFyEcVg3HGcP",
+        "slug": "test-service",
+        "title": "Test Service",
+        "categories": ["test"],
+        "nsfw": true,
+        "contractType": "SERVICE",
+        "description": "Test service listing",
+        "thumbnail": {
+            "tiny": "zb2rhfN4RQyNP6eZszvEBfwBRMZxaysoqF72MYWPKoofV5AQr",
+            "small": "zb2rhfMZFaaWZxZGvkqAPCMUbmdxNHhAaCby5XCkRrV13bew8",
+            "medium": "zb2rhnppMGkZYp6Zg7Qf2irDH9z1ZM5jc2VcAXfy6mEnifoEy"
+        },
+        "price": {
+            "currencyCode": "USD",
+            "amount": 25,
+            "modifier": 0
+        },
+        "shipsTo": [],
+        "freeShipping": [],
+        "language": "English",
+        "averageRating": 0,
+        "ratingCount": 0,
+        "moderators": [
+            "QmQifVhzhnHRu9bGT9WNcbbuc5EF2bXRF6iJpSzNj7yRtQ"
+        ],
+        "acceptedCurrencies": [
+            "BTC",
+            "BCH",
+            "ZEC",
+            "LTC"
+        ],
+        "coinType": ""
+    }
+]

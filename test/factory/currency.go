@@ -7,14 +7,13 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-func NewCurrencyDefinition(code string) *repo.CurrencyDefinition {
+func NewCurrencyDefinition(code string) repo.CurrencyDefinition {
 	if code == "" {
 		code = "BTC"
 	}
-	return &repo.CurrencyDefinition{
+	return repo.CurrencyDefinition{
 		Name:         fmt.Sprintf("%scoin", code),
 		Code:         repo.CurrencyCode(code),
-		TestnetCode:  repo.CurrencyCode(fmt.Sprintf("T%s", code)),
 		Divisibility: 8,
 		CurrencyType: repo.Crypto,
 	}

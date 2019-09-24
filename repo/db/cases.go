@@ -66,16 +66,17 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error {
-	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	def, err := repo.AllCurrencies().Lookup(paymentCoin)
 	if err != nil {
 		return fmt.Errorf("verifying paymentCoin: %s", err.Error())
 	}
+	cc := def.CurrencyCode()
 	record := &repo.DisputeCaseRecord{
 		CaseID:           caseID,
 		Claim:            claim,
 		IsBuyerInitiated: buyerOpened,
 		OrderState:       state,
-		PaymentCoin:      def.CurrencyCode(),
+		PaymentCoin:      &cc,
 		CoinType:         coinType,
 		Timestamp:        time.Now(),
 	}
@@ -419,7 +420,7 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		return nil, err
 	}
 
-	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	def, err := repo.AllCurrencies().Lookup(paymentCoin)
 	if err != nil {
 		return nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
@@ -473,6 +474,7 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		}
 		return ret
 	}
+	cc := def.CurrencyCode()
 	return &repo.DisputeCaseRecord{
 		BuyerContract:       brc,
 		BuyerOutpoints:      toPointer(buyerOutpointsOut),
@@ -480,7 +482,7 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		CaseID:              caseID,
 		IsBuyerInitiated:    buyerInitiated,
 		OrderState:          pb.OrderState(stateInt),
-		PaymentCoin:         def.CurrencyCode(),
+		PaymentCoin:         &cc,
 		Timestamp:           time.Unix(createdAt, 0),
 		VendorContract:      vrc,
 		VendorOutpoints:     toPointer(vendorOutpointsOut),

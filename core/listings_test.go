@@ -18,7 +18,7 @@ func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
 	var (
 		regularListingSlug    = "test_regular_listing"
 		cryptoListingSlug     = "test_crypto_listing"
-		newAcceptedCurrencies = []string{"BCH", "LTC"}
+		newAcceptedCurrencies = []string{"TBCH", "TLTC"}
 		cryptoListingCurrency = "TBTC"
 	)
 
