@@ -1434,8 +1434,20 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
+		normalizedIndex, err := repo.UnmarshalJSONSignedListingIndex(listingsBytes)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("failed to parse listing index: %s", err.Error()))
+			return
+		}
+
+		normalizedBytes, err := json.MarshalIndent(normalizedIndex, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("failed to normalize listing index: %s", err.Error()))
+			return
+		}
+
 		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%s, immutable", maxAge))
-		SanitizedResponse(w, string(listingsBytes))
+		SanitizedResponse(w, string(normalizedBytes))
 	}
 }
 

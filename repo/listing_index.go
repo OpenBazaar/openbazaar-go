@@ -6,11 +6,6 @@ import (
 )
 
 type (
-	ListingPrice struct {
-		Amount   CurrencyValue `json:"amount"`
-		Modifier float32       `json:"modifier"`
-	}
-
 	ListingThumbnail struct {
 		Tiny   string `json:"tiny"`
 		Small  string `json:"small"`
@@ -27,7 +22,8 @@ type (
 		ContractType       string           `json:"contractType"`
 		Description        string           `json:"description"`
 		Thumbnail          ListingThumbnail `json:"thumbnail"`
-		Price              ListingPrice     `json:"price"`
+		Price              CurrencyValue    `json:"price"`
+		Modifier           float32          `json:"modifier"`
 		ShipsTo            []string         `json:"shipsTo"`
 		FreeShipping       []string         `json:"freeShipping"`
 		Language           string           `json:"language"`
@@ -54,7 +50,7 @@ func UnmarshalJSONSignedListingIndex(data []byte) ([]ListingIndexData, error) {
 	// TODO: intelligently parse payload based on
 	// detection of the correct version.
 	for _, listingJSON := range rawIndex {
-		l, err := parseUnknownData(listingJSON)
+		l, err := parseUnknownSchemaData(listingJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -63,18 +59,18 @@ func UnmarshalJSONSignedListingIndex(data []byte) ([]ListingIndexData, error) {
 	return listingIndex, nil
 }
 
-func parseUnknownData(data []byte) (ListingIndexData, error) {
+func parseUnknownSchemaData(data []byte) (ListingIndexData, error) {
 	sl, err := parseV5Data(data)
 	if err == nil {
 		return sl, nil
 	} else {
-		log.Warningf("failed attempt to parse v5 listing index: %s", err)
+		log.Debugf("failed attempt to parse as v5 listing index: %s", err)
 	}
 	sl, err = parseV4Data(data)
 	if err == nil {
 		return sl, nil
 	} else {
-		log.Warningf("failed attempt to parse v4 listing index: %s", err)
+		log.Debugf("failed attempt to parse as v4 listing index: %s", err)
 	}
 	return ListingIndexData{}, fmt.Errorf("failed parsing listing in index: %s", err)
 }
@@ -123,21 +119,19 @@ func parseV4Data(data []byte) (ListingIndexData, error) {
 		return ListingIndexData{}, err
 	}
 	if v4.CoinType != "" && v4.CoinType != v4.Price.CurrencyCode {
-		log.Warningf("parsing v4 listing: ignoring inconsistent coinType (%s), using price currencyCode (%s)", v4.CoinType, v4.Price.CurrencyCode)
+		log.Debugf("parsing v4 listing: ignoring inconsistent coinType (%s), using price currencyCode (%s)", v4.CoinType, v4.Price.CurrencyCode)
 	}
 	return ListingIndexData{
-		Hash:         v4.Hash,
-		Slug:         v4.Slug,
-		Title:        v4.Title,
-		Categories:   v4.Categories,
-		NSFW:         v4.NSFW,
-		ContractType: v4.ContractType,
-		Description:  v4.Description,
-		Thumbnail:    v4.Thumbnail,
-		Price: ListingPrice{
-			Modifier: v4.Price.Modifier,
-			Amount:   *priceValue,
-		},
+		Hash:               v4.Hash,
+		Slug:               v4.Slug,
+		Title:              v4.Title,
+		Categories:         v4.Categories,
+		NSFW:               v4.NSFW,
+		ContractType:       v4.ContractType,
+		Description:        v4.Description,
+		Thumbnail:          v4.Thumbnail,
+		Modifier:           v4.Price.Modifier,
+		Price:              *priceValue,
 		ShipsTo:            v4.ShipsTo,
 		FreeShipping:       v4.FreeShipping,
 		Language:           v4.Language,
