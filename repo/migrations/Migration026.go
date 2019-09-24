@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -53,7 +52,6 @@ func (Migration026) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	indexExists := true
 	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
 		indexExists = false
-		fmt.Println(listingsFilePath)
 	}
 
 	if indexExists {

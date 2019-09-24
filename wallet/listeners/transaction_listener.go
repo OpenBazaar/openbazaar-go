@@ -127,7 +127,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		if isForSale {
 			err = l.db.Sales().UpdateFunding(orderId, funded, records)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("update funding for sale (%s): %s", orderId, err)
 			}
 			// This is a dispute payout. We should set the order state.
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
@@ -152,7 +152,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 					if err != nil {
-						log.Error(err)
+						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
 				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
@@ -162,7 +162,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		} else {
 			err = l.db.Purchases().UpdateFunding(orderId, funded, records)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("update funding for purchase (%s): %s", orderId, err)
 			}
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
@@ -190,7 +190,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 					if err != nil {
-						log.Error(err)
+						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
 				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
