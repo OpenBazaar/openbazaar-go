@@ -5,6 +5,9 @@ from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
 
+## This test takes over 1 hour to complete because the smart contract cannot be
+## simulated into releasing the escrow funds earlier than what has been set as timeout
+## and the minimum value for escrowtimeout is 1 hour
 class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
 
     def __init__(self):
@@ -205,6 +208,8 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         }
         api_url = alice["gateway_url"] + "ob/releaseescrow/"
         r = requests.post(api_url, data=json.dumps(release, indent=4))
+        print("after rel escrow ... ", r.status_code)
+        print("resp : ", json.loads(r.text))
         if r.status_code == 500:
             resp = json.loads(r.text)
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
@@ -212,7 +217,7 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):
-            time.sleep(3)
+            time.sleep(600)
 
         # Alice attempt to release funds again
         release = {
@@ -226,7 +231,6 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
 
         time.sleep(20)
 
-        self.send_bitcoin_cmd("generate", 1)
         time.sleep(2)
 
         # Check the funds moved into alice's wallet

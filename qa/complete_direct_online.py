@@ -42,8 +42,6 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
-        print("api_url : ", api_url)
-        print(json.dumps(listing_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
@@ -109,9 +107,6 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
-        print("################################")
-        print("before spend post : ", api_url)
-        print(json.dumps(spend, indent=4))        
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend post endpoint not found")

@@ -133,6 +133,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		return nil, err
 	}
 
+	/*	
 	out, err := m.MarshalToString(l)
 	if err != nil {
 		return nil, err
@@ -143,6 +144,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		return nil, err
 	}
 	log.Info(len(out1))
+	*/
 
 	listing0 := Listing{
 		Slug:               l.Slug,

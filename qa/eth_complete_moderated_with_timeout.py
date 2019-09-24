@@ -213,6 +213,9 @@ class EthCompleteModeratedWithTimeout(OpenBazaarTestFramework):
             raise TestFailure("EthCompleteModeratedWithTimeout - FAIL: Completion POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
+        print("after completion .... lets pause for 2 minutes")
+        time.sleep(160)
+
         # check alice received completion
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)

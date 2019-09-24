@@ -3665,12 +3665,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			_, err := rand.Read(idBytes)
-			if err != nil {
-				// TODO: if this happens, len(idBytes) != 16
-				// how to handle this
-				log.Error(err)
-			}
+			rand.Read(idBytes)
 			id = base58.Encode(idBytes)
 		}
 
@@ -3747,11 +3742,8 @@ func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Reque
 	}
 	defer file.Close()
 
-	err = i.node.ImportListings(file)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// TODO: add the import listings function call
+
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

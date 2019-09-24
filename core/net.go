@@ -783,7 +783,7 @@ func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte
 // SendOrderPayment - send order payment msg to seller from buyer
 func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
 	var msg = &pb.OrderPaymentTxn{
-		Coin:          spend.Currency.String(),
+		Coin:          spend.Currency.Code.String(),
 		OrderID:       spend.OrderID,
 		TransactionID: spend.Txid,
 		WithInput:     spend.ConsumedInput,

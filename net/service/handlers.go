@@ -1774,6 +1774,10 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	log.Info("in handle order payment .... ")
+	log.Info("txnid : ", paymentDetails.TransactionID)
+	log.Info("coin  :", paymentDetails.Coin)
+
 	wal, err := service.node.Multiwallet.WalletForCurrencyCode(paymentDetails.GetCoin())
 	if err != nil {
 		return nil, err
