@@ -96,7 +96,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			}
 		} else {
 			apiEndpoints = []string{
-				"https://tbtc.blockbook.api.openbazaar.org/api",
+				"https://tbtc.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://test-insight.bitpay.com/api",
 			}
@@ -125,7 +125,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			}
 		} else {
 			apiEndpoints = []string{
-				"https://tbch.blockbook.api.openbazaar.org/api",
+				"https://tbch.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://test-bch-insight.bitpay.com/api",
 			}
@@ -153,7 +153,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			}
 		} else {
 			apiEndpoints = []string{
-				"https://tzec.blockbook.api.openbazaar.org/api",
+				"https://tzec.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://explorer.testnet.z.cash/api",
 			}
@@ -182,7 +182,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			}
 		} else {
 			apiEndpoints = []string{
-				"https://tltc.blockbook.api.openbazaar.org/api",
+				"https://tltc.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://testnet.litecore.io/api",
 			}

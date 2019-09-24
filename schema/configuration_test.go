@@ -62,7 +62,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if len(config.BTC.APIPool) == 0 || config.BTC.APIPool[0] != "https://btc.blockbook.api.openbazaar.org/api" {
 		t.Error("BTC APIPool does not equal expected value")
 	}
-	if len(config.BTC.APITestnetPool) == 0 || config.BTC.APITestnetPool[0] != "https://tbtc.blockbook.api.openbazaar.org/api" {
+	if len(config.BTC.APITestnetPool) == 0 || config.BTC.APITestnetPool[0] != "https://tbtc.api.openbazaar.org/api" {
 		t.Error("BTC APITestnetPool does not equal expected value")
 	}
 	if config.BTC.LowFeeDefault != 1 {
@@ -84,7 +84,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if len(config.BCH.APIPool) == 0 || config.BCH.APIPool[0] != "https://bch.blockbook.api.openbazaar.org/api" {
 		t.Error("BCH APIPool does not equal expected value")
 	}
-	if len(config.BCH.APITestnetPool) == 0 || config.BCH.APITestnetPool[0] != "https://tbch.blockbook.api.openbazaar.org/api" {
+	if len(config.BCH.APITestnetPool) == 0 || config.BCH.APITestnetPool[0] != "https://tbch.api.openbazaar.org/api" {
 
 		t.Error("BCH APITestnetPool does not equal expected value")
 	}
@@ -107,7 +107,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if len(config.LTC.APIPool) == 0 || config.LTC.APIPool[0] != "https://ltc.blockbook.api.openbazaar.org/api" {
 		t.Error("LTC APIPool does not equal expected value")
 	}
-	if len(config.LTC.APITestnetPool) == 0 || config.LTC.APITestnetPool[0] != "https://tltc.blockbook.api.openbazaar.org/api" {
+	if len(config.LTC.APITestnetPool) == 0 || config.LTC.APITestnetPool[0] != "https://tltc.api.openbazaar.org/api" {
 		t.Error("LTC APITestnetPool does not equal expected value")
 	}
 	if config.LTC.LowFeeDefault != 5 {
@@ -129,7 +129,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if len(config.ZEC.APIPool) == 0 || config.ZEC.APIPool[0] != "https://zec.blockbook.api.openbazaar.org/api" {
 		t.Error("ZEC APIPool does not equal expected value")
 	}
-	if len(config.ZEC.APITestnetPool) == 0 || config.ZEC.APITestnetPool[0] != "https://tzec.blockbook.api.openbazaar.org/api" {
+	if len(config.ZEC.APITestnetPool) == 0 || config.ZEC.APITestnetPool[0] != "https://tzec.api.openbazaar.org/api" {
 		t.Error("ZEC APITestnetPool does not equal expected value")
 	}
 	if config.ZEC.LowFeeDefault != 5 {
@@ -352,7 +352,7 @@ func configFixture() []byte {
         "https://btc.blockbook.api.openbazaar.org/api"
       ],
       "APITestnet": [
-        "https://tbtc.blockbook.api.openbazaar.org/api"
+        "https://tbtc.api.openbazaar.org/api"
       ],
       "MaxFee": 200,
       "FeeAPI": "https://btc.fees.openbazaar.org",
@@ -368,7 +368,7 @@ func configFixture() []byte {
         "https://bch.blockbook.api.openbazaar.org/api"
       ],
       "APITestnet": [
-        "https://tbch.blockbook.api.openbazaar.org/api"
+        "https://tbch.api.openbazaar.org/api"
       ],
       "MaxFee": 200,
       "FeeAPI": "https://btc.fees.openbazaar.org",
@@ -384,7 +384,7 @@ func configFixture() []byte {
         "https://ltc.blockbook.api.openbazaar.org/api"
       ],
       "APITestnet": [
-        "https://tltc.blockbook.api.openbazaar.org/api"
+        "https://tltc.api.openbazaar.org/api"
       ],
       "MaxFee": 200,
       "FeeAPI": "https://btc.fees.openbazaar.org",
@@ -400,7 +400,7 @@ func configFixture() []byte {
         "https://zec.blockbook.api.openbazaar.org/api"
       ],
       "APITestnet": [
-        "https://tzec.blockbook.api.openbazaar.org/api"
+        "https://tzec.api.openbazaar.org/api"
       ],
       "MaxFee": 200,
       "FeeAPI": "https://btc.fees.openbazaar.org",
