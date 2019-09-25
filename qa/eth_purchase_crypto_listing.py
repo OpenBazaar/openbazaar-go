@@ -156,7 +156,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
 
         # check vendor detected payment
-        time.sleep(20)
+        time.sleep(120)
         api_url = vendor["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
