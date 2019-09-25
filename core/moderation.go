@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -75,7 +76,11 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 			}
 		}
 		for _, cc := range currencies {
-			moderator.AcceptedCurrencies = append(moderator.AcceptedCurrencies, n.NormalizeCurrencyCode(cc))
+			currency, err := n.LookupCurrency(cc)
+			if err != nil {
+				return fmt.Errorf("moderator fee currency (%s) unknown: %s", cc, err)
+			}
+			moderator.AcceptedCurrencies = append(moderator.AcceptedCurrencies, currency.CurrencyCode().String())
 		}
 
 		profile.Moderator = true
@@ -141,8 +146,8 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 	return nil
 }
 
-// GetModeratorFee - fetch moderator fee
-func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, currencyCode string) (big.Int, error) {
+// GetModeratorFee is called by the Moderator when determining their take of the dispute
+func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, txCurrencyCode string) (big.Int, error) {
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return *big.NewInt(0), err
@@ -151,6 +156,14 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 	err = jsonpb.UnmarshalString(string(file), profile)
 	if err != nil {
 		return *big.NewInt(0), err
+	}
+	modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
+	if err != nil {
+		return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
+	}
+	txCurrency, err := n.LookupCurrency(txCurrencyCode)
+	if err != nil {
+		return *big.NewInt(0), fmt.Errorf("lookup dispute transaction currency (%s): %s", txCurrencyCode, err)
 	}
 	t := new(big.Float).SetInt(&transactionTotal)
 	switch profile.ModeratorInfo.Fee.FeeType {
@@ -165,7 +178,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		if !ok {
 			return *big.NewInt(0), errors.New("invalid fixed fee amount")
 		}
-		if n.NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == n.NormalizeCurrencyCode(currencyCode) {
+		if modFeeCurrency.Equal(txCurrency) {
 			if fixedFee.Cmp(&transactionTotal) > 0 {
 				return *big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
 			}
@@ -175,7 +188,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 		if !ok {
 			return *big.NewInt(0), errors.New("invalid fixed fee amount")
 		}
-		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
+		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
 		if err != nil {
 			return *big.NewInt(0), err
 		} else if fee.Cmp(&transactionTotal) > 0 {
@@ -186,7 +199,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
 		var ok bool
-		if n.NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) == n.NormalizeCurrencyCode(currencyCode) {
+		if modFeeCurrency.Equal(txCurrency) {
 			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
 			if !ok {
 				return *big.NewInt(0), errors.New("invalid fixed fee amount")
@@ -196,7 +209,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, paymentCoin, 
 			if !ok {
 				return *big.NewInt(0), errors.New("invalid fixed fee amount")
 			}
-			f0, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
+			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
 			if err != nil {
 				return *big.NewInt(0), err
 			}
@@ -288,7 +301,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	}
 
 	// Update moderators and hashes on index
-	updater := func(listing *ListingData) error {
+	updater := func(listing *repo.ListingIndexData) error {
 		listing.ModeratorIDs = moderators
 		if hash, ok := hashes[listing.Slug]; ok {
 			listing.Hash = hash

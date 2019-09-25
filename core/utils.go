@@ -110,17 +110,19 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	return paymentRecords, refundRecord, nil
 }
 
-// NormalizeCurrencyCode standardizes the format for the given currency code
-func (n *OpenBazaarNode) NormalizeCurrencyCode(currencyCode string) string {
-	var c, err = repo.LoadCurrencyDefinitions().Lookup(currencyCode)
-	if err != nil {
-		log.Errorf("invalid currency code (%s): %s", currencyCode, err.Error())
-		return ""
-	}
+// LookupCurrency looks up the CurrencyDefinition, first by crypto for the current network
+// (mainnet or testnet) and then by fiat code
+func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefinition, error) {
 	if n.TestnetEnable {
-		return c.TestnetString()
+		if def, err := repo.TestnetCurrencies().Lookup(currencyCode); err == nil {
+			return def, nil
+		}
+	} else {
+		if def, err := repo.MainnetCurrencies().Lookup(currencyCode); err == nil {
+			return def, nil
+		}
 	}
-	return c.MainnetString()
+	return repo.FiatCurrencies().Lookup(currencyCode)
 }
 
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {

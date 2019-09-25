@@ -162,7 +162,6 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Couldn't load order from Vendor")
         resp = json.loads(r.text)
-        print("vendor resp 11 : ", resp["state"])
         if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor failed to detect payment")
         if resp["funded"] == False:

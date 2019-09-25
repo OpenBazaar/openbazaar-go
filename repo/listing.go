@@ -398,22 +398,10 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		fmt.Println(err)
 	}
 
-	lbytes := *objmap["listing"]
-	/*
-		err = json.Unmarshal(lbytes, &lmap)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		var vendorPlay pb.ID
-		err = json.Unmarshal(*lmap["vendorID"], &vendorPlay)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		log.Info("lets see here : ")
-		log.Info(vendorPlay)
-	*/
+	lbytes, ok := objmap["listing"]
+	if !ok {
+		fmt.Println("expected to find listing, but was not present")
+	}
 
 	m1 := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -458,7 +446,7 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 			},
 			ListingVersion:   5,
 			ListingBytes:     []byte(b0),
-			OrigListingBytes: lbytes,
+			OrigListingBytes: *lbytes,
 			ProtoListing:     sl.Listing,
 			Vendor:           peerInfo,
 		}
@@ -468,8 +456,8 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 	}
 
 	listing0 := Listing{
-		ListingBytes:     lbytes,
-		OrigListingBytes: lbytes,
+		ListingBytes:     *lbytes,
+		OrigListingBytes: *lbytes,
 		Metadata: ListingMetadata{
 			Version: version,
 		},
@@ -739,8 +727,12 @@ func ExtractIDFromSignedListing(data []byte) (*pb.ID, error) {
 		return vendorPlay, err
 	}
 
-	lbytes := *objmap["listing"]
-	return ExtractIDFromListing(lbytes)
+	lbytes, ok := objmap["listing"]
+	if !ok {
+		fmt.Println("expected to find listing, but was not present")
+		return nil, errors.New("listing json not found")
+	}
+	return ExtractIDFromListing(*lbytes)
 }
 
 // ExtractIDFromListing returns pb.ID of the listing
@@ -844,110 +836,110 @@ func (l *Listing) GetPrice() (CurrencyValue, error) {
 	log.Info(l.ListingVersion)
 	retVal := CurrencyValue{}
 	if l.ProtoListing != nil {
-		retVal.Amount, _ = new(big.Int).SetString(l.ProtoListing.Item.PriceValue.Amount, 10)
-		retVal.Currency = &CurrencyDefinition{
-			Name:         l.ProtoListing.Item.PriceValue.Currency.Name,
-			Code:         CurrencyCode(l.ProtoListing.Item.PriceValue.Currency.Code),
-			Divisibility: uint(l.ProtoListing.Item.PriceValue.Currency.Divisibility),
-			CurrencyType: l.ProtoListing.Item.PriceValue.Currency.CurrencyType,
-		}
-		return retVal, nil
+		amt, _ := new(big.Int).SetString(l.ProtoListing.Item.PriceValue.Amount, 10)
+		return CurrencyValue{
+			Amount: amt,
+			Currency: CurrencyDefinition{
+				Name:         l.ProtoListing.Item.PriceValue.Currency.Name,
+				Code:         CurrencyCode(l.ProtoListing.Item.PriceValue.Currency.Code),
+				Divisibility: uint(l.ProtoListing.Item.PriceValue.Currency.Divisibility),
+				CurrencyType: l.ProtoListing.Item.PriceValue.Currency.CurrencyType,
+			},
+		}, nil
 	}
 
-	contractType, err := l.GetContractType()
-	if err != nil {
-		return retVal, err
-	}
-	log.Info("contrct type : ", contractType)
 	switch l.ListingVersion {
 	case 3, 4:
-		{
-			if contractType == "CRYPTOCURRENCY" {
-				retVal.Amount = big.NewInt(0)
-				type coinType struct {
-					Metadata struct {
-						CoinType string `json:"coinType"`
-					} `json:"metadata"`
-				}
-				var c coinType
-				err = json.Unmarshal(l.ListingBytes, &c)
-				if err != nil {
-					return retVal, err
-				}
-				curr, err := LoadCurrencyDefinitions().Lookup(c.Metadata.CoinType)
-				if err != nil {
-					curr = &CurrencyDefinition{
-						Code:         CurrencyCode(c.Metadata.CoinType),
-						Divisibility: 8,
-						Name:         "A",
-						CurrencyType: "crypto",
-					}
-				}
-				retVal.Currency = curr
-			} else {
-				type price struct {
-					Item struct {
-						Price int64 `json:"price"`
-					} `json:"item"`
-				}
-				var p price
-				err = json.Unmarshal(l.ListingBytes, &p)
-				if err != nil {
-					return retVal, err
-				}
-				retVal.Amount = big.NewInt(p.Item.Price)
-				type pricingCurrency struct {
-					Metadata struct {
-						PricingCurrency string `json:"pricingCurrency"`
-					} `json:"metadata"`
-				}
-				var pc pricingCurrency
-				err = json.Unmarshal(l.ListingBytes, &pc)
-				if err != nil {
-					return retVal, err
-				}
-				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
-				if err != nil {
-					curr = &CurrencyDefinition{
-						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
-						Divisibility: 8,
-						Name:         "A",
-						CurrencyType: "crypto",
-					}
-				}
-				retVal.Currency = curr
-			}
+		contractType, err := l.GetContractType()
+		if err != nil {
+			return CurrencyValue{}, err
 		}
-	case 5:
-		{
-			type price struct {
+		if contractType == "CRYPTOCURRENCY" {
+			var c struct {
+				Metadata struct {
+					CoinType string `json:"coinType"`
+				} `json:"metadata"`
+			}
+			err = json.Unmarshal(l.ListingBytes, &c)
+			if err != nil {
+				return CurrencyValue{}, err
+			}
+			// TODO: Import all cryptos so they are supported for
+			// new CYRPTOCURRENCY listings (#1710)
+			curr, err := AllCurrencies().Lookup(c.Metadata.CoinType)
+			if err != nil {
+				curr = CurrencyDefinition{
+					Code:         CurrencyCode(c.Metadata.CoinType),
+					Divisibility: 8,
+					Name:         c.Metadata.CoinType,
+					CurrencyType: "crypto",
+				}
+			}
+			return CurrencyValue{
+				Amount:   big.NewInt(0),
+				Currency: curr,
+			}, nil
+		} else {
+			var p struct {
 				Item struct {
-					Price struct {
-						Currency struct {
-							Code         string `json:"code"`
-							Divisibility uint   `json:"divisibility"`
-							Name         string `json:"name"`
-							CurrencyType string `json:"currencyType"`
-						} `json:"currency"`
-						Amount string `json:"amount"`
-					} `json:"price"`
+					Price int64 `json:"price"`
 				} `json:"item"`
 			}
-			var p price
-			err = json.Unmarshal(l.ListingBytes, &p)
-			if err != nil {
-				return retVal, err
+			if err = json.Unmarshal(l.ListingBytes, &p); err != nil {
+				return CurrencyValue{}, err
 			}
-			retVal.Amount, _ = new(big.Int).SetString(p.Item.Price.Amount, 10)
-			retVal.Currency = &CurrencyDefinition{
+			var pc struct {
+				Metadata struct {
+					PricingCurrency string `json:"pricingCurrency"`
+				} `json:"metadata"`
+			}
+			if err = json.Unmarshal(l.ListingBytes, &pc); err != nil {
+				return CurrencyValue{}, err
+			}
+
+			curr, err := AllCurrencies().Lookup(pc.Metadata.PricingCurrency)
+			if err != nil {
+				curr = CurrencyDefinition{
+					Code:         CurrencyCode(pc.Metadata.PricingCurrency),
+					Divisibility: 8,
+					Name:         "A",
+					CurrencyType: "crypto",
+				}
+			}
+			return CurrencyValue{
+				Amount:   big.NewInt(p.Item.Price),
+				Currency: curr,
+			}, nil
+		}
+	case 5:
+		var p struct {
+			Item struct {
+				Price struct {
+					Currency struct {
+						Code         string `json:"code"`
+						Divisibility uint   `json:"divisibility"`
+						Name         string `json:"name"`
+						CurrencyType string `json:"currencyType"`
+					} `json:"currency"`
+					Amount string `json:"amount"`
+				} `json:"price"`
+			} `json:"item"`
+		}
+		if err := json.Unmarshal(l.ListingBytes, &p); err != nil {
+			return CurrencyValue{}, err
+		}
+		amt, _ := new(big.Int).SetString(p.Item.Price.Amount, 10)
+		return CurrencyValue{
+			Amount: amt,
+			Currency: CurrencyDefinition{
 				Code:         CurrencyCode(p.Item.Price.Currency.Code),
 				Divisibility: p.Item.Price.Currency.Divisibility,
 				Name:         p.Item.Price.Currency.Name,
 				CurrencyType: p.Item.Price.Currency.CurrencyType,
-			}
-		}
+			},
+		}, nil
 	}
-	return retVal, nil
+	return CurrencyValue{}, fmt.Errorf("failed to get price: unknown schema")
 }
 
 // GetModerators - return listing moderators
@@ -1255,9 +1247,9 @@ func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 				if err != nil {
 					return nil, err
 				}
-				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
+				curr, err := AllCurrencies().Lookup(pc.Metadata.PricingCurrency)
 				if err != nil {
-					curr = &CurrencyDefinition{
+					curr = CurrencyDefinition{
 						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
 						Divisibility: 8,
 						Name:         "A",
@@ -1334,20 +1326,6 @@ func (l *Listing) GetItem() (*pb.Listing_Item, error) {
 	price, err := l.GetPrice()
 	if err != nil {
 		return nil, err
-	}
-	curr0 := new(CurrencyDefinition)
-	curr, err := l.GetPricingCurrencyDefn()
-	if err != nil {
-		return nil, err
-	}
-	if price.Currency == nil {
-
-		curr0.Code = CurrencyCode(curr.Code)
-		curr0.Divisibility = uint(curr.Divisibility)
-		curr0.Name = curr.Name
-		curr0.CurrencyType = curr.CurrencyType
-		price.Currency = curr0
-		price.Amount = big.NewInt(0)
 	}
 	i := pb.Listing_Item{
 		Title:          title,
@@ -1466,9 +1444,9 @@ func (l *Listing) GetPricingCurrencyDefn() (*pb.CurrencyDefinition, error) {
 				if err != nil {
 					return nil, err
 				}
-				curr, err := LoadCurrencyDefinitions().Lookup(c.Metadata.CoinType)
+				curr, err := AllCurrencies().Lookup(c.Metadata.CoinType)
 				if err != nil {
-					curr = &CurrencyDefinition{
+					curr = CurrencyDefinition{
 						Code:         CurrencyCode(c.Metadata.CoinType),
 						Divisibility: 8,
 						Name:         "A",
@@ -1492,9 +1470,9 @@ func (l *Listing) GetPricingCurrencyDefn() (*pb.CurrencyDefinition, error) {
 				if err != nil {
 					return nil, err
 				}
-				curr, err := LoadCurrencyDefinitions().Lookup(pc.Metadata.PricingCurrency)
+				curr, err := AllCurrencies().Lookup(pc.Metadata.PricingCurrency)
 				if err != nil {
-					curr = &CurrencyDefinition{
+					curr = CurrencyDefinition{
 						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
 						Divisibility: 8,
 						Name:         "A",
@@ -2508,7 +2486,7 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		//	return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	localDef, err := LoadCurrencyDefinitions().Lookup(listing.Metadata.PricingCurrencyDefn.Code)
+	localDef, err := AllCurrencies().Lookup(listing.Metadata.PricingCurrencyDefn.Code)
 	if err != nil {
 		return ErrCurrencyDefinitionUndefined
 	}

@@ -334,7 +334,7 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
-	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	def, err := repo.AllCurrencies().Lookup(paymentCoin)
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
@@ -343,7 +343,8 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 	if err != nil {
 		log.Error(err)
 	}
-	return rc, pb.OrderState(stateInt), funded, records, read, def.CurrencyCode(), nil
+	cc := def.CurrencyCode()
+	return rc, pb.OrderState(stateInt), funded, records, read, &cc, nil
 }
 
 func (p *PurchasesDB) Count() int {

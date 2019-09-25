@@ -675,19 +675,19 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETWalletCurrencyDictionary(w http.ResponseWriter, r *http.Request) {
 	var (
-		resp      map[string]*repo.CurrencyDefinition
+		resp      map[string]repo.CurrencyDefinition
 		_, lookup = path.Split(r.URL.Path)
 	)
 	if lookup == "currencies" {
-		resp = repo.LoadCurrencyDefinitions().All()
+		resp = repo.AllCurrencies().AsMap()
 	} else {
 		var upperLookup = strings.ToUpper(lookup)
-		def, err := repo.LoadCurrencyDefinitions().Lookup(upperLookup)
+		def, err := i.node.LookupCurrency(upperLookup)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, fmt.Sprintf("unknown definition for %s", lookup))
 			return
 		}
-		resp = map[string]*repo.CurrencyDefinition{upperLookup: def}
+		resp = map[string]repo.CurrencyDefinition{upperLookup: def}
 	}
 	out, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
@@ -734,16 +734,16 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   string                   `json:"confirmed"`
-		Unconfirmed string                   `json:"unconfirmed"`
-		Currency    *repo.CurrencyDefinition `json:"currency"`
-		Height      uint32                   `json:"height"`
+		Confirmed   string                  `json:"confirmed"`
+		Unconfirmed string                  `json:"unconfirmed"`
+		Currency    repo.CurrencyDefinition `json:"currency"`
+		Height      uint32                  `json:"height"`
 	}
 	if coinType == "balance" {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
 			height, _ := wal.ChainTip()
-			defn, err := repo.LoadCurrencyDefinitions().Lookup(ct.CurrencyCode())
+			defn, err := i.node.LookupCurrency(ct.CurrencyCode())
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
@@ -772,7 +772,7 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	height, _ := wal.ChainTip()
 	confirmed, unconfirmed := wal.Balance()
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	defn, err := i.node.LookupCurrency(coinType)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1118,7 +1118,12 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJSON))
 
 	} else {
-		rate, err := wal.ExchangeRates().GetExchangeRate(i.node.NormalizeCurrencyCode(currencyCode))
+		def, err := i.node.LookupCurrency(currencyCode)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		rate, err := wal.ExchangeRates().GetExchangeRate(def.CurrencyCode().String())
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1598,7 +1603,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -1647,7 +1652,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -1752,7 +1757,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -1952,7 +1957,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -1993,7 +1998,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -2081,7 +2086,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -2228,7 +2233,7 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -2273,7 +2278,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -3332,7 +3337,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		Memo               string              `json:"memo"`
 	}
 	confirmed, unconfirmed := wal.Balance()
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	defn, err := i.node.LookupCurrency(wal.CurrencyCode())
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3407,7 +3412,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(coinType)
+	defn, err := i.node.LookupCurrency(coinType)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3434,7 +3439,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
-			defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+			defn, err := i.node.LookupCurrency(wal.CurrencyCode())
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
@@ -3461,7 +3466,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(wal.CurrencyCode())
+	defn, err := i.node.LookupCurrency(wal.CurrencyCode())
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

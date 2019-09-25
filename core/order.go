@@ -69,7 +69,7 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 
 	// TODO: Remove once broken contracts are migrated
 	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(lookupCoin)
+	_, err = n.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
@@ -108,7 +108,7 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paymentAddress string, paymentAmount *repo.CurrencyValue, vendorOnline bool, err error) {
 	retCurrency := &repo.CurrencyValue{}
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
+	defn, err := n.LookupCurrency(data.PaymentCoin)
 	if err != nil {
 		return "", "", retCurrency, false, err
 	}
@@ -206,7 +206,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_MODERATED
 	payment.Moderator = data.Moderator
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
+	defn, err := n.LookupCurrency(data.PaymentCoin)
 	if err != nil {
 		return nil, errors.New("invalid payment coin")
 	}
@@ -783,9 +783,17 @@ func getContractIdentity(n *OpenBazaarNode) (pb.ID, error) {
 	return id, nil
 }
 
-func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(currencyCode string, acceptedCurrencies []string) bool {
+func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(checkCode string, acceptedCurrencies []string) bool {
+	checkDef, err := n.LookupCurrency(checkCode)
+	if err != nil {
+		return false
+	}
 	for _, cc := range acceptedCurrencies {
-		if n.NormalizeCurrencyCode(cc) == n.NormalizeCurrencyCode(currencyCode) {
+		acceptedDef, err := n.LookupCurrency(cc)
+		if err != nil {
+			continue
+		}
+		if checkDef.Equal(acceptedDef) {
 			return true
 		}
 	}
@@ -836,11 +844,6 @@ func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 	return nil
 }
 
-// GetCurrencyDefinition - return the currency defn for a coin
-func (n *OpenBazaarNode) GetCurrencyDefinition(code string) (*repo.CurrencyDefinition, error) {
-	return repo.LoadCurrencyDefinitions().Lookup(code)
-}
-
 // EstimateOrderTotal - returns order total in satoshi/wei
 func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (big.Int, error) {
 	contract, err := n.createContractWithOrder(data)
@@ -848,7 +851,7 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (big.Int, e
 		return *big.NewInt(0), err
 	}
 	payment := new(pb.Order_Payment)
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(data.PaymentCoin)
+	defn, err := n.LookupCurrency(data.PaymentCoin)
 	if err != nil {
 		return *big.NewInt(0), errors.New("invalid payment coin")
 	}
@@ -1249,16 +1252,11 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount big.Int) (big.Int, error) {
-	const reserveCurrency = "BTC"
-	if n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(paymentCoin) || "T"+n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(paymentCoin) {
-		return amount, nil
-	}
-
+	var reserveCurrency = n.reserveCurrency()
 	var (
-		currencyDict             = repo.LoadCurrencyDefinitions()
-		originCurrencyDef, oErr  = currencyDict.Lookup(currencyCode)
-		paymentCurrencyDef, pErr = currencyDict.Lookup(paymentCoin)
-		reserveCurrencyDef, rErr = currencyDict.Lookup(reserveCurrency)
+		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
+		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
+		reserveCurrencyDef, rErr = n.LookupCurrency(reserveCurrency)
 	)
 	if oErr != nil {
 		return *big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
@@ -1268,6 +1266,10 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	}
 	if rErr != nil {
 		return *big.NewInt(0), fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
+	}
+
+	if originCurrencyDef.Equal(paymentCurrencyDef) {
+		return amount, nil
 	}
 
 	originValue, err := repo.NewCurrencyValue(amount.String(), originCurrencyDef)
@@ -1312,19 +1314,37 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	return *resultValue.Amount, nil
 }
 
+func (n *OpenBazaarNode) reserveCurrency() string {
+	if n.TestnetEnable {
+		return "TBTC"
+	}
+	return "BTC"
+}
+
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {
-	if n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(pricingCurrency) || "T"+n.NormalizeCurrencyCode(currencyCode) == n.NormalizeCurrencyCode(pricingCurrency) {
+	var (
+		currencyDef, cErr = n.LookupCurrency(currencyCode)
+		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
+	)
+	if cErr != nil {
+		return *big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", currencyCode, cErr)
+	}
+	if pErr != nil {
+		return *big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
+	}
+
+	if currencyDef.Equal(pricingDef) {
 		return amount, nil
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingCurrency)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingDef.CurrencyCode().String())
 	if err != nil {
-		return *big.NewInt(0), err
+		return *big.NewInt(0), fmt.Errorf("currency (%s) unsupported by wallet", pricingDef.CurrencyCode().String())
 	}
 	if wal.ExchangeRates() == nil {
 		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
+	rate, err := wal.ExchangeRates().GetExchangeRate(currencyDef.CurrencyCode().String())
 	if err != nil {
 		return *big.NewInt(0), err
 	}

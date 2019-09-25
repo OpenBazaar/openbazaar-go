@@ -198,7 +198,6 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if resp["state"] != "FULFILLED":
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Alice failed to order fulfillment")
 
-
         # bob send order completion
         with open('testdata/completion.json') as completion_file:
             completion_json = json.load(completion_file, object_pairs_hook=OrderedDict)
@@ -212,7 +211,6 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Completion POST failed. Reason: %s", resp["reason"])
 
-        print("after completion .... lets pause for 2 minutes")
         time.sleep(160)
 
         # check alice received completion

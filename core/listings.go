@@ -21,38 +21,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-type price struct {
-	CurrencyCode string             `json:"currencyCode"`
-	Amount       repo.CurrencyValue `json:"amount"`
-	Modifier     float32            `json:"modifier"`
-}
-type thumbnail struct {
-	Tiny   string `json:"tiny"`
-	Small  string `json:"small"`
-	Medium string `json:"medium"`
-}
-
-// ListingData - represent a listing
-type ListingData struct {
-	Hash               string    `json:"hash"`
-	Slug               string    `json:"slug"`
-	Title              string    `json:"title"`
-	Categories         []string  `json:"categories"`
-	NSFW               bool      `json:"nsfw"`
-	ContractType       string    `json:"contractType"`
-	Description        string    `json:"description"`
-	Thumbnail          thumbnail `json:"thumbnail"`
-	Price              price     `json:"price"`
-	ShipsTo            []string  `json:"shipsTo"`
-	FreeShipping       []string  `json:"freeShipping"`
-	Language           string    `json:"language"`
-	AverageRating      float32   `json:"averageRating"`
-	RatingCount        uint32    `json:"ratingCount"`
-	ModeratorIDs       []string  `json:"moderators"`
-	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
-	CoinType           string    `json:"coinType"`
-}
-
 // SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
 	var (
@@ -75,14 +43,18 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 		return repo.SignedListing{}, err
 	}
 	for _, acceptedCurrency := range currencies {
-		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
+		currencyDef, err := n.LookupCurrency(acceptedCurrency)
 		if err != nil {
-			return repo.SignedListing{}, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
+			return repo.SignedListing{}, fmt.Errorf("lookup currency (%s): %s", acceptedCurrency, err)
 		}
-		if currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] {
+		_, err = n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
+		if err != nil {
+			return repo.SignedListing{}, fmt.Errorf("currency (%s) not supported by wallet", acceptedCurrency)
+		}
+		if currencyMap[currencyDef.CurrencyCode().String()] {
 			return repo.SignedListing{}, errors.New("duplicate accepted currency in listing")
 		}
-		currencyMap[n.NormalizeCurrencyCode(acceptedCurrency)] = true
+		currencyMap[currencyDef.CurrencyCode().String()] = true
 	}
 	return listing.Sign(n.IpfsNode, timeout, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
 }
@@ -291,12 +263,12 @@ func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 	return n.updateListingOnDisk(index, ld, false)
 }
 
-func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
+func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.ListingIndexData, error) {
 	listingPath := path.Join(n.RepoPath, "root", "listings", listing.Listing.Slug+".json")
 
 	listingHash, err := ipfs.GetHashOfFile(n.IpfsNode, listingPath)
 	if err != nil {
-		return ListingData{}, err
+		return repo.ListingIndexData{}, err
 	}
 
 	descriptionLength := len(listing.Listing.Item.Description)
@@ -323,7 +295,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 			for _, service := range shippingOption.Services {
 				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
 				if !ok {
-					return ListingData{}, errors.New("invalid price amount")
+					return repo.ListingIndexData{}, errors.New("invalid price amount")
 				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
@@ -332,29 +304,27 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		}
 	}
 
-	defn, err := repo.LoadCurrencyDefinitions().Lookup(listing.Listing.Metadata.PricingCurrencyDefn.Code)
+	defn, err := n.LookupCurrency(listing.Listing.Metadata.PricingCurrencyDefn.Code)
 	if err != nil {
-		return ListingData{}, errors.New("invalid pricing currency")
+		return repo.ListingIndexData{}, errors.New("invalid pricing currency")
 	}
 	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
 	if !ok {
-		return ListingData{}, errors.New("invalid price amount")
+		return repo.ListingIndexData{}, errors.New("invalid price amount")
 	}
 
-	ld := ListingData{
+	ld := repo.ListingIndexData{
 		Hash:         listingHash,
 		Slug:         listing.Listing.Slug,
 		Title:        listing.Listing.Item.Title,
 		Categories:   listing.Listing.Item.Categories,
 		NSFW:         listing.Listing.Item.Nsfw,
-		CoinType:     listing.Listing.Metadata.PricingCurrencyDefn.Code,
 		ContractType: listing.Listing.Metadata.ContractType.String(),
 		Description:  listing.Listing.Item.Description[:descriptionLength],
-		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price: price{
-			CurrencyCode: listing.Listing.Metadata.PricingCurrencyDefn.Code,
-			Amount:       repo.CurrencyValue{Currency: defn, Amount: amt},
-			Modifier:     listing.Listing.Metadata.PriceModifier,
+		Thumbnail:    repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
+		Price: repo.ListingPrice{
+			Amount:   repo.CurrencyValue{Currency: defn, Amount: amt},
+			Modifier: listing.Listing.Metadata.PriceModifier,
 		},
 		ShipsTo:            shipsTo,
 		FreeShipping:       freeShipping,
@@ -365,10 +335,10 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 	return ld, nil
 }
 
-func (n *OpenBazaarNode) getListingIndex() ([]ListingData, error) {
+func (n *OpenBazaarNode) getListingIndex() ([]repo.ListingIndexData, error) {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
-	var index []ListingData
+	var index []repo.ListingIndexData
 
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
@@ -386,7 +356,7 @@ func (n *OpenBazaarNode) getListingIndex() ([]ListingData, error) {
 }
 
 // Update the listings.json file in the listings directory
-func (n *OpenBazaarNode) updateListingOnDisk(index []ListingData, ld ListingData, updateRatings bool) error {
+func (n *OpenBazaarNode) updateListingOnDisk(index []repo.ListingIndexData, ld repo.ListingIndexData, updateRatings bool) error {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	var avgRating float32
@@ -397,7 +367,7 @@ func (n *OpenBazaarNode) updateListingOnDisk(index []ListingData, ld ListingData
 			ratingCount = d.RatingCount
 
 			if len(index) == 1 {
-				index = []ListingData{}
+				index = []repo.ListingIndexData{}
 				break
 			}
 			index = append(index[:i], index[i+1:]...)
@@ -435,7 +405,7 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	if err != nil {
 		return err
 	}
-	var ld ListingData
+	var ld repo.ListingIndexData
 	exists := false
 	for _, l := range index {
 		if l.Slug == rating.RatingData.VendorSig.Metadata.ListingSlug {
@@ -457,10 +427,10 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 // UpdateEachListingOnIndex will visit each listing in the index and execute the function
 // with a pointer to the listing passed as the argument. The function should return
 // an error to further processing.
-func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingData) error) error {
+func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*repo.ListingIndexData) error) error {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
-	var index []ListingData
+	var index []repo.ListingIndexData
 
 	_, ferr := os.Stat(indexPath)
 	if os.IsNotExist(ferr) {
@@ -509,7 +479,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 		return 0
 	}
 
-	var index []ListingData
+	var index []repo.ListingIndexData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
 		return 0
@@ -535,7 +505,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 		return false
 	}
 
-	var index []ListingData
+	var index []repo.ListingIndexData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
 		log.Error(err)
@@ -572,7 +542,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	if err != nil {
 		return err
 	}
-	var index []ListingData
+	var index []repo.ListingIndexData
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
@@ -594,7 +564,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		}
 
 		if len(index) == 1 {
-			index = []ListingData{}
+			index = []repo.ListingIndexData{}
 			break
 		}
 		index = append(index[:i], index[i+1:]...)
@@ -640,7 +610,7 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	}
 
 	// Unmarshal the index to check if file contains valid json
-	var index []ListingData
+	var index []repo.ListingIndexData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
 		return nil, err
@@ -660,7 +630,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, err
 	}
 
 	// Unmarshal the index
-	var index []ListingData
+	var index []repo.ListingIndexData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
 		return nil, err

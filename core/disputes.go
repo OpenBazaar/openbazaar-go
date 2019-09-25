@@ -497,7 +497,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	// TODO: Remove once broken contracts are migrated
 	paymentCoin := preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code
-	_, err = repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	_, err = n.LookupCurrency(paymentCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", paymentCoin, orderID)
 		//preferredContract.BuyerOrder.Payment.Coin = paymentCoinHint.String()
@@ -546,7 +546,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
-		return err
+		return fmt.Errorf("currency (%s) not supported by wallet", preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
@@ -555,7 +555,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	var modAddr btcutil.Address
 	var modValue big.Int
 	modAddr = wal.CurrentAddress(wallet.EXTERNAL)
-	modValue, err = n.GetModeratorFee(*totalOut, preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code, wal.CurrencyCode())
+	modValue, err = n.GetModeratorFee(*totalOut, preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -1052,7 +1052,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	currencyDef, err := repo.LoadCurrencyDefinitions().Lookup(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	currencyDef, err := n.LookupCurrency(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
 	if err != nil {
 		return fmt.Errorf("unknown currency code (%s) in contract (%s) buyer order", contract.BuyerOrder.Payment.AmountValue.Currency.Code, orderID)
 	}
@@ -1214,7 +1214,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 
 	err = n.SendOrderPayment(&SpendResponse{
 		Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
-		Currency:      currencyDef,
+		Currency:      &currencyDef,
 		OrderID:       orderID,
 		PeerID:        peerID,
 		ConsumedInput: true,

@@ -75,11 +75,19 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	}
 	if settingsData.PreferredCurrencies != nil {
 		for _, ct := range *settingsData.PreferredCurrencies {
-			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct))
+			def, err := n.LookupCurrency(ct)
+			if err != nil {
+				return fmt.Errorf("lookup currency (%s): %s", ct, err)
+			}
+			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 		}
 	} else {
 		for ct := range n.Multiwallet {
-			acceptedCurrencies = append(acceptedCurrencies, n.NormalizeCurrencyCode(ct.CurrencyCode()))
+			def, err := n.LookupCurrency(ct.CurrencyCode())
+			if err != nil {
+				return fmt.Errorf("lookup currency (%s): %s", ct.CurrencyCode(), err)
+			}
+			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 		}
 	}
 
