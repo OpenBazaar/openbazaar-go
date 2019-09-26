@@ -897,6 +897,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 }
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+
+	log.Debugf("received order fulfillment message from %s", p.Pretty())
+
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -913,6 +916,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
+		log.Debugf("unable to find a matching order in the purchases table of the database")
 		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, nil); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -920,6 +924,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		log.Debugf("order state (%s) is not what is expected", state.String())
 		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, contract); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -927,6 +932,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
+		log.Debugf("order state (%s) is not what is expected", state.String())
 		return nil, net.DuplicateMessage
 	}
 
@@ -937,14 +943,17 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		}
 	}
 
+	log.Debugf("validating order fulfillment message")
 	if err := service.node.ValidateOrderFulfillment(rc.VendorOrderFulfillment[0], contract); err != nil {
 		return nil, err
 	}
 
 	// Set message state to fulfilled if all listings have a matching fulfillment message
 	if service.node.IsFulfilled(contract) {
+		log.Debugf("updating order %s in the database to fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_FULFILLED, false)
 	} else {
+		log.Debugf("updating order %s in the database to partially fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
 	}
 
@@ -972,7 +981,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("received ORDER_FULFILLMENT message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	return nil, nil
 }

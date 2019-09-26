@@ -116,7 +116,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		}
 
 		if pmes.IsResponse {
-			log.Debugf("received response message from %s: %s", mPeer.Pretty(), pmes.RequestId)
+			log.Debugf("received response message from %s: %d", mPeer.Pretty(), pmes.RequestId)
 			ms.requestlk.Lock()
 			ch, ok := ms.requests[pmes.RequestId]
 			if ok {
