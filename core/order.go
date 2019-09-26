@@ -119,6 +119,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		Name:         defn.Name,
 		CurrencyType: defn.CurrencyType,
 	}
+
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", retCurrency, false, err
@@ -152,6 +153,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		return id, addr, retCurrency, f, err
 
 	}
+
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
@@ -1315,7 +1317,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
-	if n.TestnetEnable {
+	if n.TestnetEnable || n.RegressionTestEnable {
 		return "TBTC"
 	}
 	return "BTC"
