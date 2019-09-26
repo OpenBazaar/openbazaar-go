@@ -121,7 +121,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 			ch, ok := ms.requests[pmes.RequestId]
 			if ok {
 				// this is a request response
-				log.Debugf("found matching request for: %s", pmes.RequestId)
+				log.Debugf("found matching request for: %i", pmes.RequestId)
 				select {
 				case ch <- pmes:
 					// message returned to requester
