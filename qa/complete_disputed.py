@@ -282,7 +282,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         time.sleep(5)
 
         # Check bob received payout
-        api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = bob["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)

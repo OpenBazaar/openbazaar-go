@@ -128,7 +128,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	if err != nil {
 		return "", "", retCurrency, false, err
 	}
-
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
@@ -1346,7 +1345,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := wal.ExchangeRates().GetExchangeRate(currencyDef.CurrencyCode().String())
+	rate, err := wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(currencyDef.CurrencyCode().String(), "T"))
 	if err != nil {
 		return *big.NewInt(0), err
 	}
