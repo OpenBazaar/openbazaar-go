@@ -462,6 +462,8 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
+	log.Debugf("received order confirmation message from %s", p.Pretty())
+
 	// Unmarshal payload
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
@@ -480,8 +482,10 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
+	log.Debugf("loading order %s from the database", orderId)
 	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
+		log.Debugf("could not retrieve order %s from the database: %s", orderId, err.Error())
 		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CONFIRMATION, nil); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -489,10 +493,12 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	if funded && state == pb.OrderState_AWAITING_FULFILLMENT || !funded && state == pb.OrderState_AWAITING_PAYMENT {
+		log.Debugf("dropping duplicate order confirmation")
 		return nil, net.DuplicateMessage
 	}
 
 	// Validate the order confirmation
+	log.Debugf("validating order confirmation message")
 	err = service.node.ValidateOrderConfirmation(vendorContract, false)
 	if err != nil {
 		return nil, err
@@ -508,9 +514,11 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	if funded {
 		// Set message state to AWAITING_FULFILLMENT
+		log.Debugf("now awaiting fulfillment for order %s", orderId)
 		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 	} else {
 		// Set message state to AWAITING_PAYMENT
+		log.Debugf("order not funded, awaiting payment for order %s", orderId)
 		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 	}
 
@@ -528,6 +536,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	// Send notification to websocket
+	log.Debugf("broadcasting notification to the websocket for order %s", orderId)
 	n := repo.OrderConfirmationNotification{
 		ID:           repo.NewNotificationID(),
 		Type:         repo.NotifierTypeOrderConfirmationNotification,
@@ -538,7 +547,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 	service.broadcast <- n
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
-	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_CONFIRMATION message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -1678,6 +1687,9 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+
+	log.Debugf("received order payment message from: %s", peer.Pretty())
+
 	// Unmarshal
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
@@ -1703,13 +1715,16 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	log.Debugf("retrieving %s transaction %s", paymentDetails.Coin, chash.String())
 	txn, err := wal.GetTransaction(*chash)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Debugf("retrieving order %s from the database", paymentDetails.OrderID)
 	contract, _, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
 	if err != nil {
+		log.Debugf("no matching order was found in the database")
 		return nil, net.OutOfOrderMessage
 	}
 
@@ -1771,6 +1786,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		WatchOnly: false,
 	}
 
+	log.Debugf("associating tx %s with order %s", txn.Txid, paymentDetails.OrderID)
 	wal0.AssociateTransactionWithOrder(cb)
 
 	return nil, nil
