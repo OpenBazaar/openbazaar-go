@@ -220,11 +220,11 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		n0, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
+		n, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
 		if !ok {
 			return errors.New("invalid payout fee per byte value")
 		}
-		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n0)
+		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n)
 		if err != nil {
 			return err
 		}
@@ -236,34 +236,6 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			pbSigs = append(pbSigs, sig)
 		}
 		oc.PayoutSigs = pbSigs
-		var vendorSignatures []wallet.Signature
-		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
-			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
-			vendorSignatures = append(vendorSignatures, sig)
-		}
-		/*
-			txnID, err := wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *n0, true)
-			if err != nil {
-				return err
-			}
-
-			currencyDefn, err := repo.LoadCurrencyDefinitions().Lookup(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
-			if err != nil {
-				return err
-			}
-
-			err = n.SendOrderPayment(&SpendResponse{
-				Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
-				Currency:      currencyDefn,
-				OrderID:       orderID,
-				PeerID:        contract.VendorListings[0].VendorID.PeerID,
-				ConsumedInput: true,
-			})
-			if err != nil {
-				log.Errorf("error sending order payment: %v", err)
-			}
-		*/
-
 	}
 
 	rc := new(pb.RicardianContract)

@@ -113,7 +113,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "currencyCode": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
             "amount": payment_amount["amount"],
             "feeLevel": "NORMAL",
@@ -187,7 +187,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         time.sleep(2)
 
         # Check the funds moved into bob's wallet
-        api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = bob["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)

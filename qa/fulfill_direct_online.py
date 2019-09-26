@@ -101,7 +101,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "currencyCode": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
             "amount": payment_amount["amount"],
             "feeLevel": "NORMAL",

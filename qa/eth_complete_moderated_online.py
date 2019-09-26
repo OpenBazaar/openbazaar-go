@@ -210,7 +210,6 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Completion POST failed. Reason: %s", resp["reason"])
-
         time.sleep(160)
 
         # check alice received completion

@@ -157,10 +157,6 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, txCurrencyCod
 	if err != nil {
 		return *big.NewInt(0), err
 	}
-	modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
-	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
-	}
 	txCurrency, err := n.LookupCurrency(txCurrencyCode)
 	if err != nil {
 		return *big.NewInt(0), fmt.Errorf("lookup dispute transaction currency (%s): %s", txCurrencyCode, err)
@@ -174,6 +170,10 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, txCurrencyCod
 		total, _ := t.Int(nil)
 		return *total, nil
 	case pb.Moderator_Fee_FIXED:
+		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
+		if err != nil {
+			return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
+		}
 		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
 		if !ok {
 			return *big.NewInt(0), errors.New("invalid fixed fee amount")
@@ -199,6 +199,10 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, txCurrencyCod
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
 		var ok bool
+		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
+		if err != nil {
+			return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
+		}
 		if modFeeCurrency.Equal(txCurrency) {
 			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
 			if !ok {

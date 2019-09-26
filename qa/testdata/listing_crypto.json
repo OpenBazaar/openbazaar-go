@@ -6,7 +6,7 @@
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
         "pricingCurrency": {
-            "code": "BCH",
+            "code": "TBCH",
             "divisibility": 8,
             "name": "A",
             "currencyType": "A"

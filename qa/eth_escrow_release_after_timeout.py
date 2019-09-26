@@ -208,8 +208,6 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         }
         api_url = alice["gateway_url"] + "ob/releaseescrow/"
         r = requests.post(api_url, data=json.dumps(release, indent=4))
-        print("after rel escrow ... ", r.status_code)
-        print("resp : ", json.loads(r.text))
         if r.status_code == 500:
             resp = json.loads(r.text)
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])

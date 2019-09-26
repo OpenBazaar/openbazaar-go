@@ -834,7 +834,6 @@ func (l *Listing) GetFormat() (string, error) {
 func (l *Listing) GetPrice() (CurrencyValue, error) {
 	log.Info("in get price ... ")
 	log.Info(l.ListingVersion)
-	retVal := CurrencyValue{}
 	if l.ProtoListing != nil {
 		amt, _ := new(big.Int).SetString(l.ProtoListing.Item.PriceValue.Amount, 10)
 		return CurrencyValue{
