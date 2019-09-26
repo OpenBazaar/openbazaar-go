@@ -282,6 +282,13 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	offline, _ := options.(bool)
+
+	if offline {
+		log.Debugf("handling offline order from: %s", peer.Pretty())
+	} else {
+		log.Debugf("handling normal order from: %s", peer.Pretty())
+	}
+
 	contract := new(pb.RicardianContract)
 	var orderId string
 	errorResponse := func(errMsg string) *pb.Message {
@@ -321,22 +328,29 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return errorResponse(err.Error()), err
 	}
 
-	pro, _ := service.node.GetProfile()
+	pro, err := service.node.GetProfile()
 	if !pro.Vendor {
+		log.Debugf("sending message to buyer that our store is not accepting orders")
 		return errorResponse("the vendor turned his store off and is not accepting orders at this time"), errors.New("store is turned off")
 	}
 
 	err = service.node.ValidateOrder(contract, !offline)
-	if err != nil && (err != core.ErrPurchaseUnknownListing || !offline) {
-		return errorResponse(err.Error()), err
+	if err != nil {
+		if err != core.ErrPurchaseUnknownListing || !offline {
+			return errorResponse(err.Error()), err
+		} else {
+			log.Debugf("error validating order from %s: %s", err, peer.Pretty())
+		}
 	}
 
 	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
+	log.Debugf("incoming order linked to %s wallet", contract.BuyerOrder.Payment.Coin)
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		log.Debugf("received direct online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
@@ -352,6 +366,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error building order confirmation"), err
 		}
+		log.Debugf("storing sales order %s into the database and awaiting payment", contract.VendorOrderConfirmation.OrderID)
 		if err := service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false); err != nil {
 			log.Errorf("failed to put sale (%s): %s", contract.VendorOrderConfirmation.OrderID, err)
 			return errorResponse("Error persisting order"), err
@@ -360,9 +375,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
 		}
-		log.Debugf("Received addr-req ORDER message from %s", peer.Pretty())
+		log.Debugf("sending order confirmation message to %s", peer.Pretty())
+		log.Debugf("received addr-req ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
+		log.Debugf("received offline direct order from %s", peer.Pretty())
 		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), err
@@ -371,11 +388,14 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
+		log.Debugf("added address to %s wallet to watch: %s", contract.BuyerOrder.Payment.Coin, addr)
 		wal.AddWatchedAddress(addr)
+		log.Debugf("storing sales order %s in database", orderId)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
+		log.Debugf("successfully processed direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
+		log.Debugf("processing moderated online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
@@ -396,6 +416,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		wal.AddWatchedAddress(addr)
+		log.Debugf("added address to %s wallet to watch: %s", contract.BuyerOrder.Payment.Coin, addr)
 		contract, err = service.node.NewOrderConfirmation(contract, false, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
@@ -405,6 +426,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		log.Debugf("storing sales order %s in database", orderId)
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -412,6 +434,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		log.Debugf("Received moderated ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
+		log.Debugf("processing moderated offline order from %s", peer.Pretty())
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		if err != nil {
 			log.Error(err)
@@ -428,8 +451,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		wal.AddWatchedAddress(addr)
-		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
+		log.Debugf("storing sales order %s in database", orderId)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		log.Debugf("successfully processed offline moderated ORDER message from %s", peer.Pretty())
 		return nil, nil
 	}
 	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
