@@ -319,9 +319,9 @@ func (wallet *EthereumWallet) CurrencyCode() string {
 	return "ETH"
 }
 
-// IsDust Check if this amount is considered dust - 1000000 wei
+// IsDust Check if this amount is considered dust - 10000 wei
 func (wallet *EthereumWallet) IsDust(amount big.Int) bool {
-	return amount.Cmp(big.NewInt(1000000)) <= 0
+	return amount.Cmp(big.NewInt(10000)) <= 0
 }
 
 // MasterPrivateKey - Get the master private key
@@ -472,6 +472,8 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 
 	//value := tx.Value().String()
 	fromAddr := msg.From()
+	toAddr := msg.To()
+	valueSub := big.NewInt(5000000)
 
 	v, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
 	if err == nil {
@@ -479,12 +481,16 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 			//value = "5"
 			log.Info("we have a smt ct transaction here....")
 			log.Info()
+			toAddr = wallet.address.address
+		}
+		if msg.Value().Cmp(valueSub) > 0 {
+			valueSub = msg.Value()
 		}
 	}
 
 	return wi.Txn{
 		Txid:        tx.Hash().Hex(),
-		Value:       msg.Value().String(),
+		Value:       valueSub.String(),
 		Height:      0,
 		Timestamp:   time.Now(),
 		WatchOnly:   false,
@@ -493,13 +499,18 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		FromAddress: msg.From().Hex(),
 		Outputs: []wi.TransactionOutput{
 			{
-				Address: EthAddress{msg.To()},
-				Value:   *msg.Value(),
-				Index:   1,
+				Address: EthAddress{toAddr},
+				Value:   *valueSub,
+				Index:   0,
 			},
 			{
 				Address: EthAddress{&fromAddr},
-				Value:   *msg.Value(),
+				Value:   *valueSub,
+				Index:   1,
+			},
+			{
+				Address: EthAddress{msg.To()},
+				Value:   *valueSub,
 				Index:   2,
 			},
 		},
