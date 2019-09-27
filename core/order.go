@@ -1345,7 +1345,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(currencyDef.CurrencyCode().String(), "T"))
+	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
 	if err != nil {
 		return *big.NewInt(0), err
 	}
