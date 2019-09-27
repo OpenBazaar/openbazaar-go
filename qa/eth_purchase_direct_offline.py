@@ -24,8 +24,8 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = [self.cointype]
+        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -69,7 +69,7 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
         with open('testdata/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
-        order_json["paymentCoin"] = self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -97,7 +97,7 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "currencyCode": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
             "amount": payment_amount["amount"],
             "feeLevel": "NORMAL",
@@ -144,7 +144,7 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseDirectOfflineTest - FAIL: Alice incorrectly saved as unfunded")
 
         # check alice balance is zero
-        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = alice["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -173,7 +173,7 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
         time.sleep(2)
 
         # Check the funds moved into alice's wallet
-        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = alice["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
