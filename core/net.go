@@ -467,7 +467,7 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 		Payload:     a,
 	}
 	orderID0 := fulfillmentMessage.VendorOrderFulfillment[0].OrderId
-	if orderID0 != "" {
+	if orderID0 == "" {
 		log.Errorf("failed fetching orderID")
 	} else {
 		err = n.Datastore.Messages().Put(
