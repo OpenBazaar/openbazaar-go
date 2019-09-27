@@ -47,6 +47,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ManageCryptoListingsTest - FAIL: Incorrect listing count: %d", len(resp))
         for listing in resp:
             if listing['contractType'] == 'CRYPTOCURRENCY':
+                print(listing)
                 if listing["coinType"] != "t" + self.cointype:
                     raise TestFailure("ManageCryptoListingsTest - FAIL: coinType incorrect: %s", listing["metadata"]["pricingCurrency"]["code"])
 

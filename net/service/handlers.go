@@ -25,7 +25,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	u "github.com/OpenBazaar/openbazaar-go/util"
+	ut "github.com/OpenBazaar/openbazaar-go/util"
 )
 
 var (
@@ -1065,12 +1065,16 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		outValue := big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
 				if err != nil {
 					return nil, err
 				}
 				outValue = new(big.Int).Add(outValue, &r.Value)
-				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				in := wallet.TransactionInput{
+					OutpointIndex: r.Index,
+					OutpointHash:  outpointHash,
+					Value:         r.Value,
+				}
 				ins = append(ins, in)
 			}
 		}
@@ -1794,7 +1798,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 		// the seller has confirmed the direct order, so a simple check of
 		// the addresses and we are good to proceed
-		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
+		if !ut.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
 			log.Errorf("mismatched payment address details: orderID: %s, expectedAddr: %s, actualAddr: %s",
 				paymentDetails.OrderID, contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress)
 			return nil, errors.New("mismatched payment addresses")

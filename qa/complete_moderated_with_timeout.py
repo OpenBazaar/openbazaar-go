@@ -130,7 +130,7 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "currencyCode": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
             "amount": payment_amount["amount"],
             "feeLevel": "NORMAL",
@@ -235,7 +235,7 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
         time.sleep(2)
 
         # Check the funds moved into alice's wallet
-        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = alice["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
