@@ -24,8 +24,8 @@ class EthPurchaseOfflineErrorTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = self.cointype
-        listing_json["metadata"]["acceptedCurrencies"] = [self.cointype]
+        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -49,7 +49,7 @@ class EthPurchaseOfflineErrorTest(OpenBazaarTestFramework):
         requests.get(api_url)
 
         # generate some coins and send them to bob
-        api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
+        api_url = bob["gateway_url"] + "wallet/address/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -72,7 +72,7 @@ class EthPurchaseOfflineErrorTest(OpenBazaarTestFramework):
 
         # set empty shipping address to trigger error
         order_json["address"] = ""
-        order_json["paymentCoin"] = self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
 
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))

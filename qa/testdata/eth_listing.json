@@ -6,12 +6,12 @@
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
 		"pricingCurrency": {
-			"code": "ETH",
+			"code": "TETH",
 			"divisibility": 18,
 			"name": "A",
 			"currencyType": "crypto"
 		},
-		"acceptedCurrencies": ["ETH"],
+		"acceptedCurrencies": ["TETH"],
 		"escrowTimeoutHours": 1080
 	},
 	"item": {
@@ -20,7 +20,7 @@
 		"processingTime": "1 to 2 Business days",
 		"price": {
 			"currency": {
-				"code": "ETH",
+				"code": "TETH",
 				"divisibility": 18,
 				"name": "A",
 				"currencyType": "crypto"
@@ -93,7 +93,7 @@
 				"productID": "932-33-2945",
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -106,7 +106,7 @@
 				"variantCombo": [0,1],
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -120,7 +120,7 @@
 				"productID": "123-99-1111",
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -134,7 +134,7 @@
 				"productID": "229-00-3333",
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -148,7 +148,7 @@
 				"productID": "987-54-3456",
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -161,7 +161,7 @@
 				"variantCombo": [2,1],
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -174,7 +174,7 @@
 				"variantCombo": [3,0],
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -187,7 +187,7 @@
 				"variantCombo": [3,1],
 				"surcharge": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -210,7 +210,7 @@
 				"name": "Standard",
 				"price": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -223,7 +223,7 @@
 				"name": "Express",
 				"price": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -245,7 +245,7 @@
 				"name": "Standard",
 				"price": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"
@@ -258,7 +258,7 @@
 				"name": "Express",
 				"price": {
 					"currency": {
-						"code": "ETH",
+						"code": "TETH",
 						"divisibility": 18,
 						"name": "A",
 						"currencyType": "crypto"

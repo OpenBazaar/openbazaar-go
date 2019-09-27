@@ -39,9 +39,9 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/eth_listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["pricingCurrency"]["code"] = "ETH"
+            listing_json["metadata"]["pricingCurrency"]["code"] = "TETH"
             listing_json["metadata"]["pricingCurrency"]["divisibility"] = 18
-            listing_json["metadata"]["acceptedCurrencies"] = [self.cointype]
+            listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
             listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
 
@@ -106,7 +106,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id
-        order_json["paymentCoin"] = self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -121,7 +121,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id_with_modifier
-        order_json["paymentCoin"] = self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:

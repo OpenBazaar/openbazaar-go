@@ -69,6 +69,8 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
 
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
+        print("lets see the listing payload")
+        print(json.dumps(listing_json, indent=4))
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Listing post endpoint not found")

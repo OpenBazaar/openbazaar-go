@@ -1098,42 +1098,56 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	log.Info("mod : ", contract.DisputeResolution.Payout.ModeratorOutput)
 	var outputs []wallet.TransactionOutput
 	if contract.DisputeResolution.Payout.BuyerOutput != nil {
+		log.Info("in buyer payout .....")
+
 		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.BuyerOutput)
+		log.Info("address : ", addr, "   err  : ", nil)
 		if err != nil {
 			return err
 		}
+		log.Info("amount : ", contract.DisputeResolution.Payout.BuyerOutput.AmountValue.Amount)
 		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.AmountValue.Amount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
+		log.Info("n  : ", n)
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   *n,
 			OrderID: orderID,
 		}
+		log.Info("######## op  :  ", output)
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.VendorOutput != nil {
+		log.Info("in vendor payout .....")
 		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.VendorOutput)
 		if err != nil {
 			return err
 		}
+		log.Info("address : ", addr, "   err  : ", nil)
+		log.Info("amount : ", contract.DisputeResolution.Payout.VendorOutput.AmountValue.Amount)
 		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.AmountValue.Amount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
+		log.Info("n  : ", n)
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   *n,
 			OrderID: orderID,
 		}
+		log.Info("######## op  :  ", output)
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
+		log.Info("in mod payout .....")
 		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.ModeratorOutput)
 		if err != nil {
 			return err
 		}
+		log.Info("address : ", addr, "   err  : ", nil)
+		log.Info("amount : ", contract.DisputeResolution.Payout.ModeratorOutput.AmountValue.Amount)
 		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.AmountValue.Amount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
@@ -1143,6 +1157,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 			Value:   *n,
 			OrderID: orderID,
 		}
+		log.Info("######## op  :  ", output)
 		outputs = append(outputs, output)
 	}
 

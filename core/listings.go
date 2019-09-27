@@ -39,11 +39,14 @@ func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, 
 		handle = profile.Handle
 	}
 	currencies, err := listing.GetAcceptedCurrencies()
+	log.Info("after get acc curr : ", currencies, "  err : ", err)
 	if err != nil {
 		return repo.SignedListing{}, err
 	}
 	for _, acceptedCurrency := range currencies {
+		log.Info("the curr : ", acceptedCurrency)
 		currencyDef, err := n.LookupCurrency(acceptedCurrency)
+		log.Info("after lookup  : ", currencyDef, "  err  : ", err)
 		if err != nil {
 			return repo.SignedListing{}, fmt.Errorf("lookup currency (%s): %s", acceptedCurrency, err)
 		}

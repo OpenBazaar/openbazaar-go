@@ -37,7 +37,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         # post listing to vendor
         with open('testdata/eth_listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["acceptedCurrencies"] = [self.cointype]
+        listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = vendor["gateway_url"] + "ob/listing"
         print("api_url   ", api_url)
@@ -65,7 +65,9 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        if resp[0]["coinType"] != "ETH":
+        print(resp)
+        print(resp[0])
+        if resp[0]["price"]["amount"]["currency"]["code"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
         listingId = resp[0]["hash"]
 
@@ -73,7 +75,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
-        order_json["paymentCoin"] = self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         print("before order purchase", api_url)
         print(json.dumps(order_json, indent=4))
@@ -100,7 +102,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -115,7 +117,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
@@ -124,7 +126,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "currencyCode": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
             "amount": payment_amount["amount"],
             "feeLevel": "NORMAL",
@@ -150,7 +152,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as unfunded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
