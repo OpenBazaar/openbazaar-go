@@ -6,9 +6,9 @@
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
         "pricingCurrency": {
-            "code": "ETH",
+            "code": "TETH",
             "divisibility": 18,
-            "name": "Eth",
+            "name": "TETH",
             "currencyType": "crypto"
         },
         "acceptedCurrencies": [],
@@ -20,9 +20,9 @@
         "processingTime": "1 to 2 hours",
         "price": {
             "currency": {
-                    "code": "ETH",
+                    "code": "TETH",
                     "divisibility": 18,
-                    "name": "Eth",
+                    "name": "TETH",
                     "currencyType": "crypto"
                 },
                 "amount": "0"
@@ -40,9 +40,9 @@
         "skus": [{
             "surcharge": {
                 "currency": {
-                    "code": "ETH",
+                    "code": "TETH",
                     "divisibility": 18,
-                    "name": "Eth",
+                    "name": "TETH",
                     "currencyType": "crypto"
                 },
                 "amount": "0"

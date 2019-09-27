@@ -147,6 +147,7 @@ type EthereumWallet struct {
 	ppsct         *Escrow
 	db            wi.Datastore
 	exchangeRates wi.ExchangeRates
+	params        *chaincfg.Params
 	listeners     []func(wi.TransactionCallback)
 }
 
@@ -187,7 +188,7 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil, nil, []func(wi.TransactionCallback){}}
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil, nil, nil, []func(wi.TransactionCallback){}}
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
@@ -268,12 +269,12 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	er := NewEthereumPriceFetcher(proxy)
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB, er, []func(wi.TransactionCallback){}}, nil
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB, er, params, []func(wi.TransactionCallback){}}, nil
 }
 
 // Params - return nil to comply
 func (wallet *EthereumWallet) Params() *chaincfg.Params {
-	return nil
+	return wallet.params
 }
 
 // GetBalance returns the balance for the wallet
@@ -316,7 +317,15 @@ func (wallet *EthereumWallet) Start() {
 
 // CurrencyCode returns ETH
 func (wallet *EthereumWallet) CurrencyCode() string {
-	return "ETH"
+	if wallet.params == nil {
+		return "ETH"
+	}
+	if wallet.params.Name == chaincfg.MainNetParams.Name {
+		return "ETH"
+	} else {
+		return "TETH"
+	}
+	//return "ETH"
 }
 
 // IsDust Check if this amount is considered dust - 10000 wei
@@ -952,10 +961,10 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() != rScript.Moderator.Hex() {
+		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
 			mbvAddresses[0] = out.Address.String()
-		} else if out.Address.String() != rScript.Buyer.Hex() {
+		} else if out.Address.String() == rScript.Buyer.Hex() {
 			mbvAddresses[1] = out.Address.String()
 		} else {
 			mbvAddresses[2] = out.Address.String()
@@ -1156,10 +1165,10 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() != rScript.Moderator.Hex() {
+		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
 			mbvAddresses[0] = out.Address.String()
-		} else if out.Address.String() != rScript.Buyer.Hex() {
+		} else if out.Address.String() == rScript.Buyer.Hex() {
 			mbvAddresses[1] = out.Address.String()
 		} else {
 			mbvAddresses[2] = out.Address.String()
