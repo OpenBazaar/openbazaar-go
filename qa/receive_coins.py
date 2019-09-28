@@ -24,7 +24,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(20)
-        api_url = self.nodes[0]["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = self.nodes[0]["gateway_url"] + "wallet/balance/T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)

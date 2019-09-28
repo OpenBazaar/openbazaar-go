@@ -236,15 +236,6 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			pbSigs = append(pbSigs, sig)
 		}
 		oc.PayoutSigs = pbSigs
-		var vendorSignatures []wallet.Signature
-		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
-			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
-			vendorSignatures = append(vendorSignatures, sig)
-		}
-		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *n, true)
-		if err != nil {
-			return err
-		}
 	}
 
 	rc := new(pb.RicardianContract)

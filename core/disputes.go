@@ -532,7 +532,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if !ok {
 			return errors.New("invalid total out amount")
 		}
-		totalOut.Add(totalOut, n)
+		totalOut = new(big.Int).Add(totalOut, n)
 	}
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.AmountCurrency.Code)
@@ -554,6 +554,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: modAddr,
 			Value:   modValue,
+			Index:   0,
 		}
 		outputs = append(outputs, out)
 		outMap["moderator"] = out
@@ -571,6 +572,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
 			Value:   *buyerValue,
+			Index:   1,
 		}
 		outputs = append(outputs, out)
 		outMap["buyer"] = out
@@ -586,6 +588,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,
 			Value:   *vendorValue,
+			Index:   2,
 		}
 		outputs = append(outputs, out)
 		outMap["vendor"] = out

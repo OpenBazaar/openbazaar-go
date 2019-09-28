@@ -44,6 +44,8 @@ func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 			return false
 		case "TZEC":
 			return false
+		case "ETH":
+			return true
 		}
 	}
 	return false

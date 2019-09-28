@@ -121,7 +121,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	if err != nil {
 		return "", "", retCurrency, false, err
 	}
-
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
@@ -146,6 +145,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		return id, addr, retCurrency, f, err
 
 	}
+
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
@@ -1268,7 +1268,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
-	if n.TestnetEnable {
+	if n.TestnetEnable || n.RegressionTestEnable {
 		return "TBTC"
 	}
 	return "BTC"
@@ -1297,7 +1297,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := wal.ExchangeRates().GetExchangeRate(currencyDef.CurrencyCode().String())
+	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
 	if err != nil {
 		return *big.NewInt(0), err
 	}

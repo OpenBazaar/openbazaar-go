@@ -42,7 +42,7 @@ import (
 
 const (
 	// InfuraAPIKey is the hard coded Infura API key
-	InfuraAPIKey = "openbazaar"
+	InfuraAPIKey = "v3/91c82af0169c4115940c76d331410749"
 )
 
 var (
@@ -147,6 +147,7 @@ type EthereumWallet struct {
 	ppsct         *Escrow
 	db            wi.Datastore
 	exchangeRates wi.ExchangeRates
+	params        *chaincfg.Params
 	listeners     []func(wi.TransactionCallback)
 }
 
@@ -187,7 +188,7 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil, nil, []func(wi.TransactionCallback){}}
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil, nil, nil, []func(wi.TransactionCallback){}}
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
@@ -268,12 +269,12 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	er := NewEthereumPriceFetcher(proxy)
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB, er, []func(wi.TransactionCallback){}}, nil
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB, er, params, []func(wi.TransactionCallback){}}, nil
 }
 
 // Params - return nil to comply
 func (wallet *EthereumWallet) Params() *chaincfg.Params {
-	return nil
+	return wallet.params
 }
 
 // GetBalance returns the balance for the wallet
@@ -316,12 +317,20 @@ func (wallet *EthereumWallet) Start() {
 
 // CurrencyCode returns ETH
 func (wallet *EthereumWallet) CurrencyCode() string {
-	return "ETH"
+	if wallet.params == nil {
+		return "ETH"
+	}
+	if wallet.params.Name == chaincfg.MainNetParams.Name {
+		return "ETH"
+	} else {
+		return "TETH"
+	}
+	//return "ETH"
 }
 
-// IsDust Check if this amount is considered dust - 1000000 wei
+// IsDust Check if this amount is considered dust - 10000 wei
 func (wallet *EthereumWallet) IsDust(amount big.Int) bool {
-	return amount.Cmp(big.NewInt(1000000)) <= 0
+	return amount.Cmp(big.NewInt(10000)) <= 0
 }
 
 // MasterPrivateKey - Get the master private key
@@ -470,9 +479,27 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		return wi.Txn{}, err
 	}
 
+	//value := tx.Value().String()
+	fromAddr := msg.From()
+	toAddr := msg.To()
+	valueSub := big.NewInt(5000000)
+
+	v, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
+	if err == nil {
+		if tx.To().String() == v.Implementation.String() {
+			//value = "5"
+			log.Info("we have a smt ct transaction here....")
+			log.Info()
+			toAddr = wallet.address.address
+		}
+		if msg.Value().Cmp(valueSub) > 0 {
+			valueSub = msg.Value()
+		}
+	}
+
 	return wi.Txn{
 		Txid:        tx.Hash().Hex(),
-		Value:       tx.Value().String(),
+		Value:       valueSub.String(),
 		Height:      0,
 		Timestamp:   time.Now(),
 		WatchOnly:   false,
@@ -481,9 +508,19 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		FromAddress: msg.From().Hex(),
 		Outputs: []wi.TransactionOutput{
 			{
-				Address: wallet.address,
-				Value:   *tx.Value(),
+				Address: EthAddress{toAddr},
+				Value:   *valueSub,
+				Index:   0,
+			},
+			{
+				Address: EthAddress{&fromAddr},
+				Value:   *valueSub,
 				Index:   1,
+			},
+			{
+				Address: EthAddress{msg.To()},
+				Value:   *valueSub,
+				Index:   2,
 			},
 		},
 	}, nil
@@ -507,7 +544,6 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 
 // Spend - Send ether to an external wallet
 func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
-
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
@@ -565,12 +601,13 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			if rcpt != nil {
 				flag = true
 			}
-			if time.Since(start).Seconds() > 140 {
+			if time.Since(start).Seconds() > 180 {
 				flag = true
 			}
 			if err != nil {
 				log.Errorf("error fetching txn rcpt: %v", err)
 			}
+			time.Sleep(5 * time.Second)
 		}
 		if rcpt != nil {
 			// good. so the txn has been processed but we have to account for failed
@@ -592,7 +629,10 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 						WithInput: false,
 					})
 					if err == nil {
-						wallet.db.Txns().Put(data, hash.Hex(), "0", 0, time.Now(), true)
+						err0 := wallet.db.Txns().Put(data, hash.Hex(), "0", 0, time.Now(), true)
+						if err0 != nil {
+							log.Error(err)
+						}
 					}
 				}
 
@@ -918,10 +958,16 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	}
 
 	indx := []int{}
+	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() != rScript.Moderator.Hex() {
+		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
+			mbvAddresses[0] = out.Address.String()
+		} else if out.Address.String() == rScript.Buyer.Hex() {
+			mbvAddresses[1] = out.Address.String()
+		} else {
+			mbvAddresses[2] = out.Address.String()
 		}
 		p := wi.TransactionOutput{
 			Address: out.Address,
@@ -993,8 +1039,11 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	//spew.Dump(payables)
 
-	for _, k := range addresses {
+	for _, k := range mbvAddresses {
 		v := payables[k]
+		if v.Cmp(big.NewInt(0)) != 1 {
+			continue
+		}
 		addr := common.HexToAddress(k)
 		sample := [32]byte{}
 		sampleDest := [32]byte{}
@@ -1113,10 +1162,16 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 
 	indx := []int{}
 	referenceID := ""
+	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() != rScript.Moderator.Hex() {
+		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
+			mbvAddresses[0] = out.Address.String()
+		} else if out.Address.String() == rScript.Buyer.Hex() {
+			mbvAddresses[1] = out.Address.String()
+		} else {
+			mbvAddresses[2] = out.Address.String()
 		}
 		p := wi.TransactionOutput{
 			Address: out.Address,
@@ -1197,10 +1252,12 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	destinations := []common.Address{}
 	amounts := []*big.Int{}
 
-	for _, k := range addresses {
+	for _, k := range mbvAddresses {
 		v := payables[k]
-		destinations = append(destinations, common.HexToAddress(k))
-		amounts = append(amounts, new(big.Int).SetBytes(v.Bytes()))
+		if v.Cmp(big.NewInt(0)) == 1 {
+			destinations = append(destinations, common.HexToAddress(k))
+			amounts = append(amounts, new(big.Int).SetBytes(v.Bytes()))
+		}
 	}
 
 	fromAddress := wallet.account.Address()
