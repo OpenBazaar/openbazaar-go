@@ -21,25 +21,17 @@
                 "LTC",
                 "ETH"
             ],
-            "pricingCurrency": {
-                "code": "USD",
-                "divisibility": 2,
-                "currencyType": "fiat"
-            },
             "escrowTimeoutHours": 1
         },
         "item": {
             "title": "ETH - $1",
             "description": "This is a listing example.",
             "processingTime": "3 days",
-            "price": {
-                "currency": {
-                    "code": "USD",
-                    "divisibility": 2,
-                    "currencyType": "fiat"
-                },
-                "amount": "100"
+            "priceCurrency": {
+                "code": "USD",
+                "divisibility": 2
             },
+            "bigPrice": "100",
             "tags": [
                 "vintage dress"
             ],
@@ -123,14 +115,7 @@
                         0
                     ],
                     "productID": "dress-red-small",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -138,14 +123,7 @@
                         1
                     ],
                     "productID": "dress-red-medium",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "100"
-                    }
+                    "bigSurcharge": "100"
                 },
                 {
                     "variantCombo": [
@@ -153,14 +131,7 @@
                         2
                     ],
                     "productID": "dress-red-large",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -168,14 +139,7 @@
                         0
                     ],
                     "productID": "dress-cream-small",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -183,14 +147,7 @@
                         1
                     ],
                     "productID": "dress-cream-medium",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -198,14 +155,7 @@
                         2
                     ],
                     "productID": "dress-cream-large",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -213,14 +163,7 @@
                         0
                     ],
                     "productID": "dress-black-small",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -228,14 +171,7 @@
                         1
                     ],
                     "productID": "dress-black-medium",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 },
                 {
                     "variantCombo": [
@@ -243,14 +179,7 @@
                         2
                     ],
                     "productID": "dress-black-large",
-                    "surcharge": {
-                        "currency": {
-                            "code": "USD",
-                            "divisibility": 2,
-                            "currencyType": "fiat"
-                        },
-                        "amount": "0"
-                    }
+                    "bigSurcharge": "0"
                 }
             ]
         },
@@ -264,43 +193,15 @@
                 "services": [
                     {
                         "name": "Standard",
-                        "price": {
-                            "currency": {
-                                "code": "USD",
-                                "divisibility": 2,
-                                "currencyType": "fiat"
-                            },
-                            "amount": "0"
-                        },
+                        "bigPrice": "0",
                         "estimatedDelivery": "3 days",
-                        "additionalItemPrice": {
-                            "currency": {
-                                "code": "USD",
-                                "divisibility": 2,
-                                "currencyType": "fiat"
-                            },
-                            "amount": "0"
-                        }
+                        "bigAdditionalItemPrice": "0"
                     },
                     {
                         "name": "Express",
-                        "price": {
-                            "currency": {
-                                "code": "USD",
-                                "divisibility": 2,
-                                "currencyType": "fiat"
-                            },
-                            "amount": "100"
-                        },
+                        "bigPrice": "0",
                         "estimatedDelivery": "3 days",
-                        "additionalItemPrice": {
-                            "currency": {
-                                "code": "USD",
-                                "divisibility": 2,
-                                "currencyType": "fiat"
-                            },
-                            "amount": "0"
-                        }
+                        "bigAdditionalItemPrice": "0"
                     }
                 ]
             }

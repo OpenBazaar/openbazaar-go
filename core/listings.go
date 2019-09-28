@@ -281,7 +281,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
 				if !ok {
 					return repo.ListingIndexData{}, errors.New("invalid price amount")
 				}
@@ -292,13 +292,17 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		}
 	}
 
-	defn, err := n.LookupCurrency(listing.Listing.Metadata.PricingCurrencyDefn.Code)
-	if err != nil {
-		return repo.ListingIndexData{}, errors.New("invalid pricing currency")
-	}
-	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
-	if !ok {
-		return repo.ListingIndexData{}, errors.New("invalid price amount")
+	var priceValue *repo.CurrencyValue
+	if listing.Listing.Item.PriceCurrency != nil {
+		defn, err := n.LookupCurrency(listing.Listing.Item.PriceCurrency.Code)
+		if err != nil {
+			return repo.ListingIndexData{}, errors.New("invalid pricing currency")
+		}
+		amt, ok := new(big.Int).SetString(listing.Listing.Item.BigPrice, 10)
+		if !ok {
+			return repo.ListingIndexData{}, errors.New("invalid price amount")
+		}
+		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
 	}
 
 	ld := repo.ListingIndexData{
@@ -310,13 +314,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		ContractType:       listing.Listing.Metadata.ContractType.String(),
 		Description:        listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:          repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price:              repo.CurrencyValue{Currency: defn, Amount: amt},
+		Price:              priceValue,
 		Modifier:           listing.Listing.Metadata.PriceModifier,
 		ShipsTo:            shipsTo,
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,
 		ModeratorIDs:       listing.Listing.Moderators,
 		AcceptedCurrencies: listing.Listing.Metadata.AcceptedCurrencies,
+		CryptoCurrencyCode: listing.Listing.Metadata.CryptoCurrencyCode,
 	}
 	return ld, nil
 }

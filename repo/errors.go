@@ -8,8 +8,10 @@ import (
 var (
 	// ErrCryptocurrencySkuQuantityInvalid - invalid sku qty err
 	ErrCryptocurrencySkuQuantityInvalid = errors.New("cryptocurrency listing quantity must be a non-negative integer")
-	// ErrListingCoinDivisibilityIncorrect - coin divisibility err
-	ErrListingCoinDivisibilityIncorrect = errors.New("incorrect coinDivisibility")
+	// ErrListingCryptoDivisibilityInvalid indicates the given divisibility doesn't match the default
+	ErrListingCryptoDivisibilityInvalid = errors.New("invalid cryptocurrency divisibility")
+	// ErrListingCryptoCurrencyCodeInvalid indicates the given code isn't valid or known
+	ErrListingCryptoCurrencyCodeInvalid = errors.New("invalid cryptocurrency code")
 	ErrShippingRegionMustBeSet          = errors.New("shipping region must be set")
 	ErrShippingRegionUndefined          = errors.New("undefined shipping region")
 	ErrShippingRegionMustNotBeContinent = errors.New("cannot specify continent as shipping region")

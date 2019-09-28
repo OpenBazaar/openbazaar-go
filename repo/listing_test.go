@@ -25,7 +25,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 			_, err       = repo.UnmarshalJSONListing(fixtureBytes)
 		)
 		if err != nil {
-			t.Fatal(err)
+			t.Errorf("exmaple (%s): %s", e, err)
 		}
 	}
 }
@@ -36,7 +36,7 @@ func TestListingAttributes(t *testing.T) {
 		expectedResponse           uint
 		expectedTitle              string
 		expectedSlug               string
-		expectedPrice              repo.CurrencyValue
+		expectedPrice              *repo.CurrencyValue
 		expectedAcceptedCurrencies []string
 	}{
 		{
@@ -44,7 +44,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedResponse: 3,
 			expectedTitle:    "Physical Listing",
 			expectedSlug:     "physical-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(1235000000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
@@ -59,7 +59,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedResponse: 4,
 			expectedTitle:    "Physical Good Listing",
 			expectedSlug:     "physical-good-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(12345678000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
@@ -74,7 +74,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedResponse: 4,
 			expectedTitle:    "Digital Good Listing",
 			expectedSlug:     "digital-good-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(1320),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
@@ -89,7 +89,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedResponse: 4,
 			expectedTitle:    "Service Listing",
 			expectedSlug:     "service-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(9877000000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
@@ -100,18 +100,11 @@ func TestListingAttributes(t *testing.T) {
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
 		},
 		{
-			fixtureName:      "v4-cryptocurrency",
-			expectedResponse: 4,
-			expectedTitle:    "LTC-XMR",
-			expectedSlug:     "ltc-xmr",
-			expectedPrice: repo.CurrencyValue{
-				Amount: big.NewInt(0),
-				Currency: repo.CurrencyDefinition{
-					Code:         repo.CurrencyCode("XMR"),
-					Divisibility: 8,
-					CurrencyType: "crypto",
-				},
-			},
+			fixtureName:                "v4-cryptocurrency",
+			expectedResponse:           4,
+			expectedTitle:              "LTC-XMR",
+			expectedSlug:               "ltc-xmr",
+			expectedPrice:              nil,
 			expectedAcceptedCurrencies: []string{"LTC"},
 		},
 		{
@@ -119,7 +112,7 @@ func TestListingAttributes(t *testing.T) {
 			expectedResponse: 5,
 			expectedTitle:    "ETH - $1",
 			expectedSlug:     "eth-1",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(100),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
@@ -149,7 +142,7 @@ func TestListingAttributes(t *testing.T) {
 		if slug, _ := l.GetSlug(); slug != e.expectedSlug {
 			t.Errorf("expected example (%s) to have slug response (%+v), but instead was (%+v)", e.fixtureName, e.expectedSlug, slug)
 		}
-		if price, _ := l.GetPrice(); !price.Equal(&e.expectedPrice) {
+		if price, _ := l.GetPrice(); !price.Equal(e.expectedPrice) {
 			t.Errorf("expected example (%s) to have price response (%+v), but instead was (%+v)", e.fixtureName, e.expectedPrice, price)
 		}
 		if acceptedCurrencies, _ := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {

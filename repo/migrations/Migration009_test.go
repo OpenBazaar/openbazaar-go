@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
@@ -49,10 +48,7 @@ func testMigration009SetupFixtures(t *testing.T, db *sql.DB) func() {
 	}
 	contract := factory.NewDisputedContract()
 	contract.VendorListings[0] = factory.NewCryptoListing("TETH")
-	//contract.BuyerOrder.Payment.Coin = "TBTC"
-	contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-	}
+	contract.BuyerOrder.Payment.Coin = "TBTC"
 	marshaledContract, err := marshaler.MarshalToString(contract)
 	if err != nil {
 		t.Fatal(err)
