@@ -124,7 +124,6 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
-		PeerID:             contract.VendorListings[0].VendorID.PeerID,
 	}, nil
 }
 
