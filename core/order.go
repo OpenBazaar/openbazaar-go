@@ -950,8 +950,14 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		}
 
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+			var priceModifier float64
+			if l.Metadata.PriceModifier != 0 {
+				priceModifier = float64(l.Metadata.PriceModifier)
+			} else if l.Item.PriceModifier != 0 {
+				priceModifier = float64(l.Item.PriceModifier)
+			}
 			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, *big.NewInt(int64(itemQuantity)))
-			t0 := new(big.Float).Mul(big.NewFloat(float64(l.Item.PriceModifier)), new(big.Float).SetInt(&satoshis))
+			t0 := new(big.Float).Mul(big.NewFloat(priceModifier), new(big.Float).SetInt(&satoshis))
 			t1, _ := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
 			satoshis = *new(big.Int).Add(&satoshis, t1)
 			itemQuantity = 1

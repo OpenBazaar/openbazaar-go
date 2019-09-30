@@ -305,6 +305,13 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
 	}
 
+	var priceModifier float32
+	if listing.Listing.Metadata.PriceModifier != 0 {
+		priceModifier = listing.Listing.Metadata.PriceModifier
+	} else if listing.Listing.Item.PriceModifier != 0 {
+		priceModifier = listing.Listing.Item.PriceModifier
+	}
+
 	ld := repo.ListingIndexData{
 		Hash:               listingHash,
 		Slug:               listing.Listing.Slug,
@@ -315,7 +322,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		Description:        listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:          repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
 		Price:              priceValue,
-		Modifier:           listing.Listing.Metadata.PriceModifier,
+		Modifier:           priceModifier,
 		ShipsTo:            shipsTo,
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,

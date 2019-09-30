@@ -1180,17 +1180,30 @@ func (l *Listing) GetEscrowTimeout() uint32 {
 
 // GetPriceModifier return listing's price modifier
 func (l *Listing) GetPriceModifier() (float32, error) {
-	type priceMod struct {
-		Metadata struct {
-			PriceModifier float32 `json:"priceModifier"`
-		} `json:"metadata"`
+	var p float32
+	switch l.ListingVersion {
+	case 5:
+		var v5Struct struct {
+			Item struct {
+				PriceModifier float32 `json:"priceModifier"`
+			} `json:"item"`
+		}
+		if err := json.Unmarshal(l.ListingBytes, &v5Struct); err != nil {
+			return 0, fmt.Errorf("parsing listing price modifier: %s", err)
+		}
+		p = v5Struct.Item.PriceModifier
+	default:
+		var defaultStruct struct {
+			Metadata struct {
+				PriceModifier float32 `json:"priceModifier"`
+			} `json:"metadata"`
+		}
+		if err := json.Unmarshal(l.ListingBytes, &defaultStruct); err != nil {
+			return 0, fmt.Errorf("parsing listing price modifier: %s", err)
+		}
+		p = defaultStruct.Metadata.PriceModifier
 	}
-	var p priceMod
-	err := json.Unmarshal(l.ListingBytes, &p)
-	if err != nil {
-		return 0, err
-	}
-	return p.Metadata.PriceModifier, nil
+	return p, nil
 }
 
 // GetPricingCurrencyDefn return the listing currency definition
@@ -2098,17 +2111,26 @@ func (l *Listing) SetCryptocurrencyListingDefaults() error {
 }
 
 func validateMarketPriceListing(listing *pb.Listing) error {
-	n, _ := new(big.Int).SetString(listing.Item.BigPrice, 10)
+	var (
+		priceModifier   float32
+		roundHundredths = func(f float32) float32 { return float32(int(f*100.0)) / 100.0 }
+		n, _            = new(big.Int).SetString(listing.Item.BigPrice, 10)
+	)
+
 	if n.Cmp(big.NewInt(0)) > 0 {
 		return ErrMarketPriceListingIllegalField("item.price")
 	}
 
 	if listing.Metadata.PriceModifier != 0 {
-		listing.Metadata.PriceModifier = float32(int(listing.Metadata.PriceModifier*100.0)) / 100.0
+		priceModifier = roundHundredths(listing.Metadata.PriceModifier)
+		listing.Metadata.PriceModifier = priceModifier
+	} else if listing.Item.PriceModifier != 0 {
+		priceModifier = roundHundredths(listing.Item.PriceModifier)
+		listing.Item.PriceModifier = priceModifier
 	}
 
-	if listing.Metadata.PriceModifier < PriceModifierMin ||
-		listing.Metadata.PriceModifier > PriceModifierMax {
+	if priceModifier < PriceModifierMin ||
+		priceModifier > PriceModifierMax {
 		return ErrPriceModifierOutOfRange{
 			Min: PriceModifierMin,
 			Max: PriceModifierMax,
