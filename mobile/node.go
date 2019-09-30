@@ -539,8 +539,16 @@ func (n *Node) Restart() error {
 	n.startMtx.Lock()
 	defer n.startMtx.Unlock()
 
+	var wg sync.WaitGroup
+
 	if n.started {
-		return n.stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = n.stop()
+			return
+		}()
+		wg.Wait()
 	}
 
 	// This node has been stopped by the stop command so we need to create
