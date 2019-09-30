@@ -288,9 +288,9 @@ func (wallet *EthereumWallet) GetUnconfirmedBalance() (*big.Int, error) {
 }
 
 // Transfer will transfer the amount from this wallet to the spec address
-func (wallet *EthereumWallet) Transfer(to string, value *big.Int) (common.Hash, error) {
+func (wallet *EthereumWallet) Transfer(to string, value *big.Int, spendAll bool) (common.Hash, error) {
 	toAddress := common.HexToAddress(to)
-	return wallet.client.Transfer(wallet.account, toAddress, value)
+	return wallet.client.Transfer(wallet.account, toAddress, value, spendAll)
 }
 
 // Start will start the wallet daemon
@@ -551,7 +551,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
-		hash, err = wallet.Transfer(addr.String(), &amount)
+		hash, err = wallet.Transfer(addr.String(), &amount, spendAll)
 	} else {
 		// this is a spend which means it has to be linked to an order
 		// specified using the referenceID
@@ -587,7 +587,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 				log.Errorf("error call add txn: %v", err)
 			}
 		} else {
-			hash, err = wallet.Transfer(addr.String(), &amount)
+			hash, err = wallet.Transfer(addr.String(), &amount, spendAll)
 		}
 
 		if err != nil {
@@ -1275,6 +1275,20 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	auth.Value = big.NewInt(0) // in wei
 	auth.GasLimit = 4000000    // in units
 	auth.GasPrice = gasPrice
+
+	// lets check if the caller has enough balance to make the
+	// multisign call
+	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(4000000))
+	currentBalance, err := wallet.GetBalance()
+	if err != nil {
+		log.Error("err fetching eth wallet balance")
+		currentBalance = big.NewInt(0)
+	}
+
+	if requiredBalance.Cmp(currentBalance) > 0 {
+		// the wallet does not have the required balance
+		return nil, errors.New("insufficient balance to release funds or confirm order")
+	}
 
 	//var tx *types.Transaction
 
