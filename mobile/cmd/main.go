@@ -52,7 +52,9 @@ func main() {
 	fmt.Println("restarting...", time.Now())
 	go func() {
 		err := n.Restart()
-		fmt.Println(err.Error())
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}()
 
 	wg.Add(1)
