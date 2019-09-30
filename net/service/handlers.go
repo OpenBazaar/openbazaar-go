@@ -350,7 +350,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
-		if !service.node.ValidatePaymentAmount(total, *n) {
+		if !service.node.ValidatePaymentAmount(total, n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true, false)
@@ -399,7 +399,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
-		if !service.node.ValidatePaymentAmount(total, *n) {
+		if !service.node.ValidatePaymentAmount(total, n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
