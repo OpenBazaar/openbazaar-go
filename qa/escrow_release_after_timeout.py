@@ -63,7 +63,7 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "t" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         slug = listing_json["slug"]
         listing_json["moderators"] = [moderatorId]
