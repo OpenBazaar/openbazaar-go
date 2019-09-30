@@ -63,7 +63,10 @@ func testmigration010SetupFixtures(t *testing.T, db *sql.DB) {
 }
 
 func TestMigration010(t *testing.T) {
-	os.Mkdir("./datastore", os.ModePerm)
+	err := os.Mkdir("./datastore", os.ModePerm)
+	if err != nil {
+		t.Log(err)
+	}
 	defer os.RemoveAll("./datastore")
 
 	db, err := migrations.OpenDB(".", testmigration010Password, true)

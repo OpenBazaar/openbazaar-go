@@ -99,6 +99,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		BanManager:       net.NewBanManager([]peer.ID{}),
 		MasterPrivateKey: mPrivKey,
 		DHT:              routing,
+		TestnetEnable:    true,
 	}
 
 	node.Service = service.New(node, repository.DB)

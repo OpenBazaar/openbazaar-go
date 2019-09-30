@@ -24,11 +24,17 @@ func (c *CouponDB) Put(coupons []repo.Coupon) error {
 		defer stmt.Close()
 		_, err := stmt.Exec(coupon.Slug, coupon.Code, coupon.Hash)
 		if err != nil {
-			tx.Rollback()
+			err = tx.Rollback()
+			if err != nil {
+				log.Error(err)
+			}
 			return err
 		}
 	}
-	tx.Commit()
+	err := tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -47,8 +53,11 @@ func (c *CouponDB) Get(slug string) ([]repo.Coupon, error) {
 		var slug string
 		var code string
 		var hash string
-		rows.Scan(&slug, &code, &hash)
-		ret = append(ret, repo.Coupon{slug, code, hash})
+		err = rows.Scan(&slug, &code, &hash)
+		if err != nil {
+			log.Error(err)
+		}
+		ret = append(ret, repo.Coupon{Slug: slug, Code: code, Hash: hash})
 	}
 	return ret, nil
 }

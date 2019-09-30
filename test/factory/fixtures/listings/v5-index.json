@@ -1,0 +1,41 @@
+[
+    {
+        "hash": "QmcCcbMysMUY4jFUoyYzgrLhJX6N6y5NhRpauCAr8etYn5",
+        "slug": "ron-swanson-tshirt",
+        "title": "Ron Swanson Tshirt",
+        "categories": [
+            "tshirts"
+        ],
+        "nsfw": true,
+        "contractType": "PHYSICAL_GOOD",
+        "description": "Example item",
+        "thumbnail": {
+            "tiny": "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV",
+            "small": "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV",
+            "medium": "QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV"
+        },
+        "currencyCode": "TLTC",
+        "price": {
+            "amount": "500000",
+            "currency": {
+                "name": "Litecoin",
+                "code": "TLTC",
+                "divisibility": 8,
+                "currencyType": "crypto"
+            }
+        },
+        "modifier": 0,
+        "shipsTo": [
+            "ALL"
+        ],
+        "freeShipping": [],
+        "language": "Klingon",
+        "averageRating": 0,
+        "ratingCount": 0,
+        "moderators": null,
+        "acceptedCurrencies": [
+            "TBTC",
+            "TLTC"
+        ]
+    }
+]

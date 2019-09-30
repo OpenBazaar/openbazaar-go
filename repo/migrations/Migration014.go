@@ -3,6 +3,7 @@ package migrations
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"path"
 	"strings"
 
@@ -66,7 +67,10 @@ func (Migration014) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 	if _, err = tx.Exec(migration); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -175,7 +179,10 @@ func (Migration014) Down(repoPath, databasePassword string, testnetEnabled bool)
 		return err
 	}
 	if _, err = tx.Exec(migration); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Println(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {

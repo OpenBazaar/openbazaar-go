@@ -38,7 +38,8 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -69,7 +70,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         with open('testdata/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
-        order_json["paymentCoin"] = "t" + self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -97,10 +98,11 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
-            "wallet": self.cointype,
+            "currencyCode": "T" + self.cointype,
             "address": payment_address,
-            "amount": payment_amount,
-            "feeLevel": "NORMAL"
+            "amount": payment_amount["amount"],
+            "feeLevel": "NORMAL",
+            "requireAssociateOrder": False
         }
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
@@ -108,7 +110,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
         # check bob detected payment
@@ -148,7 +150,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        self.send_bitcoin_cmd("generate", 1)
+        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
         time.sleep(45)
 
         # check alice detected order
@@ -161,18 +163,19 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Alice failed to detect order cancellation")
 
         # Check the funds moved into bob's wallet
-        api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
+        api_url = bob["gateway_url"] + "wallet/balance/" + "T" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= 50 - payment_amount:
+            if confirmed <= 50 - int(payment_amount["amount"]):
                 raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Failed to query Bob's balance")
 
         print("CancelDirectOfflineTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running CancelDirectOfflineTest")

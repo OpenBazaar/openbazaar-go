@@ -7,19 +7,11 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-func NewBigInt(amount string) *big.Int {
-	var i = new(big.Int)
-	if _, ok := i.SetString(amount, 0); !ok {
-		i.SetString("0", 0)
-	}
-	return i
-}
-
-func NewCurrencyDefinition(code string) *repo.CurrencyDefinition {
+func NewCurrencyDefinition(code string) repo.CurrencyDefinition {
 	if code == "" {
 		code = "BTC"
 	}
-	return &repo.CurrencyDefinition{
+	return repo.CurrencyDefinition{
 		Name:         fmt.Sprintf("%scoin", code),
 		Code:         repo.CurrencyCode(code),
 		Divisibility: 8,
@@ -27,9 +19,13 @@ func NewCurrencyDefinition(code string) *repo.CurrencyDefinition {
 	}
 }
 
-func NewCurrencyValue(amount, code string) *repo.CurrencyValue {
+func MustNewCurrencyValue(amount, code string) *repo.CurrencyValue {
+	amt, ok := new(big.Int).SetString(amount, 10)
+	if !ok {
+		panic(fmt.Sprintf("invalid CurrencyValue amount: %s", amount))
+	}
 	return &repo.CurrencyValue{
-		Amount:   NewBigInt(amount),
+		Amount:   amt,
 		Currency: NewCurrencyDefinition(code),
 	}
 }

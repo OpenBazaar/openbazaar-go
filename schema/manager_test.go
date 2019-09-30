@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -411,36 +412,42 @@ func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	loadConfig := func() map[string]interface{} {
+	loadConfig := func() (map[string]interface{}, error) {
 		configPath := path.Join(subject.dataPath, "config")
 		configFile, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			t.Error(err)
+			return map[string]interface{}{}, err
 		}
 		var cfgIface interface{}
 		if err := json.Unmarshal(configFile, &cfgIface); err != nil {
-			t.Error(err)
+			return map[string]interface{}{}, err
 		}
 		cfg, ok := cfgIface.(map[string]interface{})
 		if !ok {
-			t.Error("invalid config file")
+			return map[string]interface{}{}, errors.New("invalid config file")
 		}
-		return cfg
+		return cfg, nil
 	}
 
 	// First load the config and make sure the identity object is indeed set.
 
-	cfg := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Error("config can not be loaded")
+	}
 	_, ok := cfg["Identity"]
 	if !ok {
-		t.Error("Identity object does not exist in config but should")
+		t.Error("identity object does not exist in config but should")
 	}
 
 	// Now clean and check again
 	if err := subject.CleanIdentityFromConfig(); err != nil {
 		t.Error(err)
 	}
-	cfg = loadConfig()
+	cfg, err = loadConfig()
+	if err != nil {
+		t.Error("config can not be loaded")
+	}
 	_, ok = cfg["Identity"]
 	if ok {
 		t.Error("Identity object was not deleted from config")

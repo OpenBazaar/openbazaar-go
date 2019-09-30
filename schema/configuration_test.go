@@ -59,7 +59,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.BTC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if len(config.BTC.APIPool) == 0 || config.BTC.APIPool[0] != "https://btc.blockbook.api.openbazaar.org/api" {
+	if len(config.BTC.APIPool) == 0 || config.BTC.APIPool[0] != "https://btc.api.openbazaar.org/api" {
 		t.Error("BTC APIPool does not equal expected value")
 	}
 	if len(config.BTC.APITestnetPool) == 0 || config.BTC.APITestnetPool[0] != "https://tbtc.api.openbazaar.org/api" {
@@ -81,7 +81,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.BCH.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if len(config.BCH.APIPool) == 0 || config.BCH.APIPool[0] != "https://bch.blockbook.api.openbazaar.org/api" {
+	if len(config.BCH.APIPool) == 0 || config.BCH.APIPool[0] != "https://bch.api.openbazaar.org/api" {
 		t.Error("BCH APIPool does not equal expected value")
 	}
 	if len(config.BCH.APITestnetPool) == 0 || config.BCH.APITestnetPool[0] != "https://tbch.api.openbazaar.org/api" {
@@ -104,7 +104,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.LTC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if len(config.LTC.APIPool) == 0 || config.LTC.APIPool[0] != "https://ltc.blockbook.api.openbazaar.org/api" {
+	if len(config.LTC.APIPool) == 0 || config.LTC.APIPool[0] != "https://ltc.api.openbazaar.org/api" {
 		t.Error("LTC APIPool does not equal expected value")
 	}
 	if len(config.LTC.APITestnetPool) == 0 || config.LTC.APITestnetPool[0] != "https://tltc.api.openbazaar.org/api" {
@@ -126,7 +126,7 @@ func TestGetWalletsConfig(t *testing.T) {
 	if config.ZEC.Type != "API" {
 		t.Error("Type does not equal expected value")
 	}
-	if len(config.ZEC.APIPool) == 0 || config.ZEC.APIPool[0] != "https://zec.blockbook.api.openbazaar.org/api" {
+	if len(config.ZEC.APIPool) == 0 || config.ZEC.APIPool[0] != "https://zec.api.openbazaar.org/api" {
 		t.Error("ZEC APIPool does not equal expected value")
 	}
 	if len(config.ZEC.APITestnetPool) == 0 || config.ZEC.APITestnetPool[0] != "https://tzec.api.openbazaar.org/api" {
@@ -349,7 +349,7 @@ func configFixture() []byte {
     "BTC": {
       "Type": "API",
       "API": [
-        "https://btc.blockbook.api.openbazaar.org/api"
+        "https://btc.api.openbazaar.org/api"
       ],
       "APITestnet": [
         "https://tbtc.api.openbazaar.org/api"
@@ -365,7 +365,7 @@ func configFixture() []byte {
     "BCH": {
       "Type": "API",
       "API": [
-        "https://bch.blockbook.api.openbazaar.org/api"
+        "https://bch.api.openbazaar.org/api"
       ],
       "APITestnet": [
         "https://tbch.api.openbazaar.org/api"
@@ -381,7 +381,7 @@ func configFixture() []byte {
     "LTC": {
       "Type": "API",
       "API": [
-        "https://ltc.blockbook.api.openbazaar.org/api"
+        "https://ltc.api.openbazaar.org/api"
       ],
       "APITestnet": [
         "https://tltc.api.openbazaar.org/api"
@@ -397,7 +397,7 @@ func configFixture() []byte {
     "ZEC": {
       "Type": "API",
       "API": [
-        "https://zec.blockbook.api.openbazaar.org/api"
+        "https://zec.api.openbazaar.org/api"
       ],
       "APITestnet": [
         "https://tzec.api.openbazaar.org/api"
@@ -413,7 +413,7 @@ func configFixture() []byte {
     "ETH": {
       "Type": "API",
       "API": [
-        "https://rinkeby.infura.io"
+        "https://mainnet.infura.io"
       ],
       "APITestnet": [
         "https://rinkeby.infura.io"
@@ -425,8 +425,8 @@ func configFixture() []byte {
       "LowFeeDefault": 7,
       "TrustedPeer": "",
       "WalletOptions": {
-        "RegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-        "RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+        "RegistryAddress": "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981",
+        "RinkebyRegistryAddress": "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C",
         "RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3"
       }
     }

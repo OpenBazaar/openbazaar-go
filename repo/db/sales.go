@@ -77,7 +77,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		int(state),
 		readInt,
 		int(contract.BuyerOrder.Timestamp.Seconds),
-		int(contract.BuyerOrder.Payment.Amount),
+		contract.BuyerOrder.Payment.BigAmount,
 		contract.VendorListings[0].Item.Images[0].Tiny,
 		contract.BuyerOrder.BuyerID.PeerID,
 		handle,
@@ -89,7 +89,10 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 
@@ -169,9 +172,10 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 	var ret []repo.Sale
 	for rows.Next() {
 		var orderID, title, thumbnail, buyerID, buyerHandle, shippingName, shippingAddr, coinType, paymentCoin string
-		var timestamp, total, stateInt, readInt int
+		var timestamp, stateInt, readInt int
 		var contract []byte
-		if err := rows.Scan(&orderID, &contract, &timestamp, &total, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt, &coinType, &paymentCoin); err != nil {
+		totalStr := ""
+		if err := rows.Scan(&orderID, &contract, &timestamp, &totalStr, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt, &coinType, &paymentCoin); err != nil {
 			return ret, 0, err
 		}
 		read := false
@@ -199,7 +203,7 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           uint64(total),
+			Total:           totalStr,
 			BuyerId:         buyerID,
 			BuyerHandle:     buyerHandle,
 			ShippingName:    shippingName,
@@ -300,13 +304,17 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
-	def, err := repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	def, err := repo.AllCurrencies().Lookup(paymentCoin)
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, read, def.CurrencyCode(), nil
+	err = json.Unmarshal(serializedTransactions, &records)
+	if err != nil {
+		log.Error(err)
+	}
+	cc := def.CurrencyCode()
+	return rc, pb.OrderState(stateInt), funded, records, read, &cc, nil
 }
 
 func (s *SalesDB) Count() int {
@@ -314,7 +322,10 @@ func (s *SalesDB) Count() int {
 	defer s.lock.Unlock()
 	row := s.db.QueryRow("select Count(*) from sales")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 
@@ -341,7 +352,7 @@ func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.Coin, PaymentAddress: paymentAddr})
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil

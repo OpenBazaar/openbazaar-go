@@ -118,7 +118,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(isTestnet)
+	repoPath, err := repo.GetRepoPath(isTestnet, x.DataDir)
 	if err != nil {
 		return err
 	}
@@ -413,6 +413,10 @@ func (x *Start) Execute(args []string) error {
 			if err != nil {
 				return err
 			}
+		} else if x.Regtest {
+			if r, ok := router.(*dht.IpfsDHT); ok {
+				dhtRouting = r
+			}
 		}
 	}
 	if dhtRouting == nil {
@@ -429,12 +433,18 @@ func (x *Start) Execute(args []string) error {
 	err = proto.Unmarshal(ival, ourIpnsRecord)
 	if err != nil {
 		log.Error("unmarshal record value", err)
-		nd.Repo.Datastore().Delete(ipnskey)
+		err = nd.Repo.Datastore().Delete(ipnskey)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	if x.ForceKeyCachePurge {
 		log.Infof("forcing key purge from namesys cache...")
-		nd.Repo.Datastore().Delete(ipnskey)
+		err = nd.Repo.Datastore().Delete(ipnskey)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	// Wallet

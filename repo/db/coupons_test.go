@@ -35,8 +35,8 @@ func TestPutCoupons(t *testing.T) {
 	defer teardown()
 
 	coupons := []repo.Coupon{
-		{"slug", "code1", "hash1"},
-		{"slug", "code2", "hash2"},
+		{Slug: "slug", Code: "code1", Hash: "hash1"},
+		{Slug: "slug", Code: "code2", Hash: "hash2"},
 	}
 	err = couponDB.Put(coupons)
 	if err != nil {
@@ -54,8 +54,11 @@ func TestPutCoupons(t *testing.T) {
 		var slug string
 		var code string
 		var hash string
-		rows.Scan(&slug, &code, &hash)
-		ret = append(ret, repo.Coupon{slug, code, hash})
+		err = rows.Scan(&slug, &code, &hash)
+		if err != nil {
+			t.Log(err)
+		}
+		ret = append(ret, repo.Coupon{Slug: slug, Code: code, Hash: hash})
 	}
 	if len(ret) != 2 {
 		t.Error("Failed to return correct number of coupons")
@@ -76,8 +79,8 @@ func TestGetCoupons(t *testing.T) {
 	defer teardown()
 
 	coupons := []repo.Coupon{
-		{"s", "code1", "hash1"},
-		{"s", "code2", "hash2"},
+		{Slug: "s", Code: "code1", Hash: "hash1"},
+		{Slug: "s", Code: "code2", Hash: "hash2"},
 	}
 	err = couponDB.Put(coupons)
 	if err != nil {
@@ -106,8 +109,8 @@ func TestDeleteCoupons(t *testing.T) {
 	defer teardown()
 
 	coupons := []repo.Coupon{
-		{"slug", "code1", "hash1"},
-		{"slug", "code2", "hash2"},
+		{Slug: "slug", Code: "code1", Hash: "hash1"},
+		{Slug: "slug", Code: "code2", Hash: "hash2"},
 	}
 	err = couponDB.Put(coupons)
 	if err != nil {

@@ -3,13 +3,14 @@ package zcash
 import (
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/multiwallet/util"
 	"net"
 	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/multiwallet/util"
 
 	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"golang.org/x/net/proxy"
@@ -99,7 +100,7 @@ func (z *ZcashPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, error
 	return z.cache, nil
 }
 
-func (z *ZcashPriceFetcher) UnitsPerCoin() int {
+func (z *ZcashPriceFetcher) UnitsPerCoin() int64 {
 	return exchange.SatoshiPerBTC
 }
 

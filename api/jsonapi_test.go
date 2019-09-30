@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -275,7 +276,7 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
-		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
+		{"POST", "/ob/listing", `{`, 500, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
 		{"GET", "/ob/inventory", "", 200, `{}`},
@@ -337,34 +338,34 @@ func TestCryptoListings(t *testing.T) {
 }
 
 func TestCryptoListingsPriceModifier(t *testing.T) {
-	outOfRangeErr := core.ErrPriceModifierOutOfRange{
-		Min: core.PriceModifierMin,
-		Max: core.PriceModifierMax,
+	outOfRangeErr := repo.ErrPriceModifierOutOfRange{
+		Min: repo.PriceModifierMin,
+		Max: repo.PriceModifierMax,
 	}
 
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PriceModifier = core.PriceModifierMax
+	listing.Item.PriceModifier = repo.PriceModifierMax
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
 		{"GET", "/ob/listing/crypto", jsonFor(t, listing), 200, anyResponseJSON},
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.001
+	listing.Item.PriceModifier = repo.PriceModifierMax + 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.01
+	listing.Item.PriceModifier = repo.PriceModifierMax + 0.01
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMin - 0.001
+	listing.Item.PriceModifier = repo.PriceModifierMin - 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = core.PriceModifierMin - 1
+	listing.Item.PriceModifier = repo.PriceModifierMin - 1
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
@@ -395,40 +396,44 @@ func TestCryptoListingsQuantity(t *testing.T) {
 
 	listing.Item.Skus[0].Quantity = 0
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
 
 	listing.Item.Skus[0].Quantity = -1
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
 }
 
+/*
 func TestCryptoListingsNoCoinType(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.CoinType = ""
+	//listing.Metadata.CoinType = ""
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingCoinTypeRequired)},
 	})
 }
+*/
 
+/*
 func TestCryptoListingsCoinDivisibilityIncorrect(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON},
 	})
 
-	listing.Metadata.CoinDivisibility = 1e7
+	//listing.Metadata.CoinDivisibility = 1e7
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
 	})
 
-	listing.Metadata.CoinDivisibility = 0
+	//listing.Metadata.CoinDivisibility = 0
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
 	})
 }
+*/
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
 	runTest := func(listing *pb.Listing, err error) {
@@ -439,34 +444,42 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	physicalListing := factory.NewListing("physical")
 
-	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PricingCurrency = "btc"
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
+	//listing := factory.NewCryptoListing("crypto")
+	//listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
+	//runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
-	listing = factory.NewCryptoListing("crypto")
+	listing := factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("item.condition"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Options = physicalListing.Item.Options
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.options"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("item.options"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.ShippingOptions = physicalListing.ShippingOptions
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("shippingOptions"))
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("shippingOptions"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
-	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
+	/*[]*pb.Listing_Coupon{}
+	sampleCoupon := new(pb.Listing_Coupon)
+	sampleCoupon.Title = "sample coupon"
+	sampleCoupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"}
+	sampleCoupon.Discount = &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5}
+	*/
+	runTest(listing, repo.ErrCryptocurrencyListingIllegalField("coupons"))
+
 }
 
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.Price = 1
+	listing.Item.BigPrice = "100"
+	listing.Item.PriceCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.price"))},
 	})
 }
 
@@ -482,8 +495,94 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
+	})
+}
+
+func TestWalletSpendFailures(t *testing.T) {
+	newSpendRequest := func() *core.SpendRequest {
+		return &core.SpendRequest{
+			CurrencyCode:           "TBTC",
+			Address:                "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
+			Amount:                 "1234",
+			FeeLevel:               "PRIORITY",
+			RequireAssociatedOrder: false,
+		}
+	}
+
+	insufficientFundsRequest := newSpendRequest()
+	insufficientFundsRequest.Amount = "1700000"
+	insufficientFundsResponse := APIError{Reason: core.ErrInsufficientFunds.Error()}
+
+	invalidAmountRequest := newSpendRequest()
+	invalidAmountRequest.Amount = ""
+	invalidAmountResponse := APIError{Reason: core.ErrInvalidAmount.Error()}
+
+	missingCurrencyRequest := newSpendRequest()
+	missingCurrencyRequest.Currency = nil
+	missingCurrencyRequest.CurrencyCode = ""
+	missingCurrencyResponse := APIError{Reason: repo.ErrCurrencyDefinitionUndefined.Error()}
+
+	invalidAddrRequest := newSpendRequest()
+	invalidAddrRequest.Address = "invalid"
+	invalidAddrResponse := APIError{Reason: core.ErrInvalidSpendAddress.Error()}
+
+	runAPITests(t, apiTests{
+		{
+			"POST", "/wallet/spend",
+			insufficientFundsRequest,
+			400, insufficientFundsResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAmountRequest,
+			400, invalidAmountResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			missingCurrencyRequest,
+			400, missingCurrencyResponse,
+		},
+		{
+			"POST", "/wallet/spend",
+			invalidAddrRequest,
+			400, invalidAddrResponse,
+		},
+	})
+}
+
+func TestWalletCurrencyDictionary(t *testing.T) {
+	var expectedResponse, err = json.MarshalIndent(repo.AllCurrencies().AsMap(), "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", "/wallet/currencies", "", 200, string(expectedResponse)},
+	})
+}
+
+func TestWalletCurrencyDictionaryLookup(t *testing.T) {
+	var randomLookup string
+	for currency := range repo.AllCurrencies().AsMap() {
+		// pick any currency string from the dictionary
+		randomLookup = currency
+		break
+	}
+
+	def, err := repo.AllCurrencies().Lookup(randomLookup)
+	if err != nil {
+		t.Fatalf("error looking up (%s): %s", randomLookup, err.Error())
+	}
+	entries := map[string]repo.CurrencyDefinition{randomLookup: def}
+	expectedResponse, err := json.MarshalIndent(entries, "", "    ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runAPITests(t, apiTests{
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", randomLookup), "", 200, string(expectedResponse)},
+		{"GET", fmt.Sprintf("/wallet/currencies/%s", "INVALID"), "", 404, errorResponseJSON(errors.New("unknown definition for INVALID"))},
 	})
 }
 
@@ -570,7 +669,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
-	sale.Contract.BuyerOrder.Payment.Coin = "ZEC"
+	sale.Contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err
@@ -585,7 +684,7 @@ func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 func TestSalesGet(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
 	sale.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false)
@@ -615,9 +714,9 @@ func TestSalesGet(t *testing.T) {
 	if actualSale.BuyerId != sale.Contract.BuyerOrder.BuyerID.PeerID {
 		t.Fatal("Incorrect buyerId:", actualSale.BuyerId, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.PeerID)
 	}
-	if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualSale.OrderId != sale.OrderID {
 		t.Fatal("Incorrect orderId:", actualSale.OrderId, "\nwanted:", sale.OrderID)
 	}
@@ -637,7 +736,7 @@ func TestSalesGet(t *testing.T) {
 func TestPurchasesGet(t *testing.T) {
 	purchase := factory.NewPurchaseRecord()
 	purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
 	purchase.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Purchases().Put(purchase.OrderID, *purchase.Contract, purchase.OrderState, false)
@@ -667,9 +766,9 @@ func TestPurchasesGet(t *testing.T) {
 	if actualPurchase.VendorId != purchase.Contract.VendorListings[0].VendorID.PeerID {
 		t.Fatal("Incorrect vendorId:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.PeerID)
 	}
-	if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualPurchase.OrderId != purchase.OrderID {
 		t.Fatal("Incorrect orderId:", actualPurchase.OrderId, "\nwanted:", purchase.OrderID)
 	}
@@ -691,7 +790,7 @@ func TestCasesGet(t *testing.T) {
 	paymentCoinCode := repo.CurrencyCode("BTC")
 	disputeCaseRecord := factory.NewDisputeCaseRecord()
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
-	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
+	//disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	disputeCaseRecord.CoinType = "ZEC"
 	disputeCaseRecord.PaymentCoin = &paymentCoinCode
@@ -717,9 +816,9 @@ func TestCasesGet(t *testing.T) {
 
 	actualCase := respObj.Cases[0]
 
-	if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
-		t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
-	}
+	//if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
+	//	t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
+	//}
 	if actualCase.PaymentCoin != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
 		t.Fatal("Incorrect paymentCoin:", actualCase.PaymentCoin, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0])
 	}

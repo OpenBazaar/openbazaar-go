@@ -25,10 +25,16 @@ func (f *FollowerDB) Put(follower string, proof []byte) error {
 	defer stmt.Close()
 	_, err := stmt.Exec(follower, proof)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -51,8 +57,11 @@ func (f *FollowerDB) Get(offsetId string, limit int) ([]repo.Follower, error) {
 	for rows.Next() {
 		var peerID string
 		var proof []byte
-		rows.Scan(&peerID, &proof)
-		ret = append(ret, repo.Follower{peerID, proof})
+		err = rows.Scan(&peerID, &proof)
+		if err != nil {
+			log.Error(err)
+		}
+		ret = append(ret, repo.Follower{PeerId: peerID, Proof: proof})
 	}
 	return ret, nil
 }
@@ -72,7 +81,10 @@ func (f *FollowerDB) Count() int {
 	defer f.lock.Unlock()
 	row := f.db.QueryRow("select Count(*) from followers")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 

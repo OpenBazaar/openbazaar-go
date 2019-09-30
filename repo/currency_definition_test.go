@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -9,53 +10,51 @@ import (
 )
 
 func TestCurrencyDefinitionsAreEqual(t *testing.T) {
-	var (
-		validDef                 = factory.NewCurrencyDefinition("BTC")
-		matchingDef              = factory.NewCurrencyDefinition("BTC")
-		differentCodeDef         = factory.NewCurrencyDefinition("ETH")
-		differentTypeDef         = factory.NewCurrencyDefinition("BTC")
-		differentDivisibilityDef = factory.NewCurrencyDefinition("BTC")
-		differentNameDef         = factory.NewCurrencyDefinition("BTC")
-		examples                 = []struct {
-			value    *repo.CurrencyDefinition
-			other    *repo.CurrencyDefinition
-			expected bool
-		}{
-			{ // currency and divisibility matching should be equal
-				value:    validDef,
-				other:    matchingDef,
-				expected: true,
-			},
-			{ // different names should be true
-				value:    validDef,
-				other:    differentNameDef,
-				expected: true,
-			},
-			{ // nils should be false
-				value:    nil,
-				other:    nil,
-				expected: false,
-			},
-			{ // different code should be false
-				value:    validDef,
-				other:    differentCodeDef,
-				expected: false,
-			},
-			{ // different divisibility should be false
-				value:    validDef,
-				other:    differentDivisibilityDef,
-				expected: false,
-			},
-			{ // different type should be false
-				value:    validDef,
-				other:    differentTypeDef,
-				expected: false,
-			},
-		}
-	)
-	differentDivisibilityDef.Divisibility = 10
-	differentNameDef.Name = "Something else"
+	validDef := factory.NewCurrencyDefinition("BTC")
+	matchingDef := factory.NewCurrencyDefinition("BTC")
+	differentCodeDef := factory.NewCurrencyDefinition("ETH")
+	differentTypeDef := factory.NewCurrencyDefinition("BTC")
 	differentTypeDef.CurrencyType = "invalid"
+	differentDivisibilityDef := factory.NewCurrencyDefinition("BTC")
+	differentDivisibilityDef.Divisibility = 10
+	differentNameDef := factory.NewCurrencyDefinition("BTC")
+	differentNameDef.Name = "Something else"
+	examples := []struct {
+		value    repo.CurrencyDefinition
+		other    repo.CurrencyDefinition
+		expected bool
+	}{
+		{ // currency and divisibility matching should be equal
+			value:    validDef,
+			other:    matchingDef,
+			expected: true,
+		},
+		{ // different names should be true
+			value:    validDef,
+			other:    differentNameDef,
+			expected: true,
+		},
+		{ // nils should be false
+			value:    repo.NilCurrencyDefinition,
+			other:    repo.NilCurrencyDefinition,
+			expected: false,
+		},
+		{ // different code should be false
+			value:    validDef,
+			other:    differentCodeDef,
+			expected: false,
+		},
+		{ // different divisibility should be false
+			value:    validDef,
+			other:    differentDivisibilityDef,
+			expected: false,
+		},
+		{ // different type should be false
+			value:    validDef,
+			other:    differentTypeDef,
+			expected: false,
+		},
+	}
 
 	for _, c := range examples {
 		if c.value.Equal(c.other) != c.expected {
@@ -73,11 +72,11 @@ func TestCurrencyDefinitionsAreEqual(t *testing.T) {
 func TestCurrencyDefinitionValidation(t *testing.T) {
 	var examples = []struct {
 		expectErr error
-		input     *repo.CurrencyDefinition
+		input     repo.CurrencyDefinition
 	}{
 		{ // valid mainnet currency
 			expectErr: nil,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("BTC"),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
@@ -85,7 +84,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // valid testnet currency
 			expectErr: nil,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("TBTC"),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
@@ -93,7 +92,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error invalid 4-char currency code
 			expectErr: repo.ErrCurrencyCodeTestSymbolInvalid,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("XBTC"),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
@@ -101,7 +100,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error invalid currency code length
 			expectErr: repo.ErrCurrencyCodeLengthInvalid,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("BT"),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
@@ -109,7 +108,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error empty currency code
 			expectErr: repo.ErrCurrencyCodeLengthInvalid,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode(""),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
@@ -117,7 +116,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error invalid currency type
 			expectErr: repo.ErrCurrencyTypeInvalid,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("123"),
 				Divisibility: 1,
 				CurrencyType: "invalid",
@@ -125,7 +124,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error non-positive divisibility
 			expectErr: repo.ErrCurrencyDivisibilityNonPositive,
-			input: &repo.CurrencyDefinition{
+			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("234"),
 				Divisibility: 0,
 				CurrencyType: repo.Crypto,
@@ -133,7 +132,7 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 		},
 		{ // error nil definition
 			expectErr: repo.ErrCurrencyDefinitionUndefined,
-			input:     nil,
+			input:     repo.NilCurrencyDefinition,
 		},
 	}
 
@@ -159,38 +158,38 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 
 func TestCurrencyDictionaryLookup(t *testing.T) {
 	var (
-		expected = factory.NewCurrencyDefinition("ABC")
-		dict     = repo.CurrencyDictionary{
+		code     = "ABC"
+		expected = factory.NewCurrencyDefinition(code)
+		defs     = map[string]repo.CurrencyDefinition{
 			expected.Code.String(): expected,
 		}
-
-		examples = []struct {
-			lookup      string
-			expected    *repo.CurrencyDefinition
-			expectedErr error
-		}{
-			{ // upcase lookup
-				lookup:      "ABC",
-				expected:    expected,
-				expectedErr: nil,
-			},
-			{ // lowercase lookup
-				lookup:      "abc",
-				expected:    expected,
-				expectedErr: nil,
-			},
-			{ // testnet lookup
-				lookup:      "TABC",
-				expected:    factory.NewCurrencyDefinition("TABC"),
-				expectedErr: nil,
-			},
-			{ // undefined key
-				lookup:      "FAIL",
-				expected:    nil,
-				expectedErr: repo.ErrCurrencyDefinitionUndefined,
-			},
-		}
 	)
+	dict, err := repo.NewCurrencyDictionary(defs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var examples = []struct {
+		lookup      string
+		expected    repo.CurrencyDefinition
+		expectedErr error
+	}{
+		{ // upcase lookup
+			lookup:      code,
+			expected:    expected,
+			expectedErr: nil,
+		},
+		{ // lowercase lookup
+			lookup:      strings.ToLower(code),
+			expected:    expected,
+			expectedErr: nil,
+		},
+		{ // undefined key
+			lookup:      "FAIL",
+			expected:    repo.NilCurrencyDefinition,
+			expectedErr: repo.ErrCurrencyDefinitionUndefined,
+		},
+	}
 
 	for _, e := range examples {
 		var def, err = dict.Lookup(e.lookup)
@@ -215,13 +214,15 @@ func TestCurrencyDictionaryLookup(t *testing.T) {
 }
 
 func TestCurrencyDictionaryValid(t *testing.T) {
-	var (
-		valid      = factory.NewCurrencyDefinition("BTC")
-		invalidOne = factory.NewCurrencyDefinition("LTC")
-		invalidTwo = factory.NewCurrencyDefinition("BCH")
-	)
+	valid := factory.NewCurrencyDefinition("BTC")
+	// invalidOne is invalid because the divisibility is 0
+	invalidOne := factory.NewCurrencyDefinition("LTC")
 	invalidOne.Divisibility = 0
+	// invalidTwo is invalid because the code is too short
+	invalidTwo := factory.NewCurrencyDefinition("BCH")
 	invalidTwo.Code = "X"
+	// colliding is invalid because the code collides with BTC above
+	colliding := factory.NewCurrencyDefinition("BTC")
 
 	errOne := invalidOne.Valid()
 	if errOne == nil {
@@ -233,15 +234,16 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 	}
 
 	expectedErrs := map[string]error{
-		invalidOne.Code.String(): errOne,
-		invalidTwo.Code.String(): errTwo,
-		"DIF":                    repo.ErrDictionaryIndexMismatchedCode,
+		invalidOne.CurrencyCode().String(): errOne,
+		invalidTwo.CurrencyCode().String(): errTwo,
+		"DIF":                              repo.ErrDictionaryIndexMismatchedCode,
 	}
-	_, err := repo.NewCurrencyDictionary(map[string]*repo.CurrencyDefinition{
-		valid.Code.String():      valid,
-		invalidOne.Code.String(): invalidOne,
-		invalidTwo.Code.String(): invalidTwo,
-		"DIF":                    valid,
+	_, err := repo.NewCurrencyDictionary(map[string]repo.CurrencyDefinition{
+		valid.CurrencyCode().String():      valid,
+		colliding.CurrencyCode().String():  colliding,
+		invalidOne.CurrencyCode().String(): invalidOne,
+		invalidTwo.CurrencyCode().String(): invalidTwo,
+		"DIF":                              valid,
 	})
 
 	var mappedErrs map[string]error
@@ -252,5 +254,12 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 		t.Logf("\texpected: %+v", expectedErrs)
 		t.Logf("\tactual: %+v", mappedErrs)
 		t.Fatalf("expected error map to match, but did not")
+	}
+}
+
+func TestNilCodeCollision(t *testing.T) {
+	subject := repo.NilCurrencyCode
+	if _, err := repo.AllCurrencies().Lookup(subject.String()); err == nil {
+		t.Fatal("expected nil currency lookup to error, but did not")
 	}
 }

@@ -48,7 +48,7 @@ class OpenBazaarTestFramework(object):
             self.start_node(self.nodes[i])
 
     def setup_network(self):
-        if self.bitcoind is not None:
+        if self.bitcoind is not None and self.cointype == "BTC":
             self.start_bitcoind()
         self.setup_nodes()
 
@@ -83,10 +83,14 @@ class OpenBazaarTestFramework(object):
 
         self.cointype = self.cointype.upper()
 
+        coinConfig = config["Wallets"][self.cointype]
+        del config["Wallets"]
+        config["Wallets"] = {}
+        config["Wallets"][self.cointype] = coinConfig
+
         config["Wallets"][self.cointype]["Type"] = "SPV"
         config["Wallets"][self.cointype]["TrustedPeer"] = "127.0.0.1:18444"
         config["Wallets"][self.cointype]["FeeAPI"] = ""
-
 
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
@@ -142,7 +146,6 @@ class OpenBazaarTestFramework(object):
     def init_blockchain(self):
         self.send_bitcoin_cmd("generate", 1)
         self.bitcoin_address = self.send_bitcoin_cmd("getnewaddress")
-        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
         self.send_bitcoin_cmd("generate", 435)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
@@ -185,7 +188,7 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
-        parser.add_argument('-c', '--cointype', help="cointype to test", action='store_true', default="BTC")
+        parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir

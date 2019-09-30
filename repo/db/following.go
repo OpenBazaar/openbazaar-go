@@ -24,10 +24,16 @@ func (f *FollowingDB) Put(follower string) error {
 	defer stmt.Close()
 	_, err := stmt.Exec(follower)
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -48,7 +54,10 @@ func (f *FollowingDB) Get(offsetId string, limit int) ([]string, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var peerID string
-		rows.Scan(&peerID)
+		err = rows.Scan(&peerID)
+		if err != nil {
+			log.Error(err)
+		}
 		ret = append(ret, peerID)
 	}
 	return ret, nil
@@ -69,7 +78,10 @@ func (f *FollowingDB) Count() int {
 	defer f.lock.Unlock()
 	row := f.db.QueryRow("select Count(*) from following")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 

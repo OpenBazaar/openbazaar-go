@@ -29,7 +29,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	flag.Parse()
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(x.Testnet)
+	repoPath, err := repo.GetRepoPath(x.Testnet, x.DataDir)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,10 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	if err != nil {
 		log.Fatalf("failed to open cert.pem for writing: %s", err)
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		log.Fatalf("failed to write pem encoding: %s", err)
+	}
 	certOut.Close()
 	log.Noticef("wrote cert.pem\n")
 
@@ -120,7 +123,10 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		log.Noticef("failed to open key.pem for writing:", err)
 		return err
 	}
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv.(*rsa.PrivateKey))})
+	err = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv.(*rsa.PrivateKey))})
+	if err != nil {
+		log.Fatalf("failed to write pem encoding: %s", err)
+	}
 	keyOut.Close()
 	log.Noticef("wrote key.pem\n")
 

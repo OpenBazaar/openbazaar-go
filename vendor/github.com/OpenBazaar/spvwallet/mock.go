@@ -229,10 +229,10 @@ type mockTxnStore struct {
 	txns map[string]*wallet.Txn
 }
 
-func (m *mockTxnStore) Put(raw []byte, txid string, value, height int, timestamp time.Time, watchOnly bool) error {
+func (m *mockTxnStore) Put(raw []byte, txid, value string, height int, timestamp time.Time, watchOnly bool) error {
 	m.txns[txid] = &wallet.Txn{
 		Txid:      txid,
-		Value:     int64(value),
+		Value:     value,
 		Height:    int32(height),
 		Timestamp: timestamp,
 		WatchOnly: watchOnly,
@@ -315,7 +315,7 @@ func TestUtxo_IsEqual(t *testing.T) {
 		Op:           *wire.NewOutPoint(h, 0),
 		ScriptPubkey: make([]byte, 32),
 		AtHeight:     400000,
-		Value:        1000000,
+		Value:        "1000000",
 	}
 	if !u.IsEqual(u) {
 		t.Error("Failed to return utxos as equal")
@@ -331,7 +331,7 @@ func TestUtxo_IsEqual(t *testing.T) {
 		t.Error("Failed to return utxos as not equal")
 	}
 	testUtxo = *u
-	testUtxo.Value = 4
+	testUtxo.Value = "4"
 	if u.IsEqual(&testUtxo) {
 		t.Error("Failed to return utxos as not equal")
 	}
@@ -363,7 +363,7 @@ func TestStxo_IsEqual(t *testing.T) {
 		Op:           *wire.NewOutPoint(h, 0),
 		ScriptPubkey: make([]byte, 32),
 		AtHeight:     400000,
-		Value:        1000000,
+		Value:        "1000000",
 	}
 	h2, err := chainhash.NewHashFromStr("1f64249abbf2fcc83fc060a64f69a91391e9f5d98c5d3135fe9716838283aa4c")
 	s := &wallet.Stxo{

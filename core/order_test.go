@@ -1,14 +1,14 @@
 package core_test
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/core"
+	"fmt"
+	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
-
-	"fmt"
-	"testing"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -21,12 +21,12 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Metadata: &pb.Listing_Metadata{
 				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
+				AcceptedCurrencies: []string{"TBTC"},
 				Version:            2,
 			},
 			Item: &pb.Listing_Item{
-				Price: 100000,
+				BigPrice:      "100000",
+				PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -35,9 +35,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+							Name:                   "Standard shipping",
+							BigPrice:               "25000",
+							BigAdditionalItemPrice: "10000",
 						},
 					},
 				},
@@ -49,7 +49,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err := core.EncodeCID(ser)
+	listingID, err := ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,7 +68,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			AmountCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		},
 	}
 	contract.BuyerOrder = order
@@ -78,8 +78,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 125000 {
-		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total)
+	if total.Int64() != 125000 {
+		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total.Int64())
 	}
 
 	// Test higher quantity
@@ -88,7 +88,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 235000 {
+	if total.Int64() != 235000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -106,7 +106,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    50000,
+			BigSurcharge: "50000",
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -120,7 +120,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -129,14 +129,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 175000 {
+	if total.Int64() != 175000 {
 		t.Error("Calculated wrong order total")
 	}
 
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    -50000,
+			BigSurcharge: "-50000",
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -144,7 +144,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -153,20 +153,20 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 75000 {
+	if total.Int64() != 75000 {
 		t.Error("Calculated wrong order total")
 	}
 
 	// Test with coupon percent discount
-	couponHash, err := core.EncodeMultihash([]byte("testcoupon"))
+	couponHash, err := ipfs.EncodeMultihash([]byte("testcoupon"))
 	if err != nil {
 		t.Error(err)
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
+			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:           "coup",
+			PercentDiscount: 10,
 		},
 	}
 
@@ -174,30 +174,30 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
 	contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon"}
 	contract.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract)
+	total1, err := node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 70000 {
-		t.Error("Calculated wrong order total")
+	if total1.Int64() != 70000 {
+		t.Errorf("failed calculating correct total, expected (%d), got (%d)", 70000, total1.Int64())
 	}
 
 	// Test with coupon percent discount
-	couponHash, err = core.EncodeMultihash([]byte("testcoupon2"))
+	couponHash, err = ipfs.EncodeMultihash([]byte("testcoupon2"))
 	if err != nil {
 		t.Error(err)
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: 6000},
+			Code:             &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:            "coup",
+			BigPriceDiscount: "6000",
 		},
 	}
 
@@ -205,7 +205,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -215,7 +215,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 69000 {
+	if total.Int64() != 69000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -232,7 +232,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -241,7 +241,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 71200 {
+	if total.Int64() != 71200 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -258,7 +258,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -267,7 +267,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 72450 {
+	if total.Int64() != 72450 {
 		t.Error("Calculated wrong order total")
 		return
 	}
@@ -279,7 +279,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -288,7 +288,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 46200 {
+	if total.Int64() != 46200 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -298,11 +298,11 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 				Version:            3,
 				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
+				AcceptedCurrencies: []string{"TBTC"},
 			},
 			Item: &pb.Listing_Item{
-				Price: 100000,
+				BigPrice:      "100000",
+				PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -311,9 +311,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+							Name:                   "Standard shipping",
+							BigPrice:               "25000",
+							BigAdditionalItemPrice: "10000",
 						},
 					},
 				},
@@ -325,7 +325,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -344,7 +344,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			AmountCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		},
 	}
 	contract2.BuyerOrder = order2
@@ -354,7 +354,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 1115000 {
+	if total.Int64() != 1115000 {
 		t.Error("Calculated wrong order total")
 	}
 }

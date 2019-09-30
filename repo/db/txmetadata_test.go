@@ -34,7 +34,14 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	}
 	defer teardown()
 
-	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	m := repo.Metadata{
+		Txid:       "16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f",
+		Address:    "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452",
+		Memo:       "Some memo",
+		OrderId:    "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG",
+		Thumbnail:  "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS",
+		CanBumpFee: false,
+	}
 	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
@@ -77,7 +84,14 @@ func TestTxMetadataDB_Get(t *testing.T) {
 	}
 	defer teardown()
 
-	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	m := repo.Metadata{
+		Txid:       "16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f",
+		Address:    "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452",
+		Memo:       "Some memo",
+		OrderId:    "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG",
+		Thumbnail:  "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS",
+		CanBumpFee: false,
+	}
 	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
@@ -113,7 +127,14 @@ func TestTxMetadataDB_GetAll(t *testing.T) {
 	}
 	defer teardown()
 
-	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	m := repo.Metadata{
+		Txid:       "16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f",
+		Address:    "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452",
+		Memo:       "Some memo",
+		OrderId:    "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG",
+		Thumbnail:  "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS",
+		CanBumpFee: false,
+	}
 	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
@@ -156,7 +177,14 @@ func TestTxMetadataDB_Delete(t *testing.T) {
 	}
 	defer teardown()
 
-	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	m := repo.Metadata{
+		Txid:       "16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f",
+		Address:    "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452",
+		Memo:       "Some memo",
+		OrderId:    "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG",
+		Thumbnail:  "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS",
+		CanBumpFee: false,
+	}
 	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)

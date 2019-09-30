@@ -1,6 +1,8 @@
 package util
 
 import (
+	"strconv"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -46,7 +48,8 @@ func GatherCoins(height uint32, utxos []wallet.Utxo, scriptToAddress func(script
 		if u.AtHeight > 0 {
 			confirmations = int32(height) - u.AtHeight
 		}
-		c, err := NewCoin(u.Op.Hash, u.Op.Index, btcutil.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
+		val, _ := strconv.ParseInt(u.Value, 10, 64)
+		c, err := NewCoin(u.Op.Hash, u.Op.Index, btcutil.Amount(val), int64(confirmations), u.ScriptPubkey)
 		if err != nil {
 			continue
 		}

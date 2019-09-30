@@ -10,7 +10,7 @@
       "bitcoinSig": "MEQCIGqBDqGyLGs8tVewab+b8BIMCY73uGrxg7wPro3+JuVmAiBa2wk55FwGWWQoyLYW1mGhP62FLHyk6pfkAt59A1tU8Q=="
     },
     "metadata": {
-      "version": 4,
+      "version": 5,
       "contractType": "PHYSICAL_GOOD",
       "format": "FIXED_PRICE",
       "expiry": "2037-12-31T05:00:00.000Z",
@@ -20,14 +20,16 @@
         "BTC",
         "BCH"
       ],
-      "pricingCurrency": "USD",
-      "escrowTimeoutHours": 1080,
-      "coinDivisibility": 100000000
+      "escrowTimeoutHours": 1080
     },
     "item": {
       "title": "EXAMPLE FILE 1",
       "description": "THIS IS A TEST FILE.",
-      "price": 1000,
+      "priceCurrency": {
+          "code": "USD",
+          "divisibility": 2
+      },
+      "bigAmount": "1000",
       "tags": [
       ],
       "images": [
@@ -80,7 +82,7 @@
             0
           ],
           "productID": "A",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -88,7 +90,7 @@
             1
           ],
           "productID": "B",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -96,7 +98,7 @@
             2
           ],
           "productID": "C",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -104,7 +106,7 @@
             0
           ],
           "productID": "D",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -112,7 +114,7 @@
             1
           ],
           "productID": "E",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -120,7 +122,7 @@
             2
           ],
           "productID": "F",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -128,7 +130,7 @@
             0
           ],
           "productID": "G",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -136,7 +138,7 @@
             1
           ],
           "productID": "H",
-          "surcharge": 100
+          "bigSurcharge": "100"
         },
         {
           "variantCombo": [
@@ -144,7 +146,7 @@
             2
           ],
           "productID": "I",
-          "surcharge": 100
+          "bigSurcharge": "100"
         }
       ]
     },
@@ -158,9 +160,9 @@
         "services": [
           {
             "name": "USPS",
-            "price": 100,
+            "bigPrice": "100",
             "estimatedDelivery": "1-2 Days",
-            "additionalItemPrice": 100
+            "bigAdditionalItemPrice": "100"
           }
         ]
       }
@@ -174,7 +176,7 @@
       {
         "title": "ALMOSTFREE",
         "hash": "QmbrfL76FTwBzkMvKiLzUdwuzWUtEMwg2wYhZ2kTo3WQyS",
-        "percentDiscount": 25
+        "bigPriceDiscount": "1"
       }
     ],
     "moderators": [

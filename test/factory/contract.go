@@ -23,10 +23,10 @@ func NewContract() *pb.RicardianContract {
 				ShipTo:  "Buyer Name",
 			},
 			Payment: &pb.Order_Payment{
-				Amount:  10,
-				Method:  pb.Order_Payment_DIRECT,
-				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
-				Coin:    "BTC",
+				BigAmount:      "10",
+				AmountCurrency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+				Method:         pb.Order_Payment_DIRECT,
+				Address:        "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
 			},
 			Timestamp: nowData,
 		}

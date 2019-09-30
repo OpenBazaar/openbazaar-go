@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	EthereumRegistryAddressMainnet = "0x403d907982474cdd51687b09a8968346159378f3"
-	EthereumRegistryAddressRinkeby = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
+	EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
 	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
 )
 
@@ -89,7 +89,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		var apiEndpoints []string
 		if !testnet {
 			apiEndpoints = []string{
-				"https://btc.blockbook.api.openbazaar.org/api",
+				"https://btc.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://btc.bloqapi.net/insight-api",
 				//"https://btc.insight.openbazaar.org/insight-api",
@@ -119,7 +119,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		var apiEndpoints []string
 		if !testnet {
 			apiEndpoints = []string{
-				"https://bch.blockbook.api.openbazaar.org/api",
+				"https://bch.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://bitcoincash.blockexplorer.com/api",
 			}
@@ -147,7 +147,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		var apiEndpoints []string
 		if !testnet {
 			apiEndpoints = []string{
-				"https://zec.blockbook.api.openbazaar.org/api",
+				"https://zec.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://zcashnetwork.info/api",
 			}
@@ -175,7 +175,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		var apiEndpoints []string
 		if !testnet {
 			apiEndpoints = []string{
-				"https://ltc.blockbook.api.openbazaar.org/api",
+				"https://ltc.api.openbazaar.org/api",
 				// temporarily deprecated Insight endpoints
 				//"https://ltc.coin.space/api",
 				//"https://ltc.insight.openbazaar.org/insight-lite-api",
@@ -204,7 +204,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		var apiEndpoints []string
 		if !testnet {
 			apiEndpoints = []string{
-				"https://rinkeby.infura.io",
+				"https://mainnet.infura.io",
 			}
 		} else {
 			apiEndpoints = []string{

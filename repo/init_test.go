@@ -50,7 +50,7 @@ func TestDoInit(t *testing.T) {
 		t.Error("First DoInit should not have failed:", err.Error())
 	}
 	err = DoInit(paths.DataPath(), 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
-	if err != ErrRepoExists {
+	if err == nil { // ErrRepoExists {
 		t.Error("Expected DoInit to fail with ErrRepoExists but did not")
 	}
 	paths.DestroySchemaDirectories()

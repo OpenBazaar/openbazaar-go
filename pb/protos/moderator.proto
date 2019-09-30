@@ -24,8 +24,10 @@ message Moderator {
     }
 
     message Price {
-        string currencyCode = 1;
-        uint64 amount       = 2; // Bitcoins must be in satoshi
+        string currencyCode               = 1 [deprecated = true];
+        uint64 amount                     = 2 [deprecated = true];
+        string bigAmount                  = 3;
+        CurrencyDefinition amountCurrency = 4;
     }
 }
 

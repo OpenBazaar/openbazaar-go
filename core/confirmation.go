@@ -5,14 +5,17 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-
-	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+	"math/big"
+	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // NewOrderConfirmation - add order confirmation to the contract
@@ -25,14 +28,14 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
 
 	if addressRequest {
 		addr := wal.NewAddress(wallet.EXTERNAL)
-		oc.PaymentAddress = addr.EncodeAddress()
+		oc.PaymentAddress = addr.String()
 	}
 
 	ts, err := ptypes.TimestampProto(time.Now())
@@ -80,12 +83,14 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 
 	if calculateNewTotal {
-		oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
+		val, err := n.CalculateOrderTotal(contract)
+
 		if err != nil {
 			return nil, err
 		}
+		oc.BigRequestedAmount = val.String()
 	} else {
-		oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
+		oc.BigRequestedAmount = contract.BuyerOrder.Payment.BigAmount
 	}
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
@@ -96,26 +101,40 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 }
 
 // ConfirmOfflineOrder - confirm offline order
-func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	contract, err := n.NewOrderConfirmation(contract, false, false)
+func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	confirmedContract, err := n.NewOrderConfirmation(contract, false, false)
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(confirmedContract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
-	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+	err = n.Datastore.Sales().Put(confirmedContract.VendorOrderConfirmation.OrderID, *confirmedContract, pb.OrderState_AWAITING_FULFILLMENT, false)
+	if err != nil {
+		return err
+	}
+
+	recoverState := func() {
+		err = n.Datastore.Sales().Put(confirmedContract.VendorOrderConfirmation.OrderID, *contract, oldState, false)
+		if err != nil {
+			log.Errorf("failed to recover state on order (%s): %s", confirmedContract.VendorOrderConfirmation.OrderID, err.Error())
+		}
+	}
+
+	if confirmedContract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
+					recoverState()
 					return err
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
+					recoverState()
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
 				txInput := wallet.TransactionInput{
@@ -129,35 +148,42 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		}
 
 		if len(txInputs) == 0 {
+			recoverState()
 			return errors.New("no unspent transactions found to fund order")
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(confirmedContract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
+			recoverState()
 			return err
 		}
 		mECKey, err := n.MasterPrivateKey.ECPrivKey()
 		if err != nil {
+			recoverState()
 			return err
 		}
 		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
+			recoverState()
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(confirmedContract.BuyerOrder.Payment.RedeemScript)
 		if err != nil {
+			recoverState()
 			return err
 		}
 		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
+			recoverState()
 			return err
 		}
 	}
-	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.PeerID, contract)
+	err = n.SendOrderConfirmation(confirmedContract.BuyerOrder.BuyerID.PeerID, confirmedContract)
 	if err != nil {
-		return err
+		// TODO: local order state is accurate, remote order state needs to be retransmitted
+		log.Errorf("failed sending confirmation for order (%s): %s", confirmedContract.VendorOrderConfirmation.OrderID, err.Error())
+		return nil
 	}
-	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 	return nil
 }
 
@@ -173,21 +199,21 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
-		var outValue int64
+		outValue := *big.NewInt(0)
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return fmt.Errorf("decode prior transactions address: %s", err.Error())
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
@@ -198,7 +224,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 					Value:         r.Value,
 				}
 				ins = append(ins, in)
-				outValue += r.Value
+				outValue = *new(big.Int).Add(&outValue, &r.Value)
 			}
 		}
 
@@ -227,7 +253,11 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
+		if !ok {
+			return errors.New("invalid refund fee value")
+		}
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
 		}
@@ -257,10 +287,10 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.OrderID != orderID {
 		return errors.New("vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
+	if contract.VendorOrderConfirmation.BigRequestedAmount != contract.BuyerOrder.Payment.BigAmount {
 		return errors.New("vendor requested an amount different from what we calculated")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}

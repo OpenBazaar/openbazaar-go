@@ -34,3 +34,15 @@ docker:
 .PHONY: push_docker
 push_docker:
 	docker push $(DOCKER_IMAGE_NAME)
+
+.PHONY: qa
+qa:
+	go build -o ./openbazaar-qa ./openbazaard.go
+	(cd qa && ./runtests.sh ../openbazaar-qa /opt/bitcoin-0.16.3/bin/bitcoind)
+	rm ./openbazaar-qa
+
+.PHONY: qa_eth
+qa_eth:
+	go build -o ./openbazaar-qa ./openbazaard.go
+	(cd qa && ./runtests_eth.sh ../openbazaar-qa)
+	rm ./openbazaar-qa
