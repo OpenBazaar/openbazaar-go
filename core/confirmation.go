@@ -19,7 +19,7 @@ import (
 )
 
 // NewOrderConfirmation - add order confirmation to the contract
-func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest, calculateNewTotal bool) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
@@ -82,16 +82,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
 	}
 
-	if calculateNewTotal {
-		val, err := n.CalculateOrderTotal(contract)
-
-		if err != nil {
-			return nil, err
-		}
-		oc.BigRequestedAmount = val.String()
-	} else {
-		oc.BigRequestedAmount = contract.BuyerOrder.Payment.BigAmount
-	}
+	oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
 	if err != nil {
@@ -102,7 +93,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 
 // ConfirmOfflineOrder - confirm offline order
 func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	confirmedContract, err := n.NewOrderConfirmation(contract, false, false)
+	confirmedContract, err := n.NewOrderConfirmation(contract, false)
 	if err != nil {
 		return err
 	}
