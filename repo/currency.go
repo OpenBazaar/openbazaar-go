@@ -234,7 +234,7 @@ func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float6
 		newAmount.Mul(newAmount, divisibilityRatio)
 	}
 
-	roundedAmount := new(big.Float)
+	var roundedAmount *big.Float
 	newFloat, _ := newAmount.Float64()
 	if newFloat >= 0 {
 		roundedAmount = big.NewFloat(math.Ceil(newFloat))
