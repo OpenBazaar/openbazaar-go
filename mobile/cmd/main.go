@@ -48,10 +48,14 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	time.Sleep(time.Second * 10)
+	//time.Sleep(time.Second * 4)
 	fmt.Println("restarting...", time.Now())
-	go n.Restart()
-
 	wg.Add(1)
+
+	go func() {
+		n.Restart()
+	}()
+
 	wg.Wait()
+
 }

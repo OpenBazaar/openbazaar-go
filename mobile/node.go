@@ -28,6 +28,8 @@ import (
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
+	_ "net/http/pprof"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -55,7 +57,6 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -491,7 +492,12 @@ func (n *Node) start() error {
 		publishUnlocked = true
 		n.OpenBazaarNode.UpdateFollow()
 		if !n.OpenBazaarNode.InitalPublishComplete {
-			n.OpenBazaarNode.SeedNode()
+			go func() {
+				err = n.OpenBazaarNode.SeedNode()
+				if err != nil {
+					log.Error(err)
+				}
+			}()
 		}
 		n.OpenBazaarNode.SetUpRepublisher(republishInterval)
 	}()
@@ -529,8 +535,16 @@ func (n *Node) Restart() error {
 	n.startMtx.Lock()
 	defer n.startMtx.Unlock()
 
+	var wg sync.WaitGroup
+
 	if n.started {
-		return n.stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = n.stop()
+			return
+		}()
+		wg.Wait()
 	}
 
 	// This node has been stopped by the stop command so we need to create
