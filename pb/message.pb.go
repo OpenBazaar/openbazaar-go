@@ -3,13 +3,11 @@
 
 package pb
 
-import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	any "github.com/golang/protobuf/ptypes/any"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	math "math"
-)
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+import any "github.com/golang/protobuf/ptypes/any"
+import timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -20,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Message_MessageType int32
 
@@ -77,7 +75,6 @@ var Message_MessageType_name = map[int32]string{
 	500: "ERROR",
 	501: "ORDER_PROCESSING_FAILURE",
 }
-
 var Message_MessageType_value = map[string]int32{
 	"PING":                     0,
 	"CHAT":                     1,
@@ -108,9 +105,8 @@ var Message_MessageType_value = map[string]int32{
 func (x Message_MessageType) String() string {
 	return proto.EnumName(Message_MessageType_name, int32(x))
 }
-
 func (Message_MessageType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{0, 0}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{0, 0}
 }
 
 type Chat_Flag int32
@@ -126,7 +122,6 @@ var Chat_Flag_name = map[int32]string{
 	1: "TYPING",
 	2: "READ",
 }
-
 var Chat_Flag_value = map[string]int32{
 	"MESSAGE": 0,
 	"TYPING":  1,
@@ -136,9 +131,8 @@ var Chat_Flag_value = map[string]int32{
 func (x Chat_Flag) String() string {
 	return proto.EnumName(Chat_Flag_name, int32(x))
 }
-
 func (Chat_Flag) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{2, 0}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{2, 0}
 }
 
 type Message struct {
@@ -155,17 +149,16 @@ func (m *Message) Reset()         { *m = Message{} }
 func (m *Message) String() string { return proto.CompactTextString(m) }
 func (*Message) ProtoMessage()    {}
 func (*Message) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{0}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{0}
 }
-
 func (m *Message) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message.Unmarshal(m, b)
 }
 func (m *Message) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Message.Marshal(b, m, deterministic)
 }
-func (m *Message) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Message.Merge(m, src)
+func (dst *Message) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Message.Merge(dst, src)
 }
 func (m *Message) XXX_Size() int {
 	return xxx_messageInfo_Message.Size(m)
@@ -217,17 +210,16 @@ func (m *Envelope) Reset()         { *m = Envelope{} }
 func (m *Envelope) String() string { return proto.CompactTextString(m) }
 func (*Envelope) ProtoMessage()    {}
 func (*Envelope) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{1}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{1}
 }
-
 func (m *Envelope) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Envelope.Unmarshal(m, b)
 }
 func (m *Envelope) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Envelope.Marshal(b, m, deterministic)
 }
-func (m *Envelope) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Envelope.Merge(m, src)
+func (dst *Envelope) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Envelope.Merge(dst, src)
 }
 func (m *Envelope) XXX_Size() int {
 	return xxx_messageInfo_Envelope.Size(m)
@@ -274,17 +266,16 @@ func (m *Chat) Reset()         { *m = Chat{} }
 func (m *Chat) String() string { return proto.CompactTextString(m) }
 func (*Chat) ProtoMessage()    {}
 func (*Chat) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{2}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{2}
 }
-
 func (m *Chat) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Chat.Unmarshal(m, b)
 }
 func (m *Chat) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Chat.Marshal(b, m, deterministic)
 }
-func (m *Chat) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Chat.Merge(m, src)
+func (dst *Chat) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Chat.Merge(dst, src)
 }
 func (m *Chat) XXX_Size() int {
 	return xxx_messageInfo_Chat.Size(m)
@@ -343,17 +334,16 @@ func (m *SignedData) Reset()         { *m = SignedData{} }
 func (m *SignedData) String() string { return proto.CompactTextString(m) }
 func (*SignedData) ProtoMessage()    {}
 func (*SignedData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{3}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{3}
 }
-
 func (m *SignedData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedData.Unmarshal(m, b)
 }
 func (m *SignedData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedData.Marshal(b, m, deterministic)
 }
-func (m *SignedData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SignedData.Merge(m, src)
+func (dst *SignedData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedData.Merge(dst, src)
 }
 func (m *SignedData) XXX_Size() int {
 	return xxx_messageInfo_SignedData.Size(m)
@@ -398,17 +388,16 @@ func (m *SignedData_Command) Reset()         { *m = SignedData_Command{} }
 func (m *SignedData_Command) String() string { return proto.CompactTextString(m) }
 func (*SignedData_Command) ProtoMessage()    {}
 func (*SignedData_Command) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{3, 0}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{3, 0}
 }
-
 func (m *SignedData_Command) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedData_Command.Unmarshal(m, b)
 }
 func (m *SignedData_Command) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedData_Command.Marshal(b, m, deterministic)
 }
-func (m *SignedData_Command) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SignedData_Command.Merge(m, src)
+func (dst *SignedData_Command) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedData_Command.Merge(dst, src)
 }
 func (m *SignedData_Command) XXX_Size() int {
 	return xxx_messageInfo_SignedData_Command.Size(m)
@@ -451,17 +440,16 @@ func (m *CidList) Reset()         { *m = CidList{} }
 func (m *CidList) String() string { return proto.CompactTextString(m) }
 func (*CidList) ProtoMessage()    {}
 func (*CidList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{4}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{4}
 }
-
 func (m *CidList) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CidList.Unmarshal(m, b)
 }
 func (m *CidList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CidList.Marshal(b, m, deterministic)
 }
-func (m *CidList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CidList.Merge(m, src)
+func (dst *CidList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CidList.Merge(dst, src)
 }
 func (m *CidList) XXX_Size() int {
 	return xxx_messageInfo_CidList.Size(m)
@@ -491,17 +479,16 @@ func (m *Block) Reset()         { *m = Block{} }
 func (m *Block) String() string { return proto.CompactTextString(m) }
 func (*Block) ProtoMessage()    {}
 func (*Block) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{5}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{5}
 }
-
 func (m *Block) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Block.Unmarshal(m, b)
 }
 func (m *Block) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Block.Marshal(b, m, deterministic)
 }
-func (m *Block) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Block.Merge(m, src)
+func (dst *Block) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Block.Merge(dst, src)
 }
 func (m *Block) XXX_Size() int {
 	return xxx_messageInfo_Block.Size(m)
@@ -539,17 +526,16 @@ func (m *Error) Reset()         { *m = Error{} }
 func (m *Error) String() string { return proto.CompactTextString(m) }
 func (*Error) ProtoMessage()    {}
 func (*Error) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{6}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{6}
 }
-
 func (m *Error) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Error.Unmarshal(m, b)
 }
 func (m *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Error.Marshal(b, m, deterministic)
 }
-func (m *Error) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Error.Merge(m, src)
+func (dst *Error) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Error.Merge(dst, src)
 }
 func (m *Error) XXX_Size() int {
 	return xxx_messageInfo_Error.Size(m)
@@ -595,17 +581,16 @@ func (m *OrderPaymentTxn) Reset()         { *m = OrderPaymentTxn{} }
 func (m *OrderPaymentTxn) String() string { return proto.CompactTextString(m) }
 func (*OrderPaymentTxn) ProtoMessage()    {}
 func (*OrderPaymentTxn) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{7}
+	return fileDescriptor_message_9461cb3f76d04d41, []int{7}
 }
-
 func (m *OrderPaymentTxn) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderPaymentTxn.Unmarshal(m, b)
 }
 func (m *OrderPaymentTxn) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderPaymentTxn.Marshal(b, m, deterministic)
 }
-func (m *OrderPaymentTxn) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderPaymentTxn.Merge(m, src)
+func (dst *OrderPaymentTxn) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderPaymentTxn.Merge(dst, src)
 }
 func (m *OrderPaymentTxn) XXX_Size() int {
 	return xxx_messageInfo_OrderPaymentTxn.Size(m)
@@ -645,8 +630,6 @@ func (m *OrderPaymentTxn) GetWithInput() bool {
 }
 
 func init() {
-	proto.RegisterEnum("Message_MessageType", Message_MessageType_name, Message_MessageType_value)
-	proto.RegisterEnum("Chat_Flag", Chat_Flag_name, Chat_Flag_value)
 	proto.RegisterType((*Message)(nil), "Message")
 	proto.RegisterType((*Envelope)(nil), "Envelope")
 	proto.RegisterType((*Chat)(nil), "Chat")
@@ -656,11 +639,13 @@ func init() {
 	proto.RegisterType((*Block)(nil), "Block")
 	proto.RegisterType((*Error)(nil), "Error")
 	proto.RegisterType((*OrderPaymentTxn)(nil), "OrderPaymentTxn")
+	proto.RegisterEnum("Message_MessageType", Message_MessageType_name, Message_MessageType_value)
+	proto.RegisterEnum("Chat_Flag", Chat_Flag_name, Chat_Flag_value)
 }
 
-func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
+func init() { proto.RegisterFile("message.proto", fileDescriptor_message_9461cb3f76d04d41) }
 
-var fileDescriptor_33c57e4bae7b9afd = []byte{
+var fileDescriptor_message_9461cb3f76d04d41 = []byte{
 	// 873 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0x41, 0x8f, 0xdb, 0x44,
 	0x14, 0xae, 0x63, 0x67, 0x93, 0xbc, 0x64, 0x77, 0x67, 0x87, 0x6d, 0x65, 0x56, 0x6d, 0x89, 0x2c,

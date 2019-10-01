@@ -37,7 +37,7 @@ func TestMigration026(t *testing.T) {
 		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
 		// If the default hashing algorithm changes at any point in the future you can expect this
 		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmamWX4112We4fDsiD12GMBuxwdrWYCn3YdRne8hYiEXcn"
+		expectedListingHash = "QmPULnqJeF37Fn5GdjrHuRg7PxwAgBJdXswWL5n3Hksgca"
 
 		listing = factory.NewListing(testListingSlug)
 		m       = jsonpb.Marshaler{
@@ -112,14 +112,14 @@ func extractListingData26(listing *pb.Listing) *migrations.Migration026_ListingD
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				if service.PriceValue.Amount == "0" && !contains(freeShipping, region.String()) {
+				if service.BigPrice == "0" && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
 			}
 		}
 	}
 
-	amt, _ := strconv.ParseUint(listing.Item.PriceValue.Amount, 10, 64)
+	amt, _ := strconv.ParseUint(listing.Item.BigPrice, 10, 64)
 
 	ld := &migrations.Migration026_ListingData{
 		Hash:         "aabbcc",
@@ -131,7 +131,7 @@ func extractListingData26(listing *pb.Listing) *migrations.Migration026_ListingD
 		Description:  listing.Item.Description[:descriptionLength],
 		Thumbnail:    migrations.Migration026_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
 		Price: migrations.Migration026_Price{
-			CurrencyCode: listing.Metadata.PricingCurrencyDefn.Code,
+			CurrencyCode: listing.Item.PriceCurrency.Code,
 			Amount:       amt,
 			Modifier:     listing.Metadata.PriceModifier,
 		},

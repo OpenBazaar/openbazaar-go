@@ -26,7 +26,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		f, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		f, _ := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
 		if err != nil {
 			return err
@@ -98,10 +98,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		}
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
-		txinfo.NewValue = &pb.CurrencyValue{
-			Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
-			Amount:   outValue.String(),
-		} // uint64(outValue)
+		txinfo.BigValue = outValue.String()
 		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg

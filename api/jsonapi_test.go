@@ -344,28 +344,28 @@ func TestCryptoListingsPriceModifier(t *testing.T) {
 	}
 
 	listing := factory.NewCryptoListing("crypto")
-	listing.Metadata.PriceModifier = repo.PriceModifierMax
+	listing.Item.PriceModifier = repo.PriceModifierMax
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
 		{"GET", "/ob/listing/crypto", jsonFor(t, listing), 200, anyResponseJSON},
 	})
 
-	listing.Metadata.PriceModifier = repo.PriceModifierMax + 0.001
+	listing.Item.PriceModifier = repo.PriceModifierMax + 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = repo.PriceModifierMax + 0.01
+	listing.Item.PriceModifier = repo.PriceModifierMax + 0.01
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
 
-	listing.Metadata.PriceModifier = repo.PriceModifierMin - 0.001
+	listing.Item.PriceModifier = repo.PriceModifierMin - 0.001
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Metadata.PriceModifier = repo.PriceModifierMin - 1
+	listing.Item.PriceModifier = repo.PriceModifierMin - 1
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
@@ -475,7 +475,8 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 func TestMarketRatePrice(t *testing.T) {
 	listing := factory.NewListing("listing")
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	listing.Item.PriceValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}, Amount: "100"}
+	listing.Item.BigPrice = "100"
+	listing.Item.PriceCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.price"))},
@@ -668,7 +669,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
-	sale.Contract.BuyerOrder.Payment.AmountValue = &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}}
+	sale.Contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: "ZEC", Divisibility: 8}
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err

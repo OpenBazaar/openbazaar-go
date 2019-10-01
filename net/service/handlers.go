@@ -336,7 +336,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return errorResponse(err.Error()), err
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
@@ -346,11 +346,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
-		if !service.node.ValidatePaymentAmount(total, *n) {
+		if !service.node.ValidatePaymentAmount(total, n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true, false)
@@ -395,11 +395,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
 		}
-		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
-		if !service.node.ValidatePaymentAmount(total, *n) {
+		if !service.node.ValidatePaymentAmount(total, n) {
 			return errorResponse("Calculated a different payment amount"), errors.New("calculated different payment amount")
 		}
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
@@ -638,7 +638,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -731,7 +731,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
@@ -820,7 +820,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -865,7 +865,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
@@ -1045,7 +1045,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -1107,7 +1107,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			buyerSignatures = append(buyerSignatures, sig)
 		}
-		payoutFee, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByteValue, 10)
+		payoutFee, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.BigPayoutFeePerByte, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
