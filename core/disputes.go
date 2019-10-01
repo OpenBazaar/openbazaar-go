@@ -544,16 +544,16 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	outMap := make(map[string]wallet.TransactionOutput)
 	var outputs []wallet.TransactionOutput
 	var modAddr btcutil.Address
-	var modValue big.Int
+	var modValue *big.Int
 	modAddr = wal.CurrentAddress(wallet.EXTERNAL)
-	modValue, err = n.GetModeratorFee(*totalOut, preferredContract.BuyerOrder.Payment.AmountCurrency.Code)
+	modValue, err = n.GetModeratorFee(totalOut, preferredContract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 	if modValue.Cmp(big.NewInt(0)) > 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
-			Value:   modValue,
+			Value:   *modValue,
 			Index:   0,
 		}
 		outputs = append(outputs, out)
@@ -561,7 +561,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	var buyerAddr btcutil.Address
-	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
+	effectiveVal := new(big.Int).Sub(totalOut, modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {

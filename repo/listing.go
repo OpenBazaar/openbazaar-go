@@ -1922,8 +1922,14 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("percent discount cannot be over 100 percent")
 		}
-		n, _ := new(big.Int).SetString(listing.Item.BigPrice, 10)
-		discount0, _ := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
+		n, ok := new(big.Int).SetString(listing.Item.BigPrice, 10)
+		if !ok {
+			return errors.New("price was invalid")
+		}
+		discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
+		if !ok {
+			return errors.New("coupon discount was invalid")
+		}
 		if n.Cmp(discount0) < 0 {
 			return errors.New("price discount cannot be greater than the item price")
 		}

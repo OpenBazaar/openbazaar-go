@@ -23,7 +23,7 @@ message RicardianContract {
 message CurrencyDefinition {
     string code         = 1;
     uint32 divisibility = 2;
-}
+} // added schema v5
 
 message Listing {
     string slug                             = 1;
@@ -78,8 +78,8 @@ message Listing {
         repeated Option options          = 11;
         repeated Sku skus                = 12;
         float priceModifier              = 13;
-        string bigPrice                  = 14;
-        CurrencyDefinition priceCurrency = 15;
+        string bigPrice                  = 14; // added schema v5
+        CurrencyDefinition priceCurrency = 15; // added schema v5
 
         message Option {
             string name                = 1;
@@ -97,7 +97,7 @@ message Listing {
             string productID                     = 2;
             int64 surcharge                      = 3 [deprecated = true];
             int64 quantity                       = 4; // Not saved with listing
-            string bigSurcharge                  = 5;
+            string bigSurcharge                  = 5; // added schema v5
         }
 
         message Image {
@@ -123,11 +123,11 @@ message Listing {
 
         message Service {
             string name                   = 1;
-            uint64 price                  = 2 [deprecated = true];
+            uint64 price                  = 2 [deprecated = true]; // prefer bigPrice
             string estimatedDelivery      = 3;
-            uint64 additionalItemPrice    = 4 [deprecated = true];
-            string bigPrice               = 5;
-            string bigAdditionalItemPrice = 6;
+            uint64 additionalItemPrice    = 4 [deprecated = true]; // prefer bigAdditionalItemPrice
+            string bigPrice               = 5; // added schema v5
+            string bigAdditionalItemPrice = 6; // added schema v5
         }
     }
 
@@ -145,14 +145,14 @@ message Listing {
             string discountCode = 3;
         }
         float percentDiscount   = 5;
-        uint64 priceDiscount    = 6 [deprecated = true];
-        string bigPriceDiscount = 7;
+        uint64 priceDiscount    = 6 [deprecated = true]; // prefer bigPriceDiscount
+        string bigPriceDiscount = 7; // added schema v5
     }
 }
 
 message Order {
     string refundAddress                 = 1;
-    uint64 refundFee                     = 2 [deprecated = true];
+    uint64 refundFee                     = 2 [deprecated = true]; // prefer bigRefundFee
     Shipping shipping                    = 3;
     ID buyerID                           = 4;
     google.protobuf.Timestamp timestamp  = 5;
@@ -161,7 +161,7 @@ message Order {
     repeated bytes ratingKeys            = 8;
     string alternateContactInfo          = 9;
     uint32 version                       = 10;
-    string bigRefundFee                  = 11;
+    string bigRefundFee                  = 11; // added schema v5
 
     message Shipping {
         string shipTo       = 1;
@@ -181,7 +181,8 @@ message Order {
         string memo                   = 5;
         repeated string couponCodes   = 6;
         string paymentAddress         = 7;
-        uint64 quantity64             = 8; // order version >= 2 used with listing version >= 3
+        uint64 quantity64             = 8 [deprecated = true]; // order version >= 2 used with listing version >= 3
+        string bigQuantity            = 9; // added schema v5
 
         message Option {
             string name  = 1;
@@ -203,8 +204,8 @@ message Order {
         string redeemScript               = 6; // Hex encoded
         bytes  moderatorKey               = 7;
         string coin                       = 8 [deprecated = true];
-        string bigAmount                  = 9;
-        CurrencyDefinition amountCurrency = 10;
+        string bigAmount                  = 9; // added schema v5
+        CurrencyDefinition amountCurrency = 10; // added schema v5
 
         enum Method {
             ADDRESS_REQUEST = 0;
@@ -222,8 +223,8 @@ message OrderConfirmation {
     uint64 requestedAmount                     = 4 [deprecated = true];
 
     repeated RatingSignature ratingSignatures  = 5;
-    string bigRequestedAmount                  = 6;
-    CurrencyDefinition requestedAmountCurrency = 7;
+    string bigRequestedAmount                  = 6; // added schema v5
+    CurrencyDefinition requestedAmountCurrency = 7; // added schema v5
 }
 
 message OrderReject {
@@ -299,8 +300,8 @@ message OrderFulfillment {
         repeated BitcoinSignature sigs       = 1;
         string payoutAddress                 = 2;
         uint64 payoutFeePerByte              = 3 [deprecated = true];
-        string bigPayoutFeePerByte           = 4;
-        CurrencyDefinition payoutFeeCurrency = 5;
+        string bigPayoutFeePerByte           = 4; // added schema v5
+        CurrencyDefinition payoutFeeCurrency = 5; // added schema v5
     }
 }
 
@@ -364,7 +365,7 @@ message DisputeResolution {
             Output buyerOutput                = 3;
             Output vendorOutput               = 4;
             Output moderatorOutput            = 5;
-            CurrencyDefinition payoutCurrency = 6;
+            CurrencyDefinition payoutCurrency = 6; // added schema v5
 
             message Output {
               oneof scriptOrAddress {
@@ -372,7 +373,7 @@ message DisputeResolution {
                 string address                  = 3;
               }
               uint64 amount                     = 2 [deprecated = true];
-              string bigAmount                  = 4;
+              string bigAmount                  = 4; // added schema v5
             }
     }
 }
@@ -386,7 +387,7 @@ message Outpoint {
         string hash                      = 1; // Hex encoded
         uint32 index                     = 2;
         uint64 value                     = 3 [deprecated = true];
-        string bigValue                  = 4;
+        string bigValue                  = 4; // added schema v5
 }
 
 message Refund {
@@ -399,8 +400,8 @@ message Refund {
     message TransactionInfo {
         string txid                      = 1;
         uint64 value                     = 2 [deprecated = true];
-        string bigValue                  = 3;
-        CurrencyDefinition valueCurrency = 4;
+        string bigValue                  = 3; // added schema v5
+        CurrencyDefinition valueCurrency = 4; // added schema v5
     }
 }
 
