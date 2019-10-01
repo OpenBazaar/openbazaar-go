@@ -233,16 +233,16 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 
 func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 	var (
-		zeroRateErr             = "rate must be greater than zero"
-		undefinedCurrencyErr    = "unknown currency"
-		invalidErr              = "cannot convert invalid value"
-		insufficentPrecisionErr = repo.ErrCurrencyValueInsufficientPrecision.Error()
+		zeroRateErr          = "rate must be greater than zero"
+		undefinedCurrencyErr = "unknown currency"
+		invalidErr           = "cannot convert invalid value"
 
 		examples = []struct {
 			value        *repo.CurrencyValue
 			convertTo    repo.CurrencyDefinition
 			exchangeRate float64
 			expected     *repo.CurrencyValue
+			expectedAcc  int8
 			expectedErr  *string
 		}{
 			{ // errors when definition is nil
@@ -250,6 +250,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				convertTo:    repo.NilCurrencyDefinition,
 				exchangeRate: 0.99999,
 				expected:     nil,
+				expectedAcc:  0,
 				expectedErr:  &undefinedCurrencyErr,
 			},
 			{ // errors zero rate
@@ -257,6 +258,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				convertTo:    factory.NewCurrencyDefinition("BCH"),
 				exchangeRate: 0,
 				expected:     nil,
+				expectedAcc:  0,
 				expectedErr:  &zeroRateErr,
 			},
 			{ // errors negative rate
@@ -264,20 +266,23 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				convertTo:    factory.NewCurrencyDefinition("BCH"),
 				exchangeRate: -0.1,
 				expected:     nil,
+				expectedAcc:  0,
 				expectedErr:  &zeroRateErr,
 			},
 			{ // rounds down
 				value:        factory.MustNewCurrencyValue("1", "BTC"),
 				convertTo:    factory.NewCurrencyDefinition("BCH"),
 				exchangeRate: 0.9,
-				expected:     factory.MustNewCurrencyValue("0", "BCH"),
+				expected:     factory.MustNewCurrencyValue("1", "BCH"),
+				expectedAcc:  1,
 				expectedErr:  nil,
 			},
 			{ // handles negative values
 				value:        factory.MustNewCurrencyValue("-100", "BTC"),
 				convertTo:    factory.NewCurrencyDefinition("BCH"),
 				exchangeRate: 0.123,
-				expected:     factory.MustNewCurrencyValue("-12", "BCH"),
+				expected:     factory.MustNewCurrencyValue("-13", "BCH"),
+				expectedAcc:  -1,
 				expectedErr:  nil,
 			},
 			{ // handles zero
@@ -285,6 +290,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				convertTo:    factory.NewCurrencyDefinition("BCH"),
 				exchangeRate: 0.99999,
 				expected:     factory.MustNewCurrencyValue("0", "BCH"),
+				expectedAcc:  0,
 				expectedErr:  nil,
 			},
 			{ // handles invalid value
@@ -295,6 +301,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 				convertTo:    factory.NewCurrencyDefinition("BTC"),
 				exchangeRate: 0.5,
 				expected:     nil,
+				expectedAcc:  0,
 				expectedErr:  &invalidErr,
 			},
 			{ // handles conversions between different divisibility
@@ -323,6 +330,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 						CurrencyType: repo.Crypto,
 					},
 				},
+				expectedAcc: 0,
 				expectedErr: nil,
 			},
 			{ // handles conversions between different
@@ -352,6 +360,7 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 						CurrencyType: repo.Fiat,
 					},
 				},
+				expectedAcc: 0,
 				expectedErr: nil,
 			},
 			{ // handles conversions which reduce significant figures
@@ -372,14 +381,23 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 					CurrencyType: repo.Crypto,
 				},
 				exchangeRate: 1,
-				expected:     nil,
-				expectedErr:  &insufficentPrecisionErr,
+				expected: &repo.CurrencyValue{
+					Amount: big.NewInt(76544),
+					Currency: repo.CurrencyDefinition{
+						Name:         "SimpleCoin",
+						Code:         "SPC",
+						Divisibility: 2,
+						CurrencyType: repo.Crypto,
+					},
+				},
+				expectedAcc: 1,
+				expectedErr: nil,
 			},
 		}
 	)
 
 	for _, e := range examples {
-		actual, err := e.value.ConvertTo(e.convertTo, e.exchangeRate)
+		actual, actualAcc, err := e.value.ConvertTo(e.convertTo, e.exchangeRate)
 		if err != nil {
 			if e.expectedErr != nil && !strings.Contains(err.Error(), *e.expectedErr) {
 				t.Errorf("expected value (%s) to error with (%s) but returned: %s", e.value, *e.expectedErr, err.Error())
@@ -396,6 +414,11 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 			t.Errorf("expected converted value to be %s, but was %s", e.expected, actual)
 			t.Logf("\tfor value: (%s) convertTo: (%s) rate: (%f)", e.value, e.convertTo, e.exchangeRate)
 			continue
+		}
+
+		if expectedAcc := big.Accuracy(e.expectedAcc); actualAcc != expectedAcc {
+			t.Errorf("expected converted accuracy to be %s, but was %s", expectedAcc.String(), actualAcc.String())
+			t.Logf("\tfor value: (%s) convertTo: (%s) rate: (%f)", e.value, e.convertTo, e.exchangeRate)
 		}
 	}
 }
@@ -444,7 +467,7 @@ func TestCurrencyValueAdjustDivisibility(t *testing.T) {
 	subject := factory.MustNewCurrencyValue("123000000", "BTC")
 	subject.Currency.Divisibility = sameDiv
 
-	if newValue, err := subject.AdjustDivisibility(sameDiv); err != nil {
+	if newValue, _, err := subject.AdjustDivisibility(sameDiv); err != nil {
 		t.Fatalf("expected same divisibility to not return an error, but did: %s", err.Error())
 	} else {
 		if !newValue.Currency.Equal(subject.Currency) {
@@ -452,7 +475,7 @@ func TestCurrencyValueAdjustDivisibility(t *testing.T) {
 		}
 	}
 
-	if newValue, err := subject.AdjustDivisibility(2); err != nil {
+	if newValue, _, err := subject.AdjustDivisibility(2); err != nil {
 		t.Fatalf("expected new divisibility to not return an error, but did: %s", err.Error())
 	} else {
 		if newValue.Currency.Equal(subject.Currency) {

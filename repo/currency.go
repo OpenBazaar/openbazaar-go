@@ -187,16 +187,17 @@ func (v *CurrencyValue) Normalize() (*CurrencyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	return v.AdjustDivisibility(localDef.Divisibility)
+	val, _, err := v.AdjustDivisibility(localDef.Divisibility)
+	return val, err
 }
 
 // AdjustDivisibility updates the Currency.Divisibility and adjusts the Amount to match the new
 // value. An error will be returned if the new divisibility is invalid or produces an unreliable
 // result. This is a helper function which is equivalent to ConvertTo using a copy of the
 // CurrencyDefinition using the updated divisibility and an exchangeRatio of 1.0
-func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, error) {
+func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, big.Accuracy, error) {
 	if v.Currency.Divisibility == div {
-		return v, nil
+		return v, 0, nil
 	}
 	defWithNewDivisibility := v.Currency
 	defWithNewDivisibility.Divisibility = div
@@ -206,22 +207,23 @@ func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, error) {
 // ConvertTo will perform the following math given its arguments are valid:
 // v.Amount * exchangeRatio * (final.Currency.Divisibility/v.Currency.Divisibility)
 // where v is the receiver, exchangeRatio is the ratio of (1 final.Currency/v.Currency)
-// v and final must both be Valid() and exchangeRatio must not be zero.
-func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, error) {
+// v and final must both be Valid() and exchangeRatio must not be zero. The accuracy
+// indicates if decimal values were trimmed when converting the value back to integer.
+func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, big.Accuracy, error) {
 	if err := v.Valid(); err != nil {
-		return nil, fmt.Errorf("cannot convert invalid value: %s", err.Error())
+		return nil, 0, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}
 	if err := final.Valid(); err != nil {
-		return nil, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
+		return nil, 0, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
 	}
 	if exchangeRatio <= 0 {
-		return nil, ErrCurrencyValueNegativeRate
+		return nil, 0, ErrCurrencyValueNegativeRate
 	}
 
 	amt := new(big.Float).SetInt(v.Amount)
 	exRatio := new(big.Float).SetFloat64(exchangeRatio)
 	if exRatio == nil {
-		return nil, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
+		return nil, 0, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
 	}
 	newAmount := new(big.Float).SetPrec(53).Mul(amt, exRatio)
 
@@ -230,13 +232,16 @@ func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float6
 		finalMagnitude := math.Pow10(int(final.Divisibility))
 		divisibilityRatio := new(big.Float).SetFloat64(finalMagnitude / initMagnitude)
 		newAmount.Mul(newAmount, divisibilityRatio)
-
-		// confirm no significant figures will be lost in the decimal
-		if !newAmount.IsInt() {
-			return nil, ErrCurrencyValueInsufficientPrecision
-		}
 	}
 
-	result, _ := newAmount.Int(nil)
-	return &CurrencyValue{Amount: result, Currency: final}, nil
+	roundedAmount := new(big.Float)
+	newFloat, _ := newAmount.Float64()
+	if newFloat >= 0 {
+		roundedAmount = big.NewFloat(math.Ceil(newFloat))
+	} else {
+		roundedAmount = big.NewFloat(math.Floor(newFloat))
+	}
+	roundedInt, _ := roundedAmount.Int(nil)
+	roundedAcc := big.Accuracy(roundedAmount.Cmp(newAmount))
+	return &CurrencyValue{Amount: roundedInt, Currency: final}, roundedAcc, nil
 }
