@@ -97,7 +97,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "BCH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "BCH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -112,7 +112,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "BCH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "BCH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
@@ -146,7 +146,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as unfunded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "BCH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "BCH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")

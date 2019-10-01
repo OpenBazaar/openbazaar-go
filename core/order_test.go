@@ -19,14 +19,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	contract := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:              pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies:  []string{"TBTC"},
-				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-				Version:             2,
+				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:             pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies: []string{"TBTC"},
+				Version:            2,
 			},
 			Item: &pb.Listing_Item{
-				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "100000"},
+				BigPrice:      "100000",
+				PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -35,9 +35,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                     "Standard shipping",
-							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "25000"},
-							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "10000"},
+							Name:                   "Standard shipping",
+							BigPrice:               "25000",
+							BigAdditionalItemPrice: "10000",
 						},
 					},
 				},
@@ -68,7 +68,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}},
+			AmountCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		},
 	}
 	contract.BuyerOrder = order
@@ -106,8 +106,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "50000"},
-			VariantCombo:   []uint32{0},
+			BigSurcharge: "50000",
+			VariantCombo: []uint32{0},
 		},
 	}
 	contract.BuyerOrder.Items[0].Options = []*pb.Order_Item_Option{
@@ -136,8 +136,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "-50000"},
-			VariantCombo:   []uint32{0},
+			BigSurcharge: "-50000",
+			VariantCombo: []uint32{0},
 		},
 	}
 	ser, err = proto.Marshal(contract.VendorListings[0])
@@ -164,9 +164,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
+			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:           "coup",
+			PercentDiscount: 10,
 		},
 	}
 
@@ -185,7 +185,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total1.Int64() != 70000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("failed calculating correct total, expected (%d), got (%d)", 70000, total1.Int64())
 	}
 
 	// Test with coupon percent discount
@@ -195,9 +195,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscountValue{PriceDiscountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "6000"}},
+			Code:             &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:            "coup",
+			BigPriceDiscount: "6000",
 		},
 	}
 
@@ -295,14 +295,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	contract2 := &pb.RicardianContract{
 		VendorListings: []*pb.Listing{{
 			Metadata: &pb.Listing_Metadata{
-				Version:             3,
-				ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:              pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies:  []string{"TBTC"},
-				PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+				Version:            3,
+				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+				Format:             pb.Listing_Metadata_FIXED_PRICE,
+				AcceptedCurrencies: []string{"TBTC"},
 			},
 			Item: &pb.Listing_Item{
-				PriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "100000"},
+				BigPrice:      "100000",
+				PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			},
 			ShippingOptions: []*pb.Listing_ShippingOption{
 				{
@@ -311,9 +311,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:                     "Standard shipping",
-							PriceValue:               &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "25000"},
-							AdditionalItemPriceValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}, Amount: "10000"},
+							Name:                   "Standard shipping",
+							BigPrice:               "25000",
+							BigAdditionalItemPrice: "10000",
 						},
 					},
 				},
@@ -344,7 +344,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			AmountValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}},
+			AmountCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		},
 	}
 	contract2.BuyerOrder = order2

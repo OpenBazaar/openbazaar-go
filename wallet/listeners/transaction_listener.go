@@ -215,11 +215,11 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		return
 	}
 	if !funded {
-		currencyValue, err := repo.NewCurrencyValueWithLookup(contract.BuyerOrder.Payment.AmountValue.Amount, contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		currencyValue, err := repo.NewCurrencyValueWithLookup(contract.BuyerOrder.Payment.BigAmount, contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Failed parsing CurrencyValue for (%s, %s): %s",
-				contract.BuyerOrder.Payment.AmountValue.Amount,
-				contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+				contract.BuyerOrder.Payment.BigAmount,
+				contract.BuyerOrder.Payment.AmountCurrency.Code,
 				err.Error(),
 			)
 			return
@@ -310,11 +310,11 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 }
 
 func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint {
-	var currencyDivisibility = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Divisibility
+	var currencyDivisibility = contract.VendorListings[0].Item.PriceCurrency.Divisibility
 	if currencyDivisibility != 0 {
 		return uint(currencyDivisibility)
 	}
-	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err == nil {
 		return uint(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
 	}
@@ -335,7 +335,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		return
 	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
@@ -354,7 +354,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			Type:         "payment",
 			OrderId:      orderId,
 			FundingTotal: funding.String(),
-			CoinType:     contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+			CoinType:     contract.BuyerOrder.Payment.AmountCurrency.Code,
 		}
 		l.broadcast <- n
 		err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
@@ -392,7 +392,15 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 		if err != nil {
 			continue
 		}
-		q := int64(core.GetOrderQuantity(listing, item))
+		var q int64
+		itemQty := core.GetOrderQuantity(listing, item)
+		if itemQty.Cmp(big.NewInt(0)) <= 0 || !itemQty.IsInt64() {
+			// TODO: https://github.com/OpenBazaar/openbazaar-go/issues/1739
+			log.Errorf("unable to update inventory with invalid quantity")
+			continue
+		} else {
+			q = itemQty.Int64()
+		}
 		newCount := c - q
 		if c < 0 {
 			newCount = -1

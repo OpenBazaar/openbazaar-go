@@ -64,17 +64,6 @@ func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-func NewCurrencyValueFromProtobuf(value *pb.CurrencyValue) (*CurrencyValue, error) {
-	cv, err := NewCurrencyValueWithLookup(value.Amount, value.Currency.Code)
-	if err != nil {
-		return nil, err
-	}
-	newCurrencyDef := cv.Currency
-	newCurrencyDef.Divisibility = uint(value.Currency.Divisibility)
-	cv.Currency = newCurrencyDef
-	return cv, nil
-}
-
 // NewCurrencyValueWithLookup accepts a string value as a base10 integer
 // and uses the currency code to lookup the CurrencyDefinition
 func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, error) {
@@ -86,6 +75,20 @@ func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, er
 		return NewCurrencyValue("0", def)
 	}
 	return NewCurrencyValue(amount, def)
+}
+
+// NewCurrencyValueFromProtobuf consumes the string and pb.CurrencyDefinition
+// objects from parsed Listings and converts them into CurrencyValue objects
+func NewCurrencyValueFromProtobuf(amount string, currency *pb.CurrencyDefinition) (*CurrencyValue, error) {
+	if currency == nil {
+		return nil, ErrCurrencyDefinitionUndefined
+	}
+	value, err := NewCurrencyValueWithLookup(amount, currency.Code)
+	if err != nil {
+		return nil, err
+	}
+	value.Currency.Divisibility = uint(currency.Divisibility)
+	return value, nil
 }
 
 // NewCurrencyValueFromInt is a convenience function which converts an int64
@@ -108,21 +111,6 @@ func NewCurrencyValue(amount string, currency CurrencyDefinition) (*CurrencyValu
 		return nil, ErrCurrencyValueAmountInvalid
 	}
 	return &CurrencyValue{Amount: i, Currency: currency}, nil
-}
-
-func (v *CurrencyValue) Protobuf() (*pb.CurrencyValue, error) {
-	if !v.Amount.IsInt64() {
-		return nil, ErrCurrencyValueInsufficientPrecision
-	}
-	return &pb.CurrencyValue{
-		Amount: string(v.Amount.Int64()),
-		Currency: &pb.CurrencyDefinition{
-			Name:         v.Currency.Name,
-			Code:         string(v.Currency.Code),
-			Divisibility: uint32(v.Currency.Divisibility),
-			CurrencyType: v.Currency.CurrencyType,
-		},
-	}, nil
 }
 
 // AmountInt64 returns a valid int64 or an error
@@ -170,6 +158,9 @@ func (v *CurrencyValue) Valid() error {
 
 // Equal indicates if the amount and variety of currency is equivalent
 func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
+	if v == nil && other == nil {
+		return true
+	}
 	if v == nil || other == nil {
 		return false
 	}

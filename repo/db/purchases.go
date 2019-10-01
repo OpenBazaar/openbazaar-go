@@ -78,7 +78,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		int(state),
 		readInt,
 		int(contract.BuyerOrder.Timestamp.Seconds),
-		contract.BuyerOrder.Payment.AmountValue.Amount,
+		contract.BuyerOrder.Payment.BigAmount,
 		contract.VendorListings[0].Item.Images[0].Tiny,
 		contract.VendorListings[0].VendorID.PeerID,
 		handle,
@@ -252,7 +252,7 @@ func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountValue.Currency.Code, PaymentAddress: paymentAddr})
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil

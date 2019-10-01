@@ -40,8 +40,8 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["pricingCurrency"]["code"] = "TBCH"
-            listing_json["metadata"]["pricingCurrency"]["divisibility"] = 8
+            listing_json["metadata"]["coinType"] = "TBCH"
+            listing_json["metadata"]["coinDivisibility"] = 8
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
             listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier

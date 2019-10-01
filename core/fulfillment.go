@@ -32,14 +32,14 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			return err
 		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.String()
 		f := wal.GetFeePerByte(wallet.NORMAL)
-		payout.PayoutFeePerByteValue = f.String()
+		payout.BigPayoutFeePerByte = f.String()
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -74,7 +74,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		fee, ok := new(big.Int).SetString(payout.PayoutFeePerByteValue, 10)
+		fee, ok := new(big.Int).SetString(payout.BigPayoutFeePerByte, 10)
 		if !ok {
 			return errors.New("invalid payout fee value")
 		}
@@ -243,7 +243,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			return err
 		}

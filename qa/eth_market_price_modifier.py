@@ -39,8 +39,8 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/eth_listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["pricingCurrency"]["code"] = "TETH"
-            listing_json["metadata"]["pricingCurrency"]["divisibility"] = 18
+            listing_json["metadata"]["coinType"] = "TETH"
+            listing_json["metadata"]["coinDivisibility"] = 18
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
             listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier

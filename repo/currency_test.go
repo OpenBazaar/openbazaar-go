@@ -158,7 +158,7 @@ func TestCurrencyValuesAreEqual(t *testing.T) {
 		{ // nils should not be equal
 			value:    nil,
 			other:    nil,
-			expected: false,
+			expected: true,
 		},
 		{ // nil should not match with a value
 			value: nil,

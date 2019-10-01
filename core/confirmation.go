@@ -28,7 +28,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +82,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
 	}
 
-	oc.RequestedAmountValue = contract.BuyerOrder.Payment.AmountValue
-
+	oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
 	if err != nil {
@@ -98,7 +97,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *p
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(confirmedContract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(confirmedContract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -191,7 +190,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -245,7 +244,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
 		if !ok {
 			return errors.New("invalid refund fee value")
 		}
@@ -279,10 +278,10 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.OrderID != orderID {
 		return errors.New("vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.RequestedAmountValue.Amount != contract.BuyerOrder.Payment.AmountValue.Amount {
+	if contract.VendorOrderConfirmation.BigRequestedAmount != contract.BuyerOrder.Payment.BigAmount {
 		return errors.New("vendor requested an amount different from what we calculated")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
