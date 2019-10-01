@@ -1271,11 +1271,11 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		}
 	}
 
-	reserveValue, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
+	reserveValue, _, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("converting to reserve: %s", err.Error())
 	}
-	resultValue, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
+	resultValue, _, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
 	}
