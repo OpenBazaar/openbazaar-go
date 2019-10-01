@@ -52,10 +52,7 @@ func main() {
 	fmt.Println("restarting...", time.Now())
 
 	wg.Add(1)
-
-	go func() {
-		n.Restart()
-	}()
+	n.Restart()
 
 	wg.Wait()
 
