@@ -1817,11 +1817,23 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		}
 	}
 
-	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
+	toAddress, err := wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		log.Error(err)
+	}
+
+	tvalue, ok := new(big.Int).SetString(txn.Value, 10)
+	if ok && tvalue.Cmp(big.NewInt(0)) == 0 {
+		toAddress, err = wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+
 	outputs := []wallet.TransactionOutput{}
 	for _, o := range txn.Outputs {
 		output := wallet.TransactionOutput{
-			Address: o.Address,
+			Address: toAddress,
 			Value:   o.Value,
 			Index:   o.Index,
 			OrderID: paymentDetails.OrderID,
