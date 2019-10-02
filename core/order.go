@@ -151,6 +151,10 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 
 	contract.BuyerOrder.Payment = payment
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
+	}
 
 	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
@@ -159,7 +163,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	}
 
 	payment.BigAmount = total.String()
-	contract.BuyerOrder.Payment = payment
 
 	contract, err = n.SignOrder(contract)
 	if err != nil {
@@ -213,6 +216,10 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 		return nil, errors.New("moderator does not accept our currency")
 	}
 	contract.BuyerOrder.Payment = payment
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
+	}
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return nil, err
@@ -1128,16 +1135,19 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			return big.NewInt(0), err
 		}
 
-		var secondarySatoshi *big.Int
-		serviceAddlItemPrice, ok := new(big.Int).SetString(service.BigAdditionalItemPrice, 10)
-		if !ok {
-			return big.NewInt(0), errors.New("invalid service additional price")
-		}
-		if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
-			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-				listing.Item.PriceCurrency.Code, serviceAddlItemPrice)
-			if err != nil {
-				return big.NewInt(0), err
+		secondarySatoshi := big.NewInt(0)
+		if service.BigAdditionalItemPrice != "" {
+			serviceAddlItemPrice, ok := new(big.Int).SetString(service.BigAdditionalItemPrice, 10)
+			if !ok {
+				return big.NewInt(0), errors.New("invalid service additional price")
+			}
+
+			if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
+				secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
+					listing.Item.PriceCurrency.Code, serviceAddlItemPrice)
+				if err != nil {
+					return big.NewInt(0), err
+				}
 			}
 		}
 

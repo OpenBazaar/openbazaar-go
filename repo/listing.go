@@ -1926,17 +1926,19 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		if !ok {
 			return errors.New("price was invalid")
 		}
-		discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
-		if !ok {
-			return errors.New("coupon discount was invalid")
+		if coupon.GetBigPriceDiscount() != "" {
+			discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
+			if !ok {
+				return errors.New("coupon discount was invalid")
+			}
+			if n.Cmp(discount0) < 0 {
+				return errors.New("price discount cannot be greater than the item price")
+			}
 		}
-		if n.Cmp(discount0) < 0 {
-			return errors.New("price discount cannot be greater than the item price")
-		}
-		if coupon.GetPercentDiscount() == 0 && big.NewInt(0).Cmp(discount0) == 0 {
+		if coupon.GetPercentDiscount() == 0 && coupon.GetBigPriceDiscount() == "" {
 			return errors.New("coupons must have at least one positive discount value")
 		}
-		if coupon.GetPercentDiscount() != 0 && big.NewInt(0).Cmp(discount0) != 0 {
+		if coupon.GetPercentDiscount() != 0 && coupon.GetBigPriceDiscount() != "" {
 			return errors.New("coupons must have either a percent discount or a fixed amount discount, but not both")
 		}
 	}

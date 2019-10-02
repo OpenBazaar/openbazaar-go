@@ -82,7 +82,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
 	}
 
-	oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
+	oc.BigRequestedAmount = contract.BuyerOrder.Payment.BigAmount
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
 	if err != nil {
@@ -279,7 +279,8 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		return errors.New("vendor's response contained invalid order ID")
 	}
 	if contract.VendorOrderConfirmation.BigRequestedAmount != contract.BuyerOrder.Payment.BigAmount {
-		return errors.New("vendor requested an amount different from what we calculated")
+		return fmt.Errorf("vendor requested an amount different from what we calculated: want %s, got %s",
+			contract.BuyerOrder.Payment.BigAmount, contract.VendorOrderConfirmation.BigRequestedAmount)
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
