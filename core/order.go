@@ -152,8 +152,8 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 
 	contract.BuyerOrder.Payment = payment
 	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:                 defn.Code.String(),
-		Divisibility:         uint32(defn.Divisibility),
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
 	}
 
 	// Calculate payment amount
@@ -217,8 +217,8 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	}
 	contract.BuyerOrder.Payment = payment
 	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:                 defn.Code.String(),
-		Divisibility:         uint32(defn.Divisibility),
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
 	}
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
