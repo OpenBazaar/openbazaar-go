@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -388,7 +389,25 @@ func (wallet *EthereumWallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address 
 
 // DecodeAddress - Parse the address string and return an address interface
 func (wallet *EthereumWallet) DecodeAddress(addr string) (btcutil.Address, error) {
-	ethAddr := common.HexToAddress(addr)
+	var ethAddr common.Address
+	if len(addr) > 64 {
+		rScriptBytes, err := hex.DecodeString(addr)
+		if err != nil {
+			log.Error(err)
+		}
+		rScript, err := DeserializeEthScript(rScriptBytes)
+		if err != nil {
+			log.Error(err)
+		}
+		_, sHash, err := GenScriptHash(rScript)
+		if err != nil {
+			log.Error(err)
+		}
+		ethAddr = common.HexToAddress(sHash)
+	} else {
+		ethAddr = common.HexToAddress(addr)
+	}
+
 	//if wallet.HasKey(EthAddress{&ethAddr}) {
 	//		return *wallet.address, nil
 	//	}
@@ -499,7 +518,7 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 
 	return wi.Txn{
 		Txid:        tx.Hash().Hex(),
-		Value:       valueSub.String(),
+		Value:       tx.Value().String(),
 		Height:      0,
 		Timestamp:   time.Now(),
 		WatchOnly:   false,
@@ -581,7 +600,12 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			if err != nil {
 				return nil, err
 			}
-			actualRecipient = EthAddress{address: &ethScript.MultisigAddress}
+			_, scrHash, err := GenScriptHash(ethScript)
+			if err != nil {
+				log.Error(err)
+			}
+			addrScrHash := common.HexToAddress(scrHash)
+			actualRecipient = EthAddress{address: &addrScrHash}
 			hash, err = wallet.callAddTransaction(ethScript, &amount)
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
