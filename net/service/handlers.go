@@ -1823,7 +1823,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	tvalue, ok := new(big.Int).SetString(txn.Value, 10)
-	if ok && tvalue.Int64() == 0 {
+	if ok && tvalue.Cmp(big.NewInt(0)) == 0 {
 		toAddress, err = wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
 		if err != nil {
 			log.Error(err)

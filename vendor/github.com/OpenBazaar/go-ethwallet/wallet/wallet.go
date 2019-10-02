@@ -389,21 +389,15 @@ func (wallet *EthereumWallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address 
 
 // DecodeAddress - Parse the address string and return an address interface
 func (wallet *EthereumWallet) DecodeAddress(addr string) (btcutil.Address, error) {
-	var ethAddr common.Address
+	var (
+		ethAddr common.Address
+		err     error
+	)
 	if len(addr) > 64 {
-		rScriptBytes, err := hex.DecodeString(addr)
+		ethAddr, err = ethScriptToAddr(addr)
 		if err != nil {
 			log.Error(err)
 		}
-		rScript, err := DeserializeEthScript(rScriptBytes)
-		if err != nil {
-			log.Error(err)
-		}
-		_, sHash, err := GenScriptHash(rScript)
-		if err != nil {
-			log.Error(err)
-		}
-		ethAddr = common.HexToAddress(sHash)
 	} else {
 		ethAddr = common.HexToAddress(addr)
 	}
@@ -411,7 +405,23 @@ func (wallet *EthereumWallet) DecodeAddress(addr string) (btcutil.Address, error
 	//if wallet.HasKey(EthAddress{&ethAddr}) {
 	//		return *wallet.address, nil
 	//	}
-	return EthAddress{&ethAddr}, nil
+	return EthAddress{&ethAddr}, err
+}
+
+func ethScriptToAddr(addr string) (common.Address, error) {
+	rScriptBytes, err := hex.DecodeString(addr)
+	if err != nil {
+		return common.Address{}, err
+	}
+	rScript, err := DeserializeEthScript(rScriptBytes)
+	if err != nil {
+		return common.Address{}, err
+	}
+	_, sHash, err := GenScriptHash(rScript)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return common.HexToAddress(sHash), nil
 }
 
 // ScriptToAddress - ?
