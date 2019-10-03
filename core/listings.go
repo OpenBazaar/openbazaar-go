@@ -281,9 +281,12 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
+				if service.BigPrice == "" {
+					return repo.ListingIndexData{}, errors.New("expected shipping service price")
+				}
 				servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
 				if !ok {
-					return repo.ListingIndexData{}, errors.New("invalid price amount")
+					return repo.ListingIndexData{}, errors.New("invalid shipping service price amount")
 				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
@@ -293,14 +296,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 	}
 
 	var priceValue *repo.CurrencyValue
-	if listing.Listing.Item.PriceCurrency != nil {
+	if listing.Listing.Item.PriceCurrency != nil && listing.Listing.Item.BigPrice != "" {
 		defn, err := n.LookupCurrency(listing.Listing.Item.PriceCurrency.Code)
 		if err != nil {
 			return repo.ListingIndexData{}, errors.New("invalid pricing currency")
 		}
 		amt, ok := new(big.Int).SetString(listing.Listing.Item.BigPrice, 10)
 		if !ok {
-			return repo.ListingIndexData{}, errors.New("invalid price amount")
+			return repo.ListingIndexData{}, errors.New("invalid item price amount")
 		}
 		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
 	}

@@ -2123,11 +2123,11 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 	var (
 		priceModifier   float32
 		roundHundredths = func(f float32) float32 { return float32(int(f*100.0)) / 100.0 }
-		n, _            = new(big.Int).SetString(listing.Item.BigPrice, 10)
+		n, ok           = new(big.Int).SetString(listing.Item.BigPrice, 10)
 	)
 
-	if n.Cmp(big.NewInt(0)) > 0 {
-		return ErrMarketPriceListingIllegalField("item.price")
+	if ok && n.Cmp(big.NewInt(0)) != 0 {
+		return ErrMarketPriceListingIllegalField("item.bigPrice")
 	}
 
 	if listing.Metadata.PriceModifier != 0 {
