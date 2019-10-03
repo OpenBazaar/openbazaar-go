@@ -564,7 +564,7 @@ func TestWalletCurrencyDictionary(t *testing.T) {
 
 func TestWalletCurrencyDictionaryLookup(t *testing.T) {
 	var randomLookup string
-	for currency := range repo.AllCurrencies().AsMap() {
+	for currency := range repo.TestnetCurrencies().AsMap() {
 		// pick any currency string from the dictionary
 		randomLookup = currency
 		break

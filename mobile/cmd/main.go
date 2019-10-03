@@ -52,7 +52,13 @@ func main() {
 	fmt.Println("restarting...", time.Now())
 
 	wg.Add(1)
-	n.Restart()
+
+	go func() {
+		err := n.Restart()
+		if err != nil {
+			panic(fmt.Sprintf("failed to restart: %s", err.Error()))
+		}
+	}()
 
 	wg.Wait()
 

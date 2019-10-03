@@ -334,6 +334,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 
 	pro, err := service.node.GetProfile()
+	if err != nil {
+		log.Errorf("unable to read local profile: %s", err)
+		return errorResponse(fmt.Sprintf("unable to read local profile: %s", err.Error())), err
+	}
+
 	if !pro.Vendor {
 		log.Debugf("sending message to buyer that our store is not accepting orders")
 		return errorResponse("the vendor turned his store off and is not accepting orders at this time"), errors.New("store is turned off")
@@ -352,7 +357,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
-	log.Debugf("incoming order linked to %s wallet", contract.BuyerOrder.Payment.Coin)
+	log.Debugf("incoming order linked to %s wallet", contract.BuyerOrder.Payment.AmountCurrency.Code)
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		log.Debugf("received direct online order from %s", peer.Pretty())
@@ -401,11 +406,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("added address to wallet to watch: %s", addr)
+		log.Debugf("storing sales order %s in database", orderId)
 		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Error(err)
 		}
-		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
+		log.Debugf("successfully processed direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		log.Debugf("processing moderated online order from %s", peer.Pretty())
@@ -436,6 +443,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("added watch address (%s) to wallet (%s)", addr, contract.BuyerOrder.Payment.AmountCurrency.Code)
 		contract, err = service.node.NewOrderConfirmation(contract, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
@@ -448,6 +456,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("storing sales order %s in database", orderId)
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -475,11 +484,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
-		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
+		log.Debugf("storing sales order %s in database", orderId)
 		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("successfully processed offline moderated ORDER message from %s", peer.Pretty())
 		return nil, nil
 	}
 	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
@@ -540,12 +550,14 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	if funded {
 		// Set message state to AWAITING_FULFILLMENT
+		log.Debugf("now awaiting fulfillment for order %s", orderId)
 		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 		if err != nil {
 			log.Errorf("failed setting order (%) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
 		}
 	} else {
 		// Set message state to AWAITING_PAYMENT
+		log.Debugf("order not funded, awaiting payment for order %s", orderId)
 		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Errorf("failed setting order (%) to AWAITING_PAYMENT: %s", orderId, err.Error())
@@ -580,7 +592,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	if err != nil {
 		log.Error(err)
 	}
-	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_CONFIRMATION message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -1007,11 +1019,13 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 
 	// Set message state to fulfilled if all listings have a matching fulfillment message
 	if service.node.IsFulfilled(contract) {
+		log.Debugf("updating order %s in the database to fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		err = service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_FULFILLED, false)
 		if err != nil {
 			log.Error(err)
 		}
 	} else {
+		log.Debugf("updating order %s in the database to partially fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		err = service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
 		if err != nil {
 			log.Error(err)
@@ -1045,7 +1059,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	if err != nil {
 		log.Error(err)
 	}
-	log.Debugf("received ORDER_FULFILLMENT message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	return nil, nil
 }
@@ -1792,6 +1806,8 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("received order payment message from: %s", peer.Pretty())
+
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
 	}
@@ -1853,11 +1869,23 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		}
 	}
 
-	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
+	toAddress, err := wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		log.Error(err)
+	}
+
+	tvalue, ok := new(big.Int).SetString(txn.Value, 10)
+	if ok && tvalue.Cmp(big.NewInt(0)) == 0 {
+		toAddress, err = wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+
 	outputs := []wallet.TransactionOutput{}
 	for _, o := range txn.Outputs {
 		output := wallet.TransactionOutput{
-			Address: o.Address,
+			Address: toAddress,
 			Value:   o.Value,
 			Index:   o.Index,
 			OrderID: paymentDetails.OrderID,
