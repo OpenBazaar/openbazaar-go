@@ -5,7 +5,7 @@
         "contractType": "CRYPTOCURRENCY",
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
-        "acceptedCurrencies": [],
+        "acceptedCurrencies": ["TBTC"],
         "escrowTimeoutHours": 1080,
         "coinType": "TETH",
         "coinDivisibility": 18
@@ -25,10 +25,7 @@
         }],
         "grams": 0,
         "options": [],
-        "skus": [{
-            "bigSurcharge": "0",
-            "quantity": 350000000
-        }]
+        "skus": [{"bigQuantity":"350000000"}]
     },
     "moderators": [],
     "termsAndConditions": "NA",

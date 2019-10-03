@@ -5,9 +5,9 @@
         "contractType": "CRYPTOCURRENCY",
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
-        "acceptedCurrencies": [],
+        "acceptedCurrencies": ["TBTC"],
         "escrowTimeoutHours": 1080,
-        "coinType": "ETH",
+        "coinType": "TETH",
         "coinDivisibility": 18
     },
     "item": {
@@ -17,9 +17,7 @@
         "price": "0",
         "priceCurrency": {
             "code": "TBTC",
-            "divisibility": 8,
-            "name": "A",
-            "currencyType": "A"
+            "divisibility": 8
         },
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",
@@ -32,8 +30,7 @@
         "grams": 0,
         "options": [],
         "skus": [{
-            "bigSurcharge": "0",
-            "quantity": 350000000
+            "bigQuantity": "350000000"
         }]
     },
     "moderators": [],

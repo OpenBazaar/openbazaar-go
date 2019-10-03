@@ -239,7 +239,7 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = count
+				s.BigQuantity = fmt.Sprintf("%d", count)
 				break
 			}
 		}
@@ -1497,6 +1497,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
 		s.Quantity = 0
+		s.BigQuantity = "0"
 	}
 
 	sl := new(pb.SignedListing)
@@ -2150,10 +2151,41 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 
 func validateListingSkus(listing *pb.Listing) error {
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		for _, sku := range listing.Item.Skus {
-			if sku.Quantity < 1 {
-				return ErrCryptocurrencySkuQuantityInvalid
+		return validateCryptocurrencyQuantity(listing)
+	}
+	return nil
+}
+
+func validateCryptocurrencyQuantity(listing *pb.Listing) error {
+	var checkFn func(*pb.Listing_Item_Sku) error
+	switch listing.Metadata.Version {
+	case 5:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
 			}
+			if s.BigQuantity == "" {
+				return fmt.Errorf("sku bigQuantity empty")
+			}
+			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) <= 0 {
+				return fmt.Errorf("sku bigQuantity zero or less")
+			}
+			return nil
+		}
+	default:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
+			}
+			if s.Quantity <= 0 {
+				return fmt.Errorf("sku quantity zero or less")
+			}
+			return nil
+		}
+	}
+	for _, sku := range listing.Item.Skus {
+		if err := checkFn(sku); err != nil {
+			return ErrCryptocurrencySkuQuantityInvalid
 		}
 	}
 	return nil
