@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"math/big"
 	"strings"
 	"time"
@@ -28,7 +29,12 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -45,13 +51,13 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	oc.Timestamp = ts
 
 	oc.RatingSignatures = []*pb.RatingSignature{}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		for _, listing := range contract.VendorListings {
 			metadata := new(pb.RatingSignature_TransactionMetadata)
 			metadata.ListingSlug = listing.Slug
-			metadata.ModeratorKey = contract.BuyerOrder.Payment.ModeratorKey
+			metadata.ModeratorKey = order.Payment.ModeratorKey
 
-			if contract.BuyerOrder.Version > 0 {
+			if order.Version > 0 {
 				metadata.ListingTitle = listing.Item.Title
 				if len(listing.Item.Images) > 0 {
 					metadata.Thumbnail = &pb.RatingSignature_TransactionMetadata_Image{
@@ -79,10 +85,10 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 
 			oc.RatingSignatures = append(oc.RatingSignatures, rs)
 		}
-		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
+		oc.PaymentAddress = order.Payment.Address
 	}
 
-	oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
+	oc.BigRequestedAmount = big.NewInt(int64(order.Payment.Amount)).String()
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
 	if err != nil {
@@ -190,12 +196,16 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 	rejectMsg.Timestamp = ts
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		outValue := *big.NewInt(0)
 		for _, r := range records {
@@ -219,7 +229,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return fmt.Errorf("decode refund address: %s", err.Error())
 		}
@@ -228,7 +238,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			Value:   outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return fmt.Errorf("decode buyer chaincode: %s", err.Error())
 		}
@@ -240,11 +250,11 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
+		fee, ok := new(big.Int).SetString(order.BigRefundFee, 10)
 		if !ok {
 			return errors.New("invalid refund fee value")
 		}
@@ -259,7 +269,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		rejectMsg.Sigs = sigs
 	}
-	err = n.SendReject(contract.BuyerOrder.BuyerID.PeerID, rejectMsg)
+	err = n.SendReject(order.BuyerID.PeerID, rejectMsg)
 	if err != nil {
 		return fmt.Errorf("sending rejection: %s", err.Error())
 	}
@@ -275,17 +285,22 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if err != nil {
 		return err
 	}
-	if contract.VendorOrderConfirmation.OrderID != orderID {
-		return errors.New("vendor's response contained invalid order ID")
-	}
-	if contract.VendorOrderConfirmation.BigRequestedAmount != contract.BuyerOrder.Payment.BigAmount {
-		return errors.New("vendor requested an amount different from what we calculated")
-	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if contract.VendorOrderConfirmation.OrderID != orderID {
+		return errors.New("vendor's response contained invalid order ID")
+	}
+	if contract.VendorOrderConfirmation.BigRequestedAmount != order.Payment.BigAmount {
+		return errors.New("vendor requested an amount different from what we calculated")
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return err
+	}
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 			exists := false
 			for _, listing := range contract.VendorListings {
@@ -302,7 +317,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 				return err
 			}
 
-			if !bytes.Equal(sig.Metadata.ModeratorKey, contract.BuyerOrder.Payment.ModeratorKey) {
+			if !bytes.Equal(sig.Metadata.ModeratorKey, order.Payment.ModeratorKey) {
 				return errors.New("rating signature does not contain moderatory key")
 			}
 			ser, err := proto.Marshal(sig.Metadata)

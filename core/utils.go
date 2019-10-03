@@ -26,7 +26,11 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return nil, nil, err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
@@ -43,7 +47,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
 			tx.BigValue = r.Value.String()
-			tx.Currency = contract.BuyerOrder.Payment.AmountCurrency
+			tx.Currency = order.Payment.AmountCurrency
 
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
@@ -67,9 +71,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		paymentRecords = append(paymentRecords, rec)
 	}
 	var refundRecord *pb.TransactionRecord
-	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && contract.BuyerOrder != nil && contract.BuyerOrder.Payment != nil {
+	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && order != nil && order.Payment != nil {
 		// For multisig we can use the outgoing from the payment address
-		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
+		if order.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
 				val, _ := new(big.Int).SetString(rec.BigValue, 10)
 				if val.Cmp(big.NewInt(0)) < 0 {

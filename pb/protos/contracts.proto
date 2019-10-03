@@ -208,7 +208,7 @@ message Order {
         CurrencyDefinition amountCurrency = 10; // added schema v5
 
         enum Method {
-            ADDRESS_REQUEST = 0;
+            ADDRESS_REListingBytesQUEST = 0;
             DIRECT          = 1;
             MODERATED       = 2;
         }

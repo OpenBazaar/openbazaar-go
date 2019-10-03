@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"math/big"
 	"strings"
 	"time"
@@ -242,8 +243,13 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return errors.New("failed to verify signature on rating keys")
 	}
 
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
+		wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 		if err != nil {
 			return err
 		}
@@ -273,7 +279,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		for _, fulfil := range contract.VendorOrderFulfillment {
 			vendorSignedKeys = append(vendorSignedKeys, fulfil.RatingSignature.Metadata.RatingKey)
 		}
-		for _, bk := range contract.BuyerOrder.RatingKeys {
+		for _, bk := range order.RatingKeys {
 			if !keyExists(bk, vendorSignedKeys) {
 				return errors.New("vendor failed to send rating signatures covering all ratingKeys")
 			}
