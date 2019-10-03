@@ -48,7 +48,7 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	time.Sleep(time.Second * 10)
+	//time.Sleep(time.Second * 4)
 	fmt.Println("restarting...", time.Now())
 
 	wg.Add(1)

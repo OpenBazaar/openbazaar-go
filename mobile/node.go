@@ -507,10 +507,12 @@ func (n *Node) start() error {
 			log.Error(err)
 		}
 		if !n.OpenBazaarNode.InitalPublishComplete {
-			err = n.OpenBazaarNode.SeedNode()
-			if err != nil {
-				log.Error(err)
-			}
+			go func() {
+				err = n.OpenBazaarNode.SeedNode()
+				if err != nil {
+					log.Error(err)
+				}
+			}()
 		}
 		n.OpenBazaarNode.SetUpRepublisher(republishInterval)
 	}()
@@ -554,9 +556,8 @@ func (n *Node) Restart() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := n.stop(); err != nil {
-				log.Error(err)
-			}
+			_ = n.stop()
+			return
 		}()
 		wg.Wait()
 	}
