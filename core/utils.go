@@ -88,6 +88,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				}
 			}
 		} else if contract.Refund != nil && contract.Refund.RefundTransaction != nil && contract.Refund.Timestamp != nil {
+			refund := repo.ToV5Refund(contract.Refund)
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
 			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
@@ -98,10 +99,10 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
-			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.BigValue = contract.Refund.RefundTransaction.BigValue
-			refundRecord.Currency = contract.Refund.RefundTransaction.ValueCurrency
-			refundRecord.Timestamp = contract.Refund.Timestamp
+			refundRecord.Txid = refund.RefundTransaction.Txid
+			refundRecord.BigValue = refund.RefundTransaction.BigValue
+			refundRecord.Currency = refund.RefundTransaction.ValueCurrency
+			refundRecord.Timestamp = refund.Timestamp
 			refundRecord.Confirmations = confirmations
 			refundRecord.Height = height
 		}

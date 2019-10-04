@@ -286,14 +286,16 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		return err
 	}
 
+	orderConfirmation := repo.ToV5OrderConfirmation(contract.VendorOrderConfirmation)
+
 	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
 	}
-	if contract.VendorOrderConfirmation.OrderID != orderID {
+	if orderConfirmation.OrderID != orderID {
 		return errors.New("vendor's response contained invalid order ID")
 	}
-	if contract.VendorOrderConfirmation.BigRequestedAmount != order.Payment.BigAmount {
+	if orderConfirmation.BigRequestedAmount != order.Payment.BigAmount {
 		return errors.New("vendor requested an amount different from what we calculated")
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)

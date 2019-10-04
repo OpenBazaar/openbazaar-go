@@ -111,7 +111,8 @@ func (r *DisputeCaseRecord) ResolutionPaymentFeePerByte(ratio PayoutRatio, defau
 		return *n
 	case ratio.VendorMajority():
 		if len(r.VendorContract.VendorOrderFulfillment) > 0 && r.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			n, _ = n.SetString(r.VendorContract.VendorOrderFulfillment[0].Payout.BigPayoutFeePerByte, 10)
+			fulfillment := ToV5OrderFulfillment(r.VendorContract.VendorOrderFulfillment[0])
+			n, _ = n.SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
 			return *n
 		}
 	}

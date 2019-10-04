@@ -249,6 +249,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("dispute message is nil")
 	}
 
+	dispute := repo.ToV5Dispute(rc.Dispute)
+
 	// Deserialize contract
 	contract := new(pb.RicardianContract)
 	err := proto.Unmarshal(rc.Dispute.SerializedContract, contract)
@@ -302,7 +304,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			if err != nil {
 				return err
 			}
-			err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, dispute.Outpoints)
 			if err != nil {
 				return err
 			}
@@ -315,7 +317,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			if err != nil {
 				return err
 			}
-			err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, dispute.Outpoints)
 			if err != nil {
 				return err
 			}
@@ -1060,8 +1062,11 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create inputs
-	var inputs []wallet.TransactionInput
-	for _, o := range contract.DisputeResolution.Payout.Inputs {
+	var (
+		inputs     []wallet.TransactionInput
+		resolution = repo.ToV5DisputeResolution(contract.DisputeResolution)
+	)
+	for _, o := range resolution.Payout.Inputs {
 		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
 		if err != nil {
 			return err
@@ -1089,12 +1094,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 
 	// Create outputs
 	var outputs []wallet.TransactionOutput
-	if contract.DisputeResolution.Payout.BuyerOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.BuyerOutput)
+	if resolution.Payout.BuyerOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.BuyerOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.BigAmount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.BuyerOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1105,12 +1110,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		}
 		outputs = append(outputs, output)
 	}
-	if contract.DisputeResolution.Payout.VendorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.VendorOutput)
+	if resolution.Payout.VendorOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.VendorOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.BigAmount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.VendorOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1121,12 +1126,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		}
 		outputs = append(outputs, output)
 	}
-	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.ModeratorOutput)
+	if resolution.Payout.ModeratorOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.ModeratorOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.BigAmount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.ModeratorOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1164,7 +1169,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	var moderatorSigs []wallet.Signature
-	for _, sig := range contract.DisputeResolution.Payout.Sigs {
+	for _, sig := range resolution.Payout.Sigs {
 		s := wallet.Signature{
 			Signature:  sig.Signature,
 			InputIndex: sig.InputIndex,
