@@ -90,7 +90,7 @@ func TestOpenBazaarSignedListings_AssignMatchingQuantities(t *testing.T) {
 		t.Error(err)
 	}
 
-	if listing.Listing.Item.Skus[0].Quantity != 1000 {
+	if listing.Listing.Item.Skus[0].BigQuantity != "1000" {
 		t.Error("Inventory was not set properly")
 	}
 }

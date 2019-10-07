@@ -62,13 +62,13 @@ func NewListing(slug string) *pb.Listing {
 			Skus: []*pb.Listing_Item_Sku{
 				{
 					BigSurcharge: "0",
-					Quantity:     12,
+					BigQuantity:  "12",
 					ProductID:    "1",
 					VariantCombo: []uint32{0, 0},
 				},
 				{
 					BigSurcharge: "0",
-					Quantity:     44,
+					BigQuantity:  "44",
 					ProductID:    "2",
 					VariantCombo: []uint32{0, 1},
 				},
@@ -141,7 +141,7 @@ func NewCryptoListing(slug string) *pb.Listing {
 	listing.Metadata.CryptoCurrencyCode = "TETH"
 	listing.Metadata.CryptoDivisibility = 18
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
-	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
+	listing.Item.Skus = []*pb.Listing_Item_Sku{{BigQuantity: "100000000"}}
 	listing.Metadata.PricingCurrency = ""
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -42,7 +43,7 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = count
+				s.BigQuantity = fmt.Sprintf("%d", count)
 				break
 			}
 		}
