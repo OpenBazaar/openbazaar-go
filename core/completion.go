@@ -225,7 +225,8 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.BigPayoutFeePerByte, 10)
+		fulfillment := repo.ToV5OrderFulfillment(contract.VendorOrderFulfillment[0])
+		n, ok := new(big.Int).SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
 		if !ok {
 			return errors.New("invalid payout fee per byte value")
 		}
