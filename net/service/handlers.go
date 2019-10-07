@@ -1840,9 +1840,14 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 	log.Debugf("retrieving order %s from the database", paymentDetails.OrderID)
 	contract, _, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
+	isVendor := true
 	if err != nil {
-		log.Debugf("no matching order was found in the database")
-		return nil, net.OutOfOrderMessage
+		contract, _, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(paymentDetails.OrderID)
+		if err != nil {
+			log.Debugf("no matching order was found in the database")
+			return nil, net.OutOfOrderMessage
+		}
+		isVendor = false
 	}
 
 	if contract.VendorOrderConfirmation != nil &&
@@ -1861,12 +1866,22 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// the seller has not confirmed or this is a moderated purchase,
 		// so we need to compare the peerID in the vendorListing
 		// to the node peerID
-		if contract.VendorListings[0].VendorID.PeerID !=
-			service.node.IpfsNode.Identity.Pretty() {
-			log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
-				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
-			return nil, errors.New("mismatched peer id")
+		if isVendor {
+			if contract.VendorListings[0].VendorID.PeerID !=
+				service.node.IpfsNode.Identity.Pretty() {
+				log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
+					paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
+				return nil, errors.New("mismatched peer id")
+			}
+		} else {
+			if contract.BuyerOrder.BuyerID.PeerID !=
+				service.node.IpfsNode.Identity.Pretty() {
+				log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
+					paymentDetails.OrderID, contract.BuyerOrder.BuyerID.PeerID)
+				return nil, errors.New("mismatched peer id")
+			}
 		}
+
 	}
 
 	toAddress, err := wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)

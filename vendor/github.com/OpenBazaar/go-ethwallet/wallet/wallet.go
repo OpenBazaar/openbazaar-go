@@ -466,7 +466,8 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 	txns, err := wallet.client.eClient.NormalTxByAddress(wallet.account.Address().String(), nil, nil,
 		1, 0, true)
 	if err != nil {
-		return []wi.Txn{}, err
+		log.Error("err fetching transactions : ", err)
+		return []wi.Txn{}, nil
 	}
 
 	ret := []wi.Txn{}
@@ -614,6 +615,8 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			if err != nil {
 				log.Error(err)
 			}
+			log.Info("##$#%$^%E&^%&&***^&^%$#####$%%%%%%%%%$######$%^&*&^%$#@$%^&*()(*******************")
+			log.Info(scrHash)
 			addrScrHash := common.HexToAddress(scrHash)
 			actualRecipient = EthAddress{address: &addrScrHash}
 			hash, err = wallet.callAddTransaction(ethScript, &amount)
@@ -1072,9 +1075,13 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	//amountStr := ""
 
 	//spew.Dump(payables)
+	log.Info("cm  payables : ", payables)
+	log.Info("cm  mbv addr : ", mbvAddresses)
 
 	for _, k := range mbvAddresses {
 		v := payables[k]
+		log.Info(" addr : ", k)
+		log.Info("amt  : ", v)
 		if v.Cmp(big.NewInt(0)) != 1 {
 			continue
 		}
@@ -1165,6 +1172,9 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
 
 	//var buf bytes.Buffer
+	log.Info("in wallet multisign  ... ")
+	log.Info("ins   : ", ins)
+	log.Info("outs  : ", outs)
 
 	payouts := []wi.TransactionOutput{}
 	//delta1 := int64(0)
@@ -1286,8 +1296,13 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	destinations := []common.Address{}
 	amounts := []*big.Int{}
 
+	log.Info("ms  payables : ", payables)
+	log.Info("ms  mbv addr : ", mbvAddresses)
+
 	for _, k := range mbvAddresses {
 		v := payables[k]
+		log.Info(" addr : ", k)
+		log.Info("amt  : ", v)
 		if v.Cmp(big.NewInt(0)) == 1 {
 			destinations = append(destinations, common.HexToAddress(k))
 			amounts = append(amounts, new(big.Int).SetBytes(v.Bytes()))
@@ -1352,7 +1367,14 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, *totalVal, time.Now(), true))
+			_, scrHash, err := GenScriptHash(rScript)
+			if err != nil {
+				log.Error(err)
+			}
+			addrScrHash := common.HexToAddress(scrHash)
+			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(tx.Hash().Hex(),
+				referenceID, EthAddress{address: &addrScrHash}, *totalVal,
+				time.Now(), true))
 		} else {
 			// there was some error processing this txn
 			nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
