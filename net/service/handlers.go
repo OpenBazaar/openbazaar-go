@@ -353,19 +353,24 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, service.node.LookupCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
 	log.Debugf("incoming order linked to %s wallet", contract.BuyerOrder.Payment.AmountCurrency.Code)
 
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+	if order.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		log.Debugf("received direct online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+		n, ok := new(big.Int).SetString(order.Payment.BigAmount, 10)
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
@@ -392,13 +397,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		log.Debugf("sending order confirmation message to %s", peer.Pretty())
 		log.Debugf("received addr-req ORDER message from %s", peer.Pretty())
 		return &m, nil
-	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
+	} else if order.Payment.Method == pb.Order_Payment_DIRECT {
 		log.Debugf("received offline direct order from %s", peer.Pretty())
-		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
+		err := service.node.ValidateDirectPaymentAddress(order)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(order.Payment.Address)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
@@ -414,13 +419,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		log.Debugf("successfully processed direct ORDER message from %s", peer.Pretty())
 		return nil, nil
-	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
+	} else if order.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		log.Debugf("processing moderated online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
 		}
-		n, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+		n, ok := new(big.Int).SetString(order.Payment.BigAmount, 10)
 		if !ok {
 			return errorResponse("invalid amount"), errors.New("invalid amount")
 		}
@@ -431,11 +436,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder, timeout)
+		err = service.node.ValidateModeratedPaymentAddress(order, timeout)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(order.Payment.Address)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
@@ -463,19 +468,19 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		log.Debugf("Received moderated ORDER message from %s", peer.Pretty())
 		return &m, nil
-	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
+	} else if order.Payment.Method == pb.Order_Payment_MODERATED && offline {
 		log.Debugf("processing moderated offline order from %s", peer.Pretty())
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder, timeout)
+		err = service.node.ValidateModeratedPaymentAddress(order, timeout)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(order.Payment.Address)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -676,12 +681,17 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, service.node.LookupCurrency)
 	if err != nil {
 		return nil, err
 	}
 
-	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	if order.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
@@ -705,7 +715,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return nil, err
 		}
@@ -717,11 +727,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return nil, err
 		}
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -744,7 +754,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -753,7 +763,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return nil, err
 		}
@@ -765,11 +775,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return nil, err
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
+		fee, ok := new(big.Int).SetString(order.BigRefundFee, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
@@ -858,12 +868,17 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, service.node.LookupCurrency)
 	if err != nil {
 		return nil, err
 	}
 
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -878,7 +893,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -887,7 +902,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return nil, err
 		}
@@ -899,11 +914,11 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return nil, err
 		}
-		fee, ok := new(big.Int).SetString(contract.BuyerOrder.BigRefundFee, 10)
+		fee, ok := new(big.Int).SetString(order.BigRefundFee, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
@@ -1092,7 +1107,12 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, net.DuplicateMessage
 	}
 
-	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, service.node.LookupCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -1107,7 +1127,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
+	if order.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -1139,7 +1159,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			Value:   *outValue,
 		}
 
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return nil, err
 		}
@@ -1154,7 +1174,8 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			buyerSignatures = append(buyerSignatures, sig)
 		}
-		payoutFee, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.BigPayoutFeePerByte, 10)
+		fulfillment := repo.ToV5OrderFulfillment(contract.VendorOrderFulfillment[0])
+		payoutFee, ok := new(big.Int).SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
@@ -1182,9 +1203,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
-		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
-			buyerID = contract.BuyerOrder.BuyerID.PeerID
-			buyerHandle = contract.BuyerOrder.BuyerID.Handle
+		if order.BuyerID != nil {
+			buyerID = order.BuyerID.PeerID
+			buyerHandle = order.BuyerID.Handle
 		}
 	}
 
