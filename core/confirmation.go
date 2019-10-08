@@ -88,7 +88,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = order.Payment.Address
 	}
 
-	oc.BigRequestedAmount = big.NewInt(int64(order.Payment.Amount)).String()
+	oc.BigRequestedAmount = order.Payment.BigAmount
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
 	if err != nil {

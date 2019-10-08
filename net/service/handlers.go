@@ -1156,7 +1156,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
-		if order != nil && order.BuyerID != nil {
+		if order.BuyerID != nil {
 			buyerID = order.BuyerID.PeerID
 			buyerHandle = order.BuyerID.Handle
 		}

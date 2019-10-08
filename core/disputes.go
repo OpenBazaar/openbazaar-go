@@ -282,7 +282,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
-		if order != nil && order.BuyerID != nil {
+		if order.BuyerID != nil {
 			buyer = order.BuyerID.PeerID
 		}
 	}
@@ -643,7 +643,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	// Calculate total fee
 	defaultFee := wal.GetFeePerByte(wallet.NORMAL)
-	txFee := wal.EstimateFee(inputs, outputs, dispute.ResolutionPaymentFeePerByte(payDivision, defaultFee))
+	txFee := wal.EstimateFee(inputs, outputs, *dispute.ResolutionPaymentFeePerByte(payDivision, defaultFee))
 
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
@@ -916,6 +916,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 	if contract.BuyerOrder.Payment != nil {
 		order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 		if err != nil {
+			validationErrors = append(validationErrors, fmt.Sprintf("Error converting to v5 order: %s", err))
 			return validationErrors
 		}
 		wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
