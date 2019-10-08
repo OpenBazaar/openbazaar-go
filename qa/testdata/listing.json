@@ -12,12 +12,12 @@
 		"title": "Ron Swanson Tshirt",
 		"description": "Kick ass ron swanson tshirt in yellow",
 		"processingTime": "1 to 2 Business days",
-    "priceCurrency": {
-      "code": "TBTC",
-      "divisibility": 8,
-      "name": "A",
-      "currencyType": "A"
-    },
+		"priceCurrency": {
+		  "code": "TBTC",
+		  "divisibility": 8,
+		  "name": "A",
+		  "currencyType": "A"
+		},
 		"bigPrice": "12000000",
 		"tags": [
 			"tshirts",
@@ -136,12 +136,12 @@
 		"services": [
 			{
 				"name": "Standard",
-        "bigPrice": "6000000",
+       			"bigPrice": "6000000",
 				"estimatedDelivery": "4-6 days"
 			},
 			{
 				"name": "Express",
-        "bigPrice": "12000000",
+        		"bigPrice": "12000000",
 				"estimatedDelivery": "1-3 days"
 			}
 		]

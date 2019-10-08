@@ -110,7 +110,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 					}
 					profile.ModeratorInfo.Fee.FixedFee = &pb.Moderator_Price{
 						AmountCurrency: &pb.CurrencyDefinition{
-							Code:         normalizedFee.Currency.String(),
+							Code:         normalizedFee.Currency.CurrencyCode().String(),
 							Divisibility: uint32(normalizedFee.Currency.Divisibility),
 						},
 						BigAmount: normalizedFee.Amount.String(),

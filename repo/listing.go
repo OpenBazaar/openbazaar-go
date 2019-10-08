@@ -239,7 +239,7 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = count
+				s.BigQuantity = fmt.Sprintf("%d", count)
 				break
 			}
 		}
@@ -1497,6 +1497,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
 		s.Quantity = 0
+		s.BigQuantity = "0"
 	}
 
 	sl := new(pb.SignedListing)
@@ -1926,17 +1927,19 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		if !ok {
 			return errors.New("price was invalid")
 		}
-		discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
-		if !ok {
-			return errors.New("coupon discount was invalid")
+		if coupon.GetBigPriceDiscount() != "" {
+			discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
+			if !ok {
+				return errors.New("coupon discount was invalid")
+			}
+			if n.Cmp(discount0) < 0 {
+				return errors.New("price discount cannot be greater than the item price")
+			}
 		}
-		if n.Cmp(discount0) < 0 {
-			return errors.New("price discount cannot be greater than the item price")
-		}
-		if coupon.GetPercentDiscount() == 0 && big.NewInt(0).Cmp(discount0) == 0 {
+		if coupon.GetPercentDiscount() == 0 && coupon.GetBigPriceDiscount() == "" {
 			return errors.New("coupons must have at least one positive discount value")
 		}
-		if coupon.GetPercentDiscount() != 0 && big.NewInt(0).Cmp(discount0) != 0 {
+		if coupon.GetPercentDiscount() != 0 && coupon.GetBigPriceDiscount() != "" {
 			return errors.New("coupons must have either a percent discount or a fixed amount discount, but not both")
 		}
 	}
@@ -2120,11 +2123,11 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 	var (
 		priceModifier   float32
 		roundHundredths = func(f float32) float32 { return float32(int(f*100.0)) / 100.0 }
-		n, _            = new(big.Int).SetString(listing.Item.BigPrice, 10)
+		n, ok           = new(big.Int).SetString(listing.Item.BigPrice, 10)
 	)
 
-	if n.Cmp(big.NewInt(0)) > 0 {
-		return ErrMarketPriceListingIllegalField("item.price")
+	if ok && n.Cmp(big.NewInt(0)) != 0 {
+		return ErrMarketPriceListingIllegalField("item.bigPrice")
 	}
 
 	if listing.Metadata.PriceModifier != 0 {
@@ -2148,10 +2151,41 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 
 func validateListingSkus(listing *pb.Listing) error {
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		for _, sku := range listing.Item.Skus {
-			if sku.Quantity < 1 {
-				return ErrCryptocurrencySkuQuantityInvalid
+		return validateCryptocurrencyQuantity(listing)
+	}
+	return nil
+}
+
+func validateCryptocurrencyQuantity(listing *pb.Listing) error {
+	var checkFn func(*pb.Listing_Item_Sku) error
+	switch listing.Metadata.Version {
+	case 5:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
 			}
+			if s.BigQuantity == "" {
+				return fmt.Errorf("sku bigQuantity empty")
+			}
+			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) <= 0 {
+				return fmt.Errorf("sku bigQuantity zero or less")
+			}
+			return nil
+		}
+	default:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
+			}
+			if s.Quantity <= 0 {
+				return fmt.Errorf("sku quantity zero or less")
+			}
+			return nil
+		}
+	}
+	for _, sku := range listing.Item.Skus {
+		if err := checkFn(sku); err != nil {
+			return ErrCryptocurrencySkuQuantityInvalid
 		}
 	}
 	return nil

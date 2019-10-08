@@ -211,7 +211,7 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         if r.status_code == 500:
             resp = json.loads(r.text)
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
-        elif r.status_code != 401:
+        elif r.status_code != 400:
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):

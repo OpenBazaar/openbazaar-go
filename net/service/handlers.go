@@ -287,6 +287,13 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	offline, _ := options.(bool)
+
+	if offline {
+		log.Debugf("handling offline order from: %s", peer.Pretty())
+	} else {
+		log.Debugf("handling normal order from: %s", peer.Pretty())
+	}
+
 	contract := new(pb.RicardianContract)
 	var orderId string
 	errorResponse := func(errMsg string) *pb.Message {
@@ -326,14 +333,24 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return errorResponse(err.Error()), err
 	}
 
-	pro, _ := service.node.GetProfile()
+	pro, err := service.node.GetProfile()
+	if err != nil {
+		log.Errorf("unable to read local profile: %s", err)
+		return errorResponse(fmt.Sprintf("unable to read local profile: %s", err.Error())), err
+	}
+
 	if !pro.Vendor {
+		log.Debugf("sending message to buyer that our store is not accepting orders")
 		return errorResponse("the vendor turned his store off and is not accepting orders at this time"), errors.New("store is turned off")
 	}
 
 	err = service.node.ValidateOrder(contract, !offline)
-	if err != nil && (err != core.ErrPurchaseUnknownListing || !offline) {
-		return errorResponse(err.Error()), err
+	if err != nil {
+		if err != core.ErrPurchaseUnknownListing || !offline {
+			return errorResponse(err.Error()), err
+		} else {
+			log.Debugf("error validating order from %s: %s", err, peer.Pretty())
+		}
 	}
 
 	order, err := repo.ToV5Order(contract.BuyerOrder, service.node.LookupCurrency)
@@ -345,8 +362,10 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
+	log.Debugf("incoming order linked to %s wallet", contract.BuyerOrder.Payment.AmountCurrency.Code)
 
 	if order.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		log.Debugf("received direct online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
@@ -366,6 +385,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error building order confirmation"), err
 		}
+		log.Debugf("storing sales order %s into the database and awaiting payment", contract.VendorOrderConfirmation.OrderID)
 		if err := service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false); err != nil {
 			log.Errorf("failed to put sale (%s): %s", contract.VendorOrderConfirmation.OrderID, err)
 			return errorResponse("Error persisting order"), err
@@ -374,9 +394,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
 		}
-		log.Debugf("Received addr-req ORDER message from %s", peer.Pretty())
+		log.Debugf("sending order confirmation message to %s", peer.Pretty())
+		log.Debugf("received addr-req ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if order.Payment.Method == pb.Order_Payment_DIRECT {
+		log.Debugf("received offline direct order from %s", peer.Pretty())
 		err := service.node.ValidateDirectPaymentAddress(order)
 		if err != nil {
 			return errorResponse(err.Error()), err
@@ -389,13 +411,16 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("added address to wallet to watch: %s", addr)
+		log.Debugf("storing sales order %s in database", orderId)
 		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Error(err)
 		}
-		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
+		log.Debugf("successfully processed direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if order.Payment.Method == pb.Order_Payment_MODERATED && !offline {
+		log.Debugf("processing moderated online order from %s", peer.Pretty())
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), errors.New("error calculating payment amount")
@@ -423,6 +448,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("added watch address (%s) to wallet (%s)", addr, contract.BuyerOrder.Payment.AmountCurrency.Code)
 		contract, err = service.node.NewOrderConfirmation(contract, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("error building order confirmation")
@@ -435,6 +461,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("storing sales order %s in database", orderId)
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -442,6 +469,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		log.Debugf("Received moderated ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if order.Payment.Method == pb.Order_Payment_MODERATED && offline {
+		log.Debugf("processing moderated offline order from %s", peer.Pretty())
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		if err != nil {
 			log.Error(err)
@@ -461,11 +489,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			log.Error(err)
 		}
-		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
+		log.Debugf("storing sales order %s in database", orderId)
 		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Error(err)
 		}
+		log.Debugf("successfully processed offline moderated ORDER message from %s", peer.Pretty())
 		return nil, nil
 	}
 	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
@@ -473,6 +502,8 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 }
 
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+
+	log.Debugf("received order confirmation message from %s", p.Pretty())
 
 	// Unmarshal payload
 	if pmes.Payload == nil {
@@ -492,8 +523,10 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
+	log.Debugf("loading order %s from the database", orderId)
 	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
+		log.Debugf("could not retrieve order %s from the database: %s", orderId, err.Error())
 		if err := service.SendProcessingError(p.Pretty(), orderId, pb.Message_ORDER_CONFIRMATION, nil); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -501,10 +534,12 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	if funded && state == pb.OrderState_AWAITING_FULFILLMENT || !funded && state == pb.OrderState_AWAITING_PAYMENT {
+		log.Debugf("dropping duplicate order confirmation")
 		return nil, net.DuplicateMessage
 	}
 
 	// Validate the order confirmation
+	log.Debugf("validating order confirmation message")
 	err = service.node.ValidateOrderConfirmation(vendorContract, false)
 	if err != nil {
 		return nil, err
@@ -520,12 +555,14 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	if funded {
 		// Set message state to AWAITING_FULFILLMENT
+		log.Debugf("now awaiting fulfillment for order %s", orderId)
 		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 		if err != nil {
 			log.Errorf("failed setting order (%) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
 		}
 	} else {
 		// Set message state to AWAITING_PAYMENT
+		log.Debugf("order not funded, awaiting payment for order %s", orderId)
 		err := service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			log.Errorf("failed setting order (%) to AWAITING_PAYMENT: %s", orderId, err.Error())
@@ -546,6 +583,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	// Send notification to websocket
+	log.Debugf("broadcasting notification to the websocket for order %s", orderId)
 	n := repo.OrderConfirmationNotification{
 		ID:           repo.NewNotificationID(),
 		Type:         repo.NotifierTypeOrderConfirmationNotification,
@@ -559,7 +597,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	if err != nil {
 		log.Error(err)
 	}
-	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_CONFIRMATION message from %s", p.Pretty())
 	return nil, nil
 }
 
@@ -943,6 +981,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 }
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+
+	log.Debugf("received order fulfillment message from %s", p.Pretty())
+
 	if pmes.Payload == nil {
 		return nil, ErrEmptyPayload
 	}
@@ -959,6 +1000,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
+		log.Debugf("unable to find a matching order in the purchases table of the database")
 		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, nil); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -966,6 +1008,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		log.Debugf("order state (%s) is not what is expected", state.String())
 		if err := service.SendProcessingError(p.Pretty(), rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, contract); err != nil {
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
@@ -973,6 +1016,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
+		log.Debugf("order state (%s) is not what is expected", state.String())
 		return nil, net.DuplicateMessage
 	}
 
@@ -983,17 +1027,20 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		}
 	}
 
+	log.Debugf("validating order fulfillment message")
 	if err := service.node.ValidateOrderFulfillment(rc.VendorOrderFulfillment[0], contract); err != nil {
 		return nil, err
 	}
 
 	// Set message state to fulfilled if all listings have a matching fulfillment message
 	if service.node.IsFulfilled(contract) {
+		log.Debugf("updating order %s in the database to fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		err = service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_FULFILLED, false)
 		if err != nil {
 			log.Error(err)
 		}
 	} else {
+		log.Debugf("updating order %s in the database to partially fulfilled", rc.VendorOrderFulfillment[0].OrderId)
 		err = service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
 		if err != nil {
 			log.Error(err)
@@ -1027,7 +1074,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	if err != nil {
 		log.Error(err)
 	}
-	log.Debugf("received ORDER_FULFILLMENT message from %s", p.Pretty())
+	log.Debugf("successfully processed ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	return nil, nil
 }
@@ -1780,6 +1827,8 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("received order payment message from: %s", peer.Pretty())
+
 	if pmes.Payload == nil {
 		return nil, errors.New("payload is nil")
 	}
@@ -1804,14 +1853,22 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	log.Debugf("retrieving %s transaction %s", paymentDetails.Coin, chash.String())
 	txn, err := wal.GetTransaction(*chash)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Debugf("retrieving order %s from the database", paymentDetails.OrderID)
 	contract, _, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
+	isVendor := true
 	if err != nil {
-		return nil, net.OutOfOrderMessage
+		contract, _, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(paymentDetails.OrderID)
+		if err != nil {
+			log.Debugf("no matching order was found in the database")
+			return nil, net.OutOfOrderMessage
+		}
+		isVendor = false
 	}
 
 	if contract.VendorOrderConfirmation != nil &&
@@ -1830,19 +1887,41 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// the seller has not confirmed or this is a moderated purchase,
 		// so we need to compare the peerID in the vendorListing
 		// to the node peerID
-		if contract.VendorListings[0].VendorID.PeerID !=
-			service.node.IpfsNode.Identity.Pretty() {
-			log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
-				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
-			return nil, errors.New("mismatched peer id")
+		if isVendor {
+			if contract.VendorListings[0].VendorID.PeerID !=
+				service.node.IpfsNode.Identity.Pretty() {
+				log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
+					paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID)
+				return nil, errors.New("mismatched peer id")
+			}
+		} else {
+			if contract.BuyerOrder.BuyerID.PeerID !=
+				service.node.IpfsNode.Identity.Pretty() {
+				log.Errorf("mismatched peerID. wrong node is processing: orderID: %s, contractPeerID: %s",
+					paymentDetails.OrderID, contract.BuyerOrder.BuyerID.PeerID)
+				return nil, errors.New("mismatched peer id")
+			}
+		}
+
+	}
+
+	toAddress, err := wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		log.Error(err)
+	}
+
+	tvalue, ok := new(big.Int).SetString(txn.Value, 10)
+	if ok && tvalue.Cmp(big.NewInt(0)) == 0 {
+		toAddress, err = wal.DecodeAddress(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			log.Error(err)
 		}
 	}
 
-	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
 	outputs := []wallet.TransactionOutput{}
 	for _, o := range txn.Outputs {
 		output := wallet.TransactionOutput{
-			Address: o.Address,
+			Address: toAddress,
 			Value:   o.Value,
 			Index:   o.Index,
 			OrderID: paymentDetails.OrderID,
@@ -1876,6 +1955,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		WatchOnly: false,
 	}
 
+	log.Debugf("associating tx %s with order %s", txn.Txid, paymentDetails.OrderID)
 	wal0.AssociateTransactionWithOrder(cb)
 
 	return nil, nil
