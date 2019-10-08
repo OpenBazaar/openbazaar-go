@@ -165,13 +165,18 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		oc.Ratings = append(oc.Ratings, rating)
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 
 	// Payout order if moderated and not disputed
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
+	if order.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
 		var ins []wallet.TransactionInput
 		outValue := new(big.Int)
 		for _, r := range records {
@@ -204,7 +209,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return err
 		}
@@ -216,11 +221,12 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.VendorOrderFulfillment[0].Payout.BigPayoutFeePerByte, 10)
+		fulfillment := repo.ToV5OrderFulfillment(contract.VendorOrderFulfillment[0])
+		n, ok := new(big.Int).SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
 		if !ok {
 			return errors.New("invalid payout fee per byte value")
 		}
@@ -304,7 +310,11 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	} else if active {
 		return ErrPrematureReleaseOfTimedoutEscrowFunds
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -346,7 +356,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		}
 	}
 
-	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 	if err != nil {
 		return err
 	}
@@ -358,7 +368,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 	if err != nil {
 		return err
 	}

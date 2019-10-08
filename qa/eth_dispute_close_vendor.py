@@ -198,7 +198,7 @@ class EthDisputeCloseVendorTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to order fulfillment")
-        
+
         # Alice open dispute
         dispute = {
             "orderId": orderId,
@@ -323,6 +323,7 @@ class EthDisputeCloseVendorTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("EthDisputeCloseVendorTest - FAIL: Alice failed to set state to RESOLVED")
 
+        time.sleep(30)
         # Bob check payout transaction recorded
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)

@@ -26,7 +26,11 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return nil, nil, err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
@@ -43,7 +47,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
 			tx.BigValue = r.Value.String()
-			tx.Currency = contract.BuyerOrder.Payment.AmountCurrency
+			tx.Currency = order.Payment.AmountCurrency
 
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
@@ -67,9 +71,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		paymentRecords = append(paymentRecords, rec)
 	}
 	var refundRecord *pb.TransactionRecord
-	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && contract.BuyerOrder != nil && contract.BuyerOrder.Payment != nil {
+	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && order.Payment != nil {
 		// For multisig we can use the outgoing from the payment address
-		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
+		if order.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
 				val, _ := new(big.Int).SetString(rec.BigValue, 10)
 				if val.Cmp(big.NewInt(0)) < 0 {
@@ -84,6 +88,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				}
 			}
 		} else if contract.Refund != nil && contract.Refund.RefundTransaction != nil && contract.Refund.Timestamp != nil {
+			refund := repo.ToV5Refund(contract.Refund)
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
 			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
@@ -94,10 +99,10 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
-			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.BigValue = contract.Refund.RefundTransaction.BigValue
-			refundRecord.Currency = contract.Refund.RefundTransaction.ValueCurrency
-			refundRecord.Timestamp = contract.Refund.Timestamp
+			refundRecord.Txid = refund.RefundTransaction.Txid
+			refundRecord.BigValue = refund.RefundTransaction.BigValue
+			refundRecord.Currency = refund.RefundTransaction.ValueCurrency
+			refundRecord.Timestamp = refund.Timestamp
 			refundRecord.Confirmations = confirmations
 			refundRecord.Height = height
 		}

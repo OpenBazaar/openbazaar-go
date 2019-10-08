@@ -377,12 +377,12 @@ func TestListingsQuantity(t *testing.T) {
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Item.Skus[0].Quantity = 0
+	listing.Item.Skus[0].BigQuantity = "0"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
 	})
 
-	listing.Item.Skus[0].Quantity = -1
+	listing.Item.Skus[0].BigQuantity = "-1"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
 	})
@@ -394,12 +394,12 @@ func TestCryptoListingsQuantity(t *testing.T) {
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Item.Skus[0].Quantity = 0
+	listing.Item.Skus[0].BigQuantity = "0"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
 
-	listing.Item.Skus[0].Quantity = -1
+	listing.Item.Skus[0].BigQuantity = "-1"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
@@ -479,7 +479,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.PriceCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.price"))},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.bigPrice"))},
 	})
 }
 
