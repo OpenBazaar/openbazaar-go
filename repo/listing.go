@@ -1615,11 +1615,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 
 // ValidateCryptoListing - check cryptolisting
 func (l *Listing) ValidateCryptoListing() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
-	}
-	return validateCryptocurrencyListing(listing)
+	return l.validateCryptocurrencyListing()
 }
 
 // ValidateSkus - check listing skus
@@ -1967,12 +1963,12 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 
 	// Type-specific validations
 	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
-		err := validatePhysicalListing(listing)
+		err := l.validatePhysicalListing()
 		if err != nil {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := l.validateCryptocurrencyListing()
 		if err != nil {
 			return err
 		}
@@ -1989,7 +1985,11 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	return nil
 }
 
-func validatePhysicalListing(listing *pb.Listing) error {
+func (l *Listing) validatePhysicalListing() error {
+	listing, err := l.GetProtoListing()
+	if err != nil {
+		return fmt.Errorf("producing listing protobuf: %s", err)
+	}
 	if listing.Item.PriceCurrency.Code == "" {
 		return errors.New("listing pricing currency code must not be empty")
 	}
@@ -2068,19 +2068,29 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
-	switch {
-	case len(listing.Coupons) > 0:
+func (l *Listing) validateCryptocurrencyListing() error {
+	listing, err := l.GetProtoListing()
+	if err != nil {
+		return fmt.Errorf("producing listing protobuf: %s", err)
+	}
+
+	if len(listing.Coupons) > 0 {
 		return ErrCryptocurrencyListingIllegalField("coupons")
-	case len(listing.Item.Options) > 0:
+	}
+	if len(listing.Item.Options) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.options")
-	case len(listing.ShippingOptions) > 0:
+	}
+	if len(listing.ShippingOptions) > 0 {
 		return ErrCryptocurrencyListingIllegalField("shippingOptions")
-	case len(listing.Item.Condition) > 0:
+	}
+	if len(listing.Item.Condition) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.condition")
-	//case len(listing.Metadata.PricingCurrency.Code) > 0:
-	//return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
-	case len(listing.Metadata.CryptoCurrencyCode) == 0:
+	}
+	if listing.Item.PriceCurrency != nil &&
+		len(listing.Item.PriceCurrency.Code) > 0 {
+		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+	}
+	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
 
