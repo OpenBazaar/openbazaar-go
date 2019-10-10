@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"time"
@@ -18,8 +19,8 @@ var (
 
 // InventoryListing is the listing representation stored on IPFS
 type InventoryListing struct {
-	Inventory   int64  `json:"inventory"`
-	LastUpdated string `json:"lastUpdated"`
+	Inventory   *big.Int `json:"inventory"`
+	LastUpdated string   `json:"lastUpdated"`
 }
 
 // Inventory is the complete inventory representation stored on IPFS
@@ -34,11 +35,11 @@ func (n *OpenBazaarNode) GetLocalInventory() (Inventory, error) {
 	}
 
 	inventory := make(Inventory, len(listings))
-	var totalCount int64
+	totalCount := big.NewInt(0)
 	for slug, variants := range listings {
-		totalCount = 0
+		totalCount = big.NewInt(0)
 		for _, variantCount := range variants {
-			totalCount += variantCount
+			totalCount = new(big.Int).Add(totalCount, variantCount)
 		}
 
 		inventory[slug] = &InventoryListing{
@@ -58,9 +59,9 @@ func (n *OpenBazaarNode) GetLocalInventoryForSlug(slug string) (*InventoryListin
 	}
 
 	var inventory *InventoryListing
-	var totalCount int64
+	totalCount := big.NewInt(0)
 	for _, variantCount := range variants {
-		totalCount += variantCount
+		totalCount = new(big.Int).Add(totalCount, variantCount)
 	}
 
 	inventory = &InventoryListing{

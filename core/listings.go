@@ -84,7 +84,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
-		err = n.Datastore.Inventory().Put(slug, 0, -1)
+		err = n.Datastore.Inventory().Put(slug, 0, big.NewInt(-1))
 		if err != nil {
 			return err
 		}

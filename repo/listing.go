@@ -1632,14 +1632,24 @@ func (l *Listing) ValidateSkus() error {
 }
 
 // GetInventory - returns a map of skus and quantityies
-func (l *Listing) GetInventory() (map[int]int64, error) {
+func (l *Listing) GetInventory() (map[int]*big.Int, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
 		return nil, err
 	}
-	inventory := make(map[int]int64)
+	inventory := make(map[int]*big.Int)
 	for i, s := range listing.Item.Skus {
-		inventory[i] = s.Quantity
+		var amtStr string
+		if s.BigQuantity != "" {
+			amtStr = s.BigQuantity
+		} else {
+			amtStr = strconv.Itoa(int(s.Quantity))
+		}
+		amt, ok := new(big.Int).SetString(amtStr, 10)
+		if !ok {
+			return nil, errors.New("error parsing inventory")
+		}
+		inventory[i] = amt
 	}
 	return inventory, nil
 }
@@ -2101,6 +2111,7 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCurrencyDefinitionUndefined
 	}
 	if cryptoDivisibility != localDef.Divisibility {
+		log.Info("***", cryptoDivisibility, localDef.Divisibility)
 		return ErrListingCryptoDivisibilityInvalid
 	}
 	return nil
