@@ -375,7 +375,6 @@ type ListingMetadata struct {
 // UnmarshalJSONSignedListing - unmarshal signed listing
 func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 
-	retSL := SignedListing{}
 	var err error
 
 	var objmap map[string]*json.RawMessage
@@ -399,50 +398,49 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 
 	vendorID, err := ExtractIDFromSignedListing(data)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	peerInfo, err := NewPeerInfoFromProtobuf(vendorID)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	version, err := ExtractVersionFromSignedListing(data)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	if version == 5 {
 		sl := new(pb.SignedListing)
 		err = jsonpb.UnmarshalString(string(data), sl)
 		if err != nil {
-			return retSL, err
+			return SignedListing{}, err
 		}
 		b0, err := m1.MarshalToString(sl.Listing)
 		if err != nil {
-			return retSL, err
+			return SignedListing{}, err
 		}
-		retSL.Hash = sl.Hash
-		retSL.ProtoListing = sl.Listing
-		retSL.RListing = Listing{
-			Slug: sl.Listing.Slug,
-			Metadata: ListingMetadata{
-				Version: 5,
+		return SignedListing{
+			Hash:         sl.Hash,
+			ProtoListing: sl.Listing,
+			RListing: Listing{
+				Slug: sl.Listing.Slug,
+				Metadata: ListingMetadata{
+					Version: 5,
+				},
+				ListingVersion: 5,
+				ListingBytes:   []byte(b0),
+				ProtoListing:   sl.Listing,
+				Vendor:         peerInfo,
 			},
-			ListingVersion:   5,
-			ListingBytes:     []byte(b0),
-			OrigListingBytes: *lbytes,
-			ProtoListing:     sl.Listing,
-			Vendor:           peerInfo,
-		}
-		retSL.Signature = sl.Signature
-		retSL.ProtoSignedListing = sl
-		return retSL, nil
+			Signature:          sl.Signature,
+			ProtoSignedListing: sl,
+		}, nil
 	}
 
 	listing0 := Listing{
-		ListingBytes:     *lbytes,
-		OrigListingBytes: *lbytes,
+		ListingBytes: *lbytes,
 		Metadata: ListingMetadata{
 			Version: version,
 		},
@@ -450,44 +448,21 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		Vendor:         peerInfo,
 	}
 
-	type slisting struct {
+	var s1 struct {
 		Hash      string          `json:"hash"`
 		Signature []byte          `json:"signature"`
 		Listing   json.RawMessage `json:"listing"`
 	}
-	var s1 slisting
 	err = json.Unmarshal(data, &s1)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
-	proto0, err := listing0.GetProtoListing()
-	if err != nil {
-		return retSL, err
+	// GetProtoListing generates listing0.ProtoListing (mutation is evil)
+	if _, err = listing0.GetProtoListing(); err != nil {
+		return SignedListing{}, err
 	}
-
-	proto0.VendorID = vendorID
-
-	listing0.ProtoListing = proto0
-
-	retSL.Signature = s1.Signature
-	retSL.Hash = s1.Hash
-	retSL.RListing = listing0
-
-	retSL.ProtoListing = proto0
-	retSL.ProtoSignedListing = &pb.SignedListing{
-		Listing:   proto0,
-		Hash:      s1.Hash,
-		Signature: s1.Signature,
-	}
-
-	out0, err := m1.MarshalToString(proto0)
-	if err != nil {
-		//return ret, err
-		log.Info(err)
-	}
-
-	log.Info(len(out0))
+	listing0.ProtoListing.VendorID = vendorID
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -495,30 +470,23 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-
-	outSL, err := m.MarshalToString(retSL.RListing.ProtoListing)
+	outSL, err := m.MarshalToString(listing0.ProtoListing)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
-	retSL.RListing.ListingBytes = []byte(outSL)
+	listing0.ListingBytes = []byte(outSL)
 
-	proto1 := &pb.Listing{
-		Slug:               proto0.Slug,
-		VendorID:           vendorID,
-		Metadata:           proto0.Metadata,
-		Item:               proto0.Item,
-		ShippingOptions:    proto0.ShippingOptions,
-		Taxes:              proto0.Taxes,
-		Coupons:            proto0.Coupons,
-		Moderators:         proto0.Moderators,
-		TermsAndConditions: proto0.TermsAndConditions,
-		RefundPolicy:       proto0.RefundPolicy,
-	}
-
-	log.Info(proto1.Slug)
-
-	return retSL, nil
-
+	return SignedListing{
+		Signature:    s1.Signature,
+		Hash:         s1.Hash,
+		RListing:     listing0,
+		ProtoListing: listing0.ProtoListing,
+		ProtoSignedListing: &pb.SignedListing{
+			Listing:   listing0.ProtoListing,
+			Hash:      s1.Hash,
+			Signature: s1.Signature,
+		},
+	}, nil
 }
 
 // UnmarshalJSONListing - unmarshal listing
@@ -607,6 +575,51 @@ func ExtractIDFromListing(data []byte) (*pb.ID, error) {
 	}
 
 	return vendorPlay, nil
+}
+
+// GetCryptoDivisibility returns the listing crypto divisibility
+func (l *Listing) GetCryptoDivisibility() uint32 {
+	ct, err := l.GetContractType()
+	if err == nil && ct != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		return 0
+	}
+	div := parseProtoCryptoDivisibility(l.ListingBytes)
+	switch l.ListingVersion {
+	case 5:
+		return div
+	default: // version <4
+		if div != 0 {
+			return uint32(math.Log10(float64(div)))
+		}
+	}
+	return 0
+}
+
+func parseProtoCryptoDivisibility(listing []byte) uint32 {
+	var listingT struct {
+		Metadata struct {
+			CryptoDivisibility uint32 `json:"coinDivisibility"`
+		} `json:"metadata"`
+	}
+	err := json.Unmarshal(listing, &listingT)
+	if err != nil {
+		return 0
+	}
+	return listingT.Metadata.CryptoDivisibility
+}
+
+// GetCryptoCurrencyCode returns the listing crypto currency code
+func (l *Listing) GetCryptoCurrencyCode() string {
+	var listingT struct {
+		Metadata struct {
+			CryptoCurrencyCode string `json:"coinType"`
+		} `json:"metadata"`
+	}
+	err := json.Unmarshal(l.ListingBytes, &listingT)
+	if err != nil {
+		return ""
+	}
+	return listingT.Metadata.CryptoCurrencyCode
 }
 
 // GetTitle - return listing title
@@ -1333,6 +1346,8 @@ func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 		Language:           lang,
 		EscrowTimeoutHours: l.GetEscrowTimeout(),
 		PriceModifier:      priceMod,
+		CryptoDivisibility: parseProtoCryptoDivisibility(l.ListingBytes),
+		CryptoCurrencyCode: l.GetCryptoCurrencyCode(),
 	}
 	return &m, nil
 }
@@ -1615,11 +1630,7 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 
 // ValidateCryptoListing - check cryptolisting
 func (l *Listing) ValidateCryptoListing() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
-	}
-	return validateCryptocurrencyListing(listing)
+	return l.validateCryptocurrencyListing()
 }
 
 // ValidateSkus - check listing skus
@@ -1967,12 +1978,12 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 
 	// Type-specific validations
 	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
-		err := validatePhysicalListing(listing)
+		err := l.validatePhysicalListing()
 		if err != nil {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := l.validateCryptocurrencyListing()
 		if err != nil {
 			return err
 		}
@@ -1989,7 +2000,11 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	return nil
 }
 
-func validatePhysicalListing(listing *pb.Listing) error {
+func (l *Listing) validatePhysicalListing() error {
+	listing, err := l.GetProtoListing()
+	if err != nil {
+		return fmt.Errorf("producing listing protobuf: %s", err)
+	}
 	if listing.Item.PriceCurrency.Code == "" {
 		return errors.New("listing pricing currency code must not be empty")
 	}
@@ -2068,19 +2083,29 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
-	switch {
-	case len(listing.Coupons) > 0:
+func (l *Listing) validateCryptocurrencyListing() error {
+	listing, err := l.GetProtoListing()
+	if err != nil {
+		return fmt.Errorf("producing listing protobuf: %s", err)
+	}
+
+	if len(listing.Coupons) > 0 {
 		return ErrCryptocurrencyListingIllegalField("coupons")
-	case len(listing.Item.Options) > 0:
+	}
+	if len(listing.Item.Options) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.options")
-	case len(listing.ShippingOptions) > 0:
+	}
+	if len(listing.ShippingOptions) > 0 {
 		return ErrCryptocurrencyListingIllegalField("shippingOptions")
-	case len(listing.Item.Condition) > 0:
+	}
+	if len(listing.Item.Condition) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.condition")
-	//case len(listing.Metadata.PricingCurrency.Code) > 0:
-	//return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
-	case len(listing.Metadata.CryptoCurrencyCode) == 0:
+	}
+	if listing.Item.PriceCurrency != nil &&
+		len(listing.Item.PriceCurrency.Code) > 0 {
+		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+	}
+	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
 
