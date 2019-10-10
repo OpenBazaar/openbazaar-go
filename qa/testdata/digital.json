@@ -5,12 +5,6 @@
 		"contractType": "DIGITAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
-		"pricingCurrency": {
-			"code": "TBTC",
-			"divisibility": 8,
-			"name": "A",
-			"currencyType": "A"
-		},
 		"acceptedCurrencies": ["TBTC", "TBCH", "TLTC", "TZEC"]
 	},
 	"item": {
@@ -20,9 +14,7 @@
     "bigPrice": "12000000",
     "priceCurrency": {
       "code": "TBTC",
-      "divisibility": 8,
-      "name": "A",
-      "currencyType": "A"
+      "divisibility": 8
     },
 		"tags": [
 			"documentary"
@@ -41,8 +33,7 @@
 			"movies"
 		],
 		"condition": "New",
-		"skus": [
-		]
+		"skus": []
 	},
 	"taxes": [
 		{
