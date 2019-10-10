@@ -2119,15 +2119,8 @@ func (l *Listing) validateCryptocurrencyListing() error {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
 
-	var cryptoDivisibility uint
-	switch listing.Metadata.Version {
-	case 5:
-		cryptoDivisibility = uint(listing.Metadata.CryptoDivisibility)
-	default:
-		if listing.Metadata.CryptoDivisibility != 0 {
-			cryptoDivisibility = uint(math.Log10(float64(listing.Metadata.CryptoDivisibility)))
-		}
-	}
+
+	cryptoDivisibility := l.GetCryptoDivisibility()
 	if cryptoDivisibility == 0 {
 		return ErrListingCryptoDivisibilityInvalid
 	}
@@ -2135,8 +2128,7 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	if err != nil {
 		return ErrCurrencyDefinitionUndefined
 	}
-	if cryptoDivisibility != localDef.Divisibility {
-		log.Info("***", cryptoDivisibility, localDef.Divisibility)
+	if uint(cryptoDivisibility) != localDef.Divisibility {
 		return ErrListingCryptoDivisibilityInvalid
 	}
 	return nil
