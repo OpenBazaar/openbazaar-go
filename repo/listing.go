@@ -375,7 +375,6 @@ type ListingMetadata struct {
 // UnmarshalJSONSignedListing - unmarshal signed listing
 func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 
-	retSL := SignedListing{}
 	var err error
 
 	var objmap map[string]*json.RawMessage
@@ -399,50 +398,49 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 
 	vendorID, err := ExtractIDFromSignedListing(data)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	peerInfo, err := NewPeerInfoFromProtobuf(vendorID)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	version, err := ExtractVersionFromSignedListing(data)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
 	if version == 5 {
 		sl := new(pb.SignedListing)
 		err = jsonpb.UnmarshalString(string(data), sl)
 		if err != nil {
-			return retSL, err
+			return SignedListing{}, err
 		}
 		b0, err := m1.MarshalToString(sl.Listing)
 		if err != nil {
-			return retSL, err
+			return SignedListing{}, err
 		}
-		retSL.Hash = sl.Hash
-		retSL.ProtoListing = sl.Listing
-		retSL.RListing = Listing{
-			Slug: sl.Listing.Slug,
-			Metadata: ListingMetadata{
-				Version: 5,
+		return SignedListing{
+			Hash:         sl.Hash,
+			ProtoListing: sl.Listing,
+			RListing: Listing{
+				Slug: sl.Listing.Slug,
+				Metadata: ListingMetadata{
+					Version: 5,
+				},
+				ListingVersion: 5,
+				ListingBytes:   []byte(b0),
+				ProtoListing:   sl.Listing,
+				Vendor:         peerInfo,
 			},
-			ListingVersion:   5,
-			ListingBytes:     []byte(b0),
-			OrigListingBytes: *lbytes,
-			ProtoListing:     sl.Listing,
-			Vendor:           peerInfo,
-		}
-		retSL.Signature = sl.Signature
-		retSL.ProtoSignedListing = sl
-		return retSL, nil
+			Signature:          sl.Signature,
+			ProtoSignedListing: sl,
+		}, nil
 	}
 
 	listing0 := Listing{
-		ListingBytes:     *lbytes,
-		OrigListingBytes: *lbytes,
+		ListingBytes: *lbytes,
 		Metadata: ListingMetadata{
 			Version: version,
 		},
@@ -450,44 +448,21 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		Vendor:         peerInfo,
 	}
 
-	type slisting struct {
+	var s1 struct {
 		Hash      string          `json:"hash"`
 		Signature []byte          `json:"signature"`
 		Listing   json.RawMessage `json:"listing"`
 	}
-	var s1 slisting
 	err = json.Unmarshal(data, &s1)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
 
-	proto0, err := listing0.GetProtoListing()
-	if err != nil {
-		return retSL, err
+	// GetProtoListing generates listing0.ProtoListing (mutation is evil)
+	if _, err = listing0.GetProtoListing(); err != nil {
+		return SignedListing{}, err
 	}
-
-	proto0.VendorID = vendorID
-
-	listing0.ProtoListing = proto0
-
-	retSL.Signature = s1.Signature
-	retSL.Hash = s1.Hash
-	retSL.RListing = listing0
-
-	retSL.ProtoListing = proto0
-	retSL.ProtoSignedListing = &pb.SignedListing{
-		Listing:   proto0,
-		Hash:      s1.Hash,
-		Signature: s1.Signature,
-	}
-
-	out0, err := m1.MarshalToString(proto0)
-	if err != nil {
-		//return ret, err
-		log.Info(err)
-	}
-
-	log.Info(len(out0))
+	listing0.ProtoListing.VendorID = vendorID
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -495,30 +470,23 @@ func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-
-	outSL, err := m.MarshalToString(retSL.RListing.ProtoListing)
+	outSL, err := m.MarshalToString(listing0.ProtoListing)
 	if err != nil {
-		return retSL, err
+		return SignedListing{}, err
 	}
-	retSL.RListing.ListingBytes = []byte(outSL)
+	listing0.ListingBytes = []byte(outSL)
 
-	proto1 := &pb.Listing{
-		Slug:               proto0.Slug,
-		VendorID:           vendorID,
-		Metadata:           proto0.Metadata,
-		Item:               proto0.Item,
-		ShippingOptions:    proto0.ShippingOptions,
-		Taxes:              proto0.Taxes,
-		Coupons:            proto0.Coupons,
-		Moderators:         proto0.Moderators,
-		TermsAndConditions: proto0.TermsAndConditions,
-		RefundPolicy:       proto0.RefundPolicy,
-	}
-
-	log.Info(proto1.Slug)
-
-	return retSL, nil
-
+	return SignedListing{
+		Signature:    s1.Signature,
+		Hash:         s1.Hash,
+		RListing:     listing0,
+		ProtoListing: listing0.ProtoListing,
+		ProtoSignedListing: &pb.SignedListing{
+			Listing:   listing0.ProtoListing,
+			Hash:      s1.Hash,
+			Signature: s1.Signature,
+		},
+	}, nil
 }
 
 // UnmarshalJSONListing - unmarshal listing
