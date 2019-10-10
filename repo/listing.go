@@ -577,6 +577,51 @@ func ExtractIDFromListing(data []byte) (*pb.ID, error) {
 	return vendorPlay, nil
 }
 
+// GetCryptoDivisibility returns the listing crypto divisibility
+func (l *Listing) GetCryptoDivisibility() uint32 {
+	ct, err := l.GetContractType()
+	if err == nil && ct != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		return 0
+	}
+	div := parseProtoCryptoDivisibility(l.ListingBytes)
+	switch l.ListingVersion {
+	case 5:
+		return div
+	default: // version <4
+		if div != 0 {
+			return uint32(math.Log10(float64(div)))
+		}
+	}
+	return 0
+}
+
+func parseProtoCryptoDivisibility(listing []byte) uint32 {
+	var listingT struct {
+		Metadata struct {
+			CryptoDivisibility uint32 `json:"coinDivisibility"`
+		} `json:"metadata"`
+	}
+	err := json.Unmarshal(listing, &listingT)
+	if err != nil {
+		return 0
+	}
+	return listingT.Metadata.CryptoDivisibility
+}
+
+// GetCryptoCurrencyCode returns the listing crypto currency code
+func (l *Listing) GetCryptoCurrencyCode() string {
+	var listingT struct {
+		Metadata struct {
+			CryptoCurrencyCode string `json:"coinType"`
+		} `json:"metadata"`
+	}
+	err := json.Unmarshal(l.ListingBytes, &listingT)
+	if err != nil {
+		return ""
+	}
+	return listingT.Metadata.CryptoCurrencyCode
+}
+
 // GetTitle - return listing title
 func (l *Listing) GetTitle() (string, error) {
 	type title struct {
@@ -1301,6 +1346,8 @@ func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
 		Language:           lang,
 		EscrowTimeoutHours: l.GetEscrowTimeout(),
 		PriceModifier:      priceMod,
+		CryptoDivisibility: parseProtoCryptoDivisibility(l.ListingBytes),
+		CryptoCurrencyCode: l.GetCryptoCurrencyCode(),
 	}
 	return &m, nil
 }
