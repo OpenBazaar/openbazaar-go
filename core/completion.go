@@ -319,7 +319,8 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		return err
 	}
 
-	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
+	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours *
+		uint32(repo.ConfirmationsPerHour(order.Payment.AmountCurrency.Code))
 	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {

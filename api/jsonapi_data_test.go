@@ -333,7 +333,8 @@ const walletBalanceJSONResponse = `{
     "TBCH": {
         "confirmed": "0",
 				"currency": {
-						"code": "TBCH",
+                        "BlockTime": 600000000000,
+                        "code": "TBCH",
 						"currencyType": "crypto",
 						"divisibility": 8,
 						"name": "Testnet Bitcoin Cash"
@@ -344,7 +345,8 @@ const walletBalanceJSONResponse = `{
     "TBTC": {
         "confirmed": "0",
 				"currency": {
-						"code": "TBTC",
+                        "BlockTime": 600000000000,
+                        "code": "TBTC",
 						"currencyType": "crypto",
 						"divisibility": 8,
 						"name": "Testnet Bitcoin"
@@ -355,7 +357,8 @@ const walletBalanceJSONResponse = `{
     "TLTC": {
         "confirmed": "0",
 				"currency": {
-						"code": "TLTC",
+                        "BlockTime": 600000000000,
+                        "code": "TLTC",
 						"currencyType": "crypto",
 						"divisibility": 8,
 						"name": "Testnet Litecoin"
@@ -366,7 +369,8 @@ const walletBalanceJSONResponse = `{
     "TZEC": {
         "confirmed": "0",
 				"currency": {
-						"code": "TZEC",
+                        "BlockTime": 600000000000,
+                        "code": "TZEC",
 						"currencyType": "crypto",
 						"divisibility": 8,
 						"name": "Testnet Zcash"
