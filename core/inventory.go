@@ -19,8 +19,8 @@ var (
 
 // InventoryListing is the listing representation stored on IPFS
 type InventoryListing struct {
-	Inventory   *big.Int `json:"inventory"`
-	LastUpdated string   `json:"lastUpdated"`
+	Inventory   string `json:"inventory"`
+	LastUpdated string `json:"lastUpdated"`
 }
 
 // Inventory is the complete inventory representation stored on IPFS
@@ -34,8 +34,10 @@ func (n *OpenBazaarNode) GetLocalInventory() (Inventory, error) {
 		return nil, err
 	}
 
-	inventory := make(Inventory, len(listings))
-	totalCount := big.NewInt(0)
+	var (
+		totalCount *big.Int
+		inventory  = make(Inventory, len(listings))
+	)
 	for slug, variants := range listings {
 		totalCount = big.NewInt(0)
 		for _, variantCount := range variants {
@@ -43,7 +45,7 @@ func (n *OpenBazaarNode) GetLocalInventory() (Inventory, error) {
 		}
 
 		inventory[slug] = &InventoryListing{
-			Inventory:   totalCount,
+			Inventory:   totalCount.String(),
 			LastUpdated: time.Now().UTC().Format(time.RFC3339),
 		}
 	}
@@ -65,7 +67,7 @@ func (n *OpenBazaarNode) GetLocalInventoryForSlug(slug string) (*InventoryListin
 	}
 
 	inventory = &InventoryListing{
-		Inventory:   totalCount,
+		Inventory:   totalCount.String(),
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 	}
 

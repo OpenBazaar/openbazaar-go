@@ -17,9 +17,7 @@
         "price": "0",
         "priceCurrency": {
             "code": "TETH",
-            "divisibility": 8,
-            "name": "A",
-            "currencyType": "A"
+            "divisibility": 8
         },
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",

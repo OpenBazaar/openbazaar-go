@@ -1651,9 +1651,10 @@ func (l *Listing) GetInventory() (map[int]*big.Int, error) {
 	inventory := make(map[int]*big.Int)
 	for i, s := range listing.Item.Skus {
 		var amtStr string
-		if s.BigQuantity != "" {
+		switch l.ListingVersion {
+		case 5:
 			amtStr = s.BigQuantity
-		} else {
+		default:
 			amtStr = strconv.Itoa(int(s.Quantity))
 		}
 		amt, ok := new(big.Int).SetString(amtStr, 10)
@@ -2118,7 +2119,6 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
-
 
 	cryptoDivisibility := l.GetCryptoDivisibility()
 	if cryptoDivisibility == 0 {
