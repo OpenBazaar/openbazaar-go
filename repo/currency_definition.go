@@ -244,6 +244,17 @@ func (c CurrencyCode) String() string {
 	return string(c)
 }
 
+// NewUnknownCryptoDefinition returns a suitable crypto definition
+// when one does not already exist in local dictionaries
+func NewUnknownCryptoDefinition(code string, div uint) CurrencyDefinition {
+	return CurrencyDefinition{
+		Name:         "Unknown Currency",
+		Code:         CurrencyCode(code),
+		Divisibility: div,
+		CurrencyType: Crypto,
+	}
+}
+
 // String returns a readable representation of CurrencyDefinition
 func (c CurrencyDefinition) String() string {
 	if c == NilCurrencyDefinition {
@@ -353,14 +364,11 @@ func NewCurrencyDictionary(defs map[string]CurrencyDefinition) (*CurrencyDiction
 
 // Valid asserts that the CurrencyDefinition is either valid or has at least one error
 func (c CurrencyDefinition) Valid() error {
-	if c == NilCurrencyDefinition {
+	if c.Equal(NilCurrencyDefinition) {
 		return ErrCurrencyDefinitionUndefined
 	}
-	if len(c.Code) < CurrencyCodeValidMinimumLength || len(c.Code) > CurrencyCodeValidMaximumLength {
+	if c.Code == NilCurrencyCode {
 		return ErrCurrencyCodeLengthInvalid
-	}
-	if len(c.Code) == 4 && strings.Index(strings.ToLower(string(c.Code)), "t") != 0 {
-		return ErrCurrencyCodeTestSymbolInvalid
 	}
 	if c.CurrencyType != Crypto && c.CurrencyType != Fiat {
 		return ErrCurrencyTypeInvalid
@@ -375,9 +383,6 @@ func (c CurrencyDefinition) Valid() error {
 // Equal indicates if the receiver and other have the same code
 // and divisibility
 func (c CurrencyDefinition) Equal(other CurrencyDefinition) bool {
-	if c == NilCurrencyDefinition || other == NilCurrencyDefinition {
-		return false
-	}
 	if c.Code != other.Code {
 		return false
 	}

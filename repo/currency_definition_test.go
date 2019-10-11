@@ -34,10 +34,10 @@ func TestCurrencyDefinitionsAreEqual(t *testing.T) {
 			other:    differentNameDef,
 			expected: true,
 		},
-		{ // nils should be false
+		{ // nils should be true
 			value:    repo.NilCurrencyDefinition,
 			other:    repo.NilCurrencyDefinition,
-			expected: false,
+			expected: true,
 		},
 		{ // different code should be false
 			value:    validDef,
@@ -86,22 +86,6 @@ func TestCurrencyDefinitionValidation(t *testing.T) {
 			expectErr: nil,
 			input: repo.CurrencyDefinition{
 				Code:         repo.CurrencyCode("TBTC"),
-				Divisibility: 8,
-				CurrencyType: repo.Crypto,
-			},
-		},
-		{ // error invalid 4-char currency code
-			expectErr: repo.ErrCurrencyCodeTestSymbolInvalid,
-			input: repo.CurrencyDefinition{
-				Code:         repo.CurrencyCode("XBTC"),
-				Divisibility: 8,
-				CurrencyType: repo.Crypto,
-			},
-		},
-		{ // error invalid currency code length
-			expectErr: repo.ErrCurrencyCodeLengthInvalid,
-			input: repo.CurrencyDefinition{
-				Code:         repo.CurrencyCode("BT"),
 				Divisibility: 8,
 				CurrencyType: repo.Crypto,
 			},
@@ -218,9 +202,6 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 	// invalidOne is invalid because the divisibility is 0
 	invalidOne := factory.NewCurrencyDefinition("LTC")
 	invalidOne.Divisibility = 0
-	// invalidTwo is invalid because the code is too short
-	invalidTwo := factory.NewCurrencyDefinition("BCH")
-	invalidTwo.Code = "X"
 	// colliding is invalid because the code collides with BTC above
 	colliding := factory.NewCurrencyDefinition("BTC")
 
@@ -228,21 +209,15 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 	if errOne == nil {
 		t.Fatalf("expected invalidOne to be invalid, but was not")
 	}
-	errTwo := invalidTwo.Valid()
-	if errOne == nil {
-		t.Fatalf("expected invalidTwo to be invalid, but was not")
-	}
 
 	expectedErrs := map[string]error{
 		invalidOne.CurrencyCode().String(): errOne,
-		invalidTwo.CurrencyCode().String(): errTwo,
 		"DIF":                              repo.ErrDictionaryIndexMismatchedCode,
 	}
 	_, err := repo.NewCurrencyDictionary(map[string]repo.CurrencyDefinition{
 		valid.CurrencyCode().String():      valid,
 		colliding.CurrencyCode().String():  colliding,
 		invalidOne.CurrencyCode().String(): invalidOne,
-		invalidTwo.CurrencyCode().String(): invalidTwo,
 		"DIF":                              valid,
 	})
 

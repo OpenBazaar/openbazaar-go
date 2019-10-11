@@ -2118,15 +2118,9 @@ func (l *Listing) validateCryptocurrencyListing() error {
 			cryptoDivisibility = uint(math.Log10(float64(listing.Metadata.CryptoDivisibility)))
 		}
 	}
-	if cryptoDivisibility == 0 {
-		return ErrListingCryptoDivisibilityInvalid
-	}
-	localDef, err := AllCurrencies().Lookup(listing.Metadata.CryptoCurrencyCode)
-	if err != nil {
-		return ErrCurrencyDefinitionUndefined
-	}
-	if cryptoDivisibility != localDef.Divisibility {
-		return ErrListingCryptoDivisibilityInvalid
+	def := NewUnknownCryptoDefinition(listing.Metadata.CryptoCurrencyCode, cryptoDivisibility)
+	if err := def.Valid(); err != nil {
+		return fmt.Errorf("cryptocurrency metadata invalid: %s", err)
 	}
 	return nil
 }
