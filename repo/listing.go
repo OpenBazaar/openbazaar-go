@@ -239,7 +239,7 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.BigQuantity = fmt.Sprintf("%d", count)
+				s.BigQuantity = count.String()
 				break
 			}
 		}
