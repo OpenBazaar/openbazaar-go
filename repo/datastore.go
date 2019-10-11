@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"math/big"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"time"
@@ -162,16 +163,16 @@ type InventoryStore interface {
 
 	/* Put an inventory count for a listing
 	   Override the existing count if it exists */
-	Put(slug string, variantIndex int, count int64) error
+	Put(slug string, variantIndex int, count *big.Int) error
 
 	// Return the count for a specific listing including variants
-	GetSpecific(slug string, variantIndex int) (int64, error)
+	GetSpecific(slug string, variantIndex int) (*big.Int, error)
 
 	// Get the count for all variants of a given listing
-	Get(slug string) (map[int]int64, error)
+	Get(slug string) (map[int]*big.Int, error)
 
 	// Fetch all inventory maps for each slug
-	GetAll() (map[string]map[int]int64, error)
+	GetAll() (map[string]map[int]*big.Int, error)
 
 	// Delete a listing and related count
 	Delete(slug string, variant int) error

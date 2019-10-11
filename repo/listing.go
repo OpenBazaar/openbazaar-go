@@ -239,7 +239,7 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.BigQuantity = fmt.Sprintf("%d", count)
+				s.BigQuantity = count.String()
 				break
 			}
 		}
@@ -1643,14 +1643,25 @@ func (l *Listing) ValidateSkus() error {
 }
 
 // GetInventory - returns a map of skus and quantityies
-func (l *Listing) GetInventory() (map[int]int64, error) {
+func (l *Listing) GetInventory() (map[int]*big.Int, error) {
 	listing, err := l.GetProtoListing()
 	if err != nil {
 		return nil, err
 	}
-	inventory := make(map[int]int64)
+	inventory := make(map[int]*big.Int)
 	for i, s := range listing.Item.Skus {
-		inventory[i] = s.Quantity
+		var amtStr string
+		switch l.ListingVersion {
+		case 5:
+			amtStr = s.BigQuantity
+		default:
+			amtStr = strconv.Itoa(int(s.Quantity))
+		}
+		amt, ok := new(big.Int).SetString(amtStr, 10)
+		if !ok {
+			return nil, errors.New("error parsing inventory")
+		}
+		inventory[i] = amt
 	}
 	return inventory, nil
 }
@@ -2109,15 +2120,7 @@ func (l *Listing) validateCryptocurrencyListing() error {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
 
-	var cryptoDivisibility uint
-	switch listing.Metadata.Version {
-	case 5:
-		cryptoDivisibility = uint(listing.Metadata.CryptoDivisibility)
-	default:
-		if listing.Metadata.CryptoDivisibility != 0 {
-			cryptoDivisibility = uint(math.Log10(float64(listing.Metadata.CryptoDivisibility)))
-		}
-	}
+	cryptoDivisibility := l.GetCryptoDivisibility()
 	if cryptoDivisibility == 0 {
 		return ErrListingCryptoDivisibilityInvalid
 	}
@@ -2125,7 +2128,7 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	if err != nil {
 		return ErrCurrencyDefinitionUndefined
 	}
-	if cryptoDivisibility != localDef.Divisibility {
+	if uint(cryptoDivisibility) != localDef.Divisibility {
 		return ErrListingCryptoDivisibilityInvalid
 	}
 	return nil
