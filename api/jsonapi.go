@@ -1320,7 +1320,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
 		Variant  int    `json:"variant"`
-		Quantity int64  `json:"quantity"`
+		Quantity string `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var invList []inv
@@ -1330,7 +1330,12 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, in.Quantity)
+		q, ok := new(big.Int).SetString(in.Quantity, 10)
+		if !ok {
+			ErrorResponse(w, http.StatusBadRequest, "error parsing quantity")
+			return
+		}
+		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, q)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
