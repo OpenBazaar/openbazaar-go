@@ -333,7 +333,6 @@ const walletBalanceJSONResponse = `{
     "TBCH": {
         "confirmed": "0",
 				"currency": {
-                        "BlockTime": 600000000000,
                         "code": "TBCH",
 						"currencyType": "crypto",
 						"divisibility": 8,
@@ -345,7 +344,6 @@ const walletBalanceJSONResponse = `{
     "TBTC": {
         "confirmed": "0",
 				"currency": {
-                        "BlockTime": 600000000000,
                         "code": "TBTC",
 						"currencyType": "crypto",
 						"divisibility": 8,
@@ -357,7 +355,6 @@ const walletBalanceJSONResponse = `{
     "TLTC": {
         "confirmed": "0",
 				"currency": {
-                        "BlockTime": 600000000000,
                         "code": "TLTC",
 						"currencyType": "crypto",
 						"divisibility": 8,
@@ -369,7 +366,6 @@ const walletBalanceJSONResponse = `{
     "TZEC": {
         "confirmed": "0",
 				"currency": {
-                        "BlockTime": 600000000000,
                         "code": "TZEC",
 						"currencyType": "crypto",
 						"divisibility": 8,

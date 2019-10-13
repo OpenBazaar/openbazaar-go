@@ -28,7 +28,7 @@ type (
 		// CurrencyType indicates whether the currency is "fiat" or "crypto" currency
 		CurrencyType string `json:"currencyType,omitempty"`
 		// BlockTime is the general/approximate duration for a block to be mined
-		BlockTime time.Duration
+		BlockTime time.Duration `json:"-"`
 	}
 	// CurrencyDictionaryProcessingError represents a list of errors after
 	// processing a CurrencyDictionary
@@ -57,7 +57,7 @@ var (
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
 	ErrDictionaryCurrencyCodeCollision = errors.New("currency code is used by more than one currency")
 
-	NilCurrencyDefinition = CurrencyDefinition{Name: "", Code: NilCurrencyCode, Divisibility: 0, CurrencyType: "", BlockTime: DefaultBlockTime}
+	NilCurrencyDefinition = CurrencyDefinition{Name: "", Code: NilCurrencyCode, Divisibility: 0, CurrencyType: "", BlockTime: 0 * time.Second}
 
 	// holds validated dictionary singleton after initial load
 	validatedMainnetCurrencies *CurrencyDictionary
@@ -68,14 +68,14 @@ var (
 	mainnetCryptoDefinitions = map[string]CurrencyDefinition{
 		"BTC": {Name: "Bitcoin", Code: CurrencyCode("BTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
-		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
 		"ZEC": {Name: "Zcash", Code: CurrencyCode("ZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
 	testnetCryptoDefinitions = map[string]CurrencyDefinition{
 		"TBTC": {Name: "Testnet Bitcoin", Code: CurrencyCode("TBTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"TBCH": {Name: "Testnet Bitcoin Cash", Code: CurrencyCode("TBCH"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
-		"TLTC": {Name: "Testnet Litecoin", Code: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"TLTC": {Name: "Testnet Litecoin", Code: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
 		"TZEC": {Name: "Testnet Zcash", Code: CurrencyCode("TZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"TETH": {Name: "Testnet Ethereum", Code: CurrencyCode("TETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
@@ -394,6 +394,18 @@ func (c CurrencyDefinition) Equal(other CurrencyDefinition) bool {
 	return true
 }
 
+// ConfirmationsPerHour will calculate the no of confirmations in 1 hr
+// this is valid only for a crypto
+func (c CurrencyDefinition) ConfirmationsPerHour() uint32 {
+	if c.CurrencyType != "crypto" {
+		return 1
+	}
+	if c.BlockTime.Seconds() <= 0 {
+		return 1
+	}
+	return uint32((1.0 * 60 * 60) / c.BlockTime.Seconds())
+}
+
 // Lookup returns the CurrencyDefinition out of the loaded dictionary. Lookup normalizes the code
 // before lookup and recommends using CurrencyDefinition.CurrencyCode().String() from the
 // response as a normalized code.
@@ -418,17 +430,4 @@ func (c CurrencyDictionary) AsMap() map[string]CurrencyDefinition {
 		defCopy[i] = d
 	}
 	return defCopy
-}
-
-// ConfirmationsPerHour will calculate the no of confirmations in 1 hr
-// this is valid only for a crypto
-func ConfirmationsPerHour(currency string) uint64 {
-	defn, err := AllCurrencies().Lookup(currency)
-	if err != nil || defn.CurrencyType != "crypto" {
-		return 0
-	}
-	if defn.BlockTime.Seconds() <= 0 {
-		return 0
-	}
-	return uint64((1.0 * 60 * 60) / defn.BlockTime.Seconds())
 }

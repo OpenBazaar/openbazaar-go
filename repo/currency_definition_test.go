@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
@@ -261,5 +262,85 @@ func TestNilCodeCollision(t *testing.T) {
 	subject := repo.NilCurrencyCode
 	if _, err := repo.AllCurrencies().Lookup(subject.String()); err == nil {
 		t.Fatal("expected nil currency lookup to error, but did not")
+	}
+}
+
+func TestCurrencyDefinitionBlockTime(t *testing.T) {
+	dict := repo.AllCurrencies()
+	var examples = []struct {
+		input                        string
+		expectedBlockTime            time.Duration
+		expectedConfirmationsPerHour uint32
+	}{
+		{
+			input:                        "BTC",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "TBTC",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "BCH",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "TBCH",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "LTC",
+			expectedBlockTime:            150 * time.Second,
+			expectedConfirmationsPerHour: 24,
+		},
+		{
+			input:                        "TLTC",
+			expectedBlockTime:            150 * time.Second,
+			expectedConfirmationsPerHour: 24,
+		},
+		{
+			input:                        "ZEC",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "TZEC",
+			expectedBlockTime:            10 * time.Minute,
+			expectedConfirmationsPerHour: 6,
+		},
+		{
+			input:                        "ETH",
+			expectedBlockTime:            10 * time.Second,
+			expectedConfirmationsPerHour: 360,
+		},
+		{
+			input:                        "TETH",
+			expectedBlockTime:            10 * time.Second,
+			expectedConfirmationsPerHour: 360,
+		},
+		{
+			input:                        "USD",
+			expectedBlockTime:            0 * time.Second,
+			expectedConfirmationsPerHour: 1,
+		},
+	}
+
+	for _, e := range examples {
+		defn, err := dict.Lookup(e.input)
+		if err != nil {
+			t.Errorf("lookup should not fail for code : %s with error : %s", e.input, err.Error())
+		}
+		if defn.BlockTime != e.expectedBlockTime {
+			t.Errorf("blocktime validation fail for code : %s, expected : %v , actual : %v",
+				e.input, e.expectedBlockTime, defn.BlockTime)
+		}
+		if defn.ConfirmationsPerHour() != e.expectedConfirmationsPerHour {
+			t.Errorf("confirmations per hour validation fail for code : %s, expected : %v , actual : %v",
+				e.input, e.expectedConfirmationsPerHour, defn.BlockTime)
+		}
 	}
 }

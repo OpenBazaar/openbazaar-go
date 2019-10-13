@@ -161,6 +161,11 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
 		return false
 	}
+	defn, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
+		return false
+	}
 	for _, r := range records {
 		hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
 		if err != nil {
@@ -173,7 +178,7 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 			return false
 		}
 		confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours *
-			uint32(repo.ConfirmationsPerHour(order.Payment.AmountCurrency.Code))
+			defn.ConfirmationsPerHour()
 		if actualConfirmations >= confirmationsForTimeout {
 			return false
 		}
