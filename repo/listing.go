@@ -169,6 +169,11 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 		ld.Slug = slug
 	}
 	retListing, err := NewListingFromProtobuf(ld)
+
+	if retListing.Metadata.Version <= 0 {
+		retListing.Metadata.Version = ListingVersion
+	}
+
 	return *retListing, err
 }
 
@@ -1551,9 +1556,6 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	if err := ValidateListing(l, isTestNet); err != nil {
 		return rsl, err
 	}
-
-	// Set listing version
-	listing.Metadata.Version = ListingVersion
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
