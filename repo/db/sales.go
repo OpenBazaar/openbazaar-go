@@ -337,6 +337,7 @@ func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 	if err != nil {
 		return ret, err
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var orderID, paymentAddr string
@@ -352,7 +353,11 @@ func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
+			order, err := repo.ToV5Order(rc.BuyerOrder, repo.AllCurrencies().Lookup)
+			if err != nil {
+				return ret, err
+			}
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: order.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil
