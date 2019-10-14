@@ -84,7 +84,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
-		err = n.Datastore.Inventory().Put(slug, 0, -1)
+		err = n.Datastore.Inventory().Put(slug, 0, big.NewInt(-1))
 		if err != nil {
 			return err
 		}
@@ -678,7 +678,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.BigQuantity = fmt.Sprintf("%d", count)
+				s.BigQuantity = count.String()
 				break
 			}
 		}

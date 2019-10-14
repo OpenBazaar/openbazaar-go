@@ -289,7 +289,7 @@ const headerValidJSONResponse = `{
 const inventoryUpdateJSON = `[{
 	"slug": "ron_swanson_tshirt",
 	"variant": 0,
-	"quantity": 17
+	"quantity": "17"
 }]`
 
 //
