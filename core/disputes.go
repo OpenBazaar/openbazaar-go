@@ -30,9 +30,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
-// ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
-const ConfirmationsPerHour = 6
-
 // DisputeWg - waitgroup for disputes
 var DisputeWg = new(sync.WaitGroup)
 
@@ -155,12 +152,16 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 }
 
 func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
-	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return false
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
+		return false
+	}
+	defn, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
 		return false
@@ -176,6 +177,8 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 			log.Errorf("Failed GetConfirmations(%s): %s", hash.String(), err.Error())
 			return false
 		}
+		confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours *
+			defn.ConfirmationsPerHour()
 		if actualConfirmations >= confirmationsForTimeout {
 			return false
 		}
