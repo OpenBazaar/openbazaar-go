@@ -451,6 +451,7 @@ var MessageProcessingOrder = []pb.Message_MessageType{
 	pb.Message_MODERATOR_ADD,
 	pb.Message_MODERATOR_REMOVE,
 	pb.Message_OFFLINE_ACK,
+	pb.Message_OFFLINE_RELAY,
 }
 
 // processQueuedMessages loads all the saved messaged from the database for processing. For each message it sorts them into a
