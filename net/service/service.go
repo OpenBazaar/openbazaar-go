@@ -108,12 +108,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		if err := r.ReadMsg(pmes); err != nil {
 			err = s.Reset()
 			if err != nil {
-				log.Error(err)
-			}
-			if err == io.EOF {
-				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
-			} else {
-				log.Errorf("Error when reading message from %s: %s", mPeer.Pretty(), err.Error())
+				if err == io.EOF {
+					log.Debugf("Disconnected from peer %s", mPeer.Pretty())
+				} else {
+					log.Errorf("Error when reading message from %s: %s", mPeer.Pretty(), err.Error())
+				}
 			}
 			return
 		}

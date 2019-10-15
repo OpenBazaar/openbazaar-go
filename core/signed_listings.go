@@ -1,8 +1,8 @@
 package core
 
 import (
-	"fmt"
 	"io/ioutil"
+	"math/big"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -39,11 +39,11 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) err
 	return nil
 }
 
-func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) error {
+func AssignMatchingQuantities(inventory map[int]*big.Int, sl *pb.SignedListing) error {
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.BigQuantity = fmt.Sprintf("%d", count)
+				s.BigQuantity = count.String()
 				break
 			}
 		}

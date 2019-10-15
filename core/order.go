@@ -1471,7 +1471,7 @@ collectListings:
 	type inventory struct {
 		Slug    string
 		Variant int
-		Count   int64
+		Count   *big.Int
 	}
 	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
@@ -1514,7 +1514,7 @@ collectListings:
 		}
 		// Create inventory paths to check later
 		if q := GetOrderQuantity(listingMap[item.ListingHash], item); q.IsInt64() {
-			inv.Count = q.Int64()
+			inv.Count = q
 		} else {
 			// TODO: https://github.com/OpenBazaar/openbazaar-go/issues/1739
 			return errors.New("big inventory quantity not supported")
@@ -1577,7 +1577,7 @@ collectListings:
 			if err != nil {
 				return errors.New("vendor has no inventory for the selected variant")
 			}
-			if amt >= 0 && amt < inv.Count {
+			if amt.Cmp(big.NewInt(0)) >= 0 && amt.Cmp(inv.Count) < 0 {
 				return NewErrOutOfInventory(amt)
 			}
 		}

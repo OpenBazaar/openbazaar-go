@@ -582,6 +582,33 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
 		hash, err = wallet.Transfer(addr.String(), &amount, spendAll)
+		//time.Sleep(60 * time.Second)
+		start := time.Now()
+		flag := false
+		var rcpt *types.Receipt
+		for !flag {
+			rcpt, err = wallet.client.TransactionReceipt(context.Background(), hash)
+			if rcpt != nil {
+				flag = true
+			}
+			if time.Since(start).Seconds() > 180 {
+				flag = true
+			}
+			if err != nil {
+				log.Errorf("error fetching txn rcpt: %v", err)
+			}
+			time.Sleep(5 * time.Second)
+		}
+		if rcpt != nil {
+			// good. so the txn has been processed but we have to account for failed
+			// but valid txn like some contract condition causing revert
+			if rcpt.Status > 0 {
+				// all good to update order state
+
+			} else {
+				err = errors.New("transaction failed")
+			}
+		}
 	} else {
 		// this is a spend which means it has to be linked to an order
 		// specified using the referenceID

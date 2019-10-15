@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"math/big"
 	"path/filepath"
 	"testing"
 
@@ -76,8 +77,8 @@ func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
 func TestOpenBazaarSignedListings_AssignMatchingQuantities(t *testing.T) {
 	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
 
-	inventory := map[int]int64{
-		0: 1000,
+	inventory := map[int]*big.Int{
+		0: big.NewInt(1000),
 	}
 
 	listing, err := core.GetSignedListingFromPath(absPath)

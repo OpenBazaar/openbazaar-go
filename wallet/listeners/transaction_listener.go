@@ -392,22 +392,19 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 		if err != nil {
 			continue
 		}
-		var q int64
 		itemQty := core.GetOrderQuantity(listing, item)
 		if itemQty.Cmp(big.NewInt(0)) <= 0 || !itemQty.IsInt64() {
 			// TODO: https://github.com/OpenBazaar/openbazaar-go/issues/1739
 			log.Errorf("unable to update inventory with invalid quantity")
 			continue
-		} else {
-			q = itemQty.Int64()
 		}
-		newCount := c - q
-		if c < 0 {
-			newCount = -1
-		} else if newCount < 0 {
-			newCount = 0
+		newCount := new(big.Int).Sub(c, itemQty)
+		if c.Cmp(big.NewInt(0)) < 0 {
+			newCount = big.NewInt(-1)
+		} else if newCount.Cmp(big.NewInt(0)) < 0 {
+			newCount = big.NewInt(0)
 		}
-		if (c == 0) || (c > 0 && c-q < 0) {
+		if (c.Cmp(big.NewInt(0)) == 0) || (c.Cmp(big.NewInt(0)) > 0 && new(big.Int).Sub(c, itemQty).Cmp(big.NewInt(0)) < 0) {
 			orderId, err := calcOrderId(contract.BuyerOrder)
 			if err != nil {
 				continue
@@ -419,7 +416,7 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			log.Errorf("failed updating inventory for listing (%s, %d): %s", listing.Slug, variant, err.Error())
 		}
 		inventoryUpdated = true
-		if newCount >= 0 {
+		if newCount.Cmp(big.NewInt(0)) >= 0 {
 			log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, newCount)
 		}
 	}
