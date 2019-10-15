@@ -121,6 +121,10 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		}
 	}
 
+	if l.Metadata.Version <= 0 {
+		l.Metadata.Version = ListingVersion
+	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -169,10 +173,6 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 		ld.Slug = slug
 	}
 	retListing, err := NewListingFromProtobuf(ld)
-
-	if retListing.Metadata.Version <= 0 {
-		retListing.Metadata.Version = ListingVersion
-	}
 
 	return *retListing, err
 }
