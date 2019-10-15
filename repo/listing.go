@@ -121,6 +121,10 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		}
 	}
 
+	if l.Metadata.Version <= 0 {
+		l.Metadata.Version = ListingVersion
+	}
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -169,6 +173,7 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 		ld.Slug = slug
 	}
 	retListing, err := NewListingFromProtobuf(ld)
+
 	return *retListing, err
 }
 
@@ -1551,9 +1556,6 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	if err := ValidateListing(l, isTestNet); err != nil {
 		return rsl, err
 	}
-
-	// Set listing version
-	listing.Metadata.Version = ListingVersion
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
