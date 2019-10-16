@@ -121,7 +121,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		}
 	}
 
-	if l.Metadata.Version <= 0 {
+	if l.Metadata.Version == 0 {
 		l.Metadata.Version = ListingVersion
 	}
 
