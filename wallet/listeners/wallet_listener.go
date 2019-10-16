@@ -23,7 +23,6 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 		metadata, err := l.db.TxMetadata().Get(cb.Txid)
 		if err != nil {
 			log.Debugf("tx metadata not found for id (%s): %s", cb.Txid, err.Error())
-			return
 		}
 
 		status := "UNCONFIRMED"
