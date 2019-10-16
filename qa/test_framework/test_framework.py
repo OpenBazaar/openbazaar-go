@@ -45,7 +45,7 @@ class OpenBazaarTestFramework(object):
     def setup_nodes(self):
         for i in range(self.num_nodes):
             self.configure_node(i)
-            self.start_node(self.nodes[i])
+            self.start_node(i, self.nodes[i])
 
     def setup_network(self):
         if self.bitcoind is not None and self.cointype == "BTC":
@@ -64,7 +64,11 @@ class OpenBazaarTestFramework(object):
 
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
-        args = [self.binary, "init", "-d", dir_path, "--testnet"]
+        args = []
+        if self.binaries is not None:
+            args = [self.binaries[n], "init", "-d", dir_path, "--testnet"]
+        else:
+            args = [self.binary, "init", "-d", dir_path, "--testnet"]
         if n < 3:
             args.extend(["-m", BOOTSTAP_MNEMONICS[n]])
         process = subprocess.Popen(args, stdout=PIPE)
@@ -190,13 +194,17 @@ class OpenBazaarTestFramework(object):
                     description="OpenBazaar Test Framework",
                     usage="python3 test_framework.py [options]"
         )
-        parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
+        parser.add_argument('-b', '--binary', help="the openbazaar-go binary")
+        parser.add_argument('-i', '--binaries', nargs='*', help="a list of binaries to use. Indexes map to the index of each node in the test.")
+        parser.add_argument('-v', '--versions', nargs='*', help="a list of versions mapped to the node index")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
         parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
         parser.add_argument('-T', '--tor', help="use tor in QA testing", action='store_true')
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
+        self.binaries = args.binaries
+        self.versions = args.versions
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
         self.cointype = args.cointype
