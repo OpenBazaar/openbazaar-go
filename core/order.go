@@ -964,7 +964,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			} else if l.Item.PriceModifier != 0 {
 				priceModifier = float64(l.Item.PriceModifier)
 			}
-			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, GetOrderQuantity(l, item))
+			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Metadata.CryptoCurrencyCode, GetOrderQuantity(l, item))
 			if err != nil {
 				return big.NewInt(0), err
 			}
