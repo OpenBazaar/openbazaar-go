@@ -22,7 +22,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 				Format:             pb.Listing_Metadata_FIXED_PRICE,
 				AcceptedCurrencies: []string{"TBTC"},
-				Version:            2,
+				Version:            5,
 			},
 			Item: &pb.Listing_Item{
 				BigPrice:      "100000",
@@ -57,7 +57,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		Items: []*pb.Order_Item{
 			{
 				ListingHash: listingID.String(),
-				Quantity:    1,
+				BigQuantity: "1",
 				ShippingOption: &pb.Order_Item_ShippingOption{
 					Name:    "UPS",
 					Service: "Standard shipping",
@@ -83,7 +83,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 
 	// Test higher quantity
-	contract.BuyerOrder.Items[0].Quantity = 2
+	contract.BuyerOrder.Items[0].BigQuantity = "2"
 	total, err = node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
@@ -93,7 +93,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 
 	// Test with options
-	contract.BuyerOrder.Items[0].Quantity = 1
+	contract.BuyerOrder.Items[0].BigQuantity = "1"
 	contract.VendorListings[0].Item.Options = []*pb.Listing_Item_Option{
 		{
 			Name: "color",
