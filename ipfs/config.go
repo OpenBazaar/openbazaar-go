@@ -67,9 +67,7 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := NewAPIRouter(routerCacheURI, dhtRouting.Validator)
-	cachingRouter := NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
+	return dhtRouting, nil
 }
 
 func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
@@ -99,7 +97,5 @@ func constructTestnetRouting(ctx context.Context, host p2phost.Host, dstore ds.B
 	if err != nil {
 		return nil, err
 	}
-	apiRouter := NewAPIRouter(routerCacheURI, dhtRouting.Validator)
-	cachingRouter := NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
+	return dhtRouting, nil
 }
