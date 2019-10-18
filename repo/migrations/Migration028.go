@@ -22,6 +22,12 @@ var (
 	AM02_temp_purchases        = "ALTER TABLE purchases RENAME TO temp_purchases;"
 	AM02_insert_purchases      = "INSERT INTO purchases SELECT orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt, disputedAt, coinType, paymentCoin FROM temp_purchases;"
 	AM02_drop_temp_purchases   = "DROP TABLE temp_purchases;"
+
+	AM02_up_create_inventory   = "create table inventory (invID text primary key not null, slug text, variantIndex integer, count text);"
+	AM02_down_create_inventory = "create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);"
+	AM02_temp_inventory        = "ALTER TABLE inventory RENAME TO temp_inventory;"
+	AM02_insert_inventory      = "INSERT INTO inventory SELECT invID, slug, variantIndex, count FROM temp_inventory;"
+	AM02_drop_temp_inventory   = "DROP TABLE temp_inventory;"
 )
 
 type Migration028 struct {
@@ -60,6 +66,10 @@ func (AM02) Up(repoPath string, dbPassword string, testnet bool) error {
 		AM02_up_create_purchases,
 		AM02_insert_purchases,
 		AM02_drop_temp_purchases,
+		AM02_temp_inventory,
+		AM02_up_create_inventory,
+		AM02_insert_inventory,
+		AM02_drop_temp_inventory,
 	}, " ")
 
 	tx, err := db.Begin()
@@ -113,6 +123,10 @@ func (AM02) Down(repoPath string, dbPassword string, testnet bool) error {
 		AM02_down_create_purchases,
 		AM02_insert_purchases,
 		AM02_drop_temp_purchases,
+		AM02_temp_inventory,
+		AM02_down_create_inventory,
+		AM02_insert_inventory,
+		AM02_drop_temp_inventory,
 	}, " ")
 
 	tx, err := db.Begin()
