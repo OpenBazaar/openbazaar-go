@@ -38,7 +38,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
@@ -307,19 +306,12 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 }
 
 func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	dhtRouting, err := dht.New(
+	return dht.New(
 		ctx, host,
 		dhtopts.Client(true),
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := ipfs.NewAPIRouter(schema.IPFSCachingRouterDefaultURI, dhtRouting.Validator)
-	apiRouter.Start(nil)
-	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
 }
 
 // startIPFSNode start the node
