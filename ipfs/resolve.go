@@ -2,6 +2,8 @@ package ipfs
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
@@ -99,28 +101,39 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 // under /ipns/persistentcache/<peerID> which returns only the value (the path)
 // inside the protobuf record.
 func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
-	ival, err := datastore.Get(nativeIPNSRecordCacheKey(p))
-	if err != nil {
-		pth, err := datastore.Get(persistentCacheKey(p))
-		if err != nil {
-			if err == ds.ErrNotFound {
-				return "", namesys.ErrResolveFailed
-			}
-			return "", err
-		}
-		return ipath.ParsePath(string(pth))
+	rec, err := getCachedIPNSRecord(datastore, p)
+	if err == nil {
+		return ipath.ParsePath(string(rec.Value))
 	}
 
-	rec := new(ipnspb.IpnsEntry)
-	err = proto.Unmarshal(ival, rec)
+	pth, err := datastore.Get(persistentCacheKey(p))
 	if err != nil {
-		return "", err
+		if err == ds.ErrNotFound {
+			return "", namesys.ErrResolveFailed
+		}
+		return "", fmt.Errorf("getting cached ipns path: %s", err.Error())
 	}
-	return ipath.ParsePath(string(rec.Value))
+	return ipath.ParsePath(string(pth))
 }
 
 func putToDatastoreCache(datastore ds.Datastore, p peer.ID, pth ipath.Path) error {
 	return datastore.Put(persistentCacheKey(p), []byte(pth.String()))
+}
+
+// getCachedIPNSRecord retrieves the full IPNSEntry from the provided datastore if present
+func getCachedIPNSRecord(store ds.Datastore, id peer.ID) (*ipnspb.IpnsEntry, error) {
+	ival, err := store.Get(nativeIPNSRecordCacheKey(id))
+	if err != nil {
+		return nil, fmt.Errorf("getting cached ipns record: %s", err.Error())
+	}
+	rec := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(ival, rec)
+	if err != nil {
+		log.Errorf("failed parsing cached record for peer (%s): %s", id.Pretty(), err.Error())
+		log.Debug(debug.Stack())
+		return nil, fmt.Errorf("parsing cached ipns record: %s", err.Error())
+	}
+	return rec, nil
 }
 
 // PutCachedPubkey persists the pubkey using the appropriate key prefix
