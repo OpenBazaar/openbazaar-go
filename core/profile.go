@@ -24,9 +24,6 @@ import (
 	"github.com/imdario/mergo"
 )
 
-// KeyCachePrefix - cache prefix for public key
-const KeyCachePrefix = "/pubkey/"
-
 // ErrorProfileNotFound - profile not found error
 var ErrorProfileNotFound = errors.New("profile not found")
 

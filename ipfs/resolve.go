@@ -2,24 +2,23 @@ package ipfs
 
 import (
 	"context"
-	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
-	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
-
 	"time"
 
 	ipath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
+	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
+	nameopts "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core/options/namesys"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	"gx/ipfs/QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6/base32"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-
-	nameopts "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core/options/namesys"
 )
 
 const (
 	persistentCacheDbPrefix = "/ipns/persistentcache/"
+	pubkeyCacheDbPrefix     = "/pubkey/"
 )
 
 // Resolve an IPNS record. This is a multi-step process.
@@ -94,14 +93,14 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 }
 
 // getFromDatastore looks in two places in the database for a record. First is
-// under the /ipfs/<peerID> key which is sometimes used by the DHT. The value
+// under the /ipns/<peerID> key which is sometimes used by the DHT. The value
 // returned by this location is a serialized protobuf record. The second is
-// under /ipfs/persistentcache/<peerID> which returns only the value (the path)
+// under /ipns/persistentcache/<peerID> which returns only the value (the path)
 // inside the protobuf record.
 func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
-	ival, err := datastore.Get(namesys.IpnsDsKey(p))
+	ival, err := datastore.Get(ipnsRecordCacheKey(p))
 	if err != nil {
-		pth, err := datastore.Get(ipnsCacheDsKey(p))
+		pth, err := datastore.Get(persistentCacheKey(p))
 		if err != nil {
 			if err == ds.ErrNotFound {
 				return "", namesys.ErrResolveFailed
@@ -120,9 +119,29 @@ func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
 }
 
 func putToDatastoreCache(datastore ds.Datastore, p peer.ID, pth ipath.Path) error {
-	return datastore.Put(ipnsCacheDsKey(p), []byte(pth.String()))
+	return datastore.Put(persistentCacheKey(p), []byte(pth.String()))
 }
 
-func ipnsCacheDsKey(id peer.ID) ds.Key {
+// PutCachedPubkey persists the pubkey using the appropriate key prefix
+// from the provided datastore
+func PutCachedPubkey(store ds.Datastore, peerID string, pubkey []byte) error {
+	return store.Put(pubkeyCacheKey(peerID), pubkey)
+}
+
+// GetCachedPubkey retrieves the pubkey using the appropriate key prefix
+// from the provided Datastore
+func GetCachedPubkey(store ds.Datastore, peerID string) ([]byte, error) {
+	return store.Get(pubkeyCacheKey(peerID))
+}
+
+func pubkeyCacheKey(id string) ds.Key {
+	return ds.NewKey(pubkeyCacheDbPrefix + id)
+}
+
+func persistentCacheKey(id peer.ID) ds.Key {
 	return ds.NewKey(persistentCacheDbPrefix + base32.RawStdEncoding.EncodeToString([]byte(id)))
+}
+
+func ipnsRecordCacheKey(id peer.ID) ds.Key {
+	return namesys.IpnsDsKey(id)
 }

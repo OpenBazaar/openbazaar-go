@@ -24,7 +24,6 @@ import (
 	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 	files "gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
 	iface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
@@ -3778,6 +3777,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
+	ipfsStore := i.node.IpfsNode.Repo.Datastore()
 	_, peerID := path.Split(r.URL.Path)
 
 	pid, err := peer.IDB58Decode(peerID)
@@ -3786,7 +3786,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	val, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(pid))
+	val, err := ipfsStore.Get(namesys.IpnsDsKey(pid))
 	if err != nil { // No record in datastore
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -3795,7 +3795,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	var keyBytes []byte
 	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
 	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
-		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(datastore.NewKey(core.KeyCachePrefix + peerID))
+		keyval, err := ipfs.GetCachedPubkey(ipfsStore, peerID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
