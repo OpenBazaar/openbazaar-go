@@ -12,10 +12,11 @@ import (
 
 func TestCleanIPNSRecordsMigration(t *testing.T) {
 	var (
-		basePath  = schema.GenerateTempPath()
-		ipnsKey   = "/ipns/shoulddelete"
-		otherKey  = "/ipfs/shouldNOTdelete"
-		migration = cleanIPNSRecordsFromDatastore{}
+		basePath             = schema.GenerateTempPath()
+		ipnsKey              = "/ipns/shoulddelete"
+		ipnsFalsePositiveKey = "/ipns/persistentcache/shouldNOTdelete"
+		otherKey             = "/ipfs/shouldNOTdelete"
+		migration            = cleanIPNSRecordsFromDatastore{}
 
 		testRepoPath, err = schema.OpenbazaarPathTransform(basePath, true)
 	)
@@ -46,6 +47,10 @@ func TestCleanIPNSRecordsMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal("unable to put ipns record")
 	}
+	err = r.Datastore().Put(ds.NewKey(ipnsFalsePositiveKey), []byte("randomdata"))
+	if err != nil {
+		t.Fatal("unable to put other record")
+	}
 	err = r.Datastore().Put(ds.NewKey(otherKey), []byte("randomdata"))
 	if err != nil {
 		t.Fatal("unable to put other record")
@@ -59,6 +64,13 @@ func TestCleanIPNSRecordsMigration(t *testing.T) {
 	// validate state
 	if _, err := r.Datastore().Get(ds.NewKey(ipnsKey)); err != ds.ErrNotFound {
 		t.Errorf("expected the IPNS record to be removed, but was not")
+	}
+	if val, err := r.Datastore().Get(ds.NewKey(ipnsFalsePositiveKey)); err != nil {
+		t.Errorf("expected the false-positive record to be present, but was not")
+	} else {
+		if !bytes.Equal([]byte("randomdata"), val) {
+			t.Errorf("expected the false-positive record data to be intact, but was not")
+		}
 	}
 	if val, err := r.Datastore().Get(ds.NewKey(otherKey)); err != nil {
 		t.Errorf("expected the other record to be present, but was not")

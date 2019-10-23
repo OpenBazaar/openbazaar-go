@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
@@ -49,6 +50,9 @@ func (cleanIPNSRecordsFromDatastore) Up(repoPath, databasePassword string, testn
 
 	log.Debugf("found %d IPNS records to cull...", len(results))
 	for _, rawResult := range results {
+		if strings.HasPrefix(rawResult.Key, "/ipns/persistentcache") {
+			continue
+		}
 		rec := new(ipnspb.IpnsEntry)
 		if err = proto.Unmarshal(rawResult.Value, rec); err != nil {
 			log.Warningf("failed unmarshaling record (%s): %s", rawResult.Key, err.Error())
