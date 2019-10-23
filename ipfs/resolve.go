@@ -77,7 +77,7 @@ func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint) (i
 
 	// TODO [cp]: we should load the record count from our config and set it here. We'll need a
 	// migration for this.
-	pth, err := n.Namesys.Resolve(cctx, string(obIPNSCacheKey(p.Pretty())), nameopts.DhtRecordCount(quorum))
+	pth, err := n.Namesys.Resolve(cctx, obIPNSCacheKey(p.Pretty()), nameopts.DhtRecordCount(quorum))
 	if err != nil {
 		return pth, err
 	}
@@ -101,7 +101,7 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 // under /ipns/persistentcache/<peerID> which returns only the value (the path)
 // inside the protobuf record.
 func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
-	rec, err := getCachedIPNSRecord(datastore, p)
+	rec, err := GetCachedIPNSRecord(datastore, p)
 	if err == nil {
 		return ipath.ParsePath(string(rec.Value))
 	}
@@ -120,8 +120,8 @@ func putToDatastoreCache(datastore ds.Datastore, p peer.ID, pth ipath.Path) erro
 	return datastore.Put(persistentCacheKey(p), []byte(pth.String()))
 }
 
-// getCachedIPNSRecord retrieves the full IPNSEntry from the provided datastore if present
-func getCachedIPNSRecord(store ds.Datastore, id peer.ID) (*ipnspb.IpnsEntry, error) {
+// GetCachedIPNSRecord retrieves the full IPNSEntry from the provided datastore if present
+func GetCachedIPNSRecord(store ds.Datastore, id peer.ID) (*ipnspb.IpnsEntry, error) {
 	ival, err := store.Get(nativeIPNSRecordCacheKey(id))
 	if err != nil {
 		return nil, fmt.Errorf("getting cached ipns record: %s", err.Error())
@@ -134,6 +134,11 @@ func getCachedIPNSRecord(store ds.Datastore, id peer.ID) (*ipnspb.IpnsEntry, err
 		return nil, fmt.Errorf("parsing cached ipns record: %s", err.Error())
 	}
 	return rec, nil
+}
+
+// DeleteCachedIPNSRecord removes the cached record associated with the provided peer.ID
+func DeleteCachedIPNSRecord(store ds.Datastore, id peer.ID) error {
+	return store.Delete(nativeIPNSRecordCacheKey(id))
 }
 
 // PutCachedPubkey persists the pubkey using the appropriate key prefix

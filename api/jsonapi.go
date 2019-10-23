@@ -29,6 +29,7 @@ import (
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
+	ggproto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -44,7 +45,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
@@ -3786,7 +3786,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	val, err := ipfsStore.Get(namesys.IpnsDsKey(pid))
+	peerIPNSRecord, err := ipfs.GetCachedIPNSRecord(ipfsStore, pid)
 	if err != nil { // No record in datastore
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -3813,8 +3813,13 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		Pubkey string `json:"pubkey"`
 		Record string `json:"record"`
 	}
+	peerIPNSBytes, err := ggproto.Marshal(peerIPNSRecord)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling IPNS record: %s", err.Error()))
+		return
+	}
 
-	ret := KeyAndRecord{hex.EncodeToString(keyBytes), string(val)}
+	ret := KeyAndRecord{hex.EncodeToString(keyBytes), string(peerIPNSBytes)}
 	retBytes, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3839,9 +3844,14 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	var response = respType{PeerID: peerID}
 
 	if i.node.IpfsNode.Identity.Pretty() == peerID {
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
+		rec, err := ipfs.GetCachedIPNSRecord(i.node.IpfsNode.Repo.Datastore(), i.node.IpfsNode.Identity)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self: %s", err))
+			return
+		}
+		ipnsBytes, err := proto.Marshal(rec)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling self: %s", err))
 			return
 		}
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)

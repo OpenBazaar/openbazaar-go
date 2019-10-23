@@ -16,12 +16,7 @@ import (
 	"time"
 )
 
-const (
-	globalIPNSTopic    = "IPNS"
-	globalBlockTopic   = "BLOCK"
-	globalCIDTopic     = "CID"
-	messageTopicPrefix = "/offlinemessage/"
-)
+const messageTopicPrefix = "/offlinemessage/"
 
 type Pubsub struct {
 	Subscriber *PubsubSubscriber
