@@ -19,6 +19,7 @@ import (
 const (
 	persistentCacheDbPrefix = "/ipns/persistentcache/"
 	pubkeyCacheDbPrefix     = "/pubkey/"
+	ipnsCacheDbPrefix       = "/ipns/"
 )
 
 // Resolve an IPNS record. This is a multi-step process.
@@ -74,7 +75,7 @@ func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint) (i
 
 	// TODO [cp]: we should load the record count from our config and set it here. We'll need a
 	// migration for this.
-	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty(), nameopts.DhtRecordCount(quorum))
+	pth, err := n.Namesys.Resolve(cctx, string(obIPNSCacheKey(p.Pretty())), nameopts.DhtRecordCount(quorum))
 	if err != nil {
 		return pth, err
 	}
@@ -85,7 +86,7 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 	cctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty()+":"+altRoot)
+	pth, err := n.Namesys.Resolve(cctx, obIPNSCacheKey(p.Pretty()+":"+altRoot))
 	if err != nil {
 		return "", err
 	}
@@ -98,7 +99,7 @@ func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Du
 // under /ipns/persistentcache/<peerID> which returns only the value (the path)
 // inside the protobuf record.
 func getFromDatastore(datastore ds.Datastore, p peer.ID) (ipath.Path, error) {
-	ival, err := datastore.Get(ipnsRecordCacheKey(p))
+	ival, err := datastore.Get(nativeIPNSRecordCacheKey(p))
 	if err != nil {
 		pth, err := datastore.Get(persistentCacheKey(p))
 		if err != nil {
@@ -142,6 +143,12 @@ func persistentCacheKey(id peer.ID) ds.Key {
 	return ds.NewKey(persistentCacheDbPrefix + base32.RawStdEncoding.EncodeToString([]byte(id)))
 }
 
-func ipnsRecordCacheKey(id peer.ID) ds.Key {
+// nativeIPNSRecordCacheKey applies native IPFS key: "/ipns/" + encoded(id)
+func nativeIPNSRecordCacheKey(id peer.ID) ds.Key {
 	return namesys.IpnsDsKey(id)
+}
+
+// obIPNSCacheKey applies custom IPNS prefix key: "/ipns/" + id
+func obIPNSCacheKey(id string) string {
+	return ipnsCacheDbPrefix + id
 }
