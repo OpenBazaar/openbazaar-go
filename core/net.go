@@ -270,7 +270,7 @@ func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Mes
 		return fmt.Errorf("invalid order message type (%d)", int(msgType))
 	}
 
-	msg, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
+	msg, _, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
 	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
 		return fmt.Errorf("unable to find message for order ID (%s) and message type (%s)", orderID, msgType.String())
 	}
@@ -318,7 +318,7 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
-			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m}, nil, 0)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER), err)
 		}
@@ -358,7 +358,7 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
-			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m}, nil, 0)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_CONFIRMATION), err)
 		}
@@ -387,7 +387,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
-		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m})
+		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m}, nil, 0)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_ORDER_CANCEL), err)
 	}
@@ -420,7 +420,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
-		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m})
+		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m}, nil, 0)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT), err)
 	}
@@ -463,7 +463,7 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
-			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m}, nil, 0)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_FULFILLMENT), err)
 		}
@@ -488,7 +488,7 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
-			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m}, nil, 0)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
 		}

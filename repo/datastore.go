@@ -439,8 +439,11 @@ type MessageStore interface {
 	Queryable
 
 	// Save a new message
-	Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg Message) error
+	Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg Message, err error, receivedAt int) error
 
 	// GetByOrderIDType returns the message for specified order and type
-	GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*Message, string, error)
+	GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*Message, error, string, error)
+
+	// GetAllErrored returns the all messages with error
+	GetAllErrored() ([]OrderMessage, error)
 }

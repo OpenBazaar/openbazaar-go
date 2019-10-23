@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -32,12 +33,14 @@ func buildNewMessageStore() (repo.MessageStore, func(), error) {
 }
 
 func TestMessageDB_Put(t *testing.T) {
+	SampleErr := errors.New("sample error")
 	var (
 		messagesdb, teardown, err = buildNewMessageStore()
 		orderID                   = "orderID1"
 		mType                     = pb.Message_ORDER
 		payload                   = "sample message"
 		peerID                    = "jack"
+		recErr                    = SampleErr
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -51,12 +54,12 @@ func TestMessageDB_Put(t *testing.T) {
 		},
 	}
 
-	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg)
+	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg, recErr, 0)
 	if err != nil {
 		t.Error(err)
 	}
 
-	retMsg, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
+	retMsg, rErr, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
 	if err != nil || retMsg == nil {
 		t.Error(err)
 	}
@@ -68,4 +71,6 @@ func TestMessageDB_Put(t *testing.T) {
 	if peer != peerID {
 		t.Error("incorrect peerID")
 	}
+
+	fmt.Println("r err   : ", rErr)
 }

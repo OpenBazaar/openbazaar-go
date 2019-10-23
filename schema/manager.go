@@ -271,6 +271,7 @@ func (m *openbazaarSchemaManager) ResetForJSONApiTest() error {
 // the database schema. It assumes the target is an empty SQLite3 database which
 // supports encryption via the `PRAGMA key` statement
 func InitializeDatabaseSQL(encryptionPassword string) string {
+	fmt.Println(")))))))))))))))(((((((((((((((((((((((((((((((((((((")
 	initializeStatement := []string{
 		PragmaKey(encryptionPassword),
 		PragmaUserVersionSQL,

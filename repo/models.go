@@ -125,3 +125,12 @@ type UnfundedOrder struct {
 	PaymentCoin    string
 	PaymentAddress string
 }
+
+type OrderMessage struct {
+	MessageID   string `json:"messageID"`
+	OrderID     string `json:"orderID"`
+	MessageType int32  `json:"message_type"`
+	Message     []byte `json:"message"`
+	MsgErr      error  `json:"error"`
+	PeerID      string `json:"peerID"`
+}

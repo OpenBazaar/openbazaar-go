@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -21,7 +22,7 @@ func NewMessageStore(db *sql.DB, lock *sync.Mutex) repo.MessageStore {
 }
 
 // Put will insert a record into the messages
-func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message) error {
+func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message, rErr error, receivedAt int) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
@@ -29,7 +30,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, created_at) values(?,?,?,?,?,?)`
+	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, error, received_at, created_at) values(?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -47,6 +48,8 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		int(mType),
 		msg0,
 		peerID,
+		rErr.Error(),
+		receivedAt,
 		int(time.Now().Unix()),
 	)
 	if err != nil {
@@ -61,21 +64,22 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 }
 
 // GetByOrderIDType returns the message for the specified order and message type
-func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, string, error) {
+func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, error, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
 		msg0   []byte
 		peerID string
+		recErr error
 	)
 
-	stmt, err := o.db.Prepare("select message, peerID from messages where orderID=? and message_type=?")
+	stmt, err := o.db.Prepare("select message, peerID, error from messages where orderID=? and message_type=?")
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID)
+	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID, &recErr)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	msg := new(repo.Message)
@@ -83,9 +87,46 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 	if len(msg0) > 0 {
 		err = msg.UnmarshalJSON(msg0)
 		if err != nil {
-			return nil, "", err
+			return nil, nil, "", err
 		}
 	}
 
-	return msg, peerID, nil
+	return msg, recErr, peerID, nil
+}
+
+func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
+	q := query{
+		table:   "messages",
+		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "error"},
+		id:      "messageID",
+	}
+	stm, args := filterQuery(q)
+	rows, err := o.db.Query(stm, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ret []repo.OrderMessage
+	for rows.Next() {
+		var messageID, orderID, peerID, rErr string
+		var mType pb.Message_MessageType
+		var message []byte
+		if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr); err != nil {
+			return ret, err
+		}
+		msg := repo.OrderMessage{
+			MessageID:   messageID,
+			OrderID:     orderID,
+			MessageType: int32(mType),
+			MsgErr:      errors.New(rErr),
+			PeerID:      peerID,
+			Message:     message,
+		}
+
+		ret = append(ret, msg)
+	}
+	return ret, nil
 }
