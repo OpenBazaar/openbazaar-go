@@ -159,6 +159,9 @@ type OpenBazaarNode struct {
 	// Manage blocked peers
 	BanManager *net.BanManager
 
+	// Web Relay nodes
+	WebRelayManager *net.WebRelayManager
+
 	// Allow other nodes to push data to this node for storage
 	AcceptStoreRequests bool
 
