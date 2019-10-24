@@ -179,12 +179,17 @@ func addConfigExtensions(repoRoot string) error {
 			APIRouter:     schema.IPFSCachingRouterDefaultURI,
 		}
 
+		wr = schema.WebRelayServers
+
 		t = schema.TorConfig{}
 	)
 	if err := r.SetConfigKey("Wallets", schema.DefaultWalletsConfig()); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("DataSharing", ds); err != nil {
+		return err
+	}
+	if err := r.SetConfigKey("WebRelays", wr); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("Bootstrap-testnet", schema.BootstrapAddressesTestnet); err != nil {
