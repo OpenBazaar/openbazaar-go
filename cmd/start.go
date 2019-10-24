@@ -237,6 +237,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan data sharing config:", err)
 		return err
 	}
+	webRelays, err := schema.GetWebRelays(configFile)
+	if err != nil {
+		log.Error("scan web relays config:", err)
+		return err
+	}
 	dropboxToken, err := schema.GetDropboxApiToken(configFile)
 	if err != nil {
 		log.Error("scan dropbox api token:", err)
@@ -578,10 +583,12 @@ func (x *Start) Execute(args []string) error {
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
-	var rootHash string
-	if cachedIPNSRecord != nil {
-		rootHash = string(cachedIPNSRecord.Value)
-	}
+    var rootHash string
+    if cachedIPNSRecord != nil {
+        rootHash = string(cachedIPNSRecord.Value)
+    }
+
+	wm := obnet.NewWebRelayManager(webRelays, identity.PeerID)
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
@@ -595,6 +602,7 @@ func (x *Start) Execute(args []string) error {
 		OfflineMessageFailoverTimeout: 30 * time.Second,
 		Pubsub:                        ps,
 		PushNodes:                     pushNodes,
+		WebRelayManager:			   wm,
 		RegressionTestEnable:          x.Regtest,
 		RepoPath:                      repoPath,
 		RootHash:                      rootHash,

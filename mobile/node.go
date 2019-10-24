@@ -151,6 +151,11 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 
+	webRelays, err := apiSchema.GetWebRelays(configFile)
+	if err != nil {
+		return nil, err
+	}
+
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -275,6 +280,8 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		pushNodes = append(pushNodes, p)
 	}
 
+	wm := obnet.NewWebRelayManager(webRelays, identity.PeerID)
+
 	// OpenBazaar node setup
 	node := &core.OpenBazaarNode{
 		BanManager:                    bm,
@@ -283,6 +290,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Multiwallet:                   mw,
 		OfflineMessageFailoverTimeout: 5 * time.Second,
 		PushNodes:                     pushNodes,
+		WebRelayManager:			   wm,
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
 		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
