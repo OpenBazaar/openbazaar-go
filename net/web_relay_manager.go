@@ -92,7 +92,7 @@ func (wrm *WebRelayManager) authToWebRelay(server string, msg []byte) {
 	socketmessage, _ := json.Marshal(typedmessage)
 
 	// Connect to websocket server
-	fmt.Printf("connecting to %s", server)
+	fmt.Printf("connecting to %s\n", server)
 
 	c, _, err := websocket.DefaultDialer.Dial(server, nil)
 	if err != nil {
