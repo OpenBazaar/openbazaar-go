@@ -415,6 +415,39 @@ func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 	return d, nil
 }
 
+func GetWebRelays(cfgBytes []byte) ([]string, error) {
+	var cfgIface interface{}
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
+	var webRelays []string
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return webRelays, MalformedConfigError
+	}
+
+	wrcfg, ok := cfg["WebRelays"]
+	if !ok {
+		return webRelays, MalformedConfigError
+	}
+	wr, ok := wrcfg.([]interface{})
+	if !ok {
+		return webRelays, MalformedConfigError
+	}
+
+	for _, nd := range wr {
+		ndStr, ok := nd.(string)
+		if !ok {
+			return webRelays, MalformedConfigError
+		}
+		webRelays = append(webRelays, ndStr)
+	}
+	return webRelays, nil
+}
+
 func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
