@@ -26,6 +26,8 @@ import (
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 
+	_ "net/http/pprof"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -51,7 +53,6 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -290,7 +291,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Multiwallet:                   mw,
 		OfflineMessageFailoverTimeout: 5 * time.Second,
 		PushNodes:                     pushNodes,
-		WebRelayManager:			   wm,
+		WebRelayManager:               wm,
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
 		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),

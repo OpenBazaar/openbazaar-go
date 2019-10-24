@@ -583,10 +583,10 @@ func (x *Start) Execute(args []string) error {
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
-    var rootHash string
-    if cachedIPNSRecord != nil {
-        rootHash = string(cachedIPNSRecord.Value)
-    }
+	var rootHash string
+	if cachedIPNSRecord != nil {
+		rootHash = string(cachedIPNSRecord.Value)
+	}
 
 	wm := obnet.NewWebRelayManager(webRelays, identity.PeerID)
 
@@ -602,7 +602,7 @@ func (x *Start) Execute(args []string) error {
 		OfflineMessageFailoverTimeout: 30 * time.Second,
 		Pubsub:                        ps,
 		PushNodes:                     pushNodes,
-		WebRelayManager:			   wm,
+		WebRelayManager:               wm,
 		RegressionTestEnable:          x.Regtest,
 		RepoPath:                      repoPath,
 		RootHash:                      rootHash,
