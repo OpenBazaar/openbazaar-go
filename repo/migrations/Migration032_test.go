@@ -14,6 +14,11 @@ func TestMigration032(t *testing.T) {
 	var (
 		basePath          = schema.GenerateTempPath()
 		testRepoPath, err = schema.OpenbazaarPathTransform(basePath, true)
+
+		testMigration032SchemaStmts = []string{
+			"DROP TABLE IF EXISTS messages;",
+			migrations.MigrationCreateMessagesAM09MessagesCreateSQLDown,
+		}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -35,21 +40,11 @@ func TestMigration032(t *testing.T) {
 		databasePath = appSchema.DatabasePath()
 		schemaPath   = appSchema.DataPathJoin("repover")
 
-		schemaSQL         = "pragma key = 'foobarbaz';"
-		selectMessagesSQL = "select * from messages;"
-		//setupSQL          = strings.Join([]string{
-		//	schemaSQL,
-		//}, " ")
+		insertSQL = "insert into messages(messageID, err, received_at) values(?,?,?)"
 	)
 
 	// create schema version file
 	if err = ioutil.WriteFile(schemaPath, []byte("31"), os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-
-	// execute migration up
-	m := migrations.Migration032{}
-	if err := m.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -58,7 +53,17 @@ func TestMigration032(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if _, err = db.Exec(schemaSQL); err != nil {
+
+	for _, stmt := range testMigration032SchemaStmts {
+		_, err := db.Exec(stmt)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// execute migration up
+	m := migrations.Migration032{}
+	if err := m.Up(testRepoPath, "", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,13 +73,13 @@ func TestMigration032(t *testing.T) {
 	}
 
 	// verify change was applied properly
-	_, err = db.Exec(selectMessagesSQL)
+	_, err = db.Exec(insertSQL, "abc", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// execute migration down
-	if err := m.Down(testRepoPath, "foobarbaz", true); err != nil {
+	if err := m.Down(testRepoPath, "", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -84,9 +89,8 @@ func TestMigration032(t *testing.T) {
 	}
 
 	// verify change was reverted properly
-	_, err = db.Exec(selectMessagesSQL)
+	_, err = db.Exec(insertSQL, "abc", "", 0)
 	if err == nil {
 		t.Fatal(err)
 	}
-
 }
