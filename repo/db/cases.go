@@ -274,6 +274,10 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 					thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 				}
 			}
+
+			if contract.VendorListings[0].Metadata != nil && contract.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+				coinType = ""
+			}
 		}
 		if contract.BuyerOrder != nil {
 			slug = contract.VendorListings[0].Slug

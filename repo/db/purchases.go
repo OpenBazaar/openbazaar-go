@@ -198,6 +198,10 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 			moderated = true
 		}
 
+		if len(rc.VendorListings) > 0 && rc.VendorListings[0].Metadata != nil && rc.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+			coinType = ""
+		}
+
 		ret = append(ret, repo.Purchase{
 			OrderId:         orderID,
 			Slug:            slug,
