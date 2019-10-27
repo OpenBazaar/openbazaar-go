@@ -676,9 +676,9 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 
 	// Build the inventory list
 	for variant, count := range inventory {
-		for i, s := range sl.Listing.Item.Skus {
+		for i := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.BigQuantity = count.String()
+				sl.Listing.Item.Skus[i].BigQuantity = count.String()
 				break
 			}
 		}
