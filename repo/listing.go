@@ -124,6 +124,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 	if l.Metadata.Version == 0 {
 		l.Metadata.Version = ListingVersion
 	}
+	l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
