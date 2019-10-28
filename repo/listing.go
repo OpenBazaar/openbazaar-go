@@ -86,7 +86,7 @@ type shippingOption struct {
 
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
-	Quantity       uint64         `json:"quantity"`
+	Quantity       string         `json:"bigQuantity"`
 	Options        []option       `json:"options"`
 	Shipping       shippingOption `json:"shipping"`
 	Memo           string         `json:"memo"`
