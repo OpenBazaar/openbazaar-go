@@ -68,26 +68,28 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
-	var acceptedCurrencies []string
+	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
 	if err != nil {
 		log.Debug("settings not set, using default preferred currencies")
 	}
-	if settingsData.PreferredCurrencies != nil {
-		for _, ct := range *settingsData.PreferredCurrencies {
-			def, err := n.LookupCurrency(ct)
-			if err != nil {
-				return fmt.Errorf("lookup currency (%s): %s", ct, err)
+	if len(acceptedCurrencies) == 0 {
+		if settingsData.PreferredCurrencies != nil {
+			for _, ct := range *settingsData.PreferredCurrencies {
+				def, err := n.LookupCurrency(ct)
+				if err != nil {
+					return fmt.Errorf("lookup currency (%s): %s", ct, err)
+				}
+				acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 			}
-			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
-		}
-	} else {
-		for ct := range n.Multiwallet {
-			def, err := n.LookupCurrency(ct.CurrencyCode())
-			if err != nil {
-				return fmt.Errorf("lookup currency (%s): %s", ct.CurrencyCode(), err)
+		} else {
+			for ct := range n.Multiwallet {
+				def, err := n.LookupCurrency(ct.CurrencyCode())
+				if err != nil {
+					return fmt.Errorf("lookup currency (%s): %s", ct.CurrencyCode(), err)
+				}
+				acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 			}
-			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 		}
 	}
 
