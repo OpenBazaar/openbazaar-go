@@ -602,11 +602,19 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		// TODO: extract to repo package model
 		switch listing.ProtoListing.Metadata.Version {
 		case 5:
-			i.BigQuantity = strconv.FormatUint(item.Quantity, 10)
+			i.BigQuantity = item.Quantity
 		case 4, 3:
-			i.Quantity64 = item.Quantity
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity64 = q.Uint64()
 		default:
-			i.Quantity = uint32(item.Quantity)
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity = uint32(q.Uint64())
 		}
 
 		i.Memo = item.Memo
@@ -1305,7 +1313,9 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
 	)
 	if cErr != nil {
-		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", currencyCode, cErr)
+		// if the currency is unknown, it is likely a cryptocurrency and will
+		// assume the default divisibility
+		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
 	}
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
