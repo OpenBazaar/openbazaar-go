@@ -35,15 +35,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		return paymentRecords, nil, err
 	}
 
-	// Consolidate any transactions with multiple outputs into a single record
 	for _, r := range records {
-		record, ok := payments[r.Txid]
-		if ok {
-			n, _ := new(big.Int).SetString(record.BigValue, 10)
-			sum := new(big.Int).Add(n, &r.Value)
-			record.BigValue = sum.String()
-			payments[r.Txid] = record
-		} else {
+		_, ok := payments[r.Txid]
+		if !ok {
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
 			tx.BigValue = r.Value.String()
