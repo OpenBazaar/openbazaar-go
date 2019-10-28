@@ -1313,7 +1313,9 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
 	)
 	if cErr != nil {
-		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", currencyCode, cErr)
+		// if the currency is unknown, it is likely a cryptocurrency and will
+		// assume the default divisibility
+		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
 	}
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
