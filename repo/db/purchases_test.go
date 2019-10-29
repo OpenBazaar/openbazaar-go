@@ -978,10 +978,7 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Item.PriceCurrency = &pb.CurrencyDefinition{
-			Code:         testCoin,
-			Divisibility: 8,
-		}
+		contract.VendorListings[0].Metadata.CryptoCurrencyCode = testCoin
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
