@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -118,4 +119,12 @@ func SigRSV(isig interface{}) ([32]byte, [32]byte, uint8) {
 	V := uint8(vI + 27)
 
 	return R, S, V
+}
+
+// EnsureCorrectPrefix ensures we have 0x prefix
+func EnsureCorrectPrefix(str string) string {
+	if strings.HasPrefix(str, "0x") {
+		return str
+	}
+	return "0x" + str
 }
