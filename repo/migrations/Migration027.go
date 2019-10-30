@@ -2,6 +2,12 @@ package migrations
 
 import (
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
+	coremock "github.com/ipfs/go-ipfs/core/mock"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -160,6 +166,28 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	if indexExists {
+		// Setup signing capabilities
+		identityKey, err := migration027_GetIdentityKey(repoPath, databasePassword, testnetEnabled)
+		if err != nil {
+			return err
+		}
+
+		sk, err := crypto.UnmarshalPrivateKey(identityKey)
+		if err != nil {
+			return err
+		}
+
+		nd, err := coremock.NewMockNode()
+		if err != nil {
+			return err
+		}
+
+		listingHashMap := make(map[string]string)
+
+		m := jsonpb.Marshaler{
+			Indent: "    ",
+		}
+
 		var oldListingIndex []Migration027V4ListingIndexData
 		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
 		if err != nil {
@@ -173,15 +201,6 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		for i, listing := range oldListingIndex {
 			newListingIndex[i] = parseV4intoV5(listing)
 		}
-		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
-		if err != nil {
-			return err
-		}
-
-		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
-		if err != nil {
-			return err
-		}
 
 		for _, listing := range newListingIndex {
 			listingPath := path.Join(repoPath, "root", "listings", listing.Slug+".json")
@@ -189,14 +208,17 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			if err != nil {
 				return err
 			}
-			var listingJSON map[string]interface{}
-			if err = json.Unmarshal(listingBytes, &listingJSON); err != nil {
+			var signedListingJSON map[string]interface{}
+			if err = json.Unmarshal(listingBytes, &signedListingJSON); err != nil {
 				return err
 			}
 
-			metadataJSON := listingJSON["metadata"]
+			listingJSON := signedListingJSON["listing"]
+			listing := listingJSON.(map[string]interface{})
+
+			metadataJSON := listing["metadata"]
 			metadata := metadataJSON.(map[string]interface{})
-			itemJSON := listingJSON["item"]
+			itemJSON := listing["item"]
 			item := itemJSON.(map[string]interface{})
 
 			var (
@@ -209,11 +231,11 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			if skusJSON != nil {
 				skus = skusJSON.([]interface{})
 			}
-			shippingOptionsJSON := listingJSON["shippingOptions"]
+			shippingOptionsJSON := listing["shippingOptions"]
 			if shippingOptionsJSON != nil {
 				shippingOptions = shippingOptionsJSON.([]interface{})
 			}
-			couponsJSON := listingJSON["coupons"]
+			couponsJSON := listing["coupons"]
 			if couponsJSON != nil {
 				coupons = couponsJSON.([]interface{})
 			}
@@ -334,14 +356,58 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				delete(coupon, "priceDiscount")
 			}
 
-			out, err := json.MarshalIndent(listingJSON, "", "    ")
+			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(listingPath, out, os.ModePerm)
+
+			sl := new(pb.SignedListing)
+			if err := jsonpb.UnmarshalString(string(out), sl); err != nil {
+				return err
+			}
+
+			ser, err := proto.Marshal(sl.Listing)
 			if err != nil {
 				return err
 			}
+
+			sig, err := sk.Sign(ser)
+			if err != nil {
+				return err
+			}
+
+			sl.Signature = sig
+
+			signedOut, err := m.MarshalToString(sl)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(listingPath, []byte(signedOut), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			hash, err := ipfs.GetHashOfFile(nd, listingPath)
+			if err != nil {
+				return err
+			}
+
+			listingHashMap[sl.Listing.Slug] = hash
+		}
+
+		for i, listing := range newListingIndex {
+			newListingIndex[i].Hash = listingHashMap[listing.Slug]
+		}
+
+		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -358,6 +424,28 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	if indexExists {
+		// Setup signing capabilities
+		identityKey, err := migration027_GetIdentityKey(repoPath, databasePassword, testnetEnabled)
+		if err != nil {
+			return err
+		}
+
+		sk, err := crypto.UnmarshalPrivateKey(identityKey)
+		if err != nil {
+			return err
+		}
+
+		nd, err := coremock.NewMockNode()
+		if err != nil {
+			return err
+		}
+
+		listingHashMap := make(map[string]string)
+
+		m := jsonpb.Marshaler{
+			Indent: "    ",
+		}
+
 		var oldListingIndex []Migration027V5ListingIndexData
 		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
 		if err != nil {
@@ -371,14 +459,6 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 		for i, listing := range oldListingIndex {
 			newListingIndex[i] = parseV5intoV4(listing)
 		}
-		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
-		if err != nil {
-			return err
-		}
 
 		for _, listing := range newListingIndex {
 			listingPath := path.Join(repoPath, "root", "listings", listing.Slug+".json")
@@ -386,14 +466,17 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 			if err != nil {
 				return err
 			}
-			var listingJSON map[string]interface{}
-			if err = json.Unmarshal(listingBytes, &listingJSON); err != nil {
+			var signedListingJSON map[string]interface{}
+			if err = json.Unmarshal(listingBytes, &signedListingJSON); err != nil {
 				return err
 			}
 
-			metadataJSON := listingJSON["metadata"]
+			listingJSON := signedListingJSON["listing"]
+			listing := listingJSON.(map[string]interface{})
+
+			metadataJSON := listing["metadata"]
 			metadata := metadataJSON.(map[string]interface{})
-			itemJSON := listingJSON["item"]
+			itemJSON := listing["item"]
 			item := itemJSON.(map[string]interface{})
 
 			var (
@@ -406,11 +489,11 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 			if skusJSON != nil {
 				skus = skusJSON.([]interface{})
 			}
-			shippingOptionsJSON := listingJSON["shippingOptions"]
+			shippingOptionsJSON := listing["shippingOptions"]
 			if shippingOptionsJSON != nil {
 				shippingOptions = shippingOptionsJSON.([]interface{})
 			}
-			couponsJSON := listingJSON["coupons"]
+			couponsJSON := listing["coupons"]
 			if couponsJSON != nil {
 				coupons = couponsJSON.([]interface{})
 			}
@@ -536,16 +619,77 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 				delete(coupon, "bigPriceDiscount")
 			}
 
-			out, err := json.MarshalIndent(listingJSON, "", "    ")
+			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(listingPath, out, os.ModePerm)
+
+			sl := new(pb.SignedListing)
+			if err := jsonpb.UnmarshalString(string(out), sl); err != nil {
+				return err
+			}
+
+			ser, err := proto.Marshal(sl.Listing)
 			if err != nil {
 				return err
 			}
+
+			sig, err := sk.Sign(ser)
+			if err != nil {
+				return err
+			}
+
+			sl.Signature = sig
+
+			signedOut, err := m.MarshalToString(sl)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(listingPath, []byte(signedOut), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			hash, err := ipfs.GetHashOfFile(nd, listingPath)
+			if err != nil {
+				return err
+			}
+
+			listingHashMap[sl.Listing.Slug] = hash
+		}
+
+		for i, listing := range newListingIndex {
+			newListingIndex[i].Hash = listingHashMap[listing.Slug]
+		}
+
+		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
+		if err != nil {
+			return err
 		}
 	}
 
 	return writeRepoVer(repoPath, 27)
+}
+
+func migration027_GetIdentityKey(repoPath, databasePassword string, testnetEnabled bool) ([]byte, error) {
+	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	var identityKey []byte
+	err = db.
+		QueryRow("select value from config where key=?", "identityKey").
+		Scan(&identityKey)
+	if err != nil {
+		return nil, err
+	}
+	return identityKey, nil
 }

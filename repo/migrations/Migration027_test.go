@@ -1,85 +1,105 @@
 package migrations_test
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
+	"github.com/golang/protobuf/proto"
+	coremock "github.com/ipfs/go-ipfs/core/mock"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
 )
 
+const (
+	testMigration027_IdentityPrivateKeyBase64 = "CAESYHwrVuRp5s2u0w5ykibsR77aHWBmvpcaDq+vU9pv8lOqae31NJYJbdDsOlxVRqQZS/eDfssdd7N/rJmoVbQvPytp7fU0lglt0Ow6XFVGpBlL94N+yx13s3+smahVtC8/Kw=="
+)
+
 var (
 	preMigration027ListingJSON = `{
-    "coupons": [
-        {
-            "priceDiscount": 10
-        }
-    ],
-    "item": {
-        "price": 100,
-        "skus": [
+    "listing": {
+        "slug": "Migration027_test_listing",
+        "metadata": {
+            "contractType": "PHYSICAL_GOOD",
+            "format": "FIXED_PRICE",
+            "pricingCurrency": "BTC",
+            "priceModifier": 1
+        },
+        "item": {
+            "price": 100,
+            "skus": [
+                {
+                    "surcharge": 9,
+                    "quantity": 10
+                }
+            ]
+        },
+        "shippingOptions": [
             {
-                "quantity": 10,
-                "surcharge": 9
+                "type": "LOCAL_PICKUP",
+                "services": [
+                    {
+                        "price": 10,
+                        "additionalItemPrice": 5
+                    }
+                ]
+            }
+        ],
+        "coupons": [
+            {
+                "priceDiscount": 10
             }
         ]
     },
-    "metadata": {
-        "coinDivisibility": 8,
-        "coinType": "BCH",
-        "priceModifier": 1,
-        "pricingCurrency": "BTC"
-    },
-    "shippingOptions": [
-        {
-            "services": [
-                {
-                    "additionalItemPrice": 5,
-                    "price": 10
-                }
-            ]
-        }
-    ]
+    "signature": "2+M/+M866ZaPyqHpBdsqJ9gCgLPNOQoKKtaOrruZmDu6YXhc3RiKQtoZs1BTfC02k8TwfIU5LeFPhxagwC6UAg=="
 }`
 
 	postMigration027ListingJSON = `{
-    "coupons": [
-        {
-            "bigPriceDiscount": "10"
-        }
-    ],
-    "item": {
-        "bigPrice": "100",
-        "priceCurrency": {
-            "code": "BTC",
-            "divisibility": 8
+    "listing": {
+        "slug": "Migration027_test_listing",
+        "metadata": {
+            "contractType": "PHYSICAL_GOOD",
+            "format": "FIXED_PRICE"
         },
-        "priceModifier": 1,
-        "skus": [
+        "item": {
+            "skus": [
+                {
+                    "bigSurcharge": "9",
+                    "bigQuantity": "10"
+                }
+            ],
+            "priceModifier": 1,
+            "bigPrice": "100",
+            "priceCurrency": {
+                "code": "BTC",
+                "divisibility": 8
+            }
+        },
+        "shippingOptions": [
             {
-                "bigQuantity": "10",
-                "bigSurcharge": "9"
+                "type": "LOCAL_PICKUP",
+                "services": [
+                    {
+                        "bigPrice": "10",
+                        "bigAdditionalItemPrice": "5"
+                    }
+                ]
+            }
+        ],
+        "coupons": [
+            {
+                "bigPriceDiscount": "10"
             }
         ]
     },
-    "metadata": {
-        "cryptoCurrencyCode": "BCH",
-        "cryptoDivisibility": 8
-    },
-    "shippingOptions": [
-        {
-            "services": [
-                {
-                    "bigAdditionalItemPrice": "5",
-                    "bigPrice": "10"
-                }
-            ]
-        }
-    ]
+    "signature": "r7j6YM3ePiTRyIKmd9ILMvjvhv5jaAB5m1gMlPJ9ug05KZIfAPXXa+EtuF+ExGvtEOpdyK3BEFpU2rm65CyvDw=="
 }`
 )
 
@@ -95,6 +115,9 @@ func TestMigration027(t *testing.T) {
 	if err = testRepo.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
+	if err := testRepo.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
 	defer testRepo.DestroySchemaDirectories()
 
 	var (
@@ -105,6 +128,26 @@ func TestMigration027(t *testing.T) {
 
 		listing = factory.NewListing(testListingSlug)
 	)
+
+	db, err := migrations.OpenDB(testRepo.DataPath(), "", true)
+	if err != nil {
+		t.Error(err)
+	}
+
+	identityKey, err := base64.StdEncoding.DecodeString(testMigration027_IdentityPrivateKeyBase64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sk, err := crypto.UnmarshalPrivateKey(identityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.Exec("INSERT INTO config(key,value) VALUES('identityKey', ?)", identityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := os.Create(testListingPath)
 	if err != nil {
@@ -138,6 +181,35 @@ func TestMigration027(t *testing.T) {
 		t.Fatal("Failed to migrate listing up")
 	}
 
+	sl := new(pb.SignedListing)
+	if err := jsonpb.UnmarshalString(string(upMigratedListing), sl); err != nil {
+		t.Fatal(err)
+	}
+
+	ser, err := proto.Marshal(sl.Listing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	valid, err := sk.GetPublic().Verify(ser, sl.Signature)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Errorf("Failed to validate up migrated listing signature")
+	}
+
+	nd, err := coremock.NewMockNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	listingHash, err := ipfs.GetHashOfFile(nd, testListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var listingIndex []migrations.Migration027V5ListingIndexData
 	listingsJSON, err := ioutil.ReadFile(listingIndexPath)
 	if err != nil {
@@ -149,6 +221,10 @@ func TestMigration027(t *testing.T) {
 
 	if listingIndex[0].Price.Amount.String() != strconv.Itoa(int(index[0].Price.Amount)) {
 		t.Errorf("Incorrect price set")
+	}
+
+	if listingIndex[0].Hash != listingHash {
+		t.Errorf("Incorrect hash set")
 	}
 
 	if string(listingIndex[0].Price.Currency.Code) != index[0].Price.CurrencyCode {
@@ -167,7 +243,31 @@ func TestMigration027(t *testing.T) {
 	}
 
 	if string(downMigratedListing) != preMigration027ListingJSON {
-		t.Fatal("Failed to migrate listing up")
+		t.Fatal("Failed to migrate listing down")
+	}
+
+	sl = new(pb.SignedListing)
+	if err := jsonpb.UnmarshalString(string(downMigratedListing), sl); err != nil {
+		t.Fatal(err)
+	}
+
+	ser, err = proto.Marshal(sl.Listing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	valid, err = sk.GetPublic().Verify(ser, sl.Signature)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Errorf("Failed to validate down migrated listing signature")
+	}
+
+	listingHash, err = ipfs.GetHashOfFile(nd, testListingPath)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	var listingIndex2 []migrations.Migration027V4ListingIndexData
@@ -181,6 +281,10 @@ func TestMigration027(t *testing.T) {
 
 	if listingIndex[0].Price.Amount.String() != strconv.Itoa(int(listingIndex2[0].Price.Amount)) {
 		t.Errorf("Incorrect price set")
+	}
+
+	if listingIndex2[0].Hash != listingHash {
+		t.Errorf("Incorrect hash set")
 	}
 
 	if string(listingIndex[0].Price.Currency.Code) != listingIndex2[0].Price.CurrencyCode {
