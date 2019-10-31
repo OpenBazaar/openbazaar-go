@@ -1,95 +1,76 @@
 package migrations
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"path"
+	"fmt"
+	"strings"
 
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
+	dsq "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore/query"
+	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
+	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 )
 
-// Migration026 will update the hashes of each listing in the listing index with
-// the newest hash format.
-type Migration026 struct{}
+var cleanIPNSMigrationNumber = 26 // should match name
 
-type Migration026_Price struct {
-	CurrencyCode string  `json:"currencyCode"`
-	Amount       uint64  `json:"amount"`
-	Modifier     float32 `json:"modifier"`
-}
-type Migration026_Thumbnail struct {
-	Tiny   string `json:"tiny"`
-	Small  string `json:"small"`
-	Medium string `json:"medium"`
-}
+type (
+	cleanIPNSRecordsFromDatastore struct{}
+	Migration026                  struct {
+		cleanIPNSRecordsFromDatastore
+	}
+)
 
-type Migration026_ListingData struct {
-	Hash               string                 `json:"hash"`
-	Slug               string                 `json:"slug"`
-	Title              string                 `json:"title"`
-	Categories         []string               `json:"categories"`
-	NSFW               bool                   `json:"nsfw"`
-	ContractType       string                 `json:"contractType"`
-	Description        string                 `json:"description"`
-	Thumbnail          Migration026_Thumbnail `json:"thumbnail"`
-	Price              Migration026_Price     `json:"price"`
-	ShipsTo            []string               `json:"shipsTo"`
-	FreeShipping       []string               `json:"freeShipping"`
-	Language           string                 `json:"language"`
-	AverageRating      float32                `json:"averageRating"`
-	RatingCount        uint32                 `json:"ratingCount"`
-	ModeratorIDs       []string               `json:"moderators"`
-	AcceptedCurrencies []string               `json:"acceptedCurrencies"`
-	CoinType           string                 `json:"coinType"`
-}
+// Should we ever update these packages (which functionally changes their
+// behavior) the migrations should be made into a no-op.
+func (cleanIPNSRecordsFromDatastore) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+	r, err := fsrepo.Open(repoPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Errorf("closing repo: %s", err.Error())
+		}
+	}()
 
-func (Migration026) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	listingsFilePath := path.Join(repoPath, "root", "listings.json")
+	resultCh, err := r.Datastore().Query(dsq.Query{Prefix: "/ipns/"})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := resultCh.Close(); err != nil {
+			log.Errorf("closing result channel: %s", err.Error())
+		}
+	}()
 
-	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
-	indexExists := true
-	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
-		indexExists = false
+	results, err := resultCh.Rest()
+	if err != nil {
+		return err
 	}
 
-	if indexExists {
-		var listingIndex []Migration026_ListingData
-		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
-		if err != nil {
-			return err
+	log.Debugf("found %d IPNS records to cull...", len(results))
+	for _, rawResult := range results {
+		if strings.HasPrefix(rawResult.Key, "/ipns/persistentcache") {
+			continue
 		}
-		if err = json.Unmarshal(listingsJSON, &listingIndex); err != nil {
-			return err
-		}
-		n, err := coremock.NewMockNode()
-		if err != nil {
-			return err
-		}
-		for i, listing := range listingIndex {
-			hash, err := ipfs.GetHashOfFile(n, path.Join(repoPath, "root", "listings", listing.Slug+".json"))
-			if err != nil {
-				return err
+		rec := new(ipnspb.IpnsEntry)
+		if err = proto.Unmarshal(rawResult.Value, rec); err != nil {
+			log.Warningf("failed unmarshaling record (%s): %s", rawResult.Key, err.Error())
+			if err := r.Datastore().Delete(ds.NewKey(rawResult.Key)); err != nil {
+				log.Errorf("failed dropping cached record (%s): %s", rawResult.Key, err.Error())
 			}
-
-			listingIndex[i].Hash = hash
-		}
-		migratedJSON, err := json.MarshalIndent(&listingIndex, "", "    ")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
-		if err != nil {
-			return err
 		}
 	}
 
-	return writeRepoVer(repoPath, 27)
+	if err := writeRepoVer(repoPath, cleanIPNSMigrationNumber+1); err != nil {
+		return fmt.Errorf("updating repover to %d: %s", cleanIPNSMigrationNumber+1, err.Error())
+	}
+	return nil
 }
 
-func (Migration026) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	// Down migration is a no-op (outside of updating the version)
-	// We can't calculate the old style hash format anymore.
-	return writeRepoVer(repoPath, 26)
+func (cleanIPNSRecordsFromDatastore) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+	if err := writeRepoVer(repoPath, cleanIPNSMigrationNumber); err != nil {
+		return fmt.Errorf("updating repover to %d: %s", cleanIPNSMigrationNumber, err.Error())
+	}
+	return nil
 }

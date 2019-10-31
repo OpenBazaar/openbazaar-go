@@ -10,22 +10,21 @@ import (
 
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	"gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	blocks "gx/ipfs/QmYYLnAzR28nAQ4U5MFniLprnktu6eTFKibeNt96V21EZK/go-block-format"
 
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	ut "github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	ut "github.com/OpenBazaar/openbazaar-go/util"
 )
 
 var (
@@ -263,9 +262,9 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	if err != nil {
 		log.Errorf("handleOfflineRelayError: %s", err.Error())
 	}
-	err = service.node.IpfsNode.Repo.Datastore().Put(datastore.NewKey(core.KeyCachePrefix+id.Pretty()), env.Pubkey)
-	if err != nil {
-		log.Errorf("handleOfflineRelayError: %s", err.Error())
+	store := service.node.IpfsNode.Repo.Datastore()
+	if err := ipfs.PutCachedPubkey(store, id.Pretty(), env.Pubkey); err != nil {
+		log.Errorf("caching pubkey: %s", err.Error())
 	}
 
 	// Get handler for this message type

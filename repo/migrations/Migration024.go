@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 )
@@ -71,28 +70,28 @@ func createMessages(repoPath, databasePassword, rVer string, testnetEnabled bool
 	if _, err = tx.Exec(MigrationCreateMessagesAM06MessagesCreateSQL); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLMessageID); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLOrderIDMType); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLPeerIDMType); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
@@ -139,28 +138,28 @@ func deleteMessages(repoPath, databasePassword, rVer string, testnetEnabled bool
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLMessageID); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLOrderIDMType); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLPeerIDMType); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06MessagesDeleteSQL); err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}

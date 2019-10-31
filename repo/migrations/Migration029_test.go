@@ -2,7 +2,6 @@ package migrations_test
 
 import (
 	"database/sql"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -11,17 +10,25 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 )
 
-var stm = `PRAGMA key = 'letmein';
-				create table utxos (outpoint text primary key not null,
-					value integer, height integer, scriptPubKey text,
-					watchOnly integer, coin text);
-				create table stxos (outpoint text primary key not null,
-					value integer, height integer, scriptPubKey text,
-					watchOnly integer, spendHeight integer, spendTxid text,
-					coin text);
-				create table txns (txid text primary key not null,
-					value integer, height integer, timestamp integer,
-					watchOnly integer, tx blob, coin text);`
+var stmt = `PRAGMA key = 'letmein';
+				create table sales (orderID text primary key not null,
+					contract blob, state integer, read integer,
+					timestamp integer, total integer, thumbnail text,
+					buyerID text, buyerHandle text, title text,
+					shippingName text, shippingAddress text,
+					paymentAddr text, funded integer, transactions blob,
+					needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0,
+					coinType not null default '', paymentCoin not null default '');
+				create table purchases (orderID text primary key not null,
+					contract blob, state integer, read integer,
+					timestamp integer, total integer, thumbnail text,
+					vendorID text, vendorHandle text, title text,
+					shippingName text, shippingAddress text, paymentAddr text,
+					funded integer, transactions blob,
+					lastDisputeTimeoutNotifiedAt integer not null default 0,
+					lastDisputeExpiryNotifiedAt integer not null default 0,
+					disputedAt integer not null default 0, coinType not null default '',
+					paymentCoin not null default '');`
 
 func TestMigration029(t *testing.T) {
 	var dbPath string
@@ -33,50 +40,39 @@ func TestMigration029(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(stm); err != nil {
+	if _, err := db.Exec(stmt); err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("INSERT INTO utxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
-	if err != nil {
+	if _, err := db.Exec("INSERT INTO sales (orderID, total) values (?,?)", "asdf", 3); err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("INSERT INTO stxos (outpoint, value, height, scriptPubKey, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, "key1", 1, "TBTC")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = db.Exec("INSERT INTO txns (txid, value, height, timestamp, watchOnly, coin) values (?,?,?,?,?,?)", "asdf", 3, 1, 234, 1, "TBTC")
-	if err != nil {
+	if _, err := db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3); err != nil {
 		t.Fatal(err)
 	}
 	var m migrations.Migration029
-	err = m.Up("./", "letmein", false)
-	if err != nil {
+	if err := m.Up("./", "letmein", false); err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		orderID string
+		total   string
+		total1  int
+	)
+
+	r := db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
+	if err := r.Scan(&orderID, &total); err != nil {
 		t.Error(err)
 	}
-
-	var outpoint string
-	var value string
-	var height int
-	var scriptPubKey string
-	var watchOnlyInt int
-	var value1 int
-
-	r := db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
-
-	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
-		t.Fatal(err)
+	if total != "3" {
+		t.Errorf("expected total to be 3, but was %s", total)
 	}
-
-	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
-
-	if err := r.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil || value != "3" {
-		t.Fatal(err)
+	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
+	if err := r.Scan(&orderID, &total); err != nil {
+		t.Error(err)
 	}
-
-	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
-
-	if err := r.Scan(&outpoint, &value, &height, &watchOnlyInt); err != nil || value != "3" {
-		t.Fatal(err)
+	if total != "3" {
+		t.Errorf("expected total to be 3, but was %s", total)
 	}
 
 	repoVer, err := ioutil.ReadFile("./repover")
@@ -84,7 +80,6 @@ func TestMigration029(t *testing.T) {
 		t.Error(err)
 	}
 	if string(repoVer) != "30" {
-		fmt.Println("lets see : ", string(repoVer))
 		t.Error("Failed to write new repo version")
 	}
 
@@ -92,22 +87,21 @@ func TestMigration029(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?", "TBTC")
 
-	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Fatal(err)
+	r = db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
+	if err := r.Scan(&orderID, &total1); err != nil {
+		t.Error(err)
+	}
+	if total1 != 3 {
+		t.Errorf("expected total to be 3, but was %d", total1)
 	}
 
-	r = db.QueryRow("select outpoint, value, height, scriptPubKey, watchOnly from stxos where coin=?", "TBTC")
-
-	if err := r.Scan(&outpoint, &value1, &height, &scriptPubKey, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Fatal(err)
+	r = db.QueryRow("select orderID, total from purchases where orderID=?", "asdf")
+	if err := r.Scan(&orderID, &total1); err != nil {
+		t.Error(err)
 	}
-
-	r = db.QueryRow("select txid, value, height, watchOnly from txns where coin=?", "TBTC")
-
-	if err := r.Scan(&outpoint, &value1, &height, &watchOnlyInt); err != nil || value1 != 3 {
-		t.Fatal(err)
+	if total1 != 3 {
+		t.Errorf("expected total to be 3, but was %d", total1)
 	}
 
 	repoVer, err = ioutil.ReadFile("./repover")
@@ -115,7 +109,6 @@ func TestMigration029(t *testing.T) {
 		t.Error(err)
 	}
 	if string(repoVer) != "29" {
-		fmt.Println("lets see down: ", string(repoVer))
 		t.Error("Failed to write new repo version")
 	}
 	os.RemoveAll("./datastore")
