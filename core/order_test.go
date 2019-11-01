@@ -23,6 +23,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 					Format:             pb.Listing_Metadata_FIXED_PRICE,
 					AcceptedCurrencies: []string{"TBTC"},
+					EscrowTimeoutHours: 1080,
 					Version:            5,
 				},
 				Item: &pb.Listing_Item{
