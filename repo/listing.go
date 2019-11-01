@@ -86,7 +86,7 @@ type shippingOption struct {
 
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
-	Quantity       uint64         `json:"quantity"`
+	Quantity       string         `json:"bigQuantity"`
 	Options        []option       `json:"options"`
 	Shipping       shippingOption `json:"shipping"`
 	Memo           string         `json:"memo"`
@@ -124,6 +124,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 	if l.Metadata.Version == 0 {
 		l.Metadata.Version = ListingVersion
 	}
+	l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
