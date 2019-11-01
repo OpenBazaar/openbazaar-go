@@ -17,10 +17,8 @@ func PaymentCoinForContract(contract *pb.RicardianContract) string {
 }
 
 func CoinTypeForContract(contract *pb.RicardianContract) string {
-	if len(contract.VendorListings) > 0 {
-		if contract.VendorListings[0].Metadata.CryptoCurrencyCode != "" {
-			return contract.VendorListings[0].Metadata.CryptoCurrencyCode
-		}
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		return contract.VendorListings[0].Metadata.CryptoCurrencyCode
 	}
 	return ""
 }
