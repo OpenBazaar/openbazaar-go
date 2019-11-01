@@ -120,19 +120,17 @@ func parseV5intoV4(v5 Migration027V5ListingIndexData) Migration027V4ListingIndex
 
 func parseV4intoV5(v4 Migration027V4ListingIndexData) Migration027V5ListingIndexData {
 	var priceValue *Migration027V5CurrencyValue
-	if v4.Price.CurrencyCode != "" {
-		divisibility, ok := divisibilityMap[strings.ToUpper(v4.Price.CurrencyCode)]
-		if !ok {
-			divisibility = 2
-		}
+	divisibility, ok := divisibilityMap[strings.ToUpper(v4.Price.CurrencyCode)]
+	if !ok {
+		divisibility = 2
+	}
 
-		priceValue = &Migration027V5CurrencyValue{
-			Amount: new(big.Int).SetInt64(int64(v4.Price.Amount)),
-			Currency: Migration027V5CurrencyDefinition{
-				Code:         Migration027V5CurrencyCode(v4.Price.CurrencyCode),
-				Divisibility: divisibility,
-			},
-		}
+	priceValue = &Migration027V5CurrencyValue{
+		Amount: new(big.Int).SetInt64(int64(v4.Price.Amount)),
+		Currency: Migration027V5CurrencyDefinition{
+			Code:         Migration027V5CurrencyCode(v4.Price.CurrencyCode),
+			Divisibility: divisibility,
+		},
 	}
 	return Migration027V5ListingIndexData{
 		Hash:               v4.Hash,
