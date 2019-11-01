@@ -959,6 +959,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
 		}
+		rl, err := repo.NewListingFromProtobuf(l)
+		if err != nil {
+			return big.NewInt(0), err
+		}
 
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
@@ -995,14 +999,18 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			return big.NewInt(0), err
 		}
 		var skuExists bool
-		for i, sku := range l.Item.Skus {
+		skus, err := rl.GetSkus()
+		if err != nil {
+			return big.NewInt(0), err
+		}
+		for i, sku := range skus {
 			if selectedSku == i {
 				skuExists = true
+				surcharge := big.NewInt(0)
 				surcharge0, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
-				if !ok {
-					return big.NewInt(0), errors.New("invalid surcharge value")
+				if ok {
+					surcharge = new(big.Int).Abs(surcharge0)
 				}
-				surcharge := new(big.Int).Abs(surcharge0)
 				if surcharge.Cmp(big.NewInt(0)) != 0 {
 					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
 						l.Item.PriceCurrency.Code, surcharge)
