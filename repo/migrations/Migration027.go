@@ -298,19 +298,23 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			for _, skuJSON := range skus {
 				sku := skuJSON.(map[string]interface{})
 
-				quantityJSON := sku["quantity"]
-				quantity := quantityJSON.(float64)
+				quantityJSON, ok := sku["quantity"]
+				if ok {
+					quantity := quantityJSON.(float64)
 
-				sku["bigQuantity"] = strconv.Itoa(int(quantity))
+					sku["bigQuantity"] = strconv.Itoa(int(quantity))
 
-				delete(sku, "quantity")
+					delete(sku, "quantity")
+				}
 
-				surchargeJSON := sku["surcharge"]
-				surcharge := surchargeJSON.(float64)
+				surchargeJSON, ok := sku["surcharge"]
+				if ok {
+					surcharge := surchargeJSON.(float64)
 
-				sku["bigSurcharge"] = strconv.Itoa(int(surcharge))
+					sku["bigSurcharge"] = strconv.Itoa(int(surcharge))
 
-				delete(sku, "surcharge")
+					delete(sku, "surcharge")
+				}
 			}
 
 			for i, shippingOptionJSON := range shippingOptions {
@@ -331,12 +335,14 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 					delete(service, "price")
 
-					additionalItemPriceJSON := service["additionalItemPrice"]
-					additionalItemPrice := additionalItemPriceJSON.(float64)
+					additionalItemPriceJSON, ok := service["additionalItemPrice"]
+					if ok {
+						additionalItemPrice := additionalItemPriceJSON.(float64)
 
-					service["bigAdditionalItemPrice"] = strconv.Itoa(int(additionalItemPrice))
+						service["bigAdditionalItemPrice"] = strconv.Itoa(int(additionalItemPrice))
 
-					delete(service, "additionalItemPrice")
+						delete(service, "additionalItemPrice")
+					}
 
 					services[x] = service
 				}
@@ -348,12 +354,14 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			for _, couponJSON := range coupons {
 				coupon := couponJSON.(map[string]interface{})
 
-				priceDiscountJSON := coupon["priceDiscount"]
-				priceDiscount := priceDiscountJSON.(float64)
+				priceDiscountJSON, ok := coupon["priceDiscount"]
+				if ok {
+					priceDiscount := priceDiscountJSON.(float64)
 
-				coupon["bigPriceDiscount"] = strconv.Itoa(int(priceDiscount))
+					coupon["bigPriceDiscount"] = strconv.Itoa(int(priceDiscount))
 
-				delete(coupon, "priceDiscount")
+					delete(coupon, "priceDiscount")
+				}
 			}
 
 			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
@@ -549,25 +557,29 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 
 			for _, skuJSON := range skus {
 				sku := skuJSON.(map[string]interface{})
-				quantityJSON := sku["bigQuantity"]
-				quantity := quantityJSON.(string)
-
-				p, ok := new(big.Int).SetString(quantity, 10)
+				quantityJSON, ok := sku["bigQuantity"]
 				if ok {
-					sku["quantity"] = p.Uint64()
+					quantity := quantityJSON.(string)
+
+					p, ok := new(big.Int).SetString(quantity, 10)
+					if ok {
+						sku["quantity"] = p.Uint64()
+					}
+
+					delete(sku, "bigQuantity")
 				}
 
-				delete(sku, "bigQuantity")
-
-				surchargeJSON := sku["bigSurcharge"]
-				surcharge := surchargeJSON.(string)
-
-				s, ok := new(big.Int).SetString(surcharge, 10)
+				surchargeJSON, ok := sku["bigSurcharge"]
 				if ok {
-					sku["surcharge"] = s.Uint64()
-				}
+					surcharge := surchargeJSON.(string)
 
-				delete(sku, "bigSurcharge")
+					s, ok := new(big.Int).SetString(surcharge, 10)
+					if ok {
+						sku["surcharge"] = s.Uint64()
+					}
+
+					delete(sku, "bigSurcharge")
+				}
 			}
 
 			for i, shippingOptionJSON := range shippingOptions {
@@ -578,7 +590,7 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 					services = servicesJSON.([]interface{})
 				}
 
-				for _, serviceJSON := range services {
+				for x, serviceJSON := range services {
 					service := serviceJSON.(map[string]interface{})
 
 					priceJSON := service["bigPrice"]
@@ -591,15 +603,19 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 
 					delete(service, "bigPrice")
 
-					additionalItemPriceJSON := service["bigAdditionalItemPrice"]
-					additionalItemPrice := additionalItemPriceJSON.(string)
-
-					a, ok := new(big.Int).SetString(additionalItemPrice, 10)
+					additionalItemPriceJSON, ok := service["bigAdditionalItemPrice"]
 					if ok {
-						service["additionalItemPrice"] = a.Uint64()
+						additionalItemPrice := additionalItemPriceJSON.(string)
+
+						a, ok := new(big.Int).SetString(additionalItemPrice, 10)
+						if ok {
+							service["additionalItemPrice"] = a.Uint64()
+						}
+
+						delete(service, "bigAdditionalItemPrice")
 					}
 
-					delete(service, "bigAdditionalItemPrice")
+					services[x] = service
 				}
 
 				shippingOptions[i] = so
@@ -608,15 +624,17 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 			for _, couponJSON := range coupons {
 				coupon := couponJSON.(map[string]interface{})
 
-				priceDiscountJSON := coupon["bigPriceDiscount"]
-				priceDiscount := priceDiscountJSON.(string)
-
-				a, ok := new(big.Int).SetString(priceDiscount, 10)
+				priceDiscountJSON, ok := coupon["bigPriceDiscount"]
 				if ok {
-					coupon["priceDiscount"] = a.Uint64()
-				}
+					priceDiscount := priceDiscountJSON.(string)
 
-				delete(coupon, "bigPriceDiscount")
+					a, ok := new(big.Int).SetString(priceDiscount, 10)
+					if ok {
+						coupon["priceDiscount"] = a.Uint64()
+					}
+
+					delete(coupon, "bigPriceDiscount")
+				}
 			}
 
 			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
