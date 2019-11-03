@@ -20,7 +20,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -122,6 +121,10 @@ type OpenBazaarNode struct {
 	seedLock    sync.Mutex
 
 	InitalPublishComplete bool
+
+	// InboundMsgScanner is a worker that scans the messages
+	// table and tries to retry a failed order message
+	InboundMsgScanner *inboundMessageScanner
 }
 
 // TestNetworkEnabled indicates whether the node is operating with test parameters
@@ -310,36 +313,4 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 // IPFSIdentityString - IPFS identifier
 func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
-}
-
-// CheckErroredOrderMessages check if there are any order messages which can be retried
-func (n *OpenBazaarNode) CheckErroredOrderMessages(interval time.Duration) {
-	if interval == 0 {
-		return
-	}
-	ticker := time.NewTicker(interval)
-	go func() {
-		for range ticker.C {
-			msgs, err := n.Datastore.Messages().GetAllErrored()
-			if err != nil {
-				log.Error(err)
-			} else {
-				for _, m := range msgs {
-					if m.MsgErr.Error() == ErrInsufficientFunds.Error() {
-
-						// Get handler for this msg type
-						handler := n.Service.HandlerForMsgType(pb.Message_MessageType(m.MessageType))
-						if handler != nil {
-							// Dispatch handler
-							//rpmes, err := handler(m.PeerID, m.Message, nil)
-							//if err != nil {
-							//	log.Debugf("%s handle message error from %s: %s", pmes.MessageType.String(), mPeer.Pretty(), err)
-							//}
-						}
-
-					}
-				}
-			}
-		}
-	}()
 }

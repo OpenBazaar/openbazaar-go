@@ -54,7 +54,7 @@ func TestMessageDB_Put(t *testing.T) {
 		},
 	}
 
-	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg, recErr, 0)
+	err = messagesdb.Put(fmt.Sprintf("%s-%d", orderID, mType), orderID, mType, peerID, msg, recErr, 0, nil)
 	if err != nil {
 		t.Error(err)
 	}

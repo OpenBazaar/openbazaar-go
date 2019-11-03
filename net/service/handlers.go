@@ -335,7 +335,8 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderId, int(pb.Message_ORDER)),
-		orderId, pb.Message_ORDER, peer.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderId, pb.Message_ORDER, peer.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderId, int(pb.Message_ORDER), err)
 	}
@@ -531,7 +532,8 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderId, int(pb.Message_ORDER_CONFIRMATION)),
-		orderId, pb.Message_ORDER_CONFIRMATION, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderId, pb.Message_ORDER_CONFIRMATION, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), vendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderId, int(pb.Message_ORDER_CONFIRMATION), err)
 	}
@@ -621,13 +623,6 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	}
 	orderId := string(pmes.Payload.Value)
 
-	err := service.node.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderId, int(pb.Message_ORDER_CANCEL)),
-		orderId, pb.Message_ORDER_CANCEL, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d): %v", orderId, int(pb.Message_ORDER_CANCEL), err)
-	}
-
 	// Load the order
 	contract, state, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
@@ -635,6 +630,14 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
 		}
 		return nil, net.OutOfOrderMessage
+	}
+
+	err = service.node.Datastore.Messages().Put(
+		fmt.Sprintf("%s-%d", orderId, int(pb.Message_ORDER_CANCEL)),
+		orderId, pb.Message_ORDER_CANCEL, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), contract.BuyerOrder.BuyerID.Pubkeys.Identity)
+	if err != nil {
+		log.Errorf("failed putting message (%s-%d): %v", orderId, int(pb.Message_ORDER_CANCEL), err)
 	}
 
 	if state == pb.OrderState_CANCELED {
@@ -709,7 +712,8 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMsg.OrderID, int(pb.Message_ORDER_REJECT)),
-		rejectMsg.OrderID, pb.Message_ORDER_REJECT, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		rejectMsg.OrderID, pb.Message_ORDER_REJECT, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), contract.BuyerOrder.BuyerID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rejectMsg.OrderID, int(pb.Message_ORDER_REJECT), err)
 	}
@@ -894,7 +898,8 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rc.Refund.OrderID, int(pb.Message_REFUND)),
-		rc.Refund.OrderID, pb.Message_REFUND, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		rc.Refund.OrderID, pb.Message_REFUND, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rc.Refund.OrderID, int(pb.Message_REFUND), err)
 	}
@@ -1034,7 +1039,8 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rc.VendorOrderFulfillment[0].OrderId, int(pb.Message_ORDER_FULFILLMENT)),
-		rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		rc.VendorOrderFulfillment[0].OrderId, pb.Message_ORDER_FULFILLMENT, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), rc.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rc.VendorOrderFulfillment[0].OrderId, int(pb.Message_ORDER_FULFILLMENT), err)
 	}
@@ -1138,7 +1144,8 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rc.BuyerOrderCompletion.OrderId, int(pb.Message_ORDER_COMPLETION)),
-		rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, p.Pretty(), repo.Message{Msg: *pmes},
+		nil, time.Now().UnixNano(), rc.BuyerOrder.BuyerID.Pubkeys.Identity)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rc.BuyerOrderCompletion.OrderId, int(pb.Message_ORDER_COMPLETION), err)
 	}
@@ -1233,7 +1240,8 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			if err.Error() == "ERROR_INSUFFICIENT_FUNDS" {
 				err0 := service.node.Datastore.Messages().Put(
 					fmt.Sprintf("%s-%d", rc.BuyerOrderCompletion.OrderId, int(pb.Message_ORDER_COMPLETION)),
-					rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, p.Pretty(), repo.Message{Msg: *pmes}, err, int(time.Now().UnixNano()))
+					rc.BuyerOrderCompletion.OrderId, pb.Message_ORDER_COMPLETION, p.Pretty(), repo.Message{Msg: *pmes},
+					err, time.Now().UnixNano(), contract.BuyerOrder.BuyerID.Pubkeys.Identity)
 				if err0 != nil {
 					log.Errorf("failed putting message (%s-%d): %v", rc.BuyerOrderCompletion.OrderId, int(pb.Message_ORDER_COMPLETION), err0)
 				}
@@ -1303,7 +1311,7 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_OPEN)),
-		orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, nil, time.Now().UnixNano(), nil)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_OPEN), err)
 	}
@@ -1340,7 +1348,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	orderID := update.OrderId
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_UPDATE)),
-		orderID, pb.Message_DISPUTE_UPDATE, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderID, pb.Message_DISPUTE_UPDATE, p.Pretty(), repo.Message{Msg: *pmes}, nil, time.Now().UnixNano(), nil)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_UPDATE), err)
 	}
@@ -1442,7 +1450,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	orderID := rc.DisputeResolution.OrderId
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_CLOSE)),
-		orderID, pb.Message_DISPUTE_CLOSE, p.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderID, pb.Message_DISPUTE_CLOSE, p.Pretty(), repo.Message{Msg: *pmes}, nil, time.Now().UnixNano(), nil)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_CLOSE), err)
 	}
@@ -1928,7 +1936,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	orderID := paymentDetails.OrderID
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_PAYMENT)),
-		orderID, pb.Message_ORDER_PAYMENT, peer.Pretty(), repo.Message{Msg: *pmes}, nil, int(time.Now().UnixNano()))
+		orderID, pb.Message_ORDER_PAYMENT, peer.Pretty(), repo.Message{Msg: *pmes}, nil, time.Now().UnixNano(), nil)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_ORDER_PAYMENT), err)
 	}

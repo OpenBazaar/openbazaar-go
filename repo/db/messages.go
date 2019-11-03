@@ -22,7 +22,7 @@ func NewMessageStore(db *sql.DB, lock *sync.Mutex) repo.MessageStore {
 }
 
 // Put will insert a record into the messages
-func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message, rErr error, receivedAt int) error {
+func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message, rErr error, receivedAt int64, pubkey []byte) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
@@ -30,7 +30,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, error, received_at, created_at) values(?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, error, received_at, pubkey, created_at) values(?,?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -50,7 +50,8 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		peerID,
 		rErr.Error(),
 		receivedAt,
-		int(time.Now().Unix()),
+		pubkey,
+		time.Now().Unix(),
 	)
 	if err != nil {
 		rErr := tx.Rollback()
@@ -100,7 +101,7 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 
 	q := query{
 		table:   "messages",
-		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "error"},
+		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "error", "pubkey"},
 		id:      "messageID",
 	}
 	stm, args := filterQuery(q)
@@ -113,8 +114,8 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 	for rows.Next() {
 		var messageID, orderID, peerID, rErr string
 		var mType pb.Message_MessageType
-		var message []byte
-		if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr); err != nil {
+		var message, pubkey []byte
+		if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr, &pubkey); err != nil {
 			return ret, err
 		}
 		msg := repo.OrderMessage{
@@ -124,6 +125,7 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 			MsgErr:      errors.New(rErr),
 			PeerID:      peerID,
 			Message:     message,
+			PeerPubkey:  pubkey,
 		}
 
 		ret = append(ret, msg)

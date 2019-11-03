@@ -133,4 +133,5 @@ type OrderMessage struct {
 	Message     []byte `json:"message"`
 	MsgErr      error  `json:"error"`
 	PeerID      string `json:"peerID"`
+	PeerPubkey  []byte `json:"pubkey"`
 }

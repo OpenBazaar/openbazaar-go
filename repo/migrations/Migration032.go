@@ -16,6 +16,8 @@ const (
 	migrationAlterMessagesAM09Err = "alter table messages add err text;"
 	// migrationAlterMessagesAM09ReceivedAt alters the table to add the received_at column.
 	migrationAlterMessagesAM09ReceivedAt = "alter table messages add received_at integer;"
+	// migrationAlterMessagesAM09Pubkey alters the table to add the pubkey column.
+	migrationAlterMessagesAM09Pubkey = "alter table messages add pubkey blob;"
 	// MigrationCreateMessagesAM09MessagesCreateSQLDown the messages create sql
 	MigrationCreateMessagesAM09MessagesCreateSQLDown = "create table messages (messageID text primary key not null, orderID text, message_type integer, message blob, peerID text, url text, acknowledged bool, tries integer, created_at integer, updated_at integer);"
 	// migrationRenameMessagesAM09MessagesCreateSQL the messages create sql
@@ -61,6 +63,7 @@ func (Migration032) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	upSequence := strings.Join([]string{
 		migrationAlterMessagesAM09Err,
 		migrationAlterMessagesAM09ReceivedAt,
+		migrationAlterMessagesAM09Pubkey,
 	}, " ")
 
 	tx, err := db.Begin()
