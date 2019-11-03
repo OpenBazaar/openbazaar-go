@@ -1,12 +1,14 @@
 package util
 
 import (
+	"log"
 	"math/big"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
@@ -127,4 +129,22 @@ func EnsureCorrectPrefix(str string) string {
 		return str
 	}
 	return "0x" + str
+}
+
+// CreateChainHash is a wrapper to the chainhash.new hash function
+// this allows for a cleaner way to check if we are not in any way
+// letting the 0x prefix hinder the chainhash generation
+func CreateChainHash(str string) (*chainhash.Hash, error) {
+	hash, err := chainhash.NewHashFromStr(str)
+	if err.Error() == "max hash string length is 64 bytes" {
+		hash, err = chainhash.NewHashFromStr(strings.TrimPrefix(str, "0x"))
+		if err != nil {
+			hash, err = chainhash.NewHashFromStr("")
+			if err != nil {
+				log.Println("err : ", err.Error())
+				return hash, err
+			}
+		}
+	}
+	return hash, nil
 }
