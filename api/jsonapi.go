@@ -1045,19 +1045,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if settings.StoreModerators != nil {
-		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go func(modsToAdd, modsToDelete []string) {
-			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
-				log.Error(err)
-			}
-		}(modsToAdd, modsToDelete)
-		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		}
-		if err := i.node.SeedNode(); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		}
+	err = i.node.Datastore.Settings().Update(settings)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	if settings.BlockedNodes != nil {
 		var blockedIds []peer.ID
@@ -1071,10 +1062,21 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
-	err = i.node.Datastore.Settings().Update(settings)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+	if settings.StoreModerators != nil {
+		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
+		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if err := i.node.SeedNode(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 	}
 	SanitizedResponse(w, `{}`)
 }
