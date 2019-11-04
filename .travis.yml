@@ -1,4 +1,6 @@
 language: go
+os:
+  - osx
 go:
   - "1.11"
 sudo: required
