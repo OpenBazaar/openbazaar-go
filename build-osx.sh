@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ulimit -n 1024
+ulimit -n 32000
 
 HOMEBREW_NO_AUTO_UPDATE=1
 brew update-reset
