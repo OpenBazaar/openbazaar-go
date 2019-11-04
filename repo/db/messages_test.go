@@ -40,7 +40,7 @@ func TestMessageDB_Put(t *testing.T) {
 		mType                     = pb.Message_ORDER
 		payload                   = "sample message"
 		peerID                    = "jack"
-		recErr                    = SampleErr
+		recErr                    = SampleErr.Error()
 	)
 	if err != nil {
 		t.Fatal(err)

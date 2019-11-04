@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -22,7 +21,7 @@ func NewMessageStore(db *sql.DB, lock *sync.Mutex) repo.MessageStore {
 }
 
 // Put will insert a record into the messages
-func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message, rErr error, receivedAt int64, pubkey []byte) error {
+func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg repo.Message, rErr string, receivedAt int64, pubkey []byte) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
@@ -30,7 +29,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, error, received_at, pubkey, created_at) values(?,?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, err, received_at, pubkey, created_at) values(?,?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -48,7 +47,7 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		int(mType),
 		msg0,
 		peerID,
-		rErr.Error(),
+		rErr,
 		receivedAt,
 		pubkey,
 		time.Now().Unix(),
@@ -65,22 +64,22 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 }
 
 // GetByOrderIDType returns the message for the specified order and message type
-func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, error, string, error) {
+func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, string, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
 		msg0   []byte
 		peerID string
-		recErr error
+		recErr string
 	)
 
-	stmt, err := o.db.Prepare("select message, peerID, error from messages where orderID=? and message_type=?")
+	stmt, err := o.db.Prepare("select message, peerID, err from messages where orderID=? and message_type=?")
 	if err != nil {
-		return nil, nil, "", err
+		return nil, "", "", err
 	}
 	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID, &recErr)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, "", "", err
 	}
 
 	msg := new(repo.Message)
@@ -88,7 +87,7 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 	if len(msg0) > 0 {
 		err = msg.UnmarshalJSON(msg0)
 		if err != nil {
-			return nil, nil, "", err
+			return nil, "", "", err
 		}
 	}
 
@@ -101,7 +100,7 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 
 	q := query{
 		table:   "messages",
-		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "error", "pubkey"},
+		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "err", "pubkey"},
 		id:      "messageID",
 	}
 	stm, args := filterQuery(q)
@@ -122,7 +121,7 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 			MessageID:   messageID,
 			OrderID:     orderID,
 			MessageType: int32(mType),
-			MsgErr:      errors.New(rErr),
+			MsgErr:      rErr,
 			PeerID:      peerID,
 			Message:     message,
 			PeerPubkey:  pubkey,

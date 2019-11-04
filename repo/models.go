@@ -131,7 +131,7 @@ type OrderMessage struct {
 	OrderID     string `json:"orderID"`
 	MessageType int32  `json:"message_type"`
 	Message     []byte `json:"message"`
-	MsgErr      error  `json:"error"`
+	MsgErr      string `json:"error"`
 	PeerID      string `json:"peerID"`
 	PeerPubkey  []byte `json:"pubkey"`
 }

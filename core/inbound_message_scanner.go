@@ -77,7 +77,7 @@ func (scanner *inboundMessageScanner) PerformTask() {
 		scanner.logger.Error(err)
 	} else {
 		for _, m := range msgs {
-			if m.MsgErr.Error() == ErrInsufficientFunds.Error() {
+			if m.MsgErr == ErrInsufficientFunds.Error() {
 
 				// Get handler for this msg type
 				handler := scanner.service.HandlerForMsgType(pb.Message_MessageType(m.MessageType))
