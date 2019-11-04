@@ -779,10 +779,8 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Item.PriceCurrency = &pb.CurrencyDefinition{
-			Code:         testCoin,
-			Divisibility: 8,
-		}
+		contract.VendorListings[0].Metadata.CryptoCurrencyCode = testCoin
+		contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
