@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"sync"
@@ -26,23 +27,14 @@ func (i *InventoryDB) Put(slug string, variantIndex int, count *big.Int) error {
 
 	id := sha256.Sum256([]byte(slug + strconv.Itoa(variantIndex)))
 
-	tx, _ := i.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into inventory(invID, slug, variantIndex, count) values(?,?,?,?)")
+	stmt, err := i.PrepareQuery("insert or replace into inventory(invID, slug, variantIndex, count) values(?,?,?,?)")
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare inventory sql: %s", err.Error())
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(id[:]), slug, variantIndex, count.String())
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("update inventory: %s", err.Error())
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,16 +26,12 @@ func NewUnspentTransactionStore(db *sql.DB, lock *sync.Mutex, coinType wallet.Co
 func (u *UtxoDB) Put(utxo wallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
-	tx, _ := u.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into utxos(coin, outpoint, value, height, scriptPubKey, watchOnly) values(?,?,?,?,?,?)")
+	stmt, err := u.PrepareQuery("insert or replace into utxos(coin, outpoint, value, height, scriptPubKey, watchOnly) values(?,?,?,?,?,?)")
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("prepare utxo sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	watchOnlyInt := 0
 	if utxo.WatchOnly {
 		watchOnlyInt = 1
@@ -42,15 +39,7 @@ func (u *UtxoDB) Put(utxo wallet.Utxo) error {
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
 	_, err = stmt.Exec(u.coinType.CurrencyCode(), outpoint, utxo.Value, int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), watchOnlyInt)
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("commit utxo: %s", err.Error())
 	}
 	return nil
 }
@@ -62,7 +51,7 @@ func (u *UtxoDB) GetAll() ([]wallet.Utxo, error) {
 	stm := "select outpoint, value, height, scriptPubKey, watchOnly from utxos where coin=?"
 	rows, err := u.db.Query(stm, u.coinType.CurrencyCode())
 	if err != nil {
-		return ret, err
+		return ret, fmt.Errorf("get utxos: %s", err.Error())
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -72,19 +61,23 @@ func (u *UtxoDB) GetAll() ([]wallet.Utxo, error) {
 		var scriptPubKey string
 		var watchOnlyInt int
 		if err := rows.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil {
+			log.Errorf("scanning utxo record: %s", err.Error())
 			continue
 		}
 		s := strings.Split(outpoint, ":")
 		shaHash, err := chainhash.NewHashFromStr(s[0])
 		if err != nil {
+			log.Errorf("getting outpoint hash: %s", err.Error())
 			continue
 		}
 		index, err := strconv.Atoi(s[1])
 		if err != nil {
+			log.Errorf("getting output index: %s", err.Error())
 			continue
 		}
 		scriptBytes, err := hex.DecodeString(scriptPubKey)
 		if err != nil {
+			log.Errorf("decode redeem script pubkey: %s", err.Error())
 			continue
 		}
 		watchOnly := false
