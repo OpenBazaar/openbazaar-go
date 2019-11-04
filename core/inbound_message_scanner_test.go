@@ -13,7 +13,6 @@ import (
 	"github.com/op/go-logging"
 )
 
-// DISPUTE CASES
 func TestPerformTaskInboundMessageScanner(t *testing.T) {
 	var (
 		orderMsgWithNoErr = repo.OrderMessage{
