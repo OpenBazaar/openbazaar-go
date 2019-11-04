@@ -563,7 +563,10 @@ func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
 	if err != nil {
 		return 0, *h
 	}
-	h, _ = chainhash.NewHashFromStr(hash.Hex()[2:])
+	h, err = util.CreateChainHash(hash.Hex())
+	if err != nil {
+		log.Error(err)
+	}
 	return num, *h
 }
 
@@ -706,7 +709,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(util.EnsureCorrectPrefix(hash.Hex()))
+		h, err = util.CreateChainHash(hash.Hex())
 	}
 	return h, err
 }
@@ -769,7 +772,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			chash, err := chainhash.NewHashFromStr((*hash).Hex())
+			chash, err := util.CreateChainHash((*hash).Hex())
 			if err != nil {
 				return nil, err
 			}
@@ -789,7 +792,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 
 // BumpFee - Bump the fee for the given transaction
 func (wallet *EthereumWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	return chainhash.NewHashFromStr(txid.String())
+	return util.CreateChainHash(txid.String())
 }
 
 // EstimateFee - Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
@@ -845,7 +848,7 @@ func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address 
 
 	hash := common.BytesToHash(data)
 
-	return chainhash.NewHashFromStr(hash.Hex()[2:])
+	return util.CreateChainHash(hash.Hex())
 }
 
 // ExchangeRates - return the exchangerates
