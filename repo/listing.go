@@ -86,7 +86,7 @@ type shippingOption struct {
 
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
-	Quantity       uint64         `json:"quantity"`
+	Quantity       string         `json:"bigQuantity"`
 	Options        []option       `json:"options"`
 	Shipping       shippingOption `json:"shipping"`
 	Memo           string         `json:"memo"`
@@ -124,6 +124,7 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 	if l.Metadata.Version == 0 {
 		l.Metadata.Version = ListingVersion
 	}
+	l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1057,16 +1058,27 @@ func (l *Listing) GetOptions() ([]*pb.Listing_Item_Option, error) {
 // GetSkus - return item skus
 func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 	var (
-		sl  = &pb.SignedListing{}
-		err = json.Unmarshal(l.ListingBytes, &sl)
+		pbl = &pb.Listing{}
+		err = jsonpb.UnmarshalString(string(l.ListingBytes), pbl)
 	)
 	if err != nil {
 		return nil, err
 	}
-	if sl == nil || sl.Listing == nil || sl.Listing.Item == nil {
+	if pbl == nil || pbl.Item == nil {
 		return nil, nil
 	}
-	return sl.Listing.Item.Skus, nil
+	switch l.ListingVersion {
+	case 3, 4:
+		for i, sku := range pbl.Item.Skus {
+			surcharge := new(big.Int).SetInt64(sku.Surcharge)
+			quantity := new(big.Int).SetInt64(sku.Quantity)
+			pbl.Item.Skus[i].BigSurcharge = surcharge.String()
+			pbl.Item.Skus[i].BigQuantity = quantity.String()
+			pbl.Item.Skus[i].Quantity = 0
+			pbl.Item.Skus[i].Surcharge = 0
+		}
+	}
+	return pbl.Item.Skus, nil
 }
 
 // GetItem - return item

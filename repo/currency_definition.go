@@ -44,8 +44,9 @@ const (
 	Fiat   = "fiat"
 	Crypto = "crypto"
 
-	NilCurrencyCode  = CurrencyCode("")
-	DefaultBlockTime = 10 * time.Minute
+	DefaultCryptoDivisibility = 8
+	NilCurrencyCode           = CurrencyCode("")
+	DefaultBlockTime          = 10 * time.Minute
 )
 
 var (
@@ -251,8 +252,11 @@ func (c CurrencyCode) String() string {
 // NewUnknownCryptoDefinition returns a suitable crypto definition
 // when one does not already exist in local dictionaries
 func NewUnknownCryptoDefinition(code string, div uint) CurrencyDefinition {
+	if div == 0 {
+		div = DefaultCryptoDivisibility
+	}
 	return CurrencyDefinition{
-		Name:         "Unknown Currency",
+		Name:         fmt.Sprintf("Unknown Currency (%s)", code),
 		Code:         CurrencyCode(code),
 		Divisibility: div,
 		CurrencyType: Crypto,

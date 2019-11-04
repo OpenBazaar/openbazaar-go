@@ -602,11 +602,19 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		// TODO: extract to repo package model
 		switch listing.ProtoListing.Metadata.Version {
 		case 5:
-			i.BigQuantity = strconv.FormatUint(item.Quantity, 10)
+			i.BigQuantity = item.Quantity
 		case 4, 3:
-			i.Quantity64 = item.Quantity
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity64 = q.Uint64()
 		default:
-			i.Quantity = uint32(item.Quantity)
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity = uint32(q.Uint64())
 		}
 
 		i.Memo = item.Memo
@@ -951,6 +959,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
 		}
+		rl, err := repo.NewListingFromProtobuf(l)
+		if err != nil {
+			return big.NewInt(0), err
+		}
 
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
@@ -987,14 +999,18 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			return big.NewInt(0), err
 		}
 		var skuExists bool
-		for i, sku := range l.Item.Skus {
+		skus, err := rl.GetSkus()
+		if err != nil {
+			return big.NewInt(0), err
+		}
+		for i, sku := range skus {
 			if selectedSku == i {
 				skuExists = true
+				surcharge := big.NewInt(0)
 				surcharge0, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
-				if !ok {
-					return big.NewInt(0), errors.New("invalid surcharge value")
+				if ok {
+					surcharge = new(big.Int).Abs(surcharge0)
 				}
-				surcharge := new(big.Int).Abs(surcharge0)
 				if surcharge.Cmp(big.NewInt(0)) != 0 {
 					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
 						l.Item.PriceCurrency.Code, surcharge)
@@ -1305,7 +1321,9 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
 	)
 	if cErr != nil {
-		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", currencyCode, cErr)
+		// if the currency is unknown, it is likely a cryptocurrency and will
+		// assume the default divisibility
+		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
 	}
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)

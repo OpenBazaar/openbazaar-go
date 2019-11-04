@@ -17,32 +17,35 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	contract := &pb.RicardianContract{
-		VendorListings: []*pb.Listing{{
-			Metadata: &pb.Listing_Metadata{
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"TBTC"},
-				Version:            5,
-			},
-			Item: &pb.Listing_Item{
-				BigPrice:      "100000",
-				PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-			},
-			ShippingOptions: []*pb.Listing_ShippingOption{
-				{
-					Name:    "UPS",
-					Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
-					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
-					Services: []*pb.Listing_ShippingOption_Service{
-						{
-							Name:                   "Standard shipping",
-							BigPrice:               "25000",
-							BigAdditionalItemPrice: "10000",
+		VendorListings: []*pb.Listing{
+			{
+				Metadata: &pb.Listing_Metadata{
+					ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+					Format:             pb.Listing_Metadata_FIXED_PRICE,
+					AcceptedCurrencies: []string{"TBTC"},
+					EscrowTimeoutHours: 1080,
+					Version:            5,
+				},
+				Item: &pb.Listing_Item{
+					BigPrice:      "100000",
+					PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+				},
+				ShippingOptions: []*pb.Listing_ShippingOption{
+					{
+						Name:    "UPS",
+						Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
+						Type:    pb.Listing_ShippingOption_FIXED_PRICE,
+						Services: []*pb.Listing_ShippingOption_Service{
+							{
+								Name:                   "Standard shipping",
+								BigPrice:               "25000",
+								BigAdditionalItemPrice: "10000",
+							},
 						},
 					},
 				},
 			},
-		}},
+		},
 	}
 
 	ser, err := proto.Marshal(contract.VendorListings[0])

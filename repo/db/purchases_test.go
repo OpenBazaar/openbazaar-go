@@ -1003,6 +1003,7 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 			Divisibility: 8,
 		}
 		if test.cryptoListing {
+			contract.VendorListings[0].Metadata.CryptoCurrencyCode = test.coinType
 			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 		} else {
 			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_PHYSICAL_GOOD
