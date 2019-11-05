@@ -15,3 +15,6 @@ brew install docker docker-compose docker-machine xhyve docker-machine-driver-xh
 sudo chown root:wheel $(brew --prefix)/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
 sudo chmod u+s $(brew --prefix)/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
 
+brew services start docker-machine
+#brew cask install virtualbox
+
