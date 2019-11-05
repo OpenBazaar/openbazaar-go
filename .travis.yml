@@ -12,6 +12,7 @@ before_script:
   - sudo launchctl limit maxfiles
   - ulimit -S -n $NOFILE
   - ulimit -n
+  - echo "done setting limits"
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
