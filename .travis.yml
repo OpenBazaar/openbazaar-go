@@ -1,7 +1,7 @@
 language: go
 matrix:
   include:
-    - osx
+    - os: osx
       osx_image: xcode9.2
 go:
   - "1.11"
