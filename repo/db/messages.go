@@ -98,36 +98,63 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	q := query{
-		table:   "messages",
-		columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "err", "pubkey"},
-		id:      "messageID",
-	}
-	stm, args := filterQuery(q)
-	rows, err := o.db.Query(stm, args...)
+	/*
+		q := query{
+			table:   "messages",
+			columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "err", "pubkey"},
+			id:      "messageID",
+		}
+		stm, args := filterQuery(q)
+	*/
+
+	stmt := "select messageID, orderID, message_type, message, peerID, err, pubkey from messages where err!=? "
+	var ret []repo.OrderMessage
+	rows, err := o.db.Query(stmt, "")
 	if err != nil {
-		return nil, err
+		return ret, err
 	}
 	defer rows.Close()
-	var ret []repo.OrderMessage
+
 	for rows.Next() {
 		var messageID, orderID, peerID, rErr string
-		var mType pb.Message_MessageType
-		var message, pubkey []byte
-		if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr, &pubkey); err != nil {
-			return ret, err
+		var msg0, pkey []byte
+		var mType int32
+		err = rows.Scan(&messageID, &orderID, &mType, &msg0, &peerID, &rErr, &pkey)
+		if err != nil {
+			log.Error(err)
 		}
-		msg := repo.OrderMessage{
+		ret = append(ret, repo.OrderMessage{
+			PeerID:      peerID,
 			MessageID:   messageID,
 			OrderID:     orderID,
-			MessageType: int32(mType),
+			MessageType: mType,
+			Message:     msg0,
 			MsgErr:      rErr,
-			PeerID:      peerID,
-			Message:     message,
-			PeerPubkey:  pubkey,
-		}
-
-		ret = append(ret, msg)
+			PeerPubkey:  pkey,
+		})
 	}
+
+	/*
+		var ret []repo.OrderMessage
+		for rows.Next() {
+			var messageID, orderID, peerID, rErr string
+			var mType pb.Message_MessageType
+			var message, pubkey []byte
+			if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr, &pubkey); err != nil {
+				return ret, err
+			}
+			msg := repo.OrderMessage{
+				MessageID:   messageID,
+				OrderID:     orderID,
+				MessageType: int32(mType),
+				MsgErr:      rErr,
+				PeerID:      peerID,
+				Message:     message,
+				PeerPubkey:  pubkey,
+			}
+
+			ret = append(ret, msg)
+		}
+	*/
 	return ret, nil
 }

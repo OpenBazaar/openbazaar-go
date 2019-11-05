@@ -75,64 +75,65 @@ func (scanner *inboundMessageScanner) PerformTask() {
 	msgs, err := scanner.datastore.Messages().GetAllErrored()
 	if err != nil {
 		scanner.logger.Error(err)
-	} else {
-		for _, m := range msgs {
-			if m.MsgErr == ErrInsufficientFunds.Error() {
+		return
+	}
+	for _, m := range msgs {
+		if m.MsgErr == ErrInsufficientFunds.Error() {
 
-				// Get handler for this msg type
-				handler := scanner.service.HandlerForMsgType(pb.Message_MessageType(m.MessageType))
-				if handler != nil {
-					pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
+			// Get handler for this msg type
+			handler := scanner.service.HandlerForMsgType(pb.Message_MessageType(m.MessageType))
+			if handler != nil {
+				pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
+				if err != nil {
+					log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+					continue
+				}
+				i, err := peer.IDFromPublicKey(pubkey)
+				if err != nil {
+					log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+					continue
+				}
+				msg := new(repo.Message)
+
+				if len(m.Message) > 0 {
+					err = msg.UnmarshalJSON(m.Message)
 					if err != nil {
 						log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
 						continue
 					}
-					i, err := peer.IDFromPublicKey(pubkey)
-					if err != nil {
-						log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
-						continue
-					}
-					msg := new(repo.Message)
-
-					if len(m.Message) > 0 {
-						err = msg.UnmarshalJSON(m.Message)
-						if err != nil {
-							log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
-							continue
-						}
-					}
-
-					// Dispatch handler
-					_, err = handler(i, &msg.Msg, nil)
-					if err != nil {
-						log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
-					}
-					/*
-						// If nil response, return it before serializing
-						if rpmes == nil {
-							continue
-						}
-
-						// give back request id
-						rpmes.RequestId = msg.Msg.RequestId
-						rpmes.IsResponse = true
-
-						ms, err := scanner.service.messageSenderForPeer(scanner.service.ctx, i)
-						if err != nil {
-							log.Error("Error getting message sender and opening stream to peer")
-							continue
-						}
-
-						// send out response msg
-						log.Debugf("sending response message to: %s", m.PeerID)
-						if err := ms.SendMessage(scanner.service.ctx, rpmes); err != nil {
-							log.Debugf("send response error: %s", err)
-							continue
-						}
-					*/
 				}
 
+				// Dispatch handler
+				_, err = handler(i, &msg.Msg, nil)
+				if err != nil {
+					log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
+				}
+				/*
+					// If nil response, return it before serializing
+					if rpmes == nil {
+						continue
+					}
+
+					// give back request id
+					rpmes.RequestId = msg.Msg.RequestId
+					rpmes.IsResponse = true
+
+					ms, err := scanner.service.messageSenderForPeer(scanner.service.ctx, i)
+					if err != nil {
+						log.Error("Error getting message sender and opening stream to peer")
+						continue
+					}
+
+					// send out response msg
+					log.Debugf("sending response message to: %s", m.PeerID)
+					if err := ms.SendMessage(scanner.service.ctx, rpmes); err != nil {
+						log.Debugf("send response error: %s", err)
+						continue
+					}
+				*/
 			}
+
 		}
 	}
+
 }

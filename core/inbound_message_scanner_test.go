@@ -35,9 +35,20 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 			PeerPubkey:  []byte("sample"),
 		}
 
+		orderMsgWithOtherErr = repo.OrderMessage{
+			MessageID:   "3",
+			OrderID:     "3",
+			MessageType: int32(pb.Message_ORDER),
+			Message:     []byte("sample message"),
+			MsgErr:      "not a retryable err",
+			PeerID:      "sample",
+			PeerPubkey:  []byte("sample"),
+		}
+
 		existingRecords = []repo.OrderMessage{
 			orderMsgWithNoErr,
 			orderMsgWithErr,
+			orderMsgWithOtherErr,
 		}
 
 		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
@@ -82,5 +93,20 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 
 	fmt.Println(len(msgs))
 	fmt.Println(err)
+
+	if len(msgs) != 2 {
+		t.Errorf("did not fetch the correct no of err records")
+	}
+
+	count := 0
+	for _, msg := range msgs {
+		if msg.MsgErr == ErrInsufficientFunds.Error() {
+			count++
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("did not pick the correct no of records to process")
+	}
 
 }
