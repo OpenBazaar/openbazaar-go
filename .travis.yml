@@ -3,7 +3,6 @@ os:
   - osx
 go:
   - "1.11"
-sudo: required
 services:
   - docker
 env:
@@ -18,5 +17,6 @@ script:
   - cd $TRAVIS_BUILD_DIR && go test -i && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ./build-osx.sh; fi
+  - ./build.sh
 after_success:
   - ./deploy.sh
