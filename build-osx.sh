@@ -7,6 +7,7 @@ sudo chown root:wheel $(brew --prefix)/opt/docker-machine-driver-xhyve/bin/docke
 sudo chmod u+s $(brew --prefix)/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
 
 brew services start docker-machine
+sudo spctl --master-disable
 brew cask install virtualbox
 docker-machine create --driver virtualbox default
 
