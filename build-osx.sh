@@ -10,4 +10,3 @@ brew services start docker-machine
 sudo spctl --master-disable
 brew cask install virtualbox
 docker-machine create default --virtualbox-no-vtx-check
-
