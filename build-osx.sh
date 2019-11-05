@@ -9,5 +9,5 @@ sudo chmod u+s $(brew --prefix)/opt/docker-machine-driver-xhyve/bin/docker-machi
 brew services start docker-machine
 sudo spctl --master-disable
 brew cask install virtualbox
-docker-machine create --driver virtualbox default
+docker-machine create default --virtualbox-no-vtx-check
 
