@@ -3,8 +3,15 @@ os:
   - osx
 go:
   - "1.11"
-services:
-  - docker
+before_script:
+  - echo "Increase the maximum number of open file descriptors on macOS"
+  - NOFILE=20480
+  - sudo sysctl -w kern.maxfiles=$NOFILE
+  - sudo sysctl -w kern.maxfilesperproc=$NOFILE
+  - sudo launchctl limit maxfiles $NOFILE $NOFILE
+  - sudo launchctl limit maxfiles
+  - ulimit -S -n $NOFILE
+  - ulimit -n
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
