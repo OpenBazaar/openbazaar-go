@@ -1,7 +1,8 @@
 language: go
-os:
-  - osx
-    osx_image: xcode9.2
+matrix:
+  include:
+    - osx
+      osx_image: xcode9.2
 go:
   - "1.11"
 before_script:
