@@ -1344,11 +1344,16 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	r, _ := big.NewFloat(rate).Int(nil)
-	if r.Int64() == 0 {
-		return big.NewInt(0), errors.New("invalid rate of zero value")
+
+	cv, err := repo.NewCurrencyValue(amount.String(), currencyDef)
+	if err != nil {
+		return nil, err
 	}
-	return new(big.Int).Div(amount, r), nil
+	newCV, _, err := cv.ConvertTo(pricingDef, 1/rate)
+	if err != nil {
+		return nil, err
+	}
+	return newCV.Amount, nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
