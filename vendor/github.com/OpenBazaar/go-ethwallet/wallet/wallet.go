@@ -34,7 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	log "github.com/sirupsen/logrus"
+	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
 
@@ -52,6 +52,7 @@ var (
 		Code:         "ETH",
 		Divisibility: 18,
 	}
+	log = logging.MustGetLogger("ethwallet")
 )
 
 // EthConfiguration - used for eth specific configuration
@@ -558,6 +559,7 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 
 // ChainTip - Get the height and best hash of the blockchain
 func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
+
 	num, hash, err := wallet.client.GetLatestBlock()
 	h, _ := chainhash.NewHashFromStr("")
 	if err != nil {
@@ -566,6 +568,10 @@ func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
 	h, err = util.CreateChainHash(hash.Hex())
 	if err != nil {
 		log.Error(err)
+		h, err = chainhash.NewHashFromStr("")
+		if err != nil {
+			log.Errorf("err creating empty chainhash : %v", err)
+		}
 	}
 	return num, *h
 }
