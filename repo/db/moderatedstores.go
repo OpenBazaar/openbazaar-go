@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -19,21 +20,15 @@ func NewModeratedStore(db *sql.DB, lock *sync.Mutex) repo.ModeratedStore {
 func (m *ModeratedDB) Put(peerId string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	tx, _ := m.db.Begin()
-	stmt, _ := tx.Prepare("insert into moderatedstores(peerID) values(?)")
-
-	defer stmt.Close()
-	_, err := stmt.Exec(peerId)
+	stmt, err := m.PrepareQuery("insert into moderatedstores(peerID) values(?)")
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("prepare moderated store sql: %s", err.Error())
 	}
-	err = tx.Commit()
+	defer stmt.Close()
+
+	_, err = stmt.Exec(peerId)
 	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("commit moderated store: %s", err.Error())
 	}
 	return nil
 }

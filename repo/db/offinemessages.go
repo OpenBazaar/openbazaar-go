@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,26 +20,15 @@ func NewOfflineMessageStore(db *sql.DB, lock *sync.Mutex) repo.OfflineMessageSto
 func (o *OfflineMessagesDB) Put(url string) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	tx, err := o.db.Begin()
+	stmt, err := o.PrepareQuery("insert into offlinemessages(url, timestamp) values(?,?)")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into offlinemessages(url, timestamp) values(?,?)")
-	if err != nil {
-		return err
+		return fmt.Errorf("prepare offline message sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	_, err = stmt.Exec(url, int(time.Now().Unix()))
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("commit offline message: %s", err.Error())
 	}
 	return nil
 }

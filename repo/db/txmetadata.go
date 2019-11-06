@@ -18,13 +18,9 @@ func NewTransactionMetadataStore(db *sql.DB, lock *sync.Mutex) repo.TransactionM
 func (t *TxMetadataDB) Put(m repo.Metadata) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	tx, _ := t.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into txmetadata(txid, address, memo, orderID, thumbnail, canBumpFee) values(?,?,?,?,?,?)")
+	stmt, err := t.db.Prepare("insert or replace into txmetadata(txid, address, memo, orderID, thumbnail, canBumpFee) values(?,?,?,?,?,?)")
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
+		log.Errorf("prepring txmetadata sql for order (%s): %s", m.OrderId, err.Error())
 		return err
 	}
 	defer stmt.Close()
@@ -34,15 +30,8 @@ func (t *TxMetadataDB) Put(m repo.Metadata) error {
 	}
 	_, err = stmt.Exec(m.Txid, m.Address, m.Memo, m.OrderId, m.Thumbnail, bumpable)
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
+		log.Errorf("putting txmetadata for order (%s): %s", m.OrderId, err.Error())
 		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
 	}
 	return nil
 }

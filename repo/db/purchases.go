@@ -41,15 +41,12 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		return err
 	}
 
-	tx, err := p.db.Begin()
-	if err != nil {
-		return err
-	}
 	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions, disputedAt) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"),?)`
-	stmt, err := tx.Prepare(stm)
+	stmt, err := p.db.Prepare(stm)
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 	var (
 		paymentAddr, shippingName, shippingAddress string
 		disputedAt                                 int
@@ -70,8 +67,6 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if dispute != nil {
 		disputedAt = int(dispute.Timestamp.Seconds)
 	}
-
-	defer stmt.Close()
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -91,13 +86,9 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		disputedAt,
 	)
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("commit purchase: %s", err.Error())
 	}
-	return tx.Commit()
+	return nil
 }
 
 func (p *PurchasesDB) MarkAsRead(orderID string) error {
@@ -343,9 +334,11 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	err = json.Unmarshal(serializedTransactions, &records)
-	if err != nil {
-		log.Error(err)
+	if len(serializedTransactions) > 0 {
+		err = json.Unmarshal(serializedTransactions, &records)
+		if err != nil {
+			return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("unmarshal purchase transactions: %s", err.Error())
+		}
 	}
 	cc := def.CurrencyCode()
 	return rc, pb.OrderState(stateInt), funded, records, read, &cc, nil
@@ -358,7 +351,8 @@ func (p *PurchasesDB) Count() int {
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("failed scanning purchase count: %s", err.Error())
+		return 0
 	}
 	return count
 }
@@ -467,17 +461,23 @@ func (p *PurchasesDB) UpdatePurchasesLastDisputeTimeoutNotifiedAt(purchases []*r
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	tx, err := p.db.Begin()
+	tx, err := p.BeginTransaction()
 	if err != nil {
 		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
 	}
 	for _, p := range purchases {
 		_, err = tx.Exec("update purchases set lastDisputeTimeoutNotifiedAt = ? where orderID = ?", int(p.LastDisputeTimeoutNotifiedAt.Unix()), p.OrderID)
 		if err != nil {
+			if rErr := tx.Rollback(); rErr != nil {
+				return fmt.Errorf("update purchase: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+			}
 			return fmt.Errorf("update purchase: %s", err.Error())
 		}
 	}
 	if err = tx.Commit(); err != nil {
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("commit purchase: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+		}
 		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
 	}
 
@@ -492,17 +492,23 @@ func (p *PurchasesDB) UpdatePurchasesLastDisputeExpiryNotifiedAt(purchases []*re
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	tx, err := p.db.Begin()
+	tx, err := p.BeginTransaction()
 	if err != nil {
 		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
 	}
 	for _, p := range purchases {
 		_, err = tx.Exec("update purchases set lastDisputeExpiryNotifiedAt = ? where orderID = ?", int(p.LastDisputeExpiryNotifiedAt.Unix()), p.OrderID)
 		if err != nil {
+			if rErr := tx.Rollback(); rErr != nil {
+				return fmt.Errorf("update purchase error: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+			}
 			return fmt.Errorf("update purchase: %s", err.Error())
 		}
 	}
 	if err = tx.Commit(); err != nil {
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("commit purchase error: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+		}
 		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
 	}
 
