@@ -47,6 +47,8 @@ const (
 )
 
 var (
+	emptyChainHash *chainhash.Hash
+
 	// EthCurrencyDefinition is eth defaults
 	EthCurrencyDefinition = wi.CurrencyDefinition{
 		Code:         "ETH",
@@ -54,6 +56,18 @@ var (
 	}
 	log = logging.MustGetLogger("ethwallet")
 )
+
+func init() {
+	mustInitEmptyChainHash()
+}
+
+func mustInitEmptyChainHash() {
+	hash, err := chainhash.NewHashFromStr("")
+	if err != nil {
+		panic(fmt.Sprintf("creating emptyChainHash: %s", err.Error()))
+	}
+	emptyChainHash = hash
+}
 
 // EthConfiguration - used for eth specific configuration
 type EthConfiguration struct {
@@ -559,19 +573,14 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 
 // ChainTip - Get the height and best hash of the blockchain
 func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
-
 	num, hash, err := wallet.client.GetLatestBlock()
-	h, _ := chainhash.NewHashFromStr("")
 	if err != nil {
-		return 0, *h
+		return 0, *emptyChainHash
 	}
-	h, err = util.CreateChainHash(hash.Hex())
+	h, err := util.CreateChainHash(hash.Hex())
 	if err != nil {
 		log.Error(err)
-		h, err = chainhash.NewHashFromStr("")
-		if err != nil {
-			log.Errorf("err creating empty chainhash : %v", err)
-		}
+		h = emptyChainHash
 	}
 	return num, *h
 }
