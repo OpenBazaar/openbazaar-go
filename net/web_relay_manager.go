@@ -110,7 +110,7 @@ func connectToServer(relay string, sender string) (*websocket.Conn, error) {
 			_, p, err := c.ReadMessage()
 			if err != nil {
 				fmt.Println(err)
-				//return nil, err
+				break
 			}
 			// print out that message for clarity
 			fmt.Printf("Received incoming message from relay: %s\n", string(p))
