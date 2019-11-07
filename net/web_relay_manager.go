@@ -14,8 +14,9 @@ import (
 )
 
 type WebRelayManager struct {
-	webrelays []string
-	peerID    string
+	webrelays   []string
+	peerID      string
+	connections []*websocket.Conn
 }
 
 type EncryptedMessage struct {
@@ -34,7 +35,75 @@ type SubscribeMessage struct {
 }
 
 func NewWebRelayManager(webrelays []string, sender string) *WebRelayManager {
-	return &WebRelayManager{webrelays, sender}
+
+	// Establish connections
+	var conns []*websocket.Conn
+	for _, relay := range webrelays {
+
+		// Connect and subscribe to websocket server
+		conn, err := connectToServer(relay, sender)
+		if err != nil {
+			log.Error("Could not connect to: %s", relay)
+		}
+
+		conns = append(conns, conn)
+	}
+	return &WebRelayManager{webrelays, sender, conns}
+}
+
+func connectToServer(relay string, sender string) (*websocket.Conn, error) {
+	// Generate subscription key for web relay
+	peerIDMultihash, _ := multihash.FromB58String(sender)
+	decoded, _ := multihash.Decode(peerIDMultihash)
+	digest := decoded.Digest
+	prefix := digest[:8]
+
+	prefix64 := binary.BigEndian.Uint64(prefix)
+
+	// Then shifting
+	shiftedPrefix64 := prefix64 >> uint(48)
+
+	// Then converting back to a byte array
+	shiftedBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(shiftedBytes, shiftedPrefix64)
+
+	hashedShiftedPrefix := sha256.Sum256(shiftedBytes)
+
+	subscriptionKey, _ := multihash.Encode(hashedShiftedPrefix[:], multihash.SHA2_256)
+
+	// Generate subscribe message
+	subscribeMessage := SubscribeMessage{
+		UserID:          sender,
+		SubscriptionKey: base58.Encode(subscriptionKey),
+	}
+
+	data, _ := json.Marshal(subscribeMessage)
+	typedmessage := TypedMessage{
+		Type: "SubscribeMessage",
+		Data: data,
+	}
+	fmt.Println("Sending SubscribeMessage:", typedmessage)
+
+	socketmessage, _ := json.Marshal(typedmessage)
+
+	// Connect to websocket server
+	fmt.Printf("Connecting to relay server: %s\n", relay)
+
+	c, _, err := websocket.DefaultDialer.Dial(relay, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+		return nil, err
+	}
+
+	err = c.WriteMessage(websocket.TextMessage, socketmessage)
+	if err != nil {
+		fmt.Println("write:", err)
+		return nil, err
+	}
+
+	fmt.Printf("Successfully connected and subscribed to: %s\n", relay)
+
+	return c, nil
 }
 
 func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string) {
@@ -60,59 +129,13 @@ func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string
 
 func (wrm *WebRelayManager) authToWebRelay(server string, msg []byte) {
 
-	// Generate subscription key for web relay
-	peerIDMultihash, _ := multihash.FromB58String(wrm.peerID)
-	decoded, _ := multihash.Decode(peerIDMultihash)
-	digest := decoded.Digest
-	prefix := digest[:8]
-
-	prefix64 := binary.BigEndian.Uint64(prefix)
-
-	// Then shifting
-	shiftedPrefix64 := prefix64 >> uint(48)
-
-	// Then converting back to a byte array
-	shiftedBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(shiftedBytes, shiftedPrefix64)
-
-	hashedShiftedPrefix := sha256.Sum256(shiftedBytes)
-
-	subscriptionKey, _ := multihash.Encode(hashedShiftedPrefix[:], multihash.SHA2_256)
-
-	// Generate subscribe message
-	subscribeMessage := SubscribeMessage{
-		UserID:          wrm.peerID,
-		SubscriptionKey: base58.Encode(subscriptionKey),
-	}
-
-	data, _ := json.Marshal(subscribeMessage)
-	typedmessage := TypedMessage{
-		Type: "SubscribeMessage",
-		Data: data,
-	}
-	fmt.Println(typedmessage)
-
-	socketmessage, _ := json.Marshal(typedmessage)
-
-	// Connect to websocket server
-	fmt.Printf("connecting to %s\n", server)
-
-	c, _, err := websocket.DefaultDialer.Dial(server, nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer c.Close()
-
-	err = c.WriteMessage(websocket.TextMessage, socketmessage)
-	if err != nil {
-		fmt.Println("write:", err)
-		return
-	}
-
-	err = c.WriteMessage(websocket.TextMessage, msg)
-	if err != nil {
-		fmt.Println("write:", err)
-		return
+	for _, conn := range wrm.connections {
+		err := conn.WriteMessage(websocket.TextMessage, msg)
+		if err != nil {
+			fmt.Println("write:", err)
+			return
+		}
+		fmt.Printf("Successfully sent message to relay: %s\n", conn.RemoteAddr())
 	}
 
 }
