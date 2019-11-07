@@ -106,7 +106,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	// Base64 encode
 	encodedCipherText := base64.StdEncoding.EncodeToString(relayciphertext)
 
-	n.WebRelayManager.SendRelayMessage(encodedCipherText, p.String())
+	n.WebRelayManager.SendRelayMessage(encodedCipherText, p.Pretty())
 
 	// TODO: this function blocks if the recipient's public key is not on the local machine
 	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
