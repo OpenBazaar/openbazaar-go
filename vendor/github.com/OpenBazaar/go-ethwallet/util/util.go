@@ -5,13 +5,18 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
 )
+
+var log = logging.MustGetLogger("ethwallet-util")
 
 // ExtractChaincode used to get the chaincode out of extended key
 func ExtractChaincode(key *hdkeychain.ExtendedKey) []byte {
@@ -118,4 +123,27 @@ func SigRSV(isig interface{}) ([32]byte, [32]byte, uint8) {
 	V := uint8(vI + 27)
 
 	return R, S, V
+}
+
+// EnsureCorrectPrefix ensures we have 0x prefix
+func EnsureCorrectPrefix(str string) string {
+	if strings.HasPrefix(str, "0x") {
+		return str
+	}
+	return "0x" + str
+}
+
+// CreateChainHash is a wrapper to the chainhash.new hash function
+// this allows for a cleaner way to check if we are not in any way
+// letting the 0x prefix hinder the chainhash generation
+func CreateChainHash(str string) (*chainhash.Hash, error) {
+	hash, err := chainhash.NewHashFromStr(str)
+	if err == chainhash.ErrHashStrSize {
+		hash, err = chainhash.NewHashFromStr(strings.TrimPrefix(str, "0x"))
+		if err != nil {
+			log.Errorf("err creating chainhash : %v", err)
+			return nil, err
+		}
+	}
+	return hash, nil
 }
