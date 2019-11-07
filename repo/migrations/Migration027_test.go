@@ -61,6 +61,27 @@ var (
     "signature": "2+M/+M866ZaPyqHpBdsqJ9gCgLPNOQoKKtaOrruZmDu6YXhc3RiKQtoZs1BTfC02k8TwfIU5LeFPhxagwC6UAg=="
 }`
 
+	preMigration027CryptoListingJSON = `{
+    "listing": {
+        "slug": "Migration027_test_crypto_listing",
+        "metadata": {
+            "contractType": "CRYPTOCURRENCY",
+            "format": "MARKET_PRICE",
+            "coinType": "BAT",
+            "coinDivisibility": 8,
+            "priceModifier": 50
+        },
+        "item": {
+            "skus": [
+                {
+                    "quantity": 10
+                }
+            ]
+        }
+    },
+    "signature": "7vmvT69nQQyCmp3Yng7ROWXOiJx0VKGbNRYN8wgGJSqsnRYXC9BEd81t8dd5Mm1wHWK6egGk2rEpct+qWaWdBA=="
+}`
+
 	postMigration027ListingJSON = `{
     "listing": {
         "slug": "Migration027_test_listing",
@@ -101,6 +122,27 @@ var (
     },
     "signature": "r7j6YM3ePiTRyIKmd9ILMvjvhv5jaAB5m1gMlPJ9ug05KZIfAPXXa+EtuF+ExGvtEOpdyK3BEFpU2rm65CyvDw=="
 }`
+
+	postMigration027CryptoListingJSON = `{
+    "listing": {
+        "slug": "Migration027_test_crypto_listing",
+        "metadata": {
+            "contractType": "CRYPTOCURRENCY",
+            "format": "MARKET_PRICE",
+            "coinType": "BAT",
+            "coinDivisibility": 8
+        },
+        "item": {
+            "skus": [
+                {
+                    "bigQuantity": "10"
+                }
+            ],
+            "priceModifier": 50
+        }
+    },
+    "signature": "37KoDxNC4lYTd8hZQHzgpvJ4GJsXVTUp89D1LhDMapgFUhGmFSsiPAjkgdez7Y9wJ7lfH4ouZRrUcw/81kcCAQ=="
+}`
 )
 
 func TestMigration027(t *testing.T) {
@@ -121,12 +163,15 @@ func TestMigration027(t *testing.T) {
 	defer testRepo.DestroySchemaDirectories()
 
 	var (
-		repoverPath      = testRepo.DataPathJoin("repover")
-		listingIndexPath = testRepo.DataPathJoin("root", "listings.json")
-		testListingSlug  = "Migration027_test_listing"
-		testListingPath  = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
+		repoverPath           = testRepo.DataPathJoin("repover")
+		listingIndexPath      = testRepo.DataPathJoin("root", "listings.json")
+		testListingSlug       = "Migration027_test_listing"
+		testCryptoListingSlug = "Migration027_test_crypto_listing"
+		testListingPath       = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
+		testCryptoListingPath = testRepo.DataPathJoin("root", "listings", testCryptoListingSlug+".json")
 
-		listing = factory.NewListing(testListingSlug)
+		listing       = factory.NewListing(testListingSlug)
+		cryptoListing = factory.NewListing(testCryptoListingSlug)
 	)
 
 	db, err := migrations.OpenDB(testRepo.DataPath(), "", true)
@@ -157,7 +202,15 @@ func TestMigration027(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	index := []*migrations.Migration027V4ListingIndexData{extractListingData27(listing)}
+	f2, err := os.Create(testCryptoListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f2.Write([]byte(preMigration027CryptoListingJSON)); err != nil {
+		t.Fatal(err)
+	}
+
+	index := []*migrations.Migration027V4ListingIndexData{extractListingData27(listing), extractListingData27(cryptoListing)}
 	indexJSON, err := json.MarshalIndent(&index, "", "    ")
 	if err != nil {
 		t.Fatal(err)
@@ -177,8 +230,17 @@ func TestMigration027(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	upMigratedCryptoListing, err := ioutil.ReadFile(testCryptoListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if string(upMigratedListing) != postMigration027ListingJSON {
 		t.Fatal("Failed to migrate listing up")
+	}
+
+	if string(upMigratedCryptoListing) != postMigration027CryptoListingJSON {
+		t.Fatal("Failed to migrate crypto listing up")
 	}
 
 	sl := new(pb.SignedListing)
@@ -200,12 +262,36 @@ func TestMigration027(t *testing.T) {
 		t.Errorf("Failed to validate up migrated listing signature")
 	}
 
+	sl2 := new(pb.SignedListing)
+	if err := jsonpb.UnmarshalString(string(upMigratedCryptoListing), sl2); err != nil {
+		t.Fatal(err)
+	}
+
+	ser2, err := proto.Marshal(sl2.Listing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	valid2, err := sk.GetPublic().Verify(ser2, sl2.Signature)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid2 {
+		t.Errorf("Failed to validate up migrated crypto listing signature")
+	}
+
 	nd, err := coremock.NewMockNode()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	listingHash, err := ipfs.GetHashOfFile(nd, testListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	listingHash2, err := ipfs.GetHashOfFile(nd, testCryptoListingPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,6 +317,18 @@ func TestMigration027(t *testing.T) {
 		t.Errorf("Incorrect currency code set")
 	}
 
+	if listingIndex[1].Price.Amount.String() != strconv.Itoa(int(index[1].Price.Amount)) {
+		t.Errorf("Incorrect price set")
+	}
+
+	if listingIndex[1].Hash != listingHash2 {
+		t.Errorf("Incorrect hash set")
+	}
+
+	if string(listingIndex[1].Price.Currency.Code) != index[1].Price.CurrencyCode {
+		t.Errorf("Incorrect currency code set")
+	}
+
 	assertCorrectRepoVer(t, repoverPath, "28")
 
 	if err := migration.Down(testRepo.DataPath(), "", true); err != nil {
@@ -242,12 +340,40 @@ func TestMigration027(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	downMigratedCryptoListing, err := ioutil.ReadFile(testCryptoListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if string(downMigratedListing) != preMigration027ListingJSON {
 		t.Fatal("Failed to migrate listing down")
 	}
 
+	if string(downMigratedCryptoListing) != preMigration027CryptoListingJSON {
+		t.Fatal("Failed to migrate crypto listing down")
+	}
+
 	sl = new(pb.SignedListing)
 	if err := jsonpb.UnmarshalString(string(downMigratedListing), sl); err != nil {
+		t.Fatal(err)
+	}
+
+	ser, err = proto.Marshal(sl.Listing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	valid, err = sk.GetPublic().Verify(ser, sl.Signature)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Errorf("Failed to validate down migrated listing signature")
+	}
+
+	sl2 = new(pb.SignedListing)
+	if err := jsonpb.UnmarshalString(string(downMigratedCryptoListing), sl2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -270,6 +396,11 @@ func TestMigration027(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	listingHash2, err = ipfs.GetHashOfFile(nd, testCryptoListingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var listingIndex2 []migrations.Migration027V4ListingIndexData
 	listingsJSON, err = ioutil.ReadFile(listingIndexPath)
 	if err != nil {
@@ -288,6 +419,18 @@ func TestMigration027(t *testing.T) {
 	}
 
 	if string(listingIndex[0].Price.Currency.Code) != listingIndex2[0].Price.CurrencyCode {
+		t.Errorf("Incorrect currency code set")
+	}
+
+	if listingIndex[1].Price.Amount.String() != strconv.Itoa(int(listingIndex2[1].Price.Amount)) {
+		t.Errorf("Incorrect price set")
+	}
+
+	if listingIndex2[1].Hash != listingHash2 {
+		t.Errorf("Incorrect hash set")
+	}
+
+	if string(listingIndex[1].Price.Currency.Code) != listingIndex2[1].Price.CurrencyCode {
 		t.Errorf("Incorrect currency code set")
 	}
 

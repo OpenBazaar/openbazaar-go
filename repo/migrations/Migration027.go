@@ -211,12 +211,21 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				return err
 			}
 
-			listingJSON := signedListingJSON["listing"]
+			listingJSON, listingExists := signedListingJSON["listing"]
+			if !listingExists {
+				continue
+			}
 			listing := listingJSON.(map[string]interface{})
 
-			metadataJSON := listing["metadata"]
+			metadataJSON, metadataExists := listing["metadata"]
+			if !metadataExists {
+				continue
+			}
 			metadata := metadataJSON.(map[string]interface{})
-			itemJSON := listing["item"]
+			itemJSON, itemExists := listing["item"]
+			if !itemExists {
+				continue
+			}
 			item := itemJSON.(map[string]interface{})
 
 			var (
@@ -238,23 +247,24 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				coupons = couponsJSON.([]interface{})
 			}
 
-			pricingCurrencyJSON := metadata["pricingCurrency"]
-			pricingCurrency := pricingCurrencyJSON.(string)
+			pricingCurrencyJSON, pricingCurrencyExists := metadata["pricingCurrency"]
+			if pricingCurrencyExists {
+				pricingCurrency := pricingCurrencyJSON.(string)
+				divisibility, ok := divisibilityMap[strings.ToUpper(pricingCurrency)]
+				if !ok {
+					divisibility = 2
+				}
 
-			divisibility, ok := divisibilityMap[strings.ToUpper(pricingCurrency)]
-			if !ok {
-				divisibility = 2
+				item["priceCurrency"] = struct {
+					Code         string `json:"code"`
+					Divisibility uint32 `json:"divisibility"`
+				}{
+					Code:         pricingCurrency,
+					Divisibility: uint32(divisibility),
+				}
+
+				delete(metadata, "pricingCurrency")
 			}
-
-			item["priceCurrency"] = struct {
-				Code         string `json:"code"`
-				Divisibility uint32 `json:"divisibility"`
-			}{
-				Code:         pricingCurrency,
-				Divisibility: uint32(divisibility),
-			}
-
-			delete(metadata, "pricingCurrency")
 
 			var modifier float64
 			modifierJSON := metadata["priceModifier"]
@@ -266,38 +276,20 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 			delete(metadata, "priceModifier")
 
-			priceJSON := item["price"]
-			price := priceJSON.(float64)
+			priceJSON, priceExists := item["price"]
+			if priceExists {
+				price := priceJSON.(float64)
 
-			item["bigPrice"] = strconv.Itoa(int(price))
+				item["bigPrice"] = strconv.Itoa(int(price))
 
-			delete(item, "price")
-
-			var coinType string
-			coinTypeJSON := metadata["coinType"]
-			if coinTypeJSON != nil {
-				coinType = coinTypeJSON.(string)
+				delete(item, "price")
 			}
-
-			metadata["cryptoCurrencyCode"] = coinType
-
-			delete(metadata, "coinType")
-
-			var coinDivisibility float64
-			coinDivisibilityJSON := metadata["coinDivisibility"]
-			if coinDivisibilityJSON != nil {
-				coinDivisibility = coinDivisibilityJSON.(float64)
-			}
-
-			metadata["cryptoDivisibility"] = uint32(coinDivisibility)
-
-			delete(metadata, "coinDivisibility")
 
 			for _, skuJSON := range skus {
 				sku := skuJSON.(map[string]interface{})
 
-				quantityJSON, ok := sku["quantity"]
-				if ok {
+				quantityJSON, quantityExists := sku["quantity"]
+				if quantityExists {
 					quantity := quantityJSON.(float64)
 
 					sku["bigQuantity"] = strconv.Itoa(int(quantity))
@@ -305,8 +297,8 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 					delete(sku, "quantity")
 				}
 
-				surchargeJSON, ok := sku["surcharge"]
-				if ok {
+				surchargeJSON, surchargeExists := sku["surcharge"]
+				if surchargeExists {
 					surcharge := surchargeJSON.(float64)
 
 					sku["bigSurcharge"] = strconv.Itoa(int(surcharge))
@@ -327,14 +319,16 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 					service := serviceJSON.(map[string]interface{})
 
 					priceJSON := service["price"]
-					price := priceJSON.(float64)
+					price, priceExists := priceJSON.(float64)
 
-					service["bigPrice"] = strconv.Itoa(int(price))
+					if priceExists {
+						service["bigPrice"] = strconv.Itoa(int(price))
 
-					delete(service, "price")
+						delete(service, "price")
+					}
 
-					additionalItemPriceJSON, ok := service["additionalItemPrice"]
-					if ok {
+					additionalItemPriceJSON, additionalPriceExists := service["additionalItemPrice"]
+					if additionalPriceExists {
 						additionalItemPrice := additionalItemPriceJSON.(float64)
 
 						service["bigAdditionalItemPrice"] = strconv.Itoa(int(additionalItemPrice))
@@ -477,12 +471,21 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 				return err
 			}
 
-			listingJSON := signedListingJSON["listing"]
+			listingJSON, listingExists := signedListingJSON["listing"]
+			if !listingExists {
+				continue
+			}
 			listing := listingJSON.(map[string]interface{})
 
-			metadataJSON := listing["metadata"]
+			metadataJSON, metadataExists := listing["metadata"]
+			if !metadataExists {
+				continue
+			}
 			metadata := metadataJSON.(map[string]interface{})
-			itemJSON := listing["item"]
+			itemJSON, itemExists := listing["item"]
+			if !itemExists {
+				continue
+			}
 			item := itemJSON.(map[string]interface{})
 
 			var (
@@ -504,15 +507,19 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 				coupons = couponsJSON.([]interface{})
 			}
 
-			pricingCurrencyJSON := item["priceCurrency"]
-			pricingCurrency := pricingCurrencyJSON.(map[string]interface{})
+			pricingCurrencyJSON, pricingCurrencyExists := item["priceCurrency"]
+			if pricingCurrencyExists {
+				pricingCurrency := pricingCurrencyJSON.(map[string]interface{})
 
-			priceCurrencyCodeJSON := pricingCurrency["code"]
-			priceCurrencyCode := priceCurrencyCodeJSON.(string)
+				priceCurrencyCodeJSON, currencyCodeExists := pricingCurrency["code"]
+				if currencyCodeExists {
+					priceCurrencyCode := priceCurrencyCodeJSON.(string)
 
-			metadata["pricingCurrency"] = priceCurrencyCode
+					metadata["pricingCurrency"] = priceCurrencyCode
 
-			delete(item, "priceCurrency")
+					delete(item, "priceCurrency")
+				}
+			}
 
 			var modifier float64
 			modifierJSON := item["priceModifier"]
@@ -524,39 +531,21 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 
 			delete(item, "priceModifier")
 
-			priceJSON := item["bigPrice"]
-			price := priceJSON.(string)
+			priceJSON, priceExists := item["bigPrice"]
+			if priceExists {
+				price := priceJSON.(string)
 
-			p, ok := new(big.Int).SetString(price, 10)
-			if ok {
-				item["price"] = p.Uint64()
+				p, ok := new(big.Int).SetString(price, 10)
+				if ok {
+					item["price"] = p.Uint64()
+				}
+				delete(item, "bigPrice")
 			}
-			delete(item, "bigPrice")
-
-			var coinType string
-			coinTypeJSON := metadata["cryptoCurrencyCode"]
-			if coinTypeJSON != nil {
-				coinType = coinTypeJSON.(string)
-			}
-
-			metadata["coinType"] = coinType
-
-			delete(metadata, "cryptoCurrencyCode")
-
-			var coinDivisibility float64
-			coinDivisibilityJSON := metadata["cryptoDivisibility"]
-			if coinDivisibilityJSON != nil {
-				coinDivisibility = coinDivisibilityJSON.(float64)
-			}
-
-			metadata["coinDivisibility"] = uint32(coinDivisibility)
-
-			delete(metadata, "cryptoDivisibility")
 
 			for _, skuJSON := range skus {
 				sku := skuJSON.(map[string]interface{})
-				quantityJSON, ok := sku["bigQuantity"]
-				if ok {
+				quantityJSON, quantityExists := sku["bigQuantity"]
+				if quantityExists {
 					quantity := quantityJSON.(string)
 
 					p, ok := new(big.Int).SetString(quantity, 10)
@@ -591,18 +580,20 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 				for x, serviceJSON := range services {
 					service := serviceJSON.(map[string]interface{})
 
-					priceJSON := service["bigPrice"]
-					price := priceJSON.(string)
+					priceJSON, priceExists := service["bigPrice"]
+					if priceExists {
+						price := priceJSON.(string)
 
-					p, ok := new(big.Int).SetString(price, 10)
-					if ok {
-						service["price"] = p.Uint64()
+						p, ok := new(big.Int).SetString(price, 10)
+						if ok {
+							service["price"] = p.Uint64()
+						}
+
+						delete(service, "bigPrice")
 					}
 
-					delete(service, "bigPrice")
-
-					additionalItemPriceJSON, ok := service["bigAdditionalItemPrice"]
-					if ok {
+					additionalItemPriceJSON, additionalPriceExists := service["bigAdditionalItemPrice"]
+					if additionalPriceExists {
 						additionalItemPrice := additionalItemPriceJSON.(string)
 
 						a, ok := new(big.Int).SetString(additionalItemPrice, 10)
@@ -622,8 +613,8 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 			for _, couponJSON := range coupons {
 				coupon := couponJSON.(map[string]interface{})
 
-				priceDiscountJSON, ok := coupon["bigPriceDiscount"]
-				if ok {
+				priceDiscountJSON, priceDiscountExists := coupon["bigPriceDiscount"]
+				if priceDiscountExists {
 					priceDiscount := priceDiscountJSON.(string)
 
 					a, ok := new(big.Int).SetString(priceDiscount, 10)
