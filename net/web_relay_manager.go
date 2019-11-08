@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/any"
@@ -62,7 +62,7 @@ func (wrm *WebRelayManager) ConnectToRelays(service NetworkService) {
 			log.Error("Could not connect to: %s", relay)
 		}
 
-		conns = append(conns, conn)
+		wrm.connections = append(conns, conn)
 	}
 }
 
@@ -97,38 +97,36 @@ func (wrm *WebRelayManager) connectToServer(relay string, sender string) (*webso
 		Type: "SubscribeMessage",
 		Data: data,
 	}
-	fmt.Println("Sending SubscribeMessage:", typedmessage)
 
 	socketmessage, _ := json.Marshal(typedmessage)
 
-	fmt.Println(string(socketmessage))
 	// Connect to websocket server
-	fmt.Printf("Connecting to relay server: %s\n", relay)
+	log.Debugf("Connecting to relay server: %s\n", relay)
 
 	c, _, err := websocket.DefaultDialer.Dial(relay, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Error("dial:", err)
 		return nil, err
 	}
 
 	err = c.WriteMessage(websocket.TextMessage, socketmessage)
 	if err != nil {
-		fmt.Println("write:", err)
+		log.Debugf("write:", err)
 		return nil, err
 	}
 
-	fmt.Printf("Successfully connected to %s and subscribed to: %s\n", relay, base58.Encode(subscriptionKey))
+	log.Debugf("Successfully connected to %s and subscribed to: %s\n", relay, base58.Encode(subscriptionKey))
 
 	go func() {
 		for {
 			// read in a message
 			_, p, err := c.ReadMessage()
 			if err != nil {
-				fmt.Println(err)
+				log.Debugf("Connection to relay has an error: %s", err)
+				log.Debugf("Attempting to reconnect to the relay...")
+				wrm.reconnectToRelay(relay, sender)
 				break
 			}
-			// print out that message for clarity
-			fmt.Printf("Received incoming message from relay: %s\n", string(p))
 
 			if string(p) == "{\"subscribe\": true}" {
 				log.Debugf("Received subscribe success message")
@@ -161,6 +159,17 @@ func (wrm *WebRelayManager) connectToServer(relay string, sender string) (*webso
 	return c, nil
 }
 
+func (wrm *WebRelayManager) reconnectToRelay(relay string, sender string) {
+	conn, err := wrm.connectToServer(relay, wrm.peerID)
+	if err != nil {
+		log.Error("Could not connect to: %s", relay)
+		time.Sleep(10 * time.Second)
+		wrm.reconnectToRelay(relay, wrm.peerID)
+	} else {
+		wrm.connections = append(wrm.connections, conn)
+	}
+}
+
 func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string) {
 	encryptedmessage := EncryptedMessage{
 		Message:   ciphertext,
@@ -175,22 +184,27 @@ func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string
 	}
 
 	outgoing, _ := json.Marshal(typedmessage)
-	fmt.Println(string(outgoing))
+	log.Debugf("Sending encrypted relay message: %s", string(outgoing))
 
 	// Transmit the encrypted message to the webrelay
 	wrm.authToWebRelay(wrm.webrelays[0], outgoing)
-
 }
 
 func (wrm *WebRelayManager) authToWebRelay(server string, msg []byte) {
-
 	for _, conn := range wrm.connections {
-		err := conn.WriteMessage(websocket.TextMessage, msg)
-		if err != nil {
-			fmt.Println("write:", err)
-			return
+		if conn != nil {
+			err := conn.WriteMessage(websocket.TextMessage, msg)
+			if err != nil {
+				log.Debugf("write:", err)
+			} else {
+				log.Debugf("Successfully sent message to relay: %s\n", conn.RemoteAddr())
+			}
+
 		}
-		fmt.Printf("Successfully sent message to relay: %s\n", conn.RemoteAddr())
+	}
+
+	if len(wrm.connections) == 0 {
+		log.Debugf("There are no websocket connections to send relay message to")
 	}
 
 }
