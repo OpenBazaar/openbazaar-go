@@ -108,29 +108,6 @@ func (scanner *inboundMessageScanner) PerformTask() {
 				if err != nil {
 					log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
 				}
-				/*
-					// If nil response, return it before serializing
-					if rpmes == nil {
-						continue
-					}
-
-					// give back request id
-					rpmes.RequestId = msg.Msg.RequestId
-					rpmes.IsResponse = true
-
-					ms, err := scanner.service.messageSenderForPeer(scanner.service.ctx, i)
-					if err != nil {
-						log.Error("Error getting message sender and opening stream to peer")
-						continue
-					}
-
-					// send out response msg
-					log.Debugf("sending response message to: %s", m.PeerID)
-					if err := ms.SendMessage(scanner.service.ctx, rpmes); err != nil {
-						log.Debugf("send response error: %s", err)
-						continue
-					}
-				*/
 			}
 
 		}

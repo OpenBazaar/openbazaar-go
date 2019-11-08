@@ -32,12 +32,12 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, err, received_at, pubkey, created_at) values(?,?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare message sql: %s", err.Error())
 	}
 
 	msg0, err := msg.MarshalJSON()
 	if err != nil {
-		log.Errorf("err marshalling json: %v", err)
+		return fmt.Errorf("marshal message: %s", err.Error())
 	}
 
 	defer stmt.Close()
@@ -53,31 +53,26 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		time.Now().Unix(),
 	)
 	if err != nil {
-		rErr := tx.Rollback()
-		if rErr != nil {
-			return fmt.Errorf("message put fail: %s and rollback failed: %s", err.Error(), rErr.Error())
-		}
-		return err
+		return fmt.Errorf("commit message: %s", err.Error())
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 // GetByOrderIDType returns the message for the specified order and message type
-func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, string, string, error) {
+func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*repo.Message, string, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	var (
 		msg0   []byte
 		peerID string
-		recErr string
 	)
 
-	stmt, err := o.db.Prepare("select message, peerID, err from messages where orderID=? and message_type=?")
+	stmt, err := o.db.Prepare("select message, peerID from messages where orderID=? and message_type=?")
 	if err != nil {
 		return nil, "", "", err
 	}
-	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID, &recErr)
+	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -91,21 +86,12 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 		}
 	}
 
-	return msg, recErr, peerID, nil
+	return msg, peerID, nil
 }
 
 func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-
-	/*
-		q := query{
-			table:   "messages",
-			columns: []string{"messageID", "orderID", "message_type", "message", "peerID", "err", "pubkey"},
-			id:      "messageID",
-		}
-		stm, args := filterQuery(q)
-	*/
 
 	stmt := "select messageID, orderID, message_type, message, peerID, err, pubkey from messages where err!=? "
 	var ret []repo.OrderMessage
@@ -133,28 +119,5 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 			PeerPubkey:  pkey,
 		})
 	}
-
-	/*
-		var ret []repo.OrderMessage
-		for rows.Next() {
-			var messageID, orderID, peerID, rErr string
-			var mType pb.Message_MessageType
-			var message, pubkey []byte
-			if err := rows.Scan(&messageID, &orderID, &mType, &message, &peerID, &rErr, &pubkey); err != nil {
-				return ret, err
-			}
-			msg := repo.OrderMessage{
-				MessageID:   messageID,
-				OrderID:     orderID,
-				MessageType: int32(mType),
-				MsgErr:      rErr,
-				PeerID:      peerID,
-				Message:     message,
-				PeerPubkey:  pubkey,
-			}
-
-			ret = append(ret, msg)
-		}
-	*/
 	return ret, nil
 }

@@ -2,15 +2,15 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
 
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
-
-	"strconv"
-	"sync"
-	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -27,30 +27,20 @@ func NewPointerStore(db *sql.DB, lock *sync.Mutex) repo.PointerStore {
 func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	tx, err := p.db.Begin()
+
+	stmt, err := p.PrepareQuery("insert into pointers(pointerID, key, address, cancelID, purpose, timestamp) values(?,?,?,?,?,?)")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into pointers(pointerID, key, address, cancelID, purpose, timestamp) values(?,?,?,?,?,?)")
-	if err != nil {
-		return err
+		return fmt.Errorf("prepare pointer sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	var cancelID string
 	if pointer.CancelID != nil {
 		cancelID = pointer.CancelID.Pretty()
 	}
 	_, err = stmt.Exec(pointer.Value.ID.Pretty(), pointer.Cid.String(), pointer.Value.Addrs[0].String(), cancelID, pointer.Purpose, int(time.Now().Unix()))
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("commit pointer: %s", err.Error())
 	}
 	return nil
 }

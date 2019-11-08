@@ -66,6 +66,59 @@ func TestSettings(t *testing.T) {
 	})
 }
 
+func TestSettingsSetModerator(t *testing.T) {
+	var (
+		validSettings      = factory.MustNewValidSettings()
+		jsonSettings, sErr = json.Marshal(validSettings)
+		moderatorUpdate    = `{"storeModerators": ["QmeRfQcEiefLYgEFRsNqn1WjjrLjrJVAddt85htU1Up32y"]}`
+	)
+	if sErr != nil {
+		t.Fatal(sErr)
+	}
+
+	expected := `{
+	"blockedNodes": [],
+	"country": "United State of Shipping",
+	"localCurrency": "USD",
+	"mispaymentBuffer": 1,
+	"paymentDataInQR": true,
+	"refundPolicy": "Refund policy.",
+	"shippingAddresses": [
+			{
+					"addressLineOne": "123 Address Street",
+					"addressLineTwo": "Suite H",
+					"addressNotes": "This is a fake yet valid address for testing.",
+					"city": "Shipping City",
+					"company": "Shipping Company",
+					"country": "United States of Shipping",
+					"name": "Shipping Name",
+					"postalCode": "12345-6789",
+					"state": "Shipping State"
+			}
+	],
+	"showNotifications": true,
+	"showNsfw": true,
+	"smtpSettings": {
+			"notifications": false,
+			"password": "",
+			"recipientEmail": "",
+			"senderEmail": "",
+			"serverAddress": "",
+			"username": ""
+	},
+	"storeModerators": [
+			"QmeRfQcEiefLYgEFRsNqn1WjjrLjrJVAddt85htU1Up32y"
+	],
+	"termsAndConditions": "Terms and Conditions",
+	"version": ""
+}`
+	runAPITests(t, apiTests{
+		{"POST", "/ob/settings", string(jsonSettings), 200, string(jsonSettings)},
+		{"PATCH", "/ob/settings", moderatorUpdate, 200, "{}"},
+		{"GET", "/ob/settings", "", 200, expected},
+	})
+}
+
 func TestProfile(t *testing.T) {
 	// Create, Update
 	runAPITests(t, apiTests{
