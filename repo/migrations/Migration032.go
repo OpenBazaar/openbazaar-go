@@ -135,7 +135,7 @@ func (Migration032) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Bump schema version
-	err = err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09DownVer)
+	err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09DownVer)
 	if err != nil {
 		return err
 	}
