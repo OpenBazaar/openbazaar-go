@@ -70,11 +70,11 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 
 	stmt, err := o.db.Prepare("select message, peerID from messages where orderID=? and message_type=?")
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 	err = stmt.QueryRow(orderID, mType).Scan(&msg0, &peerID)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
 	msg := new(repo.Message)
@@ -82,7 +82,7 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 	if len(msg0) > 0 {
 		err = msg.UnmarshalJSON(msg0)
 		if err != nil {
-			return nil, "", "", err
+			return nil, "", err
 		}
 	}
 

@@ -270,7 +270,7 @@ func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Mes
 		return fmt.Errorf("invalid order message type (%d)", int(msgType))
 	}
 
-	msg, _, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
+	msg, peerID, err := n.Datastore.Messages().GetByOrderIDType(orderID, msgType)
 	if err != nil || msg == nil || msg.Msg.GetPayload() == nil {
 		return fmt.Errorf("unable to find message for order ID (%s) and message type (%s)", orderID, msgType.String())
 	}

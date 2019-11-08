@@ -59,7 +59,7 @@ func TestMessageDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 
-	retMsg, rErr, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
+	retMsg, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
 	if err != nil || retMsg == nil {
 		t.Error(err)
 	}
@@ -71,6 +71,4 @@ func TestMessageDB_Put(t *testing.T) {
 	if peer != peerID {
 		t.Error("incorrect peerID")
 	}
-
-	fmt.Println("r err   : ", rErr)
 }

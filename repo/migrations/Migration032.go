@@ -27,9 +27,9 @@ const (
 	// migrationCreateMessagesAM09MessagesDeleteSQL the messages delete sql
 	migrationCreateMessagesAM09MessagesDeleteSQL = "drop table if exists temp_messages;"
 	// migrationCreateMessagesAM09UpVer set the repo Up version
-	migrationCreateMessagesAM09UpVer = "33"
+	migrationCreateMessagesAM09UpVer = 33
 	// migrationCreateMessagesAM09DownVer set the repo Down version
-	migrationCreateMessagesAM09DownVer = "32"
+	migrationCreateMessagesAM09DownVer = 32
 )
 
 // Migration032  migration struct
@@ -81,7 +81,7 @@ func (Migration032) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(repoVersionFilePath, []byte(migrationCreateMessagesAM09UpVer), os.ModePerm)
+	err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09UpVer)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (Migration032) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(repoVersionFilePath, []byte(migrationCreateMessagesAM09DownVer), os.ModePerm)
+	err = err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09DownVer)
 	if err != nil {
 		return err
 	}
