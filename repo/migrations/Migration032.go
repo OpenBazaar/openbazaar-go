@@ -3,8 +3,6 @@ package migrations
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 
@@ -38,8 +36,7 @@ type Migration032 struct{}
 // Up the migration Up code
 func (Migration032) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
-		databaseFilePath    string
-		repoVersionFilePath = path.Join(repoPath, "repover")
+		databaseFilePath string
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
@@ -81,7 +78,7 @@ func (Migration032) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Bump schema version
-	err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09UpVer)
+	err = writeRepoVer(repoPath, migrationCreateMessagesAM09UpVer)
 	if err != nil {
 		return err
 	}
@@ -91,8 +88,7 @@ func (Migration032) Up(repoPath, databasePassword string, testnetEnabled bool) e
 // Down the migration Down code
 func (Migration032) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
-		databaseFilePath    string
-		repoVersionFilePath = path.Join(repoPath, "repover")
+		databaseFilePath string
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
@@ -135,7 +131,7 @@ func (Migration032) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Bump schema version
-	err = writeRepoVer(repoVersionFilePath, migrationCreateMessagesAM09DownVer)
+	err = writeRepoVer(repoPath, migrationCreateMessagesAM09DownVer)
 	if err != nil {
 		return err
 	}

@@ -53,7 +53,12 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		time.Now().Unix(),
 	)
 	if err != nil {
-		return fmt.Errorf("commit message: %s", err.Error())
+		return fmt.Errorf("err inserting message: %s", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("err committing message: %s", err.Error())
 	}
 
 	return nil

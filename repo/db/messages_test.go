@@ -60,6 +60,9 @@ func TestMessageDB_Put(t *testing.T) {
 	}
 
 	retMsg, peer, err := messagesdb.GetByOrderIDType(orderID, mType)
+	fmt.Println("############  ", err)
+	fmt.Println(retMsg)
+	fmt.Println(peer)
 	if err != nil || retMsg == nil {
 		t.Error(err)
 	}
