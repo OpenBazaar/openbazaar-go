@@ -44,7 +44,7 @@ func TestMigration032(t *testing.T) {
 	)
 
 	// create schema version file
-	if err = ioutil.WriteFile(schemaPath, []byte("31"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(schemaPath, []byte("32"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
