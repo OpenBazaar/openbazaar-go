@@ -684,6 +684,7 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
+
 		core.Node.Service = service.New(core.Node, sqliteDB)
 		core.Node.Service.WaitForReady()
 		log.Info("OpenBazaar Service Ready")
@@ -691,6 +692,8 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
+
+		core.Node.WebRelayManager.ConnectToRelays(core.Node.Service)
 
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()

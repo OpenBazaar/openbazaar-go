@@ -5,10 +5,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes/any"
 
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
+
+	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/gorilla/websocket"
 )
@@ -17,6 +21,7 @@ type WebRelayManager struct {
 	webrelays   []string
 	peerID      string
 	connections []*websocket.Conn
+	obService   NetworkService
 }
 
 type EncryptedMessage struct {
@@ -34,24 +39,34 @@ type SubscribeMessage struct {
 	SubscriptionKey string `json:"subscriptionKey"`
 }
 
+type SubscribeResponse struct {
+	Subscribe string `json:"subscribe"`
+}
+
 func NewWebRelayManager(webrelays []string, sender string) *WebRelayManager {
+	return &WebRelayManager{webrelays, sender, nil, nil}
+}
+
+func (wrm *WebRelayManager) ConnectToRelays(service NetworkService) {
+
+	// Set WRM service
+	wrm.obService = service
 
 	// Establish connections
 	var conns []*websocket.Conn
-	for _, relay := range webrelays {
+	for _, relay := range wrm.webrelays {
 
 		// Connect and subscribe to websocket server
-		conn, err := connectToServer(relay, sender)
+		conn, err := wrm.connectToServer(relay, wrm.peerID)
 		if err != nil {
 			log.Error("Could not connect to: %s", relay)
 		}
 
 		conns = append(conns, conn)
 	}
-	return &WebRelayManager{webrelays, sender, conns}
 }
 
-func connectToServer(relay string, sender string) (*websocket.Conn, error) {
+func (wrm *WebRelayManager) connectToServer(relay string, sender string) (*websocket.Conn, error) {
 	// Generate subscription key for web relay
 	peerIDMultihash, _ := multihash.FromB58String(sender)
 	decoded, _ := multihash.Decode(peerIDMultihash)
@@ -102,7 +117,7 @@ func connectToServer(relay string, sender string) (*websocket.Conn, error) {
 		return nil, err
 	}
 
-	fmt.Printf("Successfully connected and subscribed to: %s\n", relay)
+	fmt.Printf("Successfully connected to %s and subscribed to: %s\n", relay, base58.Encode(subscriptionKey))
 
 	go func() {
 		for {
@@ -115,10 +130,30 @@ func connectToServer(relay string, sender string) (*websocket.Conn, error) {
 			// print out that message for clarity
 			fmt.Printf("Received incoming message from relay: %s\n", string(p))
 
-			//if err := c.WriteMessage(messageType, p); err != nil {
-			//	fmt.Println(err)
-			//	//return nil, err
-			//}
+			if string(p) == "{\"subscribe\": true}" {
+				log.Debugf("Received subscribe success message")
+			} else {
+				// turn encrypted message into OFFLINE_RELAY and process normally
+				m := new(pb.Message)
+				m.MessageType = pb.Message_OFFLINE_RELAY
+				m.Payload = &any.Any{Value: p}
+
+				handler := wrm.obService.HandlerForMsgType(m.MessageType)
+
+				peerID, _ := peer.IDB58Decode(sender)
+
+				if peerID != "" {
+					m, err = handler(peerID, m, nil)
+					if err != nil {
+						if m != nil {
+							log.Debugf("%s handle message error: %s", m.MessageType.String(), err.Error())
+						} else {
+							log.Errorf("Error: %s", err.Error())
+						}
+					}
+					log.Debugf("Received OFFLINE_RELAY2 message from %s", peerID.Pretty())
+				}
+			}
 
 		}
 	}()
