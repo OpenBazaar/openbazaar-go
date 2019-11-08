@@ -45,6 +45,7 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	n.SendRelayedMessage(p, k, &message) // send relayed message immediately
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
@@ -57,24 +58,10 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	return nil
 }
 
-// SendOfflineMessage Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
-func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
-	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+func (n *OpenBazaarNode) SendRelayedMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
+	messageBytes, err := n.getMessageBytes(m)
 	if err != nil {
 		return err
-	}
-	ser, err := proto.Marshal(m)
-	if err != nil {
-		return err
-	}
-	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
-	if err != nil {
-		return err
-	}
-	env := pb.Envelope{Message: m, Pubkey: pubKeyBytes, Signature: sig}
-	messageBytes, merr := proto.Marshal(&env)
-	if merr != nil {
-		return merr
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
@@ -107,6 +94,38 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	encodedCipherText := base64.StdEncoding.EncodeToString(relayciphertext)
 
 	n.WebRelayManager.SendRelayMessage(encodedCipherText, p.Pretty())
+
+	return nil
+}
+
+func (n *OpenBazaarNode) getMessageBytes(m *pb.Message) ([]byte, error) {
+	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, err
+	}
+	ser, err := proto.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return nil, err
+	}
+
+	env := pb.Envelope{Message: m, Pubkey: pubKeyBytes, Signature: sig}
+	messageBytes, merr := proto.Marshal(&env)
+	if merr != nil {
+		return nil, merr
+	}
+	return messageBytes, nil
+}
+
+// SendOfflineMessage Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
+func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
+	messageBytes, err := n.getMessageBytes(m)
+	if err != nil {
+		return err
+	}
 
 	// TODO: this function blocks if the recipient's public key is not on the local machine
 	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
@@ -318,6 +337,8 @@ func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Mes
 	if err != nil {
 		return fmt.Errorf("unable to decode invalid peer ID for order (%s) and message type (%s)", orderID, msgType.String())
 	}
+
+	n.SendRelayedMessage(p, nil, &msg.Msg) // send relayed message immediately
 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
@@ -614,6 +635,7 @@ func (n *OpenBazaarNode) SendChat(peerID string, chatMessage *pb.Chat) error {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	n.SendRelayedMessage(p, nil, &m) // send relayed message immediately
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil && chatMessage.Flag != pb.Chat_TYPING {
@@ -834,6 +856,9 @@ func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.Orde
 	if err != nil {
 		return err
 	}
+
+	n.SendRelayedMessage(p, nil, &m) // send relayed message immediately
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
 	cancel()
