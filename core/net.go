@@ -616,7 +616,7 @@ func (n *OpenBazaarNode) SendChat(peerID string, chatMessage *pb.Chat) error {
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &m)
-	if chatMessage.Flag != pb.Chat_TYPING {
+	if err != nil && chatMessage.Flag != pb.Chat_TYPING {
 		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			log.Errorf("failed to send offline message: %v", err)
 			return err
