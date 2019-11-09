@@ -58,6 +58,7 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	return nil
 }
 
+// SendRelayedMessage - send message through web relay manager to recipient
 func (n *OpenBazaarNode) SendRelayedMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
 	messageBytes, err := n.getMessageBytes(m)
 	if err != nil {

@@ -415,6 +415,7 @@ func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 	return d, nil
 }
 
+// GetWebRelays - retrieves web relay server addresses from config file
 func GetWebRelays(cfgBytes []byte) ([]string, error) {
 	var cfgIface interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)

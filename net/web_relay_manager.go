@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// WebRelayManager - manages connections to web relay servers
 type WebRelayManager struct {
 	webrelays   []string
 	peerID      string
@@ -24,31 +25,36 @@ type WebRelayManager struct {
 	obService   NetworkService
 }
 
+// EncryptedMessage - message envelope for relay messages
 type EncryptedMessage struct {
 	Message   string `json:"encryptedMessage"`
 	Recipient string `json:"recipient"`
 }
 
+// TypedMessage - generic typed message for transport
 type TypedMessage struct {
 	Type string
 	Data json.RawMessage
 }
 
+// SubscribeMessage - authentication message for web relay server
 type SubscribeMessage struct {
 	UserID          string `json:"userID"`
 	SubscriptionKey string `json:"subscriptionKey"`
 }
 
+// SubscribeResponse - for marshaling authN response from web relay server
 type SubscribeResponse struct {
 	Subscribe string `json:"subscribe"`
 }
 
+// NewWebRelayManager - creates a web relay manager to maintain connections
 func NewWebRelayManager(webrelays []string, sender string) *WebRelayManager {
 	return &WebRelayManager{webrelays, sender, nil, nil}
 }
 
+// ConnectToRelays - initiate websocket connections to the relay servers configured
 func (wrm *WebRelayManager) ConnectToRelays(service NetworkService) {
-
 	// Set WRM service
 	wrm.obService = service
 
