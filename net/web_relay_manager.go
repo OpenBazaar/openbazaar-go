@@ -192,8 +192,10 @@ func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string
 	outgoing, _ := json.Marshal(typedmessage)
 	log.Debugf("Sending encrypted relay message: %s", string(outgoing))
 
-	// Transmit the encrypted message to the webrelay
-	wrm.authToWebRelay(wrm.webrelays[0], outgoing)
+	// Transmit the encrypted message to each configured web relay
+	for _, relay := range wrm.webrelays {
+		wrm.authToWebRelay(relay, outgoing)
+	}
 }
 
 func (wrm *WebRelayManager) authToWebRelay(server string, msg []byte) {
@@ -205,7 +207,6 @@ func (wrm *WebRelayManager) authToWebRelay(server string, msg []byte) {
 			} else {
 				log.Debugf("Successfully sent message to relay: %s\n", conn.RemoteAddr())
 			}
-
 		}
 	}
 
