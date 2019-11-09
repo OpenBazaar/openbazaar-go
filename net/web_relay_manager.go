@@ -130,7 +130,7 @@ func (wrm *WebRelayManager) connectToServer(relay string, sender string) (*webso
 			if err != nil {
 				log.Debugf("Connection to relay has an error: %s", err)
 				log.Debugf("Attempting to reconnect to the relay...")
-				wrm.reconnectToRelay(relay, sender)
+				wrm.reconnectToRelay(relay)
 				break
 			}
 
@@ -165,12 +165,12 @@ func (wrm *WebRelayManager) connectToServer(relay string, sender string) (*webso
 	return c, nil
 }
 
-func (wrm *WebRelayManager) reconnectToRelay(relay string, sender string) {
+func (wrm *WebRelayManager) reconnectToRelay(relay string) {
 	conn, err := wrm.connectToServer(relay, wrm.peerID)
 	if err != nil {
 		log.Error("Could not connect to: %s", relay)
 		time.Sleep(10 * time.Second)
-		wrm.reconnectToRelay(relay, wrm.peerID)
+		wrm.reconnectToRelay(relay)
 	} else {
 		wrm.connections = append(wrm.connections, conn)
 	}
