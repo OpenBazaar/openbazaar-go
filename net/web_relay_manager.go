@@ -176,6 +176,7 @@ func (wrm *WebRelayManager) reconnectToRelay(relay string) {
 	}
 }
 
+// SendRelayMessage - Wrap relay message in encrypted envelope and broadcast
 func (wrm *WebRelayManager) SendRelayMessage(ciphertext string, recipient string) {
 	encryptedmessage := EncryptedMessage{
 		Message:   ciphertext,
