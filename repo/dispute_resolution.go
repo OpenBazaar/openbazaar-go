@@ -11,15 +11,15 @@ import (
 func ToV5DisputeResolution(disputeResolution *pb.DisputeResolution) *pb.DisputeResolution {
 	newDisputeResolution := proto.Clone(disputeResolution).(*pb.DisputeResolution)
 
-	if disputeResolution.Payout.BuyerOutput.Amount != 0 && disputeResolution.Payout.BuyerOutput.BigAmount == "" {
+	if disputeResolution.Payout.BuyerOutput != nil && disputeResolution.Payout.BuyerOutput.Amount != 0 && disputeResolution.Payout.BuyerOutput.BigAmount == "" {
 		newDisputeResolution.Payout.BuyerOutput.BigAmount = big.NewInt(int64(disputeResolution.Payout.BuyerOutput.Amount)).String()
 		newDisputeResolution.Payout.BuyerOutput.Amount = 0
 	}
-	if disputeResolution.Payout.VendorOutput.Amount != 0 && disputeResolution.Payout.VendorOutput.BigAmount == "" {
+	if disputeResolution.Payout.VendorOutput != nil && disputeResolution.Payout.VendorOutput.Amount != 0 && disputeResolution.Payout.VendorOutput.BigAmount == "" {
 		newDisputeResolution.Payout.VendorOutput.BigAmount = big.NewInt(int64(disputeResolution.Payout.VendorOutput.Amount)).String()
 		newDisputeResolution.Payout.VendorOutput.Amount = 0
 	}
-	if disputeResolution.Payout.ModeratorOutput.Amount != 0 && disputeResolution.Payout.ModeratorOutput.BigAmount == "" {
+	if disputeResolution.Payout.ModeratorOutput != nil && disputeResolution.Payout.ModeratorOutput.Amount != 0 && disputeResolution.Payout.ModeratorOutput.BigAmount == "" {
 		newDisputeResolution.Payout.ModeratorOutput.BigAmount = big.NewInt(int64(disputeResolution.Payout.ModeratorOutput.Amount)).String()
 		newDisputeResolution.Payout.ModeratorOutput.Amount = 0
 	}

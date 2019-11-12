@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 // DisputeWg - waitgroup for disputes
@@ -77,7 +77,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	var outpoints []*pb.Outpoint
 	for _, r := range records {
 		o := new(pb.Outpoint)
-		o.Hash = strings.TrimPrefix(r.Txid, "0x")
+		o.Hash = util.NormalizeAddress(r.Txid)
 		o.Index = r.Index
 		o.BigValue = r.Value.String()
 		outpoints = append(outpoints, o)
@@ -167,7 +167,7 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 		return false
 	}
 	for _, r := range records {
-		hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
+		hash, err := chainhash.NewHashFromStr(util.NormalizeAddress(r.Txid))
 		if err != nil {
 			log.Errorf("Failed NewHashFromStr(%s): %s", r.Txid, err.Error())
 			return false
@@ -361,7 +361,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = strings.TrimPrefix(r.Txid, "0x")
+			o.Hash = util.NormalizeAddress(r.Txid)
 			o.Index = r.Index
 			o.BigValue = r.Value.String()
 			outpoints = append(outpoints, o)
@@ -421,7 +421,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = strings.TrimPrefix(r.Txid, "0x")
+			o.Hash = util.NormalizeAddress(r.Txid)
 			o.Index = r.Index
 			o.BigValue = r.Value.String()
 			outpoints = append(outpoints, o)
@@ -959,7 +959,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 
-		if strings.TrimPrefix(order.Payment.Address, "0x") != strings.TrimPrefix(addr.String(), "0x") {
+		if util.NormalizeAddress(order.Payment.Address) != util.NormalizeAddress(addr.String()) {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
 
@@ -1071,7 +1071,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		resolution = repo.ToV5DisputeResolution(contract.DisputeResolution)
 	)
 	for _, o := range resolution.Payout.Inputs {
-		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
+		decodedHash, err := hex.DecodeString(util.NormalizeAddress(o.Hash))
 		if err != nil {
 			return err
 		}
@@ -1211,7 +1211,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	err = n.SendOrderPayment(&SpendResponse{
-		Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
+		Txid:          util.NormalizeAddress(hexutil.Encode(txnID)),
 		Currency:      &currencyDef,
 		OrderID:       orderID,
 		PeerID:        peerID,
