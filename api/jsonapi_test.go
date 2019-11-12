@@ -512,7 +512,7 @@ func TestCryptoListingsQuantity(t *testing.T) {
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Item.Skus[0].BigQuantity = "0"
+	listing.Item.Skus[0].BigQuantity = "-1"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})
