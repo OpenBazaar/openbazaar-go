@@ -25,22 +25,18 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	tx, err := o.db.Begin()
-	if err != nil {
-		return err
-	}
 	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, err, received_at, pubkey, created_at) values(?,?,?,?,?,?,?,?,?)`
-	stmt, err := tx.Prepare(stm)
+	stmt, err := o.PrepareQuery(stm)
 	if err != nil {
 		return fmt.Errorf("prepare message sql: %s", err.Error())
 	}
+	defer stmt.Close()
 
 	msg0, err := msg.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("marshal message: %s", err.Error())
 	}
 
-	defer stmt.Close()
 	_, err = stmt.Exec(
 		messageID,
 		orderID,
@@ -54,11 +50,6 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	)
 	if err != nil {
 		return fmt.Errorf("err inserting message: %s", err.Error())
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("err committing message: %s", err.Error())
 	}
 
 	return nil

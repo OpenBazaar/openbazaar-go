@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 
@@ -87,12 +86,8 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 		logger:    logging.MustGetLogger("testInboundMsgScanner"),
 	}
 
-	//worker.PerformTask()
-	fmt.Println(worker)
+	worker.PerformTask()
 	msgs, err := worker.datastore.Messages().GetAllErrored()
-
-	fmt.Println(len(msgs))
-	fmt.Println(err)
 
 	if len(msgs) != 2 {
 		t.Errorf("did not fetch the correct no of err records")
