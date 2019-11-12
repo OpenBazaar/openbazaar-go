@@ -25,19 +25,15 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	tx, err := o.db.Begin()
-	if err != nil {
-		return err
-	}
 	stm := `insert or replace into messages(messageID, orderID, message_type, message, peerID, created_at) values(?,?,?,?,?,?)`
-	stmt, err := tx.Prepare(stm)
+	stmt, err := o.PrepareQuery(stm)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare message sql: %s", err.Error())
 	}
 
 	msg0, err := msg.MarshalJSON()
 	if err != nil {
-		log.Errorf("err marshalling json: %v", err)
+		return fmt.Errorf("marshal message: %s", err.Error())
 	}
 
 	defer stmt.Close()
@@ -50,14 +46,10 @@ func (o *MessagesDB) Put(messageID, orderID string, mType pb.Message_MessageType
 		int(time.Now().Unix()),
 	)
 	if err != nil {
-		rErr := tx.Rollback()
-		if rErr != nil {
-			return fmt.Errorf("message put fail: %s and rollback failed: %s", err.Error(), rErr.Error())
-		}
-		return err
+		return fmt.Errorf("commit message: %s", err.Error())
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 // GetByOrderIDType returns the message for the specified order and message type

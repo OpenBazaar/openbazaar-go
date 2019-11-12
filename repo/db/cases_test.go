@@ -1062,25 +1062,51 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 
 func TestCasesDB_Put_CoinType(t *testing.T) {
 	var (
-		testsCoins = []string{"TBTC", "TETH"}
-		contract   = factory.NewContract()
+		contract  = factory.NewContract()
+		testCoins = []struct {
+			coinType      string
+			cryptoListing bool
+		}{
+			{
+				"",
+				true,
+			},
+			{
+				"TBTC",
+				true,
+			},
+			{
+				"TETH",
+				true,
+			},
+			{
+				"TBCH",
+				false,
+			},
+		}
 	)
 
-	for _, testCoin := range testsCoins {
+	for _, test := range testCoins {
 		var casesdb, teardown, err = buildNewCaseStore()
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		//contract.VendorListings[0].Metadata.CoinType = testCoin
-		paymentCoin := repo.CurrencyCode(testCoin)
+		paymentCoin := repo.CurrencyCode(test.coinType)
+
+		if test.cryptoListing {
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+		} else {
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_PHYSICAL_GOOD
+		}
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
-			CoinType:         testCoin,
+			CoinType:         test.coinType,
 			PaymentCoin:      &paymentCoin,
 		})
 		if err != nil {
@@ -1098,8 +1124,10 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 		if count != 1 {
 			t.Errorf(`Expected %d record got %d`, 1, count)
 		}
-		if cases[0].CoinType != testCoin {
-			t.Errorf(`Expected %s got %s`, testCoin, cases[0].CoinType)
+		if test.cryptoListing && cases[0].CoinType != test.coinType {
+			t.Errorf(`Expected %s got %s`, test.coinType, cases[0].CoinType)
+		} else if !test.cryptoListing && cases[0].CoinType != "" {
+			t.Errorf(`Expected "" got %s`, cases[0].CoinType)
 		}
 		err = casesdb.Delete(cases[0].CaseId)
 		if err != nil {

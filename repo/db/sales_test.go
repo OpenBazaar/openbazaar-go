@@ -771,16 +771,47 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 }
 
 func TestSalesDB_Put_CoinType(t *testing.T) {
-	var contract = factory.NewContract()
+	var (
+		contract  = factory.NewContract()
+		testCoins = []struct {
+			coinType      string
+			cryptoListing bool
+		}{
+			{
+				"",
+				true,
+			},
+			{
+				"TBTC",
+				true,
+			},
+			{
+				"TETH",
+				true,
+			},
+			{
+				"TBCH",
+				false,
+			},
+		}
+	)
 
-	for _, testCoin := range []string{"", "TBTC", "TETH"} {
+	for _, test := range testCoins {
 		var saldb, teardown, err = buildNewSaleStore()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.CryptoCurrencyCode = testCoin
-		contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+		contract.VendorListings[0].Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         test.coinType,
+			Divisibility: 8,
+		}
+		if test.cryptoListing {
+			contract.VendorListings[0].Metadata.CryptoCurrencyCode = test.coinType
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+		} else {
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_PHYSICAL_GOOD
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -794,8 +825,10 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 		if count != 1 {
 			t.Errorf(`Expected %d record got %d`, 1, count)
 		}
-		if sales[0].CoinType != testCoin {
-			t.Errorf(`Expected %s got %s`, testCoin, sales[0].CoinType)
+		if test.cryptoListing && sales[0].CoinType != test.coinType {
+			t.Errorf(`Expected %s got %s`, test.coinType, sales[0].CoinType)
+		} else if !test.cryptoListing && sales[0].CoinType != "" {
+			t.Errorf(`Expected "" got %s`, sales[0].CoinType)
 		}
 		teardown()
 	}

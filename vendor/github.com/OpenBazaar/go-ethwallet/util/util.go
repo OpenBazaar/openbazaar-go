@@ -1,7 +1,6 @@
 package util
 
 import (
-	"log"
 	"math/big"
 	"reflect"
 	"regexp"
@@ -13,8 +12,11 @@ import (
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
 )
+
+var log = logging.MustGetLogger("ethwallet-util")
 
 // ExtractChaincode used to get the chaincode out of extended key
 func ExtractChaincode(key *hdkeychain.ExtendedKey) []byte {
@@ -136,14 +138,11 @@ func EnsureCorrectPrefix(str string) string {
 // letting the 0x prefix hinder the chainhash generation
 func CreateChainHash(str string) (*chainhash.Hash, error) {
 	hash, err := chainhash.NewHashFromStr(str)
-	if err.Error() == "max hash string length is 64 bytes" {
+	if err == chainhash.ErrHashStrSize {
 		hash, err = chainhash.NewHashFromStr(strings.TrimPrefix(str, "0x"))
 		if err != nil {
-			hash, err = chainhash.NewHashFromStr("")
-			if err != nil {
-				log.Println("err : ", err.Error())
-				return hash, err
-			}
+			log.Errorf("err creating chainhash : %v", err)
+			return nil, err
 		}
 	}
 	return hash, nil

@@ -104,19 +104,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	return paymentRecords, refundRecord, nil
 }
 
-// LookupCurrency looks up the CurrencyDefinition, first by crypto for the current network
-// (mainnet or testnet) and then by fiat code
+// LookupCurrency looks up the CurrencyDefinition from available currencies
 func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefinition, error) {
-	if n.TestnetEnable || n.RegressionTestEnable {
-		if def, err := repo.TestnetCurrencies().Lookup(currencyCode); err == nil {
-			return def, nil
-		}
-	} else {
-		if def, err := repo.MainnetCurrencies().Lookup(currencyCode); err == nil {
-			return def, nil
-		}
-	}
-	return repo.FiatCurrencies().Lookup(currencyCode)
+	return repo.AllCurrencies().Lookup(currencyCode)
 }
 
 // exchangeRateCode strips the T off the currency code if we are on testnet or regtest.
