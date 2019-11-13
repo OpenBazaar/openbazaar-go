@@ -107,6 +107,12 @@ func (scanner *inboundMessageScanner) PerformTask() {
 				_, err = handler(i, &msg.Msg, nil)
 				if err != nil {
 					log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
+					continue
+				}
+				err = scanner.datastore.Messages().Put(m.MessageID, m.OrderID, pb.Message_MessageType(m.MessageType),
+					m.PeerID, *msg, "", 0, m.PeerPubkey)
+				if err != nil {
+					log.Errorf("err putting message : %v", err)
 				}
 			}
 

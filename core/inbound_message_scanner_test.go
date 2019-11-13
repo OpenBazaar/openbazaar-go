@@ -86,8 +86,11 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 		logger:    logging.MustGetLogger("testInboundMsgScanner"),
 	}
 
-	worker.PerformTask()
+	//worker.PerformTask()
 	msgs, err := worker.datastore.Messages().GetAllErrored()
+	if err != nil {
+		t.Errorf("err fetching msgs : %v", err)
+	}
 
 	if len(msgs) != 2 {
 		t.Errorf("did not fetch the correct no of err records")
