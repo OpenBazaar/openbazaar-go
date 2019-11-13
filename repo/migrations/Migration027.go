@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -85,6 +86,41 @@ type (
 	}
 )
 
+func (c *Migration027V5CurrencyValue) MarshalJSON() ([]byte, error) {
+	var value = struct {
+		Amount   string                           `json:"amount"`
+		Currency Migration027V5CurrencyDefinition `json:"currency"`
+	}{
+		Amount:   "0",
+		Currency: c.Currency,
+	}
+	if c.Amount != nil {
+		value.Amount = c.Amount.String()
+	}
+
+	return json.Marshal(value)
+
+}
+
+func (c *Migration027V5CurrencyValue) UnmarshalJSON(b []byte) error {
+	var value struct {
+		Amount   string                           `json:"amount"`
+		Currency Migration027V5CurrencyDefinition `json:"currency"`
+	}
+	err := json.Unmarshal(b, &value)
+	if err != nil {
+		return err
+	}
+	amt, ok := new(big.Int).SetString(value.Amount, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount (%s)", value.Amount)
+	}
+
+	c.Amount = amt
+	c.Currency = value.Currency
+	return err
+}
+
 var divisibilityMap = map[string]uint{
 	"BTC": 8,
 	"BCH": 8,
@@ -93,6 +129,22 @@ var divisibilityMap = map[string]uint{
 }
 
 func parseV5intoV4(v5 Migration027V5ListingIndexData) Migration027V4ListingIndexData {
+	if v5.ModeratorIDs == nil {
+		v5.ModeratorIDs = []string{}
+	}
+	if v5.ShipsTo == nil {
+		v5.ShipsTo = []string{}
+	}
+	if v5.FreeShipping == nil {
+		v5.FreeShipping = []string{}
+	}
+	if v5.Categories == nil {
+		v5.Categories = []string{}
+	}
+	if v5.AcceptedCurrencies == nil {
+		v5.AcceptedCurrencies = []string{}
+	}
+
 	return Migration027V4ListingIndexData{
 		Hash:         v5.Hash,
 		Slug:         v5.Slug,
@@ -132,6 +184,22 @@ func parseV4intoV5(v4 Migration027V4ListingIndexData) Migration027V5ListingIndex
 			Divisibility: divisibility,
 		},
 	}
+	if v4.ModeratorIDs == nil {
+		v4.ModeratorIDs = []string{}
+	}
+	if v4.ShipsTo == nil {
+		v4.ShipsTo = []string{}
+	}
+	if v4.FreeShipping == nil {
+		v4.FreeShipping = []string{}
+	}
+	if v4.Categories == nil {
+		v4.Categories = []string{}
+	}
+	if v4.AcceptedCurrencies == nil {
+		v4.AcceptedCurrencies = []string{}
+	}
+
 	return Migration027V5ListingIndexData{
 		Hash:               v4.Hash,
 		Slug:               v4.Slug,
@@ -222,6 +290,7 @@ func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) e
 				continue
 			}
 			metadata := metadataJSON.(map[string]interface{})
+			metadata["version"] = 5
 			itemJSON, itemExists := listing["item"]
 			if !itemExists {
 				continue
@@ -482,6 +551,7 @@ func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool)
 				continue
 			}
 			metadata := metadataJSON.(map[string]interface{})
+			metadata["version"] = 4
 			itemJSON, itemExists := listing["item"]
 			if !itemExists {
 				continue

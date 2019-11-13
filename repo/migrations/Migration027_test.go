@@ -27,6 +27,7 @@ var (
     "listing": {
         "slug": "Migration027_test_listing",
         "metadata": {
+            "version": 4,
             "contractType": "PHYSICAL_GOOD",
             "format": "FIXED_PRICE",
             "pricingCurrency": "BTC",
@@ -58,13 +59,14 @@ var (
             }
         ]
     },
-    "signature": "2+M/+M866ZaPyqHpBdsqJ9gCgLPNOQoKKtaOrruZmDu6YXhc3RiKQtoZs1BTfC02k8TwfIU5LeFPhxagwC6UAg=="
+    "signature": "HmJCQ+XGPOYgs6GWiBYWAyEi+J8t3yLcuzJlf396hI0isnLdQlffNxPnU/uxw6kqFIFyINYUYkXd/O4QPFpxDg=="
 }`
 
 	preMigration027CryptoListingJSON = `{
     "listing": {
         "slug": "Migration027_test_crypto_listing",
         "metadata": {
+            "version": 4,
             "contractType": "CRYPTOCURRENCY",
             "format": "MARKET_PRICE",
             "coinType": "BAT",
@@ -79,13 +81,14 @@ var (
             ]
         }
     },
-    "signature": "7vmvT69nQQyCmp3Yng7ROWXOiJx0VKGbNRYN8wgGJSqsnRYXC9BEd81t8dd5Mm1wHWK6egGk2rEpct+qWaWdBA=="
+    "signature": "h00CONM6qpY5yC5SRrpWgj/UGKUizLM6FNKLFMP5+feg/BytfmP0On9iZbLr/qoAYWetXfc1WiEuAWXv1vHrAg=="
 }`
 
 	postMigration027ListingJSON = `{
     "listing": {
         "slug": "Migration027_test_listing",
         "metadata": {
+            "version": 5,
             "contractType": "PHYSICAL_GOOD",
             "format": "FIXED_PRICE"
         },
@@ -120,13 +123,14 @@ var (
             }
         ]
     },
-    "signature": "r7j6YM3ePiTRyIKmd9ILMvjvhv5jaAB5m1gMlPJ9ug05KZIfAPXXa+EtuF+ExGvtEOpdyK3BEFpU2rm65CyvDw=="
+    "signature": "TrlzcAflSbJWLJ+efqTIREIeSTFwfCDAWbEMaa6iTSSgvROxgKyGt1fGMfrWleLsjObhIVXJKga5jZVZcIkPDw=="
 }`
 
 	postMigration027CryptoListingJSON = `{
     "listing": {
         "slug": "Migration027_test_crypto_listing",
         "metadata": {
+            "version": 5,
             "contractType": "CRYPTOCURRENCY",
             "format": "MARKET_PRICE",
             "coinType": "BAT",
@@ -141,7 +145,7 @@ var (
             "priceModifier": 50
         }
     },
-    "signature": "37KoDxNC4lYTd8hZQHzgpvJ4GJsXVTUp89D1LhDMapgFUhGmFSsiPAjkgdez7Y9wJ7lfH4ouZRrUcw/81kcCAQ=="
+    "signature": "s0GBGyIYcClzUJ3SgWtRM3l3yi7FE/P52OTf0nTh0M21FKiWJQ8lIDdyUiDDdW8T8l8PLjE/QaToV45ZwlziDQ=="
 }`
 )
 
@@ -305,6 +309,24 @@ func TestMigration027(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	for _, l := range listingIndex {
+		if l.ModeratorIDs == nil {
+			t.Errorf("ModeratorIDs is null")
+		}
+		if l.ShipsTo == nil {
+			t.Errorf("ShipsTo is null")
+		}
+		if l.FreeShipping == nil {
+			t.Errorf("FreeShipping is null")
+		}
+		if l.Categories == nil {
+			t.Errorf("Categories is null")
+		}
+		if l.AcceptedCurrencies == nil {
+			t.Errorf("AcceptedCurrencies is null")
+		}
+	}
+
 	if listingIndex[0].Price.Amount.String() != strconv.Itoa(int(index[0].Price.Amount)) {
 		t.Errorf("Incorrect price set")
 	}
@@ -408,6 +430,24 @@ func TestMigration027(t *testing.T) {
 	}
 	if err = json.Unmarshal(listingsJSON, &listingIndex2); err != nil {
 		t.Fatal(err)
+	}
+
+	for _, l := range listingIndex2 {
+		if l.ModeratorIDs == nil {
+			t.Errorf("ModeratorIDs is null")
+		}
+		if l.ShipsTo == nil {
+			t.Errorf("ShipsTo is null")
+		}
+		if l.FreeShipping == nil {
+			t.Errorf("FreeShipping is null")
+		}
+		if l.Categories == nil {
+			t.Errorf("Categories is null")
+		}
+		if l.AcceptedCurrencies == nil {
+			t.Errorf("AcceptedCurrencies is null")
+		}
 	}
 
 	if listingIndex[0].Price.Amount.String() != strconv.Itoa(int(listingIndex2[0].Price.Amount)) {
