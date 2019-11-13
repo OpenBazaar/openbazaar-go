@@ -129,7 +129,7 @@ func TestProfile(t *testing.T) {
 	})
 }
 
-func TestProfileCurrencyUpdate(t *testing.T) {
+func TestPatchProfileCurrencyUpdate(t *testing.T) {
 	var (
 		postProfile = `{
 	"handle": "test",
@@ -154,7 +154,7 @@ func TestProfileCurrencyUpdate(t *testing.T) {
 	},
 	"currencies": ["LTC"]
 }`
-		putProfile      = `{"currencies": ["ETH"]}`
+		patchProfile    = `{"currencies": ["ETH"]}`
 		validateProfile = func(testRepo *test.Repository) error {
 			m, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 				DataPath:        testRepo.Path,
@@ -189,7 +189,7 @@ func TestProfileCurrencyUpdate(t *testing.T) {
 
 	runAPITestsWithSetup(t, apiTests{
 		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
-		{"PATCH", "/ob/profile", putProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
 	}, nil, validateProfile)
 }
 
