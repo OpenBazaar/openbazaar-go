@@ -1113,9 +1113,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	wal, err := service.node.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
-	log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-	log.Info(err)
-
 	if err != nil {
 		return nil, err
 	}
@@ -1128,9 +1125,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
-		log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@11111")
-		log.Info(err)
-
 		return nil, err
 	}
 	if order.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
@@ -1139,10 +1133,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				outpointHash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
-				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@22222")
-				log.Info(err)
-				log.Info(r.Txid)
-
 				if err != nil {
 					return nil, err
 				}
@@ -1159,9 +1149,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		if len(contract.VendorOrderFulfillment) > 0 {
 			payoutAddress, err = wal.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
 			if err != nil {
-				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@3333")
-				log.Info(err)
-
 				return nil, err
 			}
 		} else {
@@ -1173,9 +1160,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		}
 
 		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
-		log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@444444")
-		log.Info(err)
-
 		if err != nil {
 			return nil, err
 		}
@@ -1196,9 +1180,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			return nil, errors.New("invalid amount")
 		}
 		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *payoutFee, true)
-		log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@555555555555")
-		log.Info(err)
-
 		if err != nil {
 			return nil, err
 		}
