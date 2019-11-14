@@ -1,12 +1,66 @@
 package repo_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
+
+func TestProfileFromProtobuf(t *testing.T) {
+	var (
+		fixedFeeAmount          = "1234"
+		feeType                 = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE
+		feePercentage           = float32(1.1)
+		feeCurrencyDivisibility = uint32(10)
+		feeCurrencyCode         = "BTC"
+		pbProfile               = &pb.Profile{
+			ModeratorInfo: &pb.Moderator{
+				Fee: &pb.Moderator_Fee{
+					FixedFee: &pb.Moderator_Price{
+						BigAmount: fixedFeeAmount,
+						AmountCurrency: &pb.CurrencyDefinition{
+							Code:         feeCurrencyCode,
+							Divisibility: feeCurrencyDivisibility,
+						},
+					},
+					Percentage: feePercentage,
+					FeeType:    feeType,
+				},
+			},
+		}
+	)
+
+	actualProfile, err := repo.ProfileFromProtobuf(pbProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repoProfileFees := actualProfile.ModeratorInfo.Fee
+	if repoProfileFees.FeeType != feeType.String() {
+		t.Errorf("expected FeeType to be (%s), but was (%s)", feeType.String(), repoProfileFees.FeeType)
+	}
+	if repoProfileFees.Percentage != feePercentage {
+		t.Errorf("expected Percentage to be (%f), but was (%f)", feePercentage, repoProfileFees.Percentage)
+	}
+	if repoProfileFees.FixedFee.Amount != fixedFeeAmount {
+		t.Errorf("expected FixedFee.Amount to be (%s), but was (%s)", fixedFeeAmount, repoProfileFees.FixedFee.Amount)
+	}
+	if repoProfileFees.FixedFee.AmountCurrency.Code.String() != feeCurrencyCode {
+		t.Errorf("expected FixedFee.AmountCurrency to be (%s), but was (%s)", feeCurrencyCode, repoProfileFees.FixedFee.AmountCurrency)
+	}
+}
+
+func TestProfileFromProtobufMissingModInfo(t *testing.T) {
+	p := factory.NewProfileProtobuf()
+	p.ModeratorInfo = nil
+
+	if _, err := repo.ProfileFromProtobuf(p); err != nil {
+		t.Errorf("expected missing ModeratorInfo to be valid, but errored (%s)", err.Error())
+	}
+}
 
 func TestProfileFactoryIsValid(t *testing.T) {
 	p := factory.NewProfile()

@@ -48,6 +48,35 @@ type Profile struct {
 	ModeratorInfo *ModeratorInfo `json:"moderatorInfo,omitempty"`
 }
 
+func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
+	var modInfo *ModeratorInfo
+	if p.ModeratorInfo != nil {
+		var (
+			fees             = p.ModeratorInfo.Fee
+			amtCurrency, err = AllCurrencies().Lookup(fees.FixedFee.AmountCurrency.Code)
+		)
+		if err != nil {
+			return nil, fmt.Errorf("lookup currency (%s): %s", fees.FixedFee.AmountCurrency, err.Error())
+		}
+		amtCurrency.Divisibility = uint(fees.FixedFee.AmountCurrency.Divisibility)
+
+		modInfo = &ModeratorInfo{
+			Fee: &ModeratorFee{
+				FeeType: fees.FeeType.String(),
+				FixedFee: &ModeratorFixedFee{
+					Amount:         fees.FixedFee.BigAmount,
+					AmountCurrency: amtCurrency,
+				},
+				Percentage: fees.Percentage,
+			},
+		}
+	}
+
+	return &Profile{
+		ModeratorInfo: modInfo,
+	}, nil
+}
+
 // Valid indicates whether the Profile is valid by returning an error when
 // any part of the data is not as expected
 func (p *Profile) Valid() error {

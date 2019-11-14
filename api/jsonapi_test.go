@@ -193,6 +193,72 @@ func TestPatchProfileCurrencyUpdate(t *testing.T) {
 	}, nil, validateProfile)
 }
 
+func TestPatchProfileValidatesAsInvalid(t *testing.T) {
+	var (
+		// init profile for patch
+		postProfile = `{
+	"handle": "test",
+	"name": "Test User",
+	"location": "Internet",
+	"about": "The test fixture",
+	"shortDescription": "Fixture",
+	"contactInfo": {
+		"website": "internet.com",
+		"email": "email@address.com",
+		"phoneNumber": "687-5309"
+	},
+	"nsfw": false,
+	"vendor": false,
+	"moderator": false,
+	"colors": {
+		"primary": "#000000",
+		"secondary": "#FFD700",
+		"text": "#ffffff",
+		"highlight": "#123ABC",
+		"highlightText": "#DEAD00"
+	},
+	"currencies": ["LTC"]
+}`
+		// test valid patch
+		patchProfile = `{
+	"moderator": true,
+	"moderatorInfo": {
+		"description": "Fix plus percentage. Test moderator account. DO NOT USE.",
+		"fee": {
+			"feeType": "FIXED_PLUS_PERCENTAGE",
+			"fixedFee": {
+				"amountCurrency": {
+					"code": "USD",
+					"divisibility": 2
+				},
+				"bigAmount": "2"
+			},
+			"percentage": 0.1
+		},
+		"languages": [
+			"en-US"
+		],
+		"termsAndConditions": "Test moderator account. DO NOT USE."
+	}
+}`
+		// test invalid patch: percentage must be greater than 0
+		invalidPatchProfile = `{
+	"moderatorInfo": {
+		"fee": {
+			"percentage": 0
+		}
+	}
+}`
+	)
+
+	expectedErr := fmt.Errorf("invalid profile: %s", repo.ErrModeratorFeeHasNonPositivePercent)
+	runAPITests(t, apiTests{
+		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", invalidPatchProfile, 500, errorResponseJSON(expectedErr)},
+	})
+}
+
 func TestAvatar(t *testing.T) {
 	// Setting an avatar fails if we don't have a profile
 	runAPITests(t, apiTests{

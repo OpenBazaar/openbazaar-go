@@ -204,7 +204,6 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
 	if err != nil {
 		return err
@@ -213,6 +212,16 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err
 	}
+
+	repoProfile, err := repo.ProfileFromProtobuf(p)
+	if err != nil {
+		return fmt.Errorf("building profile for validation: %s", err.Error())
+	}
+
+	if err := repoProfile.Valid(); err != nil {
+		return fmt.Errorf("invalid profile: %s", err.Error())
+	}
+
 	return n.UpdateProfile(p)
 }
 
