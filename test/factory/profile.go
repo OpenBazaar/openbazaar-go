@@ -7,6 +7,7 @@ import (
 
 func NewProfile() *repo.Profile {
 	return &repo.Profile{
+		Moderator: true,
 		ModeratorInfo: &repo.ModeratorInfo{
 			Fee: &repo.ModeratorFee{
 				FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
@@ -22,6 +23,7 @@ func NewProfile() *repo.Profile {
 
 func NewProfileProtobuf() *pb.Profile {
 	return &pb.Profile{
+		Moderator: true,
 		ModeratorInfo: &pb.Moderator{
 			Fee: &pb.Moderator_Fee{
 				FixedFee: &pb.Moderator_Price{

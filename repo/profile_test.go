@@ -82,6 +82,7 @@ func TestProfileInvalidWithUnknownFeeType(t *testing.T) {
 
 func TestProfileValidWithoutModeratorInfo(t *testing.T) {
 	p := factory.NewProfile()
+	p.Moderator = false
 	p.ModeratorInfo = nil
 	if err := p.Valid(); err != nil {
 		t.Error("expected profile to be valid without moderator info, but wasn't")
@@ -326,5 +327,156 @@ func TestProfileInvalidPercentWithFixedHavingNoFixedFee(t *testing.T) {
 		t.Errorf("expected percentage with fixed fee but fixed fee is missing to be invalid")
 	} else if err != repo.ErrModeratorFixedFeeIsMissing {
 		t.Errorf("expected ErrModeratorFixedFeeIsMissing error, but got (%s)", err.Error())
+	}
+}
+
+func TestProfileInvalidAsModeratorWithoutInfo(t *testing.T) {
+	p := factory.NewProfile()
+	p.Moderator = true
+	p.ModeratorInfo = nil
+
+	if err := p.Valid(); err == nil {
+		t.Errorf("expected moderator without info to be invalid")
+	} else if err != repo.ErrModeratorInfoMissing {
+		t.Errorf("expected ErrModeratorInfoMissing error, but got (%s)", err.Error())
+	}
+}
+
+func TestProfileInvalidAsUserWithModeratorInfo(t *testing.T) {
+	p := factory.NewProfile()
+	p.Moderator = false
+	p.ModeratorInfo = &repo.ModeratorInfo{
+		Fee: &repo.ModeratorFee{
+			FeeType:    pb.Moderator_Fee_PERCENTAGE.String(),
+			Percentage: 1.1,
+			FixedFee:   nil,
+		},
+	}
+
+	if err := p.Valid(); err == nil {
+		t.Errorf("expected regular user with moderator info to be invalid")
+	} else if err != repo.ErrNonModeratorShouldNotHaveInfo {
+		t.Errorf("expected ErrNonModeratorShouldNotHaveInfo error, but got (%s)", err.Error())
+	}
+}
+
+func TestProfileSetModeratorFixedFee(t *testing.T) {
+	p := factory.NewProfile()
+	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String()
+	p.ModeratorInfo.Fee.FixedFee = nil
+	p.ModeratorInfo.Fee.Percentage = 1.1
+
+	fee, err := repo.NewCurrencyValueWithLookup("123", "USD")
+	if err != nil {
+		t.Fatalf("failed creating fee value: %s", err.Error())
+	}
+
+	if err := p.SetModeratorFixedFee(fee); err != nil {
+		t.Fatalf("failed setting fee: %s", err.Error())
+	}
+
+	if !p.Moderator {
+		t.Errorf("expected Moderator flag to be true")
+	}
+	if p.ModeratorInfo.Fee.FeeType != pb.Moderator_Fee_FIXED.String() {
+		t.Errorf("expected feeType to be (%s), but was (%s)", pb.Moderator_Fee_FIXED.String(), p.ModeratorInfo.Fee.FeeType)
+	}
+	if p.ModeratorInfo.Fee.Percentage != 0 {
+		t.Fatalf("expected percentage to be zero")
+	}
+	if p.ModeratorInfo.Fee.FixedFee == nil {
+		t.Fatalf("expected fixedFee to not be nil")
+	}
+	if p.ModeratorInfo.Fee.FixedFee.Amount != fee.Amount.String() {
+		t.Errorf("expected fixed fee amount to be (%s), but was (%s)", fee.Amount.String(), p.ModeratorInfo.Fee.FixedFee.Amount)
+	}
+	if !fee.Currency.Equal(p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
+		t.Errorf("expected fixed fee amount currency to be (%s), but was (%s)", fee.Currency.String(), p.ModeratorInfo.Fee.FixedFee.AmountCurrency)
+	}
+}
+
+func TestProfileSetModeratorFixedPlusPercentageFee(t *testing.T) {
+	percentage := float32(2.5)
+	p := factory.NewProfile()
+	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_PERCENTAGE.String()
+	p.ModeratorInfo.Fee.FixedFee = nil
+	p.ModeratorInfo.Fee.Percentage = 1.1
+
+	fee, err := repo.NewCurrencyValueWithLookup("123", "USD")
+	if err != nil {
+		t.Fatalf("failed creating fee value: %s", err.Error())
+	}
+
+	if err := p.SetModeratorFixedPlusPercentageFee(fee, percentage); err != nil {
+		t.Fatalf("failed setting fee: %s", err.Error())
+	}
+
+	if !p.Moderator {
+		t.Errorf("expected Moderator flag to be true")
+	}
+	if p.ModeratorInfo.Fee.FeeType != pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String() {
+		t.Errorf("expected feeType to be (%s), but was (%s)", pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(), p.ModeratorInfo.Fee.FeeType)
+	}
+	if p.ModeratorInfo.Fee.Percentage != percentage {
+		t.Fatalf("expected percentage to be zero")
+	}
+	if p.ModeratorInfo.Fee.FixedFee == nil {
+		t.Fatalf("expected fixedFee to not be nil")
+	}
+	if p.ModeratorInfo.Fee.FixedFee.Amount != fee.Amount.String() {
+		t.Errorf("expected fixed fee amount to be (%s), but was (%s)", fee.Amount.String(), p.ModeratorInfo.Fee.FixedFee.Amount)
+	}
+	if !fee.Currency.Equal(p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
+		t.Errorf("expected fixed fee amount currency to be (%s), but was (%s)", fee.Currency.String(), p.ModeratorInfo.Fee.FixedFee.AmountCurrency)
+	}
+}
+
+func TestProfileSetModeratorPercentageFee(t *testing.T) {
+	percentage := float32(2.5)
+	p := factory.NewProfile()
+	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED.String()
+	p.ModeratorInfo.Fee.FixedFee = &repo.ModeratorFixedFee{
+		Amount:         "1230",
+		AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+	}
+	p.ModeratorInfo.Fee.Percentage = 0
+
+	if err := p.SetModeratorPercentageFee(percentage); err != nil {
+		t.Fatalf("failed setting fee: %s", err.Error())
+	}
+
+	if !p.Moderator {
+		t.Errorf("expected Moderator flag to be true")
+	}
+	if p.ModeratorInfo.Fee.FeeType != pb.Moderator_Fee_PERCENTAGE.String() {
+		t.Errorf("expected feeType to be (%s), but was (%s)", pb.Moderator_Fee_PERCENTAGE.String(), p.ModeratorInfo.Fee.FeeType)
+	}
+	if p.ModeratorInfo.Fee.Percentage != percentage {
+		t.Fatalf("expected percentage to be zero")
+	}
+	if p.ModeratorInfo.Fee.FixedFee != nil {
+		t.Fatalf("expected fixedFee to be nil")
+	}
+}
+
+func TestProfileDisableModeration(t *testing.T) {
+	p := factory.NewProfile()
+	p.Moderator = true
+	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED.String()
+	p.ModeratorInfo.Fee.FixedFee = &repo.ModeratorFixedFee{
+		Amount:         "1230",
+		AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+	}
+	p.ModeratorInfo.Fee.Percentage = 0
+
+	if err := p.DisableModeration(); err != nil {
+		t.Fatalf("failed disabling moderation: %s", err.Error())
+	}
+
+	if p.Moderator {
+		t.Errorf("expected Moderator flag to be false")
+	}
+	if p.ModeratorInfo != nil {
+		t.Errorf("expected ModeratorInfo to be nil")
 	}
 }

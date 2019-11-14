@@ -9,6 +9,12 @@ import (
 )
 
 var (
+	// ErrModeratorInfoMissing indicates when the moderator information is
+	// missing while also indicating they are a moderator
+	ErrModeratorInfoMissing = errors.New("moderator is enabled but information is missing")
+	// ErrNonModeratorShouldNotHaveInfo indicates when the moderator information
+	// is present, but not indicating moderator is enabled
+	ErrNonModeratorShouldNotHaveInfo = errors.New("moderator information is provided but moderator is not enabled")
 	// ErrMissingModeratorFee indicates the fee schedule is missing
 	ErrMissingModeratorFee = errors.New("moderator info is missing fee schedule")
 	// ErrUnknownModeratorFeeType indicates the feeType is unknown
@@ -45,6 +51,7 @@ type ModeratorInfo struct {
 
 // Profile presents the user's metadata
 type Profile struct {
+	Moderator     bool           `json:"moderator"`
 	ModeratorInfo *ModeratorInfo `json:"moderatorInfo,omitempty"`
 }
 
@@ -87,8 +94,14 @@ func (p *Profile) Valid() error {
 }
 
 func (p *Profile) validateModeratorFees() error {
-	if p.ModeratorInfo == nil {
+	if !p.Moderator && p.ModeratorInfo == nil {
 		return nil
+	}
+	if p.Moderator && p.ModeratorInfo == nil {
+		return ErrModeratorInfoMissing
+	}
+	if !p.Moderator && p.ModeratorInfo != nil {
+		return ErrNonModeratorShouldNotHaveInfo
 	}
 
 	if p.ModeratorInfo.Fee == nil {
@@ -134,5 +147,61 @@ func (p *Profile) validateModeratorFees() error {
 		return ErrUnknownModeratorFeeType
 	}
 
+	return nil
+}
+
+// DisableModeration sets the profile so moderationr is disabled and
+// all fee schedules are removed
+func (p *Profile) DisableModeration() error {
+	p.Moderator = false
+	p.ModeratorInfo = nil
+	return nil
+}
+
+// SetModeratorFixedFee sets the profile to be a moderator with a
+// fixed fee schedule
+func (p *Profile) SetModeratorFixedFee(fee *CurrencyValue) error {
+	p.Moderator = true
+	p.ModeratorInfo = &ModeratorInfo{
+		Fee: &ModeratorFee{
+			FeeType: pb.Moderator_Fee_FIXED.String(),
+			FixedFee: &ModeratorFixedFee{
+				Amount:         fee.Amount.String(),
+				AmountCurrency: fee.Currency,
+			},
+			Percentage: 0,
+		},
+	}
+	return nil
+}
+
+// SetModeratorFixedPlusPercentageFee sets the profile to be a moderator
+// with a fixed fee plus percentage schedule
+func (p *Profile) SetModeratorFixedPlusPercentageFee(fee *CurrencyValue, percentage float32) error {
+	p.Moderator = true
+	p.ModeratorInfo = &ModeratorInfo{
+		Fee: &ModeratorFee{
+			FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
+			FixedFee: &ModeratorFixedFee{
+				Amount:         fee.Amount.String(),
+				AmountCurrency: fee.Currency,
+			},
+			Percentage: percentage,
+		},
+	}
+	return nil
+}
+
+// SetModeratorPercentageFee sets the profile to be a moderator with a
+// percentage fee schedule
+func (p *Profile) SetModeratorPercentageFee(percentage float32) error {
+	p.Moderator = true
+	p.ModeratorInfo = &ModeratorInfo{
+		Fee: &ModeratorFee{
+			FeeType:    pb.Moderator_Fee_PERCENTAGE.String(),
+			FixedFee:   nil,
+			Percentage: percentage,
+		},
+	}
 	return nil
 }
