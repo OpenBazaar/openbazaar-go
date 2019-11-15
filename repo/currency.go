@@ -17,10 +17,11 @@ const (
 )
 
 var (
-	ErrCurrencyValueInsufficientPrecision = errors.New("unable to accurately represent value as int64")
-	ErrCurrencyValueNegativeRate          = errors.New("conversion rate must be greater than zero")
-	ErrCurrencyValueAmountInvalid         = errors.New("invalid amount")
-	ErrCurrencyValueDefinitionInvalid     = errors.New("invalid currency definition")
+	ErrCurrencyValueInsufficientPrecision         = errors.New("unable to accurately represent value as int64")
+	ErrCurrencyValueNegativeRate                  = errors.New("conversion rate must be greater than zero")
+	ErrCurrencyValueAmountInvalid                 = errors.New("invalid amount")
+	ErrCurrencyValueDefinitionInvalid             = errors.New("invalid currency definition")
+	ErrCurrencyValueInvalidCmpDifferentCurrencies = errors.New("unable to compare two different currencies")
 )
 
 // CurrencyValue represents the amount and variety of currency
@@ -244,4 +245,27 @@ func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float6
 	roundedInt, _ := roundedAmount.Int(nil)
 	roundedAcc := big.Accuracy(roundedAmount.Cmp(newAmount))
 	return &CurrencyValue{Amount: roundedInt, Currency: final}, roundedAcc, nil
+}
+
+// Cmp exposes the (*big.Int).Cmp behavior after verifying currency and adjusting
+// for different currency divisibilities.
+func (v *CurrencyValue) Cmp(other *CurrencyValue) (int, error) {
+	if v.Currency.Code.String() != other.Currency.Code.String() {
+		return 0, ErrCurrencyValueInvalidCmpDifferentCurrencies
+	}
+	if v.Currency.Equal(other.Currency) {
+		return v.Amount.Cmp(other.Amount), nil
+	}
+	if v.Currency.Divisibility > other.Currency.Divisibility {
+		adjOther, _, err := other.AdjustDivisibility(v.Currency.Divisibility)
+		if err != nil {
+			return 0, fmt.Errorf("adjusting other divisibility: %s", err.Error())
+		}
+		return v.Amount.Cmp(adjOther.Amount), nil
+	}
+	selfAdj, _, err := v.AdjustDivisibility(other.Currency.Divisibility)
+	if err != nil {
+		return 0, fmt.Errorf("adjusting self divisibility: %s", err.Error())
+	}
+	return selfAdj.Amount.Cmp(other.Amount), nil
 }
