@@ -17,6 +17,7 @@ func TestProfileFromProtobuf(t *testing.T) {
 		feeCurrencyDivisibility = uint32(10)
 		feeCurrencyCode         = "BTC"
 		pbProfile               = &pb.Profile{
+			Moderator: true,
 			ModeratorInfo: &pb.Moderator{
 				Fee: &pb.Moderator_Fee{
 					FixedFee: &pb.Moderator_Price{
@@ -38,6 +39,9 @@ func TestProfileFromProtobuf(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if !actualProfile.Moderator {
+		t.Errorf("expected Moderator to be true")
+	}
 	repoProfileFees := actualProfile.ModeratorInfo.Fee
 	if repoProfileFees.FeeType != feeType.String() {
 		t.Errorf("expected FeeType to be (%s), but was (%s)", feeType.String(), repoProfileFees.FeeType)
@@ -155,48 +159,44 @@ func TestProfileInvalidWithZeroFixedFee(t *testing.T) {
 	// test fixed fee
 	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED.String()
 	p.ModeratorInfo.Fee.FixedFee.Amount = "0"
-	if err := p.Valid(); err == nil {
-		t.Errorf("expected profile with zero fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	if err := p.Valid(); err != nil {
+		t.Errorf("expected profile with zero fee to be valid, but errored: %s", err.Error())
 	}
 
 	p.ModeratorInfo.Fee.FixedFee.Amount = "-1"
 	if err := p.Valid(); err == nil {
 		t.Errorf("expected profile with negative fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	} else if err != repo.ErrModeratorFixedFeeIsNegativeOrNotSet {
+		t.Errorf("expected ErrModeratorFixedFeeIsNegativeOrNotSet error, but was (%s)", err.Error())
 	}
 
 	p.ModeratorInfo.Fee.FixedFee.Amount = ""
 	if err := p.Valid(); err == nil {
 		t.Errorf("expected profile with empty fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	} else if err != repo.ErrModeratorFixedFeeIsNegativeOrNotSet {
+		t.Errorf("expected ErrModeratorFixedFeeIsNegativeOrNotSet error, but was (%s)", err.Error())
 	}
 
 	// test fixed fee plus percentage
 	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String()
 	p.ModeratorInfo.Fee.Percentage = 1.1
 	p.ModeratorInfo.Fee.FixedFee.Amount = "0"
-	if err := p.Valid(); err == nil {
-		t.Errorf("expected profile with zero fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	if err := p.Valid(); err != nil {
+		t.Errorf("expected profile with zero fee to be valid, but errored: %s", err.Error())
 	}
 
 	p.ModeratorInfo.Fee.FixedFee.Amount = "-1"
 	if err := p.Valid(); err == nil {
 		t.Errorf("expected profile with negative fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	} else if err != repo.ErrModeratorFixedFeeIsNegativeOrNotSet {
+		t.Errorf("expected ErrModeratorFixedFeeIsNegativeOrNotSet error, but was (%s)", err.Error())
 	}
 
 	p.ModeratorInfo.Fee.FixedFee.Amount = ""
 	if err := p.Valid(); err == nil {
 		t.Errorf("expected profile with empty fee to be invalid")
-	} else if err != repo.ErrModeratorFixedFeeIsNonPositive {
-		t.Errorf("expected ErrModeratorFixedFeeIsNonPositive error, but was (%s)", err.Error())
+	} else if err != repo.ErrModeratorFixedFeeIsNegativeOrNotSet {
+		t.Errorf("expected ErrModeratorFixedFeeIsNegativeOrNotSet error, but was (%s)", err.Error())
 	}
 }
 

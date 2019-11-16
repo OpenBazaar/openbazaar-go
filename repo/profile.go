@@ -27,8 +27,8 @@ var (
 	ErrPercentageFeeHasFixedFee = fmt.Errorf("percentage moderator fee should not include a fixed fee or should use (%s) feeType", pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String())
 	// ErrModeratorFixedFeeIsMissing indicates when the fixed fee is missing
 	ErrModeratorFixedFeeIsMissing = fmt.Errorf("fixed moderator fee is missing or should use (%s) feeType", pb.Moderator_Fee_PERCENTAGE.String())
-	// ErrModeratorFixedFeeIsNonPositive indicates that the fixed fee is non-positive
-	ErrModeratorFixedFeeIsNonPositive = errors.New("fixed moderator fee is not positive")
+	// ErrModeratorFixedFeeIsNegativeOrNotSet indicates that the fixed fee is non-positive
+	ErrModeratorFixedFeeIsNegativeOrNotSet = errors.New("fixed moderator fee is negative or not a parsable number")
 )
 
 // ModeratorFixedFee represents the value of a fixed moderation fee
@@ -80,6 +80,7 @@ func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 	}
 
 	return &Profile{
+		Moderator:     p.Moderator,
 		ModeratorInfo: modInfo,
 	}, nil
 }
@@ -104,6 +105,7 @@ func (p *Profile) validateModeratorFees() error {
 		return ErrNonModeratorShouldNotHaveInfo
 	}
 
+	// Moderator is true, Info is present
 	if p.ModeratorInfo.Fee == nil {
 		return ErrMissingModeratorFee
 	}
@@ -115,8 +117,8 @@ func (p *Profile) validateModeratorFees() error {
 		if err := p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Valid(); err != nil {
 			return fmt.Errorf("invalid fixed fee currency: %s", err.Error())
 		}
-		if amt, ok := new(big.Int).SetString(p.ModeratorInfo.Fee.FixedFee.Amount, 10); !ok || amt.Cmp(big.NewInt(0)) <= 0 {
-			return ErrModeratorFixedFeeIsNonPositive
+		if amt, ok := new(big.Int).SetString(p.ModeratorInfo.Fee.FixedFee.Amount, 10); !ok || amt.Cmp(big.NewInt(0)) < 0 {
+			return ErrModeratorFixedFeeIsNegativeOrNotSet
 		}
 		return nil
 	}
