@@ -239,7 +239,7 @@ func TestProfileValidPercentageFee(t *testing.T) {
 	}
 }
 
-func TestProfileInvalidPercentageFeeZero(t *testing.T) {
+func TestProfileValidPercentageFeeZero(t *testing.T) {
 	p := factory.NewProfile()
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
@@ -248,10 +248,8 @@ func TestProfileInvalidPercentageFeeZero(t *testing.T) {
 		},
 	}
 
-	if err := p.Valid(); err == nil {
-		t.Errorf("expected zero percentage fee to be invalid")
-	} else if err != repo.ErrModeratorFeeHasNonPositivePercent {
-		t.Errorf("expected ErrModeratorFeeHasNonPositivePercent error, but was (%s)", err.Error())
+	if err := p.Valid(); err != nil {
+		t.Errorf("expected profile example to be valid")
 	}
 }
 
@@ -293,7 +291,7 @@ func TestProfileValidPercentageWithFixedFee(t *testing.T) {
 	}
 }
 
-func TestProfileInvalidPercentWithFixedHavingZeroPercent(t *testing.T) {
+func TestProfileValidPercentWithFixedHavingZeroPercent(t *testing.T) {
 	p := factory.NewProfile()
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
@@ -306,10 +304,28 @@ func TestProfileInvalidPercentWithFixedHavingZeroPercent(t *testing.T) {
 		},
 	}
 
+	if err := p.Valid(); err != nil {
+		t.Errorf("expected profile exmaple to be valid")
+	}
+}
+
+func TestProfileInvalidPercentWithFixedHavingNegativePercent(t *testing.T) {
+	p := factory.NewProfile()
+	p.ModeratorInfo = &repo.ModeratorInfo{
+		Fee: &repo.ModeratorFee{
+			FeeType:    pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
+			Percentage: -1,
+			FixedFee: &repo.ModeratorFixedFee{
+				Amount:         "1234",
+				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+			},
+		},
+	}
+
 	if err := p.Valid(); err == nil {
-		t.Errorf("expected percentage with fixed fee but percent is zero to be invalid")
-	} else if err != repo.ErrModeratorFeeHasNonPositivePercent {
-		t.Errorf("expected ErrModeratorFeeHasNonPositivePercent error, but got (%s)", err.Error())
+		t.Errorf("expected percentage with fixed fee but negative percentage to be invalid")
+	} else if err != repo.ErrModeratorFeeHasNegativePercentage {
+		t.Errorf("expected ErrModeratorFeeHasNegativePercentage error, but got (%s)", err.Error())
 	}
 }
 

@@ -193,7 +193,7 @@ func TestPatchProfileCurrencyUpdate(t *testing.T) {
 	}, nil, validateProfile)
 }
 
-func TestPatchProfileValidatesAsInvalid(t *testing.T) {
+func TestPatchProfileCanBeInvalid(t *testing.T) {
 	var (
 		// init profile for patch
 		postProfile = `{
@@ -245,13 +245,13 @@ func TestPatchProfileValidatesAsInvalid(t *testing.T) {
 		invalidPatchProfile = `{
 	"moderatorInfo": {
 		"fee": {
-			"percentage": 0
+			"percentage": -1
 		}
 	}
 }`
 	)
 
-	expectedErr := fmt.Errorf("invalid profile: %s", repo.ErrModeratorFeeHasNonPositivePercent)
+	expectedErr := fmt.Errorf("invalid profile: %s", repo.ErrModeratorFeeHasNegativePercentage)
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
 		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
