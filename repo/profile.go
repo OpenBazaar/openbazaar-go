@@ -19,8 +19,8 @@ var (
 	ErrMissingModeratorFee = errors.New("moderator info is missing fee schedule")
 	// ErrUnknownModeratorFeeType indicates the feeType is unknown
 	ErrUnknownModeratorFeeType = errors.New("moderator fee type is unknown")
-	// ErrModeratorFeeHasNonPositivePercent indicates when the percentage is non-positive but should be
-	ErrModeratorFeeHasNonPositivePercent = errors.New("percentage moderator fee should be greater than zero")
+	// ErrModeratorFeeHasNegativePercentage indicates when the percentage is non-positive but should be
+	ErrModeratorFeeHasNegativePercentage = errors.New("percentage moderator fee should not be negative")
 	// ErrFixedFeeHasNonZeroPercentage indicates when the percentage is not zero but should be
 	ErrFixedFeeHasNonZeroPercentage = errors.New("fixed moderator fee should have a zero percentage amount")
 	// ErrPercentageFeeHasFixedFee indicates that a fixed fee is included when there should not be
@@ -132,15 +132,15 @@ func (p *Profile) validateModeratorFees() error {
 			return err
 		}
 	case pb.Moderator_Fee_PERCENTAGE.String():
-		if p.ModeratorInfo.Fee.Percentage <= 0 {
-			return ErrModeratorFeeHasNonPositivePercent
+		if p.ModeratorInfo.Fee.Percentage < 0 {
+			return ErrModeratorFeeHasNegativePercentage
 		}
 		if p.ModeratorInfo.Fee.FixedFee != nil {
 			return ErrPercentageFeeHasFixedFee
 		}
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String():
-		if p.ModeratorInfo.Fee.Percentage <= 0 {
-			return ErrModeratorFeeHasNonPositivePercent
+		if p.ModeratorInfo.Fee.Percentage < 0 {
+			return ErrModeratorFeeHasNegativePercentage
 		}
 		if err := validateFixedFee(); err != nil {
 			return err
