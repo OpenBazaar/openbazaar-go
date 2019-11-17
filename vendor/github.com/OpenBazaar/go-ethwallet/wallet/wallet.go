@@ -906,10 +906,19 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 	auth.GasLimit = 4000000 // in units
 	auth.GasPrice = gasPrice
 
-	//redeemScript, err := SerializeEthScript(script)
-	//if err != nil {
-	//	return h, err
-	//}
+	// lets check if the caller has enough balance to make the
+	// multisign call
+	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(4000000))
+	currentBalance, err := wallet.GetBalance()
+	if err != nil {
+		log.Error("err fetching eth wallet balance")
+		currentBalance = big.NewInt(0)
+	}
+
+	if requiredBalance.Cmp(currentBalance) > 0 {
+		// the wallet does not have the required balance
+		return h, errors.New("insufficient balance to place the order")
+	}
 
 	shash, _, err := GenScriptHash(script)
 	if err != nil {
