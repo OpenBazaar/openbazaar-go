@@ -84,38 +84,40 @@ func (scanner *inboundMessageScanner) PerformTask() {
 
 			// Get handler for this msg type
 			handler := scanner.getHandler(pb.Message_MessageType(m.MessageType))
-			if handler != nil {
-				pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
+			if handler == nil {
+				log.Errorf("err fetching handler for msg: %v", pb.Message_MessageType(m.MessageType))
+				continue
+			}
+			pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
+			if err != nil {
+				log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+				continue
+			}
+			i, err := peer.IDFromPublicKey(pubkey)
+			if err != nil {
+				log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+				continue
+			}
+			msg := new(repo.Message)
+
+			if len(m.Message) > 0 {
+				err = msg.UnmarshalJSON(m.Message)
 				if err != nil {
 					log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
 					continue
 				}
-				i, err := peer.IDFromPublicKey(pubkey)
-				if err != nil {
-					log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
-					continue
-				}
-				msg := new(repo.Message)
+			}
 
-				if len(m.Message) > 0 {
-					err = msg.UnmarshalJSON(m.Message)
-					if err != nil {
-						log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
-						continue
-					}
-				}
-
-				// Dispatch handler
-				_, err = handler(i, &msg.Msg, nil)
-				if err != nil {
-					log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
-					continue
-				}
-				err = scanner.datastore.Messages().Put(m.MessageID, m.OrderID, pb.Message_MessageType(m.MessageType),
-					m.PeerID, *msg, "", 0, m.PeerPubkey)
-				if err != nil {
-					log.Errorf("err putting message : %v", err)
-				}
+			// Dispatch handler
+			_, err = handler(i, &msg.Msg, nil)
+			if err != nil {
+				log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
+				continue
+			}
+			err = scanner.datastore.Messages().Put(m.MessageID, m.OrderID, pb.Message_MessageType(m.MessageType),
+				m.PeerID, *msg, "", 0, m.PeerPubkey)
+			if err != nil {
+				log.Errorf("err putting message : %v", err)
 			}
 
 		}
