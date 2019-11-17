@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"sync"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/op/go-logging"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 )
 
 func TestPerformTaskInboundMessageScanner(t *testing.T) {
@@ -80,10 +82,20 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 		}
 	}
 
+	handler := func(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
+		return func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
+			if t == pb.Message_ORDER {
+				return nil, nil
+			}
+			return nil, errors.New("unknown message type")
+		}
+	}
+
 	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &inboundMessageScanner{
-		datastore: datastore,
-		logger:    logging.MustGetLogger("testInboundMsgScanner"),
+		datastore:  datastore,
+		logger:     logging.MustGetLogger("testInboundMsgScanner"),
+		getHandler: handler,
 	}
 
 	//worker.PerformTask()

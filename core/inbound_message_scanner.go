@@ -19,9 +19,10 @@ const (
 
 type inboundMessageScanner struct {
 	// PerformTask dependencies
-	datastore repo.Datastore
-	service   net.NetworkService
-	broadcast chan repo.Notifier
+	datastore  repo.Datastore
+	service    net.NetworkService
+	getHandler func(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error)
+	broadcast  chan repo.Notifier
 
 	// Worker-handling dependencies
 	intervalDelay time.Duration
@@ -35,6 +36,7 @@ func (n *OpenBazaarNode) StartInboundMsgScanner() {
 	n.InboundMsgScanner = &inboundMessageScanner{
 		datastore:     n.Datastore,
 		service:       n.Service,
+		getHandler:    n.Service.HandlerForMsgType,
 		broadcast:     n.Broadcast,
 		intervalDelay: n.scannerIntervalDelay(),
 		logger:        logging.MustGetLogger("inboundMessageScanner"),
@@ -81,7 +83,7 @@ func (scanner *inboundMessageScanner) PerformTask() {
 		if m.MsgErr == ErrInsufficientFunds.Error() {
 
 			// Get handler for this msg type
-			handler := scanner.service.HandlerForMsgType(pb.Message_MessageType(m.MessageType))
+			handler := scanner.getHandler(pb.Message_MessageType(m.MessageType))
 			if handler != nil {
 				pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
 				if err != nil {
