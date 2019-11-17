@@ -587,7 +587,21 @@ func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
 
 // GetFeePerByte - Get the current fee per byte
 func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
-	return *big.NewInt(0)
+	est, err := wallet.client.GetEthGasStationEstimate()
+	ret := big.NewInt(0)
+	if err != nil {
+		log.Errorf("err fetching ethgas station data: %v", err)
+		return *ret
+	}
+	switch feeLevel {
+	case wi.NORMAL:
+		ret, _ = big.NewFloat(est.Average * 100000000).Int(nil)
+	case wi.ECONOMIC:
+		ret, _ = big.NewFloat(est.SafeLow * 100000000).Int(nil)
+	case wi.PRIOIRTY, wi.FEE_BUMP:
+		ret, _ = big.NewFloat(est.Fast * 100000000).Int(nil)
+	}
+	return *ret
 }
 
 // Spend - Send ether to an external wallet
