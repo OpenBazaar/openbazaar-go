@@ -496,3 +496,46 @@ func TestProfileDisableModeration(t *testing.T) {
 		t.Errorf("expected ModeratorInfo to be nil")
 	}
 }
+
+//func TestProfileGetModeratorFixedFee(t *testing.T) {
+//mockExchange := factory.NewMockExchangeRater("BTC")
+//// mocked rate 1 BTC = 10 ETH
+//btcETHRate := float64(10)
+//mockExchange.AddRate("ETH", btcETHRate)
+
+//// orderTotal using actual BTC def w divisibility 8
+//orderTotal, err := repo.NewCurrencyValueWithLookup("100000000", "BTC") // 1 BTC
+//if err != nil {
+//t.Fatalf("building total: %s", err.Error())
+//}
+
+//// mod fixedFee using actual ETH def w divisibility 18
+//fixedFee, err := repo.NewCurrencyValueWithLookup("1000000000000000000", "ETH") // 1 ETH
+//if err != nil {
+//t.Fatalf("building fixed fee: %s", err.Error())
+//}
+//p := factory.NewProfile()
+//if err := p.SetModeratorFixedFee(fixedFee); err != nil {
+//t.Fatalf("setting fixed fee: %s", err.Error())
+//}
+
+//moderatorFee, err := p.GetModeratorFee(orderTotal, mockExchange) //(*repo.CurrencyValue, error)
+//if err != nil {
+//t.Fatalf("getting moderator fee: %s", err.Error())
+//}
+
+//// expected fee = 1 ETH in BTC = 1 ETH * (1 BTC/10 ETH) = 1 ETH * (1 BTC/10 ETH) = 0.1 BTC
+//expectedFee, err := repo.NewCurrencyValueWithLookup("10000000", "BTC")
+//if err != nil {
+//t.Fatalf("making expected fee: %s", err.Error())
+//}
+//if actual, err := moderatorFee.Cmp(expectedFee); err == nil && actual != 0 {
+//t.Errorf("expected moderator fee to be (%s), but was (%s)", expectedFee.String(), moderatorFee.String())
+//} else if err != nil {
+//t.Errorf("comparing fees (%s) and (%s): %s", expectedFee.String(), moderatorFee.String(), err.Error())
+//}
+//}
+
+// TODO: test GetModeratorFee with invalid total
+// TODO: test GetModeratorFee with invalid desiredCurrency
+// TODO: test GetModeratorFee with missing exchange rates

@@ -50,13 +50,14 @@ const (
 )
 
 var (
-	ErrCurrencyCodeLengthInvalid       = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
-	ErrCurrencyCodeTestSymbolInvalid   = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
-	ErrCurrencyDefinitionUndefined     = errors.New("unknown currency")
-	ErrCurrencyTypeInvalid             = errors.New("currency type must be crypto or fiat")
-	ErrCurrencyDivisibilityNonPositive = errors.New("currency divisibility most be greater than zero")
-	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
-	ErrDictionaryCurrencyCodeCollision = errors.New("currency code is used by more than one currency")
+	ErrCurrencyCodeLengthInvalid             = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
+	ErrCurrencyCodeTestSymbolInvalid         = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
+	ErrCurrencyDefinitionUndefined           = errors.New("unknown currency")
+	ErrCurrencyTypeInvalid                   = errors.New("currency type must be crypto or fiat")
+	ErrCurrencyDivisibilityNonPositive       = errors.New("currency divisibility most be greater than zero")
+	ErrDictionaryIndexMismatchedCode         = errors.New("dictionary index mismatched with definition currency code")
+	ErrDictionaryCurrencyCodeCollision       = errors.New("currency code is used by more than one currency")
+	ErrCurrencyDefinitionDivisibilityTooHigh = errors.New("currency divisibility is too large")
 
 	NilCurrencyDefinition = CurrencyDefinition{Name: "", Code: NilCurrencyCode, Divisibility: 0, CurrencyType: "", BlockTime: 0 * time.Second}
 

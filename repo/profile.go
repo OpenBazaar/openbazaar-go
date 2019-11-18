@@ -152,6 +152,10 @@ func (p *Profile) validateModeratorFees() error {
 	return nil
 }
 
+func (p *Profile) IsModerationEnabled() bool {
+	return p.Moderator && p.ModeratorInfo != nil
+}
+
 // DisableModeration sets the profile so moderationr is disabled and
 // all fee schedules are removed
 func (p *Profile) DisableModeration() error {
@@ -207,3 +211,40 @@ func (p *Profile) SetModeratorPercentageFee(percentage float32) error {
 	}
 	return nil
 }
+
+// GetModeratorFee returns the appropriate fee owed for a provided total
+// given the currently set profile moderator fee schedule. If moderation is
+// disabled or the profile is invalid, an error will be returned. A zero will
+// be returned as the fee without an error if the provided total is also zero.
+//func (p *Profile) GetModeratorFee(total *CurrencyValue, exchRate ExchangeRater) (*CurrencyValue, error) {
+//if !p.IsModerationEnabled() {
+//return nil, ErrMissingModeratorFee
+//}
+
+//switch p.ModeratorInfo.Fee.FeeType {
+//case pb.Moderator_Fee_FIXED.String():
+//return p.getModeratorFixedFee(exchRate)
+//}
+//return nil, ErrUnknownModeratorFeeType
+//}
+
+//func (p *Profile) getModeratorFixedFee(exchRate ExchangeRater) (*CurrencyValue, error) {
+////reserveCode := exchRate.GetReserveCurrency().Code.String()
+//moderatorCurrency, err := AllCurrencies().Lookup(p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code.String())
+//if err != nil {
+//return nil, fmt.Errorf("unknown moderator fixed fee currency: %s", err.Error())
+//}
+//moderatorFee, err := NewCurrencyValue(
+//p.ModeratorInfo.Fee.FixedFee.Amount,
+//moderatorCurrency,
+//)
+//if err != nil {
+//return nil, fmt.Errorf("invalid moderator fixed fee: %s", err.Error())
+//}
+
+////if p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Divisibility != moderatorCurrency.Divisibility {
+////moderatorFee, err = moderatorFee.AdjustDivisibility(moderatorCurrency.Divisibility)
+////}
+
+//return moderatorFee, nil
+//}

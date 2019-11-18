@@ -18,7 +18,7 @@ const (
 
 var (
 	ErrCurrencyValueInsufficientPrecision         = errors.New("unable to accurately represent value as int64")
-	ErrCurrencyValueNegativeRate                  = errors.New("conversion rate must be greater than zero")
+	ErrCurrencyValueNonPositiveRate               = errors.New("conversion rate must be greater than zero")
 	ErrCurrencyValueAmountInvalid                 = errors.New("invalid amount")
 	ErrCurrencyValueDefinitionInvalid             = errors.New("invalid currency definition")
 	ErrCurrencyValueInvalidCmpDifferentCurrencies = errors.New("unable to compare two different currencies")
@@ -202,7 +202,7 @@ func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, big.Accura
 	}
 	defWithNewDivisibility := v.Currency
 	defWithNewDivisibility.Divisibility = div
-	return v.ConvertTo(defWithNewDivisibility, 1.0)
+	return v.ConvertTo(defWithNewDivisibility, NewEqualExchangeRater())
 }
 
 // ConvertTo will perform the following math given its arguments are valid:
@@ -210,22 +210,29 @@ func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, big.Accura
 // where v is the receiver, exchangeRatio is the ratio of (1 final.Currency/v.Currency)
 // v and final must both be Valid() and exchangeRatio must not be zero. The accuracy
 // indicates if decimal values were trimmed when converting the value back to integer.
-func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, big.Accuracy, error) {
+func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exRater ExchangeRater) (*CurrencyValue, big.Accuracy, error) {
+	//func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, big.Accuracy, error) {
 	if err := v.Valid(); err != nil {
 		return nil, 0, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}
 	if err := final.Valid(); err != nil {
 		return nil, 0, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
 	}
-	if exchangeRatio <= 0 {
-		return nil, 0, ErrCurrencyValueNegativeRate
+	inRate, err := exRater.GetExchangeRate(v.Currency.Code.String())
+	if err != nil {
+		return nil, 0, fmt.Errorf("looking up (%s) rate: %s", v.Currency.Code.String(), err.Error())
 	}
+	outRate, err := exRater.GetExchangeRate(final.Code.String())
+	if err != nil {
+		return nil, 0, fmt.Errorf("looking up (%s) rate: %s", final.Code.String(), err.Error())
+	}
+	rate := 1 / (inRate / outRate)
+	if rate <= 0 {
+		return nil, 0, ErrCurrencyValueNonPositiveRate
+	}
+	exRatio := new(big.Float).SetFloat64(rate)
 
 	amt := new(big.Float).SetInt(v.Amount)
-	exRatio := new(big.Float).SetFloat64(exchangeRatio)
-	if exRatio == nil {
-		return nil, 0, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
-	}
 	newAmount := new(big.Float).SetPrec(53).Mul(amt, exRatio)
 
 	if v.Currency.Divisibility != final.Divisibility {
