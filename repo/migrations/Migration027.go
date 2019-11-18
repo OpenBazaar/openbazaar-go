@@ -1,683 +1,772 @@
 package migrations
 
-//import (
-//"context"
-//"encoding/json"
-//"fmt"
-//"io/ioutil"
-//"os"
-//"path"
-//"strconv"
-//"time"
-
-//crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
-
-//"github.com/OpenBazaar/jsonpb"
-//"github.com/OpenBazaar/openbazaar-go/ipfs"
-//"github.com/OpenBazaar/openbazaar-go/pb"
-//"github.com/golang/protobuf/proto"
-//timestamp "github.com/golang/protobuf/ptypes/timestamp"
-//ipfscore "github.com/ipfs/go-ipfs/core"
-//"github.com/ipfs/go-ipfs/repo/fsrepo"
-//)
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
+	coremock "github.com/ipfs/go-ipfs/core/mock"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+)
 
 type Migration027 struct{}
 
-func (Migration027) Up(a, b string, c bool) error   { return nil }
-func (Migration027) Down(a, b string, c bool) error { return nil }
-
-//type price0 struct {
-//CurrencyCode string  `json:"currencyCode"`
-//Amount       string  `json:"amount"`
-//Modifier     float32 `json:"modifier"`
-//}
-
-//[>
-//type thumbnail struct {
-//Tiny   string `json:"tiny"`
-//Small  string `json:"small"`
-//Medium string `json:"medium"`
-//}
-
-//type ListingData struct {
-//Hash               string    `json:"hash"`
-//Slug               string    `json:"slug"`
-//Title              string    `json:"title"`
-//Categories         []string  `json:"categories"`
-//NSFW               bool      `json:"nsfw"`
-//ContractType       string    `json:"contractType"`
-//Description        string    `json:"description"`
-//Thumbnail          thumbnail `json:"thumbnail"`
-//Price              price     `json:"price"`
-//ShipsTo            []string  `json:"shipsTo"`
-//FreeShipping       []string  `json:"freeShipping"`
-//Language           string    `json:"language"`
-//AverageRating      float32   `json:"averageRating"`
-//RatingCount        uint32    `json:"ratingCount"`
-//ModeratorIDs       []string  `json:"moderators"`
-//AcceptedCurrencies []string  `json:"acceptedCurrencies"`
-//CoinType           string    `json:"coinType"`
-//}
-//*/
-
-//type m27_filterListing struct {
-//Hash string `json:"hash"`
-//Slug string `json:"slug"`
-//}
-
-//type m27_ListingData struct {
-//Hash         string   `json:"hash"`
-//Slug         string   `json:"slug"`
-//Title        string   `json:"title"`
-//Categories   []string `json:"categories"`
-//NSFW         bool     `json:"nsfw"`
-//ContractType string   `json:"contractType"`
-//Description  string   `json:"description"`
-//Thumbnail    struct {
-//Tiny   string `json:"tiny"`
-//Small  string `json:"small"`
-//Medium string `json:"medium"`
-//} `json:"thumbnail"`
-//Price struct {
-//CurrencyCode string  `json:"currencyCode"`
-//Modifier     float32 `json:"modifier"`
-//} `json:"price"`
-//ShipsTo            []string `json:"shipsTo"`
-//FreeShipping       []string `json:"freeShipping"`
-//Language           string   `json:"language"`
-//AverageRating      float32  `json:"averageRating"`
-//RatingCount        uint32   `json:"ratingCount"`
-//ModeratorIDs       []string `json:"moderators"`
-//AcceptedCurrencies []string `json:"acceptedCurrencies"`
-//CoinType           string   `json:"coinType"`
-//}
-
-//type m27_ListingDatav5 struct {
-//Hash         string   `json:"hash"`
-//Slug         string   `json:"slug"`
-//Title        string   `json:"title"`
-//Categories   []string `json:"categories"`
-//NSFW         bool     `json:"nsfw"`
-//ContractType string   `json:"contractType"`
-//Description  string   `json:"description"`
-//Thumbnail    struct {
-//Tiny   string `json:"tiny"`
-//Small  string `json:"small"`
-//Medium string `json:"medium"`
-//} `json:"thumbnail"`
-//Price              price0   `json:"price"`
-//ShipsTo            []string `json:"shipsTo"`
-//FreeShipping       []string `json:"freeShipping"`
-//Language           string   `json:"language"`
-//AverageRating      float32  `json:"averageRating"`
-//RatingCount        uint32   `json:"ratingCount"`
-//ModeratorIDs       []string `json:"moderators"`
-//AcceptedCurrencies []string `json:"acceptedCurrencies"`
-//CoinType           string   `json:"coinType"`
-//}
-
-//type m27_Listing struct {
-//Slug     string  `json:"slug,omitempty"`
-//VendorID *m27_ID `json:"vendorID,omitempty"`
-//Metadata *struct {
-//Version            uint32   `json:"version,omitempty"`
-//ContractType       string   `json:"contractType,omitempty"`
-//Format             string   `json:"format,omitempty"`
-//Expiry             string   `json:"expiry,omitempty"`
-//AcceptedCurrencies []string `json:"acceptedCurrencies,omitempty"`
-//PricingCurrency    string   `json:"pricingCurrency,omitempty"`
-//Language           string   `json:"language,omitempty"`
-//EscrowTimeoutHours uint32   `json:"escrowTimeoutHours,omitempty"`
-//CoinType           string   `json:"coinType,omitempty"`
-//CoinDivisibility   uint32   `json:"coinDivisibility,omitempty"`
-//PriceModifier      float32  `json:"priceModifier,omitempty"`
-//} `json:"metadata,omitempty"`
-//Item               *m27_ListingItem             `json:"item,omitempty"`
-//ShippingOptions    []*m27_ListingShippingOption `json:"shippingOptions,omitempty"`
-//Taxes              []*m27_Listing_Tax           `json:"taxes,omitempty"`
-//Coupons            []*m27_Listing_Coupon        `json:"coupons,omitempty"`
-//Moderators         []string                     `json:"moderators,omitempty"`
-//TermsAndConditions string                       `json:"termsAndConditions,omitempty"`
-//RefundPolicy       string
-//}
-
-//type m27_ID struct {
-//PeerID  string `json:"peerID,omitempty"`
-//Handle  string `json:"handle,omitempty"`
-//Pubkeys *struct {
-//Identity []byte `json:"identity,omitempty"`
-//Bitcoin  []byte `json:"bitcoin,omitempty"`
-//} `json:"pubkeys,omitempty"`
-//BitcoinSig []byte `json:"bitcoinSig,omitempty"`
-//}
-
-//type m27_ListingItem struct {
-//Title          string                    `json:"title,omitempty"`
-//Description    string                    `json:"description,omitempty"`
-//ProcessingTime string                    `json:"processingTime,omitempty"`
-//Price          uint64                    `json:"price,omitempty"`
-//Nsfw           bool                      `json:"nsfw,omitempty"`
-//Tags           []string                  `json:"tags,omitempty"`
-//Images         []*pb.Listing_Item_Image  `json:"images,omitempty"`
-//Categories     []string                  `json:"categories,omitempty"`
-//Grams          float32                   `json:"grams,omitempty"`
-//Condition      string                    `json:"condition,omitempty"`
-//Options        []*pb.Listing_Item_Option `json:"options,omitempty"`
-//Skus           []*m27_Listing_Item_Sku   `json:"skus,omitempty"`
-//}
-
-//[>
-//type m27_Listing_Item_Option struct {
-//Name        string                            `json:"name,omitempty"`
-//Description string                            `json:"description,omitempty"`
-//Variants    []*pb.Listing_Item_Option_Variant `json:"variants,omitempty"`
-//}
-
-//type m27_Listing_Item_Option_Variant struct {
-//Name  string                 `json:"name,omitempty"`
-//Image *pb.Listing_Item_Image `json:"image,omitempty"`
-//}
-//*/
-
-//type m27_Listing_Item_Sku struct {
-//VariantCombo []uint32 `json:"variantCombo,omitempty"`
-//ProductID    string   `json:"productID,omitempty"`
-//Surcharge    int64    `json:"surcharge,omitempty"`
-//Quantity     int64    `json:"quantity,omitempty"`
-//}
-
-//[>
-//type m27_Listing_Item_Image struct {
-//Filename string `json:"filename,omitempty"`
-//Original string `json:"original,omitempty"`
-//Large    string `json:"large,omitempty"`
-//Medium   string `json:"medium,omitempty"`
-//Small    string `json:"small,omitempty"`
-//Tiny     string `json:"tiny,omitempty"`
-//}
-//*/
-
-//type m27_ListingShippingOption struct {
-//Name     string                                `json:"name,omitempty"`
-//Type     string                                `json:"type,omitempty"`
-//Regions  []string                              `json:"regions,omitempty"`
-//Services []*m27_Listing_ShippingOption_Service `json:"services,omitempty"`
-//}
-
-//type m27_Listing_ShippingOption_Service struct {
-//Name                string `json:"name,omitempty"`
-//Price               uint64 `json:"price,omitempty"`
-//EstimatedDelivery   string `json:"estimatedDelivery,omitempty"`
-//AdditionalItemPrice uint64 `json:"additionalItemPrice,omitempty"`
-//}
-
-//type m27_Listing_Tax struct {
-//TaxType     string   `json:"taxType,omitempty"`
-//TaxRegions  []string `json:"taxRegions,omitempty"`
-//TaxShipping bool     `json:"taxShipping,omitempty"`
-//Percentage  float32  `json:"percentage,omitempty"`
-//}
-
-//type m27_Listing_Coupon struct {
-//PercentDiscount float32 `json:"percentDiscount,omitempty"`
-//PriceDiscount   uint64  `json:"priceDiscount,omitempty"`
-//Title           string  `json:"title"`
-//DiscountCode    string  `json:"discountCode"`
-//Hash            string  `json:"hash"`
-//}
-
-//type m27_SignedListing struct {
-//Listing   *m27_Listing `json:"listing"`
-//Hash      string       `json:"hash"`
-//Signature []byte       `json:"signature"`
-//}
-
-//func (m *m27_SignedListing) Reset()         { *m = m27_SignedListing{} }
-//func (m *m27_SignedListing) String() string { return proto.CompactTextString(m) }
-//func (*m27_SignedListing) ProtoMessage()    {}
-
-//type m27_ListingFilter struct {
-//Slug     string                      `json:"slug,omitempty"`
-//Metadata *m27_Listing_MetadataFilter `json:"metadata,omitempty"`
-//}
-
-//type m27_Listing_MetadataFilter struct {
-//Version uint32 `json:"version,omitempty"`
-//}
-
-//type m27_SignedListingDataFilter struct {
-//Listing   *m27_ListingFilter `json:"listing"`
-//Hash      string             `json:"hash"`
-//Signature []byte             `json:"signature"`
-//}
-
-//func m27_GetIdentityKey(repoPath, databasePassword string, testnetEnabled bool) ([]byte, error) {
-//db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
-//if err != nil {
-//return nil, err
-//}
-//defer db.Close()
-
-//var identityKey []byte
-//err = db.
-//QueryRow("select value from config where key=?", "identityKey").
-//Scan(&identityKey)
-//if err != nil {
-//return nil, err
-//}
-//return identityKey, nil
-//}
-
-//func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-//listingsIndexFilePath := path.Join(repoPath, "root", "listings.json")
-
-//// Find all crypto listings
-//if _, err := os.Stat(listingsIndexFilePath); os.IsNotExist(err) {
-//// Finish early if no listings are found
-//return writeRepoVer(repoPath, 28)
-//}
-//listingsIndexJSONBytes, err := ioutil.ReadFile(listingsIndexFilePath)
-//if err != nil {
-//return err
-//}
-
-//var listingsIndex []interface{}
-//err = json.Unmarshal(listingsIndexJSONBytes, &listingsIndex)
-//if err != nil {
-//return err
-//}
-
-//var cryptoListings []interface{}
-//indexv5 := []m27_ListingDatav5{}
-////indexBytes0 := []byte{}
-
-//cryptoListings = append(cryptoListings, listingsIndex...)
-
-//// Finish early If no crypto listings
-//if len(cryptoListings) == 0 {
-//return writeRepoVer(repoPath, 28)
-//}
-
-//// Check each crypto listing for markup
-//var markupListings []*m27_SignedListing
-//for _, listingAbstract := range cryptoListings {
-//listSlug := (listingAbstract.(map[string]interface{})["slug"]).(string)
-//listingJSONBytes, err := ioutil.ReadFile(migration027_listingFilePath(repoPath, listSlug))
-//if err != nil {
-//return err
-//}
-//sl := new(m27_SignedListing)
-//var filter m27_SignedListingDataFilter
-//var temp m27_SignedListing
-////err = jsonpb.UnmarshalString(string(listingJSONBytes), &temp)
-
-//err = json.Unmarshal(listingJSONBytes, &filter)
-//if err != nil {
-//return err
-//}
-
-//if filter.Listing.Metadata.Version > 4 {
-//b, _ := json.Marshal(listingAbstract)
-////indexBytes0 = append(indexBytes0, b...)
-//var n m27_ListingDatav5
-//if err := json.Unmarshal(b, &n); err != nil {
-//return fmt.Errorf("failed unmarshaling (%s): %s", listSlug, err.Error())
-//}
-//indexv5 = append(indexv5, n)
-//continue
-//}
-
-//err = json.Unmarshal(listingJSONBytes, &temp)
-//if err != nil {
-//return err
-//}
-
-//templisting := temp.Listing
-//sl.Hash = temp.Hash
-//sl.Signature = temp.Signature
-
-//sl.Listing = new(pb.Listing)
-//sl.Listing.Metadata = new(pb.Listing_Metadata)
-//sl.Listing.Item = new(pb.Listing_Item)
-
-//sl.Listing.Slug = listSlug
-//sl.Listing.VendorID = templisting.VendorID
-//sl.Listing.Moderators = templisting.Moderators
-//sl.Listing.RefundPolicy = templisting.RefundPolicy
-//sl.Listing.TermsAndConditions = templisting.TermsAndConditions
-
-//sl.Listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{
-//Code:         templisting.Metadata.PricingCurrency,
-//Divisibility: 8,
-//}
-
-//sl.Listing.Metadata.Version = 5
-
-//sl.Listing.Metadata.ContractType = pb.Listing_Metadata_ContractType(
-//pb.Listing_Metadata_ContractType_value[templisting.Metadata.ContractType],
-//)
-
-//sl.Listing.Metadata.Format = pb.Listing_Metadata_Format(
-//pb.Listing_Metadata_Format_value[templisting.Metadata.Format],
-//)
-
-//t, _ := time.Parse(time.RFC3339Nano, templisting.Metadata.Expiry)
-//sl.Listing.Metadata.Expiry = &timestamp.Timestamp{
-//Seconds: t.Unix(),
-//Nanos:   int32(t.Nanosecond()),
-//}
-//sl.Listing.Metadata.AcceptedCurrencies = templisting.Metadata.AcceptedCurrencies
-//sl.Listing.Metadata.EscrowTimeoutHours = templisting.Metadata.EscrowTimeoutHours
-//sl.Listing.Metadata.Language = templisting.Metadata.Language
-//sl.Listing.Metadata.PriceModifier = templisting.Metadata.PriceModifier
-
-//[>
-//Title                string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-//Description          string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-//ProcessingTime       string                 `protobuf:"bytes,3,opt,name=processingTime,proto3" json:"processingTime,omitempty"`
-//Price                *CurrencyValue         `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
-//Nsfw                 bool                   `protobuf:"varint,5,opt,name=nsfw,proto3" json:"nsfw,omitempty"`
-//Tags                 []string               `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
-//Images               []*Listing_Item_Image  `protobuf:"bytes,7,rep,name=images,proto3" json:"images,omitempty"`
-//Categories           []string               `protobuf:"bytes,8,rep,name=categories,proto3" json:"categories,omitempty"`
-//Grams                float32                `protobuf:"fixed32,9,opt,name=grams,proto3" json:"grams,omitempty"`
-//Condition            string                 `protobuf:"bytes,10,opt,name=condition,proto3" json:"condition,omitempty"`
-//Options              []*Listing_Item_Option `protobuf:"bytes,11,rep,name=options,proto3" json:"options,omitempty"`
-//Skus                 []*Listing_Item_Sku
-//*/
-
-//sl.Listing.Item.Title = templisting.Item.Title
-//sl.Listing.Item.Description = templisting.Item.Description
-//sl.Listing.Item.ProcessingTime = templisting.Item.ProcessingTime
-//sl.Listing.Item.BigPrice = strconv.FormatUint(templisting.Item.Price, 10)
-//sl.Listing.Item.Nsfw = templisting.Item.Nsfw
-//sl.Listing.Item.Tags = templisting.Item.Tags
-//sl.Listing.Item.Images = templisting.Item.Images
-//sl.Listing.Item.Categories = templisting.Item.Categories
-//sl.Listing.Item.Grams = templisting.Item.Grams
-//sl.Listing.Item.Condition = templisting.Item.Condition
-//sl.Listing.Item.Options = templisting.Item.Options
-
-//skus := []*pb.Listing_Item_Sku{}
-//for _, s := range templisting.Item.Skus {
-//sku := &pb.Listing_Item_Sku{
-//VariantCombo: s.VariantCombo,
-//ProductID:    s.ProductID,
-//Quantity:     s.Quantity,
-//BigSurcharge: strconv.FormatInt(s.Surcharge, 10),
-//}
-//skus = append(skus, sku)
-//}
-//sl.Listing.Item.Skus = skus
-
-//shippingOptions := []*pb.Listing_ShippingOption{}
-//for _, s := range templisting.ShippingOptions {
-//regions := []pb.CountryCode{}
-//for _, r := range s.Regions {
-//region := pb.CountryCode(
-//pb.CountryCode_value[r],
-//)
-//regions = append(regions, region)
-//}
-//sers := []*pb.Listing_ShippingOption_Service{}
-//for _, s := range s.Services {
-//ser := &pb.Listing_ShippingOption_Service{
-//Name: s.Name,
-//PriceValue: &pb.CurrencyValue{
-//Currency: sl.Listing.Metadata.PricingCurrencyDefn,
-//Amount:   strconv.FormatUint(s.Price, 10),
-//},
-//EstimatedDelivery: s.EstimatedDelivery,
-//AdditionalItemPriceValue: &pb.CurrencyValue{
-//Currency: sl.Listing.Metadata.PricingCurrencyDefn,
-//Amount:   strconv.FormatUint(s.AdditionalItemPrice, 10),
-//},
-//}
-//sers = append(sers, ser)
-//}
-//shippingOption := &pb.Listing_ShippingOption{
-//Name: s.Name,
-//Type: pb.Listing_ShippingOption_ShippingType(
-//pb.Listing_ShippingOption_ShippingType_value[s.Type],
-//),
-//Regions:  regions,
-//Services: sers,
-//}
-//shippingOptions = append(shippingOptions, shippingOption)
-//}
-
-//sl.Listing.ShippingOptions = shippingOptions
-
-//taxes := []*pb.Listing_Tax{}
-
-//for _, t := range templisting.Taxes {
-//regions := []pb.CountryCode{}
-//for _, r := range t.TaxRegions {
-//region := pb.CountryCode(
-//pb.CountryCode_value[r],
-//)
-//regions = append(regions, region)
-//}
-//tax := &pb.Listing_Tax{
-//TaxType:     t.TaxType,
-//TaxRegions:  regions,
-//TaxShipping: t.TaxShipping,
-//Percentage:  t.Percentage,
-//}
-//taxes = append(taxes, tax)
-//}
-
-//sl.Listing.Taxes = taxes
-
-//coupons := []*pb.Listing_Coupon{}
-
-//for _, c := range templisting.Coupons {
-////discount := pb.Listing_Coupon_Discount
-//coupon := &pb.Listing_Coupon{
-//Title: c.Title,
-////Code:  c.Code,
-//}
-//if c.PriceDiscount == 0 {
-//disc := &pb.Listing_Coupon_PercentDiscount{
-//PercentDiscount: c.PercentDiscount,
-//}
-//coupon.Discount = disc
-//} else {
-//disc := &pb.Listing_Coupon_PriceDiscountValue{
-//PriceDiscountValue: &pb.CurrencyValue{
-//Currency: sl.Listing.Metadata.PricingCurrencyDefn,
-//Amount:   strconv.FormatUint(c.PriceDiscount, 10),
-//},
-//}
-//coupon.Discount = disc
-//}
-//if c.DiscountCode == "" {
-//code := &pb.Listing_Coupon_Hash{
-//Hash: c.Hash,
-//}
-//coupon.Code = code
-//} else {
-//code := &pb.Listing_Coupon_DiscountCode{
-//DiscountCode: c.DiscountCode,
-//}
-//coupon.Code = code
-//}
-
-//coupons = append(coupons, coupon)
-//}
-
-//sl.Listing.Coupons = coupons
-
-//markupListings = append(markupListings, sl)
-
-//}
-
-//// Finish early If no crypto listings with new features are found
-//if len(markupListings) == 0 {
-//return writeRepoVer(repoPath, 28)
-//}
-
-//// Setup signing capabilities
-//identityKey, err := m27_GetIdentityKey(repoPath, databasePassword, testnetEnabled)
-//if err != nil {
-//return err
-//}
-
-//identity, err := ipfs.IdentityFromKey(identityKey)
-//if err != nil {
-//return err
-//}
-
-//// IPFS node setup
-//r, err := fsrepo.Open(repoPath)
-//if err != nil {
-//return err
-//}
-//cctx, cancel := context.WithCancel(context.Background())
-//defer cancel()
-
-//cfg, err := r.Config()
-//if err != nil {
-//return err
-//}
-
-//cfg.Identity = identity
-
-//ncfg := &ipfscore.BuildCfg{
-//Repo:   r,
-//Online: false,
-//ExtraOpts: map[string]bool{
-//"mplex": true,
-//},
-//Routing: nil,
-//}
-
-//nd, err := ipfscore.NewNode(cctx, ncfg)
-//if err != nil {
-//return err
-//}
-//defer nd.Close()
-
-//// Update each listing to have the latest version number and resave
-//// Save the new hashes for each changed listing so we can update the index.
-//hashes := make(map[string]string)
-//amounts := make(map[string]*pb.CurrencyValue)
-
-//privKey, err := crypto.UnmarshalPrivateKey(identityKey)
-//if err != nil {
-//return err
-//}
-
-//for _, sl := range markupListings {
-
-//serializedListing, err := proto.Marshal(sl.Listing)
-//if err != nil {
-//return err
-//}
-
-//idSig, err := privKey.Sign(serializedListing)
-//if err != nil {
-//return err
-//}
-//sl.Signature = idSig
-
-//m := jsonpb.Marshaler{
-//EnumsAsInts:  false,
-//EmitDefaults: false,
-//Indent:       "    ",
-//OrigName:     false,
-//}
-//out, err := m.MarshalToString(sl)
-//if err != nil {
-//return err
-//}
-
-//filename := migration027_listingFilePath(repoPath, sl.Listing.Slug)
-//if err := ioutil.WriteFile(filename, []byte(out), os.ModePerm); err != nil {
-//return err
-//}
-//h, err := ipfs.GetHashOfFile(nd, filename)
-//if err != nil {
-//return err
-//}
-//hashes[sl.Listing.Slug] = h
-//amounts[sl.Listing.Slug] = sl.Listing.Item.PriceValue
-
-//}
-
-//// Update listing index
-//indexBytes, err := ioutil.ReadFile(listingsIndexFilePath)
-//if err != nil {
-//return err
-//}
-//var index []m27_ListingData
-
-//err = json.Unmarshal(indexBytes, &index)
-//if err != nil {
-//return err
-//}
-
-//for _, l := range index {
-//h, ok := hashes[l.Slug]
-
-//// Not one of the changed listings
-//if !ok {
-//continue
-//}
-
-//a := amounts[l.Slug]
-
-//newListing := m27_ListingDatav5{
-//Hash:               h,
-//Slug:               l.Slug,
-//Title:              l.Title,
-//Categories:         l.Categories,
-//NSFW:               l.NSFW,
-//ContractType:       l.ContractType,
-//Description:        l.Description,
-//Thumbnail:          l.Thumbnail,
-//Price:              price0{CurrencyCode: l.Price.CurrencyCode, Modifier: l.Price.Modifier, Amount: a},
-//ShipsTo:            l.ShipsTo,
-//FreeShipping:       l.FreeShipping,
-//Language:           l.Language,
-//AverageRating:      l.AverageRating,
-//RatingCount:        l.RatingCount,
-//ModeratorIDs:       l.ModeratorIDs,
-//AcceptedCurrencies: l.AcceptedCurrencies,
-//CoinType:           l.CoinType,
-//}
-
-//indexv5 = append(indexv5, newListing)
-//}
-
-//// Write it back to file
-//ifile, err := os.Create(listingsIndexFilePath)
-//if err != nil {
-//return err
-//}
-//defer ifile.Close()
-
-//j, jerr := json.MarshalIndent(indexv5, "", "    ")
-//if jerr != nil {
-//return jerr
-//}
-//_, werr := ifile.Write(j)
-//if werr != nil {
-//return werr
-//}
-
-//_, err = ipfs.GetHashOfFile(nd, listingsIndexFilePath)
-//if err != nil {
-//return err
-//}
-
-//return writeRepoVer(repoPath, 28)
-//}
-
-//func migration027_listingFilePath(datadir string, slug string) string {
-//return path.Join(datadir, "root", "listings", slug+".json")
-//}
-
-//func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-//return writeRepoVer(repoPath, 27)
-//}
+type (
+	Migration027ListingThumbnail struct {
+		Tiny   string `json:"tiny"`
+		Small  string `json:"small"`
+		Medium string `json:"medium"`
+	}
+
+	Migration027V5CurrencyValue struct {
+		Amount   *big.Int                         `json:"amount"`
+		Currency Migration027V5CurrencyDefinition `json:"currency"`
+	}
+
+	Migration027V5CurrencyCode string
+
+	Migration027V5CurrencyDefinition struct {
+		Code         Migration027V5CurrencyCode `json:"code"`
+		Divisibility uint                       `json:"divisibility"`
+	}
+
+	Migration027V5ListingIndexData struct {
+		Hash               string                       `json:"hash"`
+		Slug               string                       `json:"slug"`
+		Title              string                       `json:"title"`
+		Categories         []string                     `json:"categories"`
+		NSFW               bool                         `json:"nsfw"`
+		ContractType       string                       `json:"contractType"`
+		Description        string                       `json:"description"`
+		Thumbnail          Migration027ListingThumbnail `json:"thumbnail"`
+		Price              *Migration027V5CurrencyValue `json:"price"`
+		Modifier           float32                      `json:"modifier"`
+		ShipsTo            []string                     `json:"shipsTo"`
+		FreeShipping       []string                     `json:"freeShipping"`
+		Language           string                       `json:"language"`
+		AverageRating      float32                      `json:"averageRating"`
+		RatingCount        uint32                       `json:"ratingCount"`
+		ModeratorIDs       []string                     `json:"moderators"`
+		AcceptedCurrencies []string                     `json:"acceptedCurrencies"`
+		CryptoCurrencyCode string                       `json:"coinType"`
+	}
+
+	Migration027V4price struct {
+		CurrencyCode string  `json:"currencyCode"`
+		Amount       uint    `json:"amount"`
+		Modifier     float32 `json:"modifier"`
+	}
+
+	Migration027V4ListingIndexData struct {
+		Hash               string                       `json:"hash"`
+		Slug               string                       `json:"slug"`
+		Title              string                       `json:"title"`
+		Categories         []string                     `json:"categories"`
+		NSFW               bool                         `json:"nsfw"`
+		ContractType       string                       `json:"contractType"`
+		Description        string                       `json:"description"`
+		Thumbnail          Migration027ListingThumbnail `json:"thumbnail"`
+		Price              Migration027V4price          `json:"price"`
+		ShipsTo            []string                     `json:"shipsTo"`
+		FreeShipping       []string                     `json:"freeShipping"`
+		Language           string                       `json:"language"`
+		AverageRating      float32                      `json:"averageRating"`
+		RatingCount        uint32                       `json:"ratingCount"`
+		ModeratorIDs       []string                     `json:"moderators"`
+		AcceptedCurrencies []string                     `json:"acceptedCurrencies"`
+		CryptoCurrencyCode string                       `json:"coinType"`
+	}
+)
+
+func (c *Migration027V5CurrencyValue) MarshalJSON() ([]byte, error) {
+	var value = struct {
+		Amount   string                           `json:"amount"`
+		Currency Migration027V5CurrencyDefinition `json:"currency"`
+	}{
+		Amount:   "0",
+		Currency: c.Currency,
+	}
+	if c.Amount != nil {
+		value.Amount = c.Amount.String()
+	}
+
+	return json.Marshal(value)
+
+}
+
+func (c *Migration027V5CurrencyValue) UnmarshalJSON(b []byte) error {
+	var value struct {
+		Amount   string                           `json:"amount"`
+		Currency Migration027V5CurrencyDefinition `json:"currency"`
+	}
+	err := json.Unmarshal(b, &value)
+	if err != nil {
+		return err
+	}
+	amt, ok := new(big.Int).SetString(value.Amount, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount (%s)", value.Amount)
+	}
+
+	c.Amount = amt
+	c.Currency = value.Currency
+	return err
+}
+
+var divisibilityMap = map[string]uint{
+	"BTC": 8,
+	"BCH": 8,
+	"LTC": 8,
+	"ZEC": 8,
+}
+
+func parseV5intoV4(v5 Migration027V5ListingIndexData) Migration027V4ListingIndexData {
+	if v5.ModeratorIDs == nil {
+		v5.ModeratorIDs = []string{}
+	}
+	if v5.ShipsTo == nil {
+		v5.ShipsTo = []string{}
+	}
+	if v5.FreeShipping == nil {
+		v5.FreeShipping = []string{}
+	}
+	if v5.Categories == nil {
+		v5.Categories = []string{}
+	}
+	if v5.AcceptedCurrencies == nil {
+		v5.AcceptedCurrencies = []string{}
+	}
+
+	return Migration027V4ListingIndexData{
+		Hash:         v5.Hash,
+		Slug:         v5.Slug,
+		Title:        v5.Title,
+		Categories:   v5.Categories,
+		NSFW:         v5.NSFW,
+		ContractType: v5.ContractType,
+		Description:  v5.Description,
+		Thumbnail:    v5.Thumbnail,
+		Price: Migration027V4price{
+			CurrencyCode: string(v5.Price.Currency.Code),
+			Amount:       uint(v5.Price.Amount.Uint64()),
+			Modifier:     v5.Modifier,
+		},
+		ShipsTo:            v5.ShipsTo,
+		FreeShipping:       v5.FreeShipping,
+		Language:           v5.Language,
+		AverageRating:      v5.AverageRating,
+		RatingCount:        v5.RatingCount,
+		ModeratorIDs:       v5.ModeratorIDs,
+		AcceptedCurrencies: v5.AcceptedCurrencies,
+		CryptoCurrencyCode: v5.CryptoCurrencyCode,
+	}
+}
+
+func parseV4intoV5(v4 Migration027V4ListingIndexData) Migration027V5ListingIndexData {
+	var priceValue *Migration027V5CurrencyValue
+	divisibility, ok := divisibilityMap[strings.ToUpper(v4.Price.CurrencyCode)]
+	if !ok {
+		divisibility = 2
+	}
+
+	priceValue = &Migration027V5CurrencyValue{
+		Amount: new(big.Int).SetInt64(int64(v4.Price.Amount)),
+		Currency: Migration027V5CurrencyDefinition{
+			Code:         Migration027V5CurrencyCode(v4.Price.CurrencyCode),
+			Divisibility: divisibility,
+		},
+	}
+	if v4.ModeratorIDs == nil {
+		v4.ModeratorIDs = []string{}
+	}
+	if v4.ShipsTo == nil {
+		v4.ShipsTo = []string{}
+	}
+	if v4.FreeShipping == nil {
+		v4.FreeShipping = []string{}
+	}
+	if v4.Categories == nil {
+		v4.Categories = []string{}
+	}
+	if v4.AcceptedCurrencies == nil {
+		v4.AcceptedCurrencies = []string{}
+	}
+
+	return Migration027V5ListingIndexData{
+		Hash:               v4.Hash,
+		Slug:               v4.Slug,
+		Title:              v4.Title,
+		Categories:         v4.Categories,
+		NSFW:               v4.NSFW,
+		ContractType:       v4.ContractType,
+		Description:        v4.Description,
+		Thumbnail:          v4.Thumbnail,
+		Modifier:           v4.Price.Modifier,
+		Price:              priceValue,
+		ShipsTo:            v4.ShipsTo,
+		FreeShipping:       v4.FreeShipping,
+		Language:           v4.Language,
+		AverageRating:      v4.AverageRating,
+		RatingCount:        v4.RatingCount,
+		ModeratorIDs:       v4.ModeratorIDs,
+		AcceptedCurrencies: v4.AcceptedCurrencies,
+		CryptoCurrencyCode: v4.CryptoCurrencyCode,
+	}
+}
+
+func (Migration027) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+	listingsFilePath := path.Join(repoPath, "root", "listings.json")
+
+	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
+	indexExists := true
+	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
+		indexExists = false
+	}
+
+	if indexExists {
+		// Setup signing capabilities
+		identityKey, err := migration027_GetIdentityKey(repoPath, databasePassword, testnetEnabled)
+		if err != nil {
+			return err
+		}
+
+		sk, err := crypto.UnmarshalPrivateKey(identityKey)
+		if err != nil {
+			return err
+		}
+
+		nd, err := coremock.NewMockNode()
+		if err != nil {
+			return err
+		}
+
+		listingHashMap := make(map[string]string)
+
+		m := jsonpb.Marshaler{
+			Indent: "    ",
+		}
+
+		var oldListingIndex []Migration027V4ListingIndexData
+		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listingsJSON, &oldListingIndex); err != nil {
+			return err
+		}
+
+		newListingIndex := make([]Migration027V5ListingIndexData, len(oldListingIndex))
+		for i, listing := range oldListingIndex {
+			newListingIndex[i] = parseV4intoV5(listing)
+		}
+
+		for _, listing := range newListingIndex {
+			listingPath := path.Join(repoPath, "root", "listings", listing.Slug+".json")
+			listingBytes, err := ioutil.ReadFile(listingPath)
+			if err != nil {
+				return err
+			}
+			var signedListingJSON map[string]interface{}
+			if err = json.Unmarshal(listingBytes, &signedListingJSON); err != nil {
+				return err
+			}
+
+			listingJSON, listingExists := signedListingJSON["listing"]
+			if !listingExists {
+				continue
+			}
+			listing := listingJSON.(map[string]interface{})
+
+			metadataJSON, metadataExists := listing["metadata"]
+			if !metadataExists {
+				continue
+			}
+			metadata := metadataJSON.(map[string]interface{})
+			metadata["version"] = 5
+			itemJSON, itemExists := listing["item"]
+			if !itemExists {
+				continue
+			}
+			item := itemJSON.(map[string]interface{})
+
+			var (
+				skus            []interface{}
+				shippingOptions []interface{}
+				coupons         []interface{}
+			)
+
+			skusJSON := item["skus"]
+			if skusJSON != nil {
+				skus = skusJSON.([]interface{})
+			}
+			shippingOptionsJSON := listing["shippingOptions"]
+			if shippingOptionsJSON != nil {
+				shippingOptions = shippingOptionsJSON.([]interface{})
+			}
+			couponsJSON := listing["coupons"]
+			if couponsJSON != nil {
+				coupons = couponsJSON.([]interface{})
+			}
+
+			pricingCurrencyJSON, pricingCurrencyExists := metadata["pricingCurrency"]
+			if pricingCurrencyExists {
+				pricingCurrency := pricingCurrencyJSON.(string)
+				divisibility, ok := divisibilityMap[strings.ToUpper(pricingCurrency)]
+				if !ok {
+					divisibility = 2
+				}
+
+				item["priceCurrency"] = struct {
+					Code         string `json:"code"`
+					Divisibility uint32 `json:"divisibility"`
+				}{
+					Code:         pricingCurrency,
+					Divisibility: uint32(divisibility),
+				}
+
+				delete(metadata, "pricingCurrency")
+			}
+
+			var modifier float64
+			modifierJSON := metadata["priceModifier"]
+			if modifierJSON != nil {
+				modifier = modifierJSON.(float64)
+			}
+
+			item["priceModifier"] = modifier
+
+			delete(metadata, "priceModifier")
+
+			priceJSON, priceExists := item["price"]
+			if priceExists {
+				price := priceJSON.(float64)
+
+				item["bigPrice"] = strconv.Itoa(int(price))
+
+				delete(item, "price")
+			}
+
+			for _, skuJSON := range skus {
+				sku := skuJSON.(map[string]interface{})
+
+				quantityJSON, quantityExists := sku["quantity"]
+				if quantityExists {
+					quantity := quantityJSON.(float64)
+
+					sku["bigQuantity"] = strconv.Itoa(int(quantity))
+
+					delete(sku, "quantity")
+				}
+
+				surchargeJSON, surchargeExists := sku["surcharge"]
+				if surchargeExists {
+					surcharge := surchargeJSON.(float64)
+
+					sku["bigSurcharge"] = strconv.Itoa(int(surcharge))
+
+					delete(sku, "surcharge")
+				}
+			}
+
+			for i, shippingOptionJSON := range shippingOptions {
+				so := shippingOptionJSON.(map[string]interface{})
+				var services []interface{}
+				servicesJSON := so["services"]
+				if servicesJSON != nil {
+					services = servicesJSON.([]interface{})
+				}
+
+				for x, serviceJSON := range services {
+					service := serviceJSON.(map[string]interface{})
+
+					priceJSON := service["price"]
+					price, priceExists := priceJSON.(float64)
+
+					if priceExists {
+						service["bigPrice"] = strconv.Itoa(int(price))
+
+						delete(service, "price")
+					}
+
+					additionalItemPriceJSON, additionalPriceExists := service["additionalItemPrice"]
+					if additionalPriceExists {
+						additionalItemPrice := additionalItemPriceJSON.(float64)
+
+						service["bigAdditionalItemPrice"] = strconv.Itoa(int(additionalItemPrice))
+
+						delete(service, "additionalItemPrice")
+					}
+
+					services[x] = service
+				}
+
+				so["services"] = services
+				shippingOptions[i] = so
+			}
+
+			for _, couponJSON := range coupons {
+				coupon := couponJSON.(map[string]interface{})
+
+				priceDiscountJSON, ok := coupon["priceDiscount"]
+				if ok {
+					priceDiscount := priceDiscountJSON.(float64)
+
+					coupon["bigPriceDiscount"] = strconv.Itoa(int(priceDiscount))
+
+					delete(coupon, "priceDiscount")
+				}
+			}
+
+			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			sl := new(pb.SignedListing)
+			if err := jsonpb.UnmarshalString(string(out), sl); err != nil {
+				return err
+			}
+
+			ser, err := proto.Marshal(sl.Listing)
+			if err != nil {
+				return err
+			}
+
+			sig, err := sk.Sign(ser)
+			if err != nil {
+				return err
+			}
+
+			sl.Signature = sig
+
+			signedOut, err := m.MarshalToString(sl)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(listingPath, []byte(signedOut), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			hash, err := ipfs.GetHashOfFile(nd, listingPath)
+			if err != nil {
+				return err
+			}
+
+			listingHashMap[sl.Listing.Slug] = hash
+		}
+
+		for i, listing := range newListingIndex {
+			newListingIndex[i].Hash = listingHashMap[listing.Slug]
+		}
+
+		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	return writeRepoVer(repoPath, 28)
+}
+
+func (Migration027) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+	listingsFilePath := path.Join(repoPath, "root", "listings.json")
+
+	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
+	indexExists := true
+	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
+		indexExists = false
+	}
+
+	if indexExists {
+		// Setup signing capabilities
+		identityKey, err := migration027_GetIdentityKey(repoPath, databasePassword, testnetEnabled)
+		if err != nil {
+			return err
+		}
+
+		sk, err := crypto.UnmarshalPrivateKey(identityKey)
+		if err != nil {
+			return err
+		}
+
+		nd, err := coremock.NewMockNode()
+		if err != nil {
+			return err
+		}
+
+		listingHashMap := make(map[string]string)
+
+		m := jsonpb.Marshaler{
+			Indent: "    ",
+		}
+
+		var oldListingIndex []Migration027V5ListingIndexData
+		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listingsJSON, &oldListingIndex); err != nil {
+			return err
+		}
+
+		newListingIndex := make([]Migration027V4ListingIndexData, len(oldListingIndex))
+		for i, listing := range oldListingIndex {
+			newListingIndex[i] = parseV5intoV4(listing)
+		}
+
+		for _, listing := range newListingIndex {
+			listingPath := path.Join(repoPath, "root", "listings", listing.Slug+".json")
+			listingBytes, err := ioutil.ReadFile(listingPath)
+			if err != nil {
+				return err
+			}
+			var signedListingJSON map[string]interface{}
+			if err = json.Unmarshal(listingBytes, &signedListingJSON); err != nil {
+				return err
+			}
+
+			listingJSON, listingExists := signedListingJSON["listing"]
+			if !listingExists {
+				continue
+			}
+			listing := listingJSON.(map[string]interface{})
+
+			metadataJSON, metadataExists := listing["metadata"]
+			if !metadataExists {
+				continue
+			}
+			metadata := metadataJSON.(map[string]interface{})
+			metadata["version"] = 4
+			itemJSON, itemExists := listing["item"]
+			if !itemExists {
+				continue
+			}
+			item := itemJSON.(map[string]interface{})
+
+			var (
+				skus            []interface{}
+				shippingOptions []interface{}
+				coupons         []interface{}
+			)
+
+			skusJSON := item["skus"]
+			if skusJSON != nil {
+				skus = skusJSON.([]interface{})
+			}
+			shippingOptionsJSON := listing["shippingOptions"]
+			if shippingOptionsJSON != nil {
+				shippingOptions = shippingOptionsJSON.([]interface{})
+			}
+			couponsJSON := listing["coupons"]
+			if couponsJSON != nil {
+				coupons = couponsJSON.([]interface{})
+			}
+
+			pricingCurrencyJSON, pricingCurrencyExists := item["priceCurrency"]
+			if pricingCurrencyExists {
+				pricingCurrency := pricingCurrencyJSON.(map[string]interface{})
+
+				priceCurrencyCodeJSON, currencyCodeExists := pricingCurrency["code"]
+				if currencyCodeExists {
+					priceCurrencyCode := priceCurrencyCodeJSON.(string)
+
+					metadata["pricingCurrency"] = priceCurrencyCode
+
+					delete(item, "priceCurrency")
+				}
+			}
+
+			var modifier float64
+			modifierJSON := item["priceModifier"]
+			if modifierJSON != nil {
+				modifier = modifierJSON.(float64)
+			}
+
+			metadata["priceModifier"] = modifier
+
+			delete(item, "priceModifier")
+
+			priceJSON, priceExists := item["bigPrice"]
+			if priceExists {
+				price := priceJSON.(string)
+
+				p, ok := new(big.Int).SetString(price, 10)
+				if ok {
+					item["price"] = p.Uint64()
+				}
+				delete(item, "bigPrice")
+			}
+
+			for _, skuJSON := range skus {
+				sku := skuJSON.(map[string]interface{})
+				quantityJSON, quantityExists := sku["bigQuantity"]
+				if quantityExists {
+					quantity := quantityJSON.(string)
+
+					p, ok := new(big.Int).SetString(quantity, 10)
+					if ok {
+						sku["quantity"] = p.Uint64()
+					}
+
+					delete(sku, "bigQuantity")
+				}
+
+				surchargeJSON, ok := sku["bigSurcharge"]
+				if ok {
+					surcharge := surchargeJSON.(string)
+
+					s, ok := new(big.Int).SetString(surcharge, 10)
+					if ok {
+						sku["surcharge"] = s.Uint64()
+					}
+
+					delete(sku, "bigSurcharge")
+				}
+			}
+
+			for i, shippingOptionJSON := range shippingOptions {
+				so := shippingOptionJSON.(map[string]interface{})
+				var services []interface{}
+				servicesJSON := so["services"]
+				if servicesJSON != nil {
+					services = servicesJSON.([]interface{})
+				}
+
+				for x, serviceJSON := range services {
+					service := serviceJSON.(map[string]interface{})
+
+					priceJSON, priceExists := service["bigPrice"]
+					if priceExists {
+						price := priceJSON.(string)
+
+						p, ok := new(big.Int).SetString(price, 10)
+						if ok {
+							service["price"] = p.Uint64()
+						}
+
+						delete(service, "bigPrice")
+					}
+
+					additionalItemPriceJSON, additionalPriceExists := service["bigAdditionalItemPrice"]
+					if additionalPriceExists {
+						additionalItemPrice := additionalItemPriceJSON.(string)
+
+						a, ok := new(big.Int).SetString(additionalItemPrice, 10)
+						if ok {
+							service["additionalItemPrice"] = a.Uint64()
+						}
+
+						delete(service, "bigAdditionalItemPrice")
+					}
+
+					services[x] = service
+				}
+
+				shippingOptions[i] = so
+			}
+
+			for _, couponJSON := range coupons {
+				coupon := couponJSON.(map[string]interface{})
+
+				priceDiscountJSON, priceDiscountExists := coupon["bigPriceDiscount"]
+				if priceDiscountExists {
+					priceDiscount := priceDiscountJSON.(string)
+
+					a, ok := new(big.Int).SetString(priceDiscount, 10)
+					if ok {
+						coupon["priceDiscount"] = a.Uint64()
+					}
+
+					delete(coupon, "bigPriceDiscount")
+				}
+			}
+
+			out, err := json.MarshalIndent(signedListingJSON, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			sl := new(pb.SignedListing)
+			if err := jsonpb.UnmarshalString(string(out), sl); err != nil {
+				return err
+			}
+
+			ser, err := proto.Marshal(sl.Listing)
+			if err != nil {
+				return err
+			}
+
+			sig, err := sk.Sign(ser)
+			if err != nil {
+				return err
+			}
+
+			sl.Signature = sig
+
+			signedOut, err := m.MarshalToString(sl)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(listingPath, []byte(signedOut), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			hash, err := ipfs.GetHashOfFile(nd, listingPath)
+			if err != nil {
+				return err
+			}
+
+			listingHashMap[sl.Listing.Slug] = hash
+		}
+
+		for i, listing := range newListingIndex {
+			newListingIndex[i].Hash = listingHashMap[listing.Slug]
+		}
+
+		migratedJSON, err := json.MarshalIndent(&newListingIndex, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(listingsFilePath, migratedJSON, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	return writeRepoVer(repoPath, 27)
+}
+
+func migration027_GetIdentityKey(repoPath, databasePassword string, testnetEnabled bool) ([]byte, error) {
+	db, err := OpenDB(repoPath, databasePassword, testnetEnabled)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	var identityKey []byte
+	err = db.
+		QueryRow("select value from config where key=?", "identityKey").
+		Scan(&identityKey)
+	if err != nil {
+		return nil, err
+	}
+	return identityKey, nil
+}

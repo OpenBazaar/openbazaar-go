@@ -28,7 +28,8 @@ var stmt = `PRAGMA key = 'letmein';
 					lastDisputeTimeoutNotifiedAt integer not null default 0,
 					lastDisputeExpiryNotifiedAt integer not null default 0,
 					disputedAt integer not null default 0, coinType not null default '',
-					paymentCoin not null default '');`
+					paymentCoin not null default '');
+				create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);`
 
 func TestMigration028(t *testing.T) {
 	var dbPath string
@@ -49,6 +50,9 @@ func TestMigration028(t *testing.T) {
 	if _, err := db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec("INSERT INTO inventory (invID, count) values (?,?)", "asdf", "3"); err != nil {
+		t.Fatal(err)
+	}
 	var m migrations.Migration028
 	if err := m.Up("./", "letmein", false); err != nil {
 		t.Fatal(err)
@@ -58,6 +62,9 @@ func TestMigration028(t *testing.T) {
 		orderID string
 		total   string
 		total1  int
+		invID   string
+		count   string
+		count1  int
 	)
 
 	r := db.QueryRow("select orderID, total from sales where orderID=?", "asdf")
@@ -73,6 +80,13 @@ func TestMigration028(t *testing.T) {
 	}
 	if total != "3" {
 		t.Errorf("expected total to be 3, but was %s", total)
+	}
+	r = db.QueryRow("select invID, count from inventory where invID=?", "asdf")
+	if err := r.Scan(&invID, &count); err != nil {
+		t.Error(err)
+	}
+	if count != "3" {
+		t.Errorf("expected count to be 3, but was %s", total)
 	}
 
 	repoVer, err := ioutil.ReadFile("./repover")
@@ -102,6 +116,14 @@ func TestMigration028(t *testing.T) {
 	}
 	if total1 != 3 {
 		t.Errorf("expected total to be 3, but was %d", total1)
+	}
+
+	r = db.QueryRow("select invID, count from inventory where invID=?", "asdf")
+	if err := r.Scan(&invID, &count1); err != nil {
+		t.Error(err)
+	}
+	if count1 != 3 {
+		t.Errorf("expected count to be 3, but was %d", total1)
 	}
 
 	repoVer, err = ioutil.ReadFile("./repover")
