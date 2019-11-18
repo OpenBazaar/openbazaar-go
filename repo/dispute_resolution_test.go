@@ -1,8 +1,10 @@
-package repo
+package repo_test
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 func TestToV5DisputeResolution(t *testing.T) {
@@ -20,7 +22,7 @@ func TestToV5DisputeResolution(t *testing.T) {
 				},
 			},
 		}
-		newDisputeResolution = ToV5DisputeResolution(disputeResolution)
+		newDisputeResolution = repo.ToV5DisputeResolution(disputeResolution)
 		expected             = "10000"
 	)
 
@@ -43,4 +45,53 @@ func TestToV5DisputeResolution(t *testing.T) {
 	if newDisputeResolution.Payout.ModeratorOutput.Amount != 0 {
 		t.Errorf("Expected Amount of 0, got %d", newDisputeResolution.Payout.ModeratorOutput.Amount)
 	}
+}
+
+func TestToV5DisputeResolutionHandlesMissingOutputs(t *testing.T) {
+	var (
+		examples = []*pb.DisputeResolution{
+			{ // missing BuyerOutput
+				Payout: &pb.DisputeResolution_Payout{
+					BuyerOutput: nil,
+					VendorOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+					ModeratorOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+				},
+			},
+			{ // missing VendorOutput
+				Payout: &pb.DisputeResolution_Payout{
+					BuyerOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+					VendorOutput: nil,
+					ModeratorOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+				},
+			},
+			{ // missing ModeratorOutput
+				Payout: &pb.DisputeResolution_Payout{
+					BuyerOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+					VendorOutput: &pb.DisputeResolution_Payout_Output{
+						Amount: 10000,
+					},
+					ModeratorOutput: nil,
+				},
+			},
+		}
+	)
+
+	for _, e := range examples {
+		repo.ToV5DisputeResolution(e)
+	}
+}
+
+func TestToV5DisputeResolutionHandlesMissingPayout(t *testing.T) {
+	var example = &pb.DisputeResolution{Payout: nil}
+	repo.ToV5DisputeResolution(example)
 }
