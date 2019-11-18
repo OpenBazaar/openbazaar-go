@@ -287,7 +287,7 @@ func TestProfileValidPercentageWithFixedFee(t *testing.T) {
 	}
 
 	if err := p.Valid(); err != nil {
-		t.Errorf("expected profile exmaple to be valid")
+		t.Errorf("expected profile with fixed fee and percentage to be valid")
 	}
 }
 
@@ -305,7 +305,7 @@ func TestProfileValidPercentWithFixedHavingZeroPercent(t *testing.T) {
 	}
 
 	if err := p.Valid(); err != nil {
-		t.Errorf("expected profile exmaple to be valid")
+		t.Errorf("expected profile with fixed fee but zero percentage to be valid")
 	}
 }
 

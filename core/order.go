@@ -1315,21 +1315,21 @@ func (n *OpenBazaarNode) reserveCurrency() string {
 	return "BTC"
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount *big.Int) (*big.Int, error) {
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, amountCurrency string, amount *big.Int) (*big.Int, error) {
 	var (
-		currencyDef, cErr = n.LookupCurrency(currencyCode)
-		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
+		amountCurrencyDef, cErr = n.LookupCurrency(amountCurrency)
+		pricingDef, pErr        = n.LookupCurrency(pricingCurrency)
 	)
 	if cErr != nil {
 		// if the currency is unknown, it is likely a cryptocurrency and will
 		// assume the default divisibility
-		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
+		amountCurrencyDef = repo.NewUnknownCryptoDefinition(amountCurrency, repo.DefaultCryptoDivisibility)
 	}
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
 	}
 
-	if currencyDef.Equal(pricingDef) {
+	if amountCurrencyDef.Equal(pricingDef) {
 		return amount, nil
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingDef.CurrencyCode().String())
@@ -1340,12 +1340,12 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
+	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(amountCurrencyDef.CurrencyCode().String()))
 	if err != nil {
 		return big.NewInt(0), err
 	}
 
-	cv, err := repo.NewCurrencyValue(amount.String(), currencyDef)
+	cv, err := repo.NewCurrencyValue(amount.String(), amountCurrencyDef)
 	if err != nil {
 		return nil, err
 	}
