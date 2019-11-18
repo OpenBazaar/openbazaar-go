@@ -22,6 +22,7 @@ type inboundMessageScanner struct {
 	datastore  repo.Datastore
 	service    net.NetworkService
 	getHandler func(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error)
+	extractID  func([]byte) (*peer.ID, error)
 	broadcast  chan repo.Notifier
 
 	// Worker-handling dependencies
@@ -31,12 +32,27 @@ type inboundMessageScanner struct {
 	stopWorker    chan bool
 }
 
+func peerIDExtractor(data []byte) (*peer.ID, error) {
+	pubkey, err := libp2p.UnmarshalPublicKey(data)
+	if err != nil {
+		log.Errorf("err extracting peerID: %v", err.Error())
+		return nil, err
+	}
+	i, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		log.Errorf("err extracting peerID:  %v", err.Error())
+		return nil, err
+	}
+	return &i, nil
+}
+
 // StartInboundMsgScanner - start the notifier
 func (n *OpenBazaarNode) StartInboundMsgScanner() {
 	n.InboundMsgScanner = &inboundMessageScanner{
 		datastore:     n.Datastore,
 		service:       n.Service,
 		getHandler:    n.Service.HandlerForMsgType,
+		extractID:     peerIDExtractor,
 		broadcast:     n.Broadcast,
 		intervalDelay: n.scannerIntervalDelay(),
 		logger:        logging.MustGetLogger("inboundMessageScanner"),
@@ -81,19 +97,13 @@ func (scanner *inboundMessageScanner) PerformTask() {
 	}
 	for _, m := range msgs {
 		if m.MsgErr == ErrInsufficientFunds.Error() {
-
 			// Get handler for this msg type
 			handler := scanner.getHandler(pb.Message_MessageType(m.MessageType))
 			if handler == nil {
 				log.Errorf("err fetching handler for msg: %v", pb.Message_MessageType(m.MessageType))
 				continue
 			}
-			pubkey, err := libp2p.UnmarshalPublicKey(m.PeerPubkey)
-			if err != nil {
-				log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
-				continue
-			}
-			i, err := peer.IDFromPublicKey(pubkey)
+			i, err := scanner.extractID(m.PeerPubkey)
 			if err != nil {
 				log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
 				continue
@@ -107,9 +117,8 @@ func (scanner *inboundMessageScanner) PerformTask() {
 					continue
 				}
 			}
-
 			// Dispatch handler
-			_, err = handler(i, &msg.Msg, nil)
+			_, err = handler(*i, &msg.Msg, nil)
 			if err != nil {
 				log.Debugf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
 				continue
@@ -119,8 +128,6 @@ func (scanner *inboundMessageScanner) PerformTask() {
 			if err != nil {
 				log.Errorf("err putting message : %v", err)
 			}
-
 		}
 	}
-
 }

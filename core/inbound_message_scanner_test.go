@@ -91,14 +91,19 @@ func TestPerformTaskInboundMessageScanner(t *testing.T) {
 		}
 	}
 
+	extractor := func(data []byte) (*peer.ID, error) {
+		return nil, nil
+	}
+
 	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &inboundMessageScanner{
 		datastore:  datastore,
 		logger:     logging.MustGetLogger("testInboundMsgScanner"),
 		getHandler: handler,
+		extractID:  extractor,
 	}
 
-	//worker.PerformTask()
+	worker.PerformTask()
 	msgs, err := worker.datastore.Messages().GetAllErrored()
 	if err != nil {
 		t.Errorf("err fetching msgs : %v", err)
