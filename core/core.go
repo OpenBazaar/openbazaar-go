@@ -121,6 +121,10 @@ type OpenBazaarNode struct {
 	seedLock    sync.Mutex
 
 	InitalPublishComplete bool
+
+	// InboundMsgScanner is a worker that scans the messages
+	// table and tries to retry a failed order message
+	InboundMsgScanner *inboundMessageScanner
 }
 
 // TestNetworkEnabled indicates whether the node is operating with test parameters

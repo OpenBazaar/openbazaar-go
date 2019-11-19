@@ -697,6 +697,7 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
+		core.Node.StartInboundMsgScanner()
 
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
