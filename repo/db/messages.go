@@ -89,9 +89,9 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	stmt := "select messageID, orderID, message_type, message, peerID, err, pubkey from messages where err!=? "
+	stmt := `select messageID, orderID, message_type, message, peerID, err, pubkey from messages where err != ""`
 	var ret []repo.OrderMessage
-	rows, err := o.db.Query(stmt, "")
+	rows, err := o.db.Query(stmt)
 	if err != nil {
 		return ret, err
 	}
@@ -116,4 +116,25 @@ func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 		})
 	}
 	return ret, nil
+}
+
+// MarkAsResolved sets a provided message as resolved
+func (o *MessagesDB) MarkAsResolved(m repo.OrderMessage) error {
+	var (
+		stmt = `update messages set err = "" where messageID == ?`
+		msg  = new(repo.Message)
+	)
+
+	if len(m.Message) > 0 {
+		err := msg.UnmarshalJSON(m.Message)
+		if err != nil {
+			log.Errorf("failed extracting message (%+v): %s", m, err.Error())
+			return err
+		}
+	}
+	_, err := o.db.Exec(stmt, m.MessageID)
+	if err != nil {
+		return fmt.Errorf("marking msg (%s) as resolved: %s", m.MessageID, err.Error())
+	}
+	return nil
 }

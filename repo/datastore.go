@@ -446,4 +446,8 @@ type MessageStore interface {
 
 	// GetAllErrored returns the all messages with error
 	GetAllErrored() ([]OrderMessage, error)
+
+	// MarkAsResolved sets the message as resolved and will no longer return
+	// with GetAllErrored
+	MarkAsResolved(OrderMessage) error
 }
