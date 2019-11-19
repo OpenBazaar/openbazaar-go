@@ -85,6 +85,7 @@ func (o *MessagesDB) GetByOrderIDType(orderID string, mType pb.Message_MessageTy
 	return msg, peerID, nil
 }
 
+// GetAllErrored returns all messages which have an error state
 func (o *MessagesDB) GetAllErrored() ([]repo.OrderMessage, error) {
 	o.lock.Lock()
 	defer o.lock.Unlock()

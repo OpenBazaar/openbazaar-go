@@ -1011,15 +1011,15 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		purchases, count, err := purdb.GetAll(nil, "", false, false, 1, nil)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		if count != 1 {
-			t.Errorf(`Expected %d record got %d`, 1, count)
+			t.Fatalf(`Expected %d record got %d`, 1, count)
 		}
 		if test.cryptoListing && purchases[0].CoinType != test.coinType {
 			t.Errorf(`Expected %s got %s`, test.coinType, purchases[0].CoinType)
