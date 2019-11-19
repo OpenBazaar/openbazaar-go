@@ -304,9 +304,9 @@ func (wallet *EthereumWallet) GetUnconfirmedBalance() (*big.Int, error) {
 }
 
 // Transfer will transfer the amount from this wallet to the spec address
-func (wallet *EthereumWallet) Transfer(to string, value *big.Int, spendAll bool) (common.Hash, error) {
+func (wallet *EthereumWallet) Transfer(to string, value *big.Int, spendAll bool, fee big.Int) (common.Hash, error) {
 	toAddress := common.HexToAddress(to)
-	return wallet.client.Transfer(wallet.account, toAddress, value, spendAll)
+	return wallet.client.Transfer(wallet.account, toAddress, value, spendAll, fee)
 }
 
 // Start will start the wallet daemon
@@ -613,7 +613,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
-		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll)
+		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
 		//time.Sleep(60 * time.Second)
 		start := time.Now()
 		flag := false
@@ -648,6 +648,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 		//twoMinutes, _ := time.ParseDuration("2m")
 
 		// check if the addr is a multisig addr
+		log.Info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@233333333333333333333333")
 		scripts, err := wallet.db.WatchedScripts().GetAll()
 		if err != nil {
 			return nil, err
@@ -683,7 +684,11 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 				log.Errorf("error call add txn: %v", err)
 			}
 		} else {
-			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll)
+			log.Info("ddddddddddddddddddiiiiiiiiiiiiiiiiiiirrrrrrrrrrrrr purchase ......")
+			if !wallet.balanceCheck(feeLevel, amount) {
+				return nil, wi.ErrInsufficientFunds
+			}
+			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
 		}
 
 		if err != nil {
@@ -839,15 +844,19 @@ func (wallet *EthereumWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.T
 }
 
 func (wallet *EthereumWallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int) bool {
+	log.Info("in balance Check ............")
 	fee := wallet.GetFeePerByte(feeLevel)
 	if fee.Int64() == 0 {
 		return false
 	}
+	log.Info("the fee is ........... ", fee.String())
 	// lets check if the caller has enough balance to make the
 	// multisign call
 	requiredBalance := new(big.Int).Mul(&fee, big.NewInt(4000000))
 	requiredBalance = new(big.Int).Add(requiredBalance, &amount)
 	currentBalance, err := wallet.GetBalance()
+	log.Info("curr bal : ", currentBalance.String())
+	log.Info("req bal : ", requiredBalance.String())
 	if err != nil {
 		log.Error("err fetching eth wallet balance")
 		currentBalance = big.NewInt(0)

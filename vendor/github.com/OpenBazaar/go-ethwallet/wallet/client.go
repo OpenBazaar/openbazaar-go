@@ -59,7 +59,7 @@ func NewEthClient(url string) (*EthClient, error) {
 }
 
 // Transfer will transfer eth from this user account to dest address
-func (client *EthClient) Transfer(from *Account, destAccount common.Address, value *big.Int, spendAll bool) (common.Hash, error) {
+func (client *EthClient) Transfer(from *Account, destAccount common.Address, value *big.Int, spendAll bool, fee big.Int) (common.Hash, error) {
 	var err error
 	fromAddress := from.Address()
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -70,6 +70,10 @@ func (client *EthClient) Transfer(from *Account, destAccount common.Address, val
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		return common.BytesToHash([]byte{}), err
+	}
+
+	if gasPrice.Int64() < fee.Int64() {
+		gasPrice = &fee
 	}
 
 	tvalue := value
