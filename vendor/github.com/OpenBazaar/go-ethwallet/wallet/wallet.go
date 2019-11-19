@@ -678,7 +678,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			log.Info(scrHash)
 			addrScrHash := common.HexToAddress(scrHash)
 			actualRecipient = EthAddress{address: &addrScrHash}
-			hash, err = wallet.callAddTransaction(ethScript, &amount)
+			hash, err = wallet.callAddTransaction(ethScript, &amount, feeLevel)
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
 			}
@@ -838,8 +838,32 @@ func (wallet *EthereumWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.T
 	return *sum
 }
 
+func (wallet *EthereumWallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int) bool {
+	fee := wallet.GetFeePerByte(feeLevel)
+	if fee.Int64() == 0 {
+		return false
+	}
+	// lets check if the caller has enough balance to make the
+	// multisign call
+	requiredBalance := new(big.Int).Mul(&fee, big.NewInt(4000000))
+	requiredBalance = new(big.Int).Add(requiredBalance, &amount)
+	currentBalance, err := wallet.GetBalance()
+	if err != nil {
+		log.Error("err fetching eth wallet balance")
+		currentBalance = big.NewInt(0)
+	}
+	if requiredBalance.Cmp(currentBalance) > 0 {
+		// the wallet does not have the required balance
+		return false
+	}
+	return true
+}
+
 // EstimateSpendFee - Build a spend transaction for the amount and return the transaction fee
 func (wallet *EthereumWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLevel) (big.Int, error) {
+	if !wallet.balanceCheck(feeLevel, amount) {
+		return *big.NewInt(0), wi.ErrInsufficientFunds
+	}
 	gas, err := wallet.client.EstimateGasSpend(wallet.account.Address(), &amount)
 	return *gas, err
 }
@@ -885,7 +909,7 @@ func (wallet *EthereumWallet) ExchangeRates() wi.ExchangeRates {
 	return wallet.exchangeRates
 }
 
-func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *big.Int) (common.Hash, error) {
+func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *big.Int, feeLevel wi.FeeLevel) (common.Hash, error) {
 
 	h := common.BigToHash(big.NewInt(0))
 
@@ -899,6 +923,10 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 	if err != nil {
 		log.Fatal(err)
 	}
+	gasPriceETHGAS := wallet.GetFeePerByte(feeLevel)
+	if gasPriceETHGAS.Int64() < gasPrice.Int64() {
+		gasPriceETHGAS = *gasPrice
+	}
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
 	auth.Nonce = big.NewInt(int64(nonce))
@@ -908,7 +936,7 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 
 	// lets check if the caller has enough balance to make the
 	// multisign call
-	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(4000000))
+	requiredBalance := new(big.Int).Mul(&gasPriceETHGAS, big.NewInt(4000000))
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
 		log.Error("err fetching eth wallet balance")
