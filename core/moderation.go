@@ -221,12 +221,12 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 		}
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
-		t.Mul(t, f)
-		total, _ := t.Int(transactionTotal)
-		if fixed.Add(fixed, total).Cmp(transactionTotal) > 0 {
+		percentAmt, _ := new(big.Float).Mul(t, f).Int(nil)
+		feeTotal := new(big.Int).Add(fixed, percentAmt)
+		if feeTotal.Cmp(transactionTotal) > 0 {
 			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
-		return fixed.Add(fixed, total), nil
+		return feeTotal, nil
 	default:
 		return big.NewInt(0), errors.New("Unrecognized fee type")
 	}
