@@ -35,3 +35,12 @@ func MustNewCurrencyValue(amount, code string) *repo.CurrencyValue {
 		Currency: NewCurrencyDefinition(code),
 	}
 }
+
+func MustNewCurrencyValueUsingDiv(amount, code string, customDiv uint) *repo.CurrencyValue {
+	if customDiv == 0 {
+		panic("custom divisibility must be greater than 0")
+	}
+	v := MustNewCurrencyValue(amount, code)
+	v.Currency.Divisibility = customDiv
+	return v
+}
