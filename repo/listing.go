@@ -358,21 +358,6 @@ func (r *Listing) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-type SignedListing struct {
-	Hash         string      `json:"hash"`
-	Signature    []byte      `json:"signature"`
-	RListing     Listing     `json:"listing"`
-	ProtoListing *pb.Listing `json:"-"`
-
-	ProtoSignedListing *pb.SignedListing `json:"-"`
-
-	proto.Message
-}
-
-func (l *SignedListing) Reset()         { *l = SignedListing{} }
-func (l *SignedListing) String() string { return proto.CompactTextString(l) }
-func (*SignedListing) ProtoMessage()    {}
-
 // ListingMetadata -
 type ListingMetadata struct {
 	Version uint `json:"version"`
