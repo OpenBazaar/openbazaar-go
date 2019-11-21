@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -110,10 +108,6 @@ func (client *EthClient) Transfer(from *Account, destAccount common.Address, val
 		Timestamp: time.Now(),
 		WatchOnly: false,
 		Bytes:     rawTx.Data()})
-
-	// this for debug only
-	fmt.Println("Txn ID : ", signedTx.Hash().Hex())
-
 	return signedTx.Hash(), client.SendTransaction(context.Background(), signedTx)
 }
 
@@ -133,14 +127,8 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 
 	transferFnSignature := []byte("transfer(address,uint256)")
 	methodID := crypto.Keccak256(transferFnSignature)[:4]
-
-	fmt.Printf("Method ID: %s\n", hexutil.Encode(methodID))
-
 	paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
-	fmt.Printf("To address: %s\n", hexutil.Encode(paddedAddress))
-
 	paddedAmount := common.LeftPadBytes(value.Bytes(), 32)
-	fmt.Printf("Token amount: %s", hexutil.Encode(paddedAmount))
 
 	var data []byte
 	data = append(data, methodID...)
@@ -154,14 +142,11 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 	if err != nil {
 		return common.BytesToHash([]byte{}), err
 	}
-	fmt.Printf("Gas limit: %d", gasLimit)
-
 	rawTx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
 	signedTx, err := from.SignTransaction(types.HomesteadSigner{}, rawTx) //types.SignTx(tx, types.HomesteadSigner{}, privateKey)
 	if err != nil {
 		return common.BytesToHash([]byte{}), err
 	}
-
 	txns = append(txns, wi.Txn{
 		Txid:      signedTx.Hash().Hex(),
 		Value:     value.String(),
@@ -169,10 +154,6 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 		Timestamp: time.Now(),
 		WatchOnly: false,
 		Bytes:     rawTx.Data()})
-
-	// this for debug only
-	fmt.Println("Txn ID : ", signedTx.Hash().Hex())
-
 	return signedTx.Hash(), client.SendTransaction(context.Background(), signedTx)
 }
 
