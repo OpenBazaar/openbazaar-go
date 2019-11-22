@@ -1,145 +1,96 @@
-package migrations_test
+package migrations
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"strconv"
+	"bytes"
 	"testing"
 
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/OpenBazaar/openbazaar-go/test/factory"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+
+	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 )
 
-func TestMigration026(t *testing.T) {
-	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
-		DataPath:        schema.GenerateTempPath(),
-		TestModeEnabled: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = testRepo.BuildSchemaDirectories(); err != nil {
-		t.Fatal(err)
-	}
-	defer testRepo.DestroySchemaDirectories()
-
+func TestCleanIPNSRecordsMigration(t *testing.T) {
 	var (
-		repoverPath      = testRepo.DataPathJoin("repover")
-		listingIndexPath = testRepo.DataPathJoin("root", "listings.json")
-		testListingSlug  = "Migration026_test_listing"
-		testListingPath  = testRepo.DataPathJoin("root", "listings", testListingSlug+".json")
+		basePath             = schema.GenerateTempPath()
+		ipnsKey              = "/ipns/shoulddelete"
+		ipnsFalsePositiveKey = "/ipns/persistentcache/shouldNOTdelete"
+		otherKey             = "/ipfs/shouldNOTdelete"
+		migration            = cleanIPNSRecordsFromDatastore{}
 
-		// This listing hash is generated using the default IPFS hashing algorithm as of v0.4.19
-		// If the default hashing algorithm changes at any point in the future you can expect this
-		// test to fail and it will need to be updated to maintain the functionality of this migration.
-		expectedListingHash = "QmazPNUtguF1DXeiPAFpBFmie2RbALf1BTqFTcbC8G9b15"
-
-		listing = factory.NewListing(testListingSlug)
-		m       = jsonpb.Marshaler{
-			Indent:       "    ",
-			EmitDefaults: true,
-		}
+		testRepoPath, err = schema.OpenbazaarPathTransform(basePath, true)
 	)
-
-	f, err := os.Create(testListingPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := m.Marshal(f, listing); err != nil {
-		t.Fatal(err)
-	}
-
-	index := []*migrations.Migration026_ListingData{extractListingData26(listing)}
-	indexJSON, err := json.MarshalIndent(&index, "", "    ")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(listingIndexPath, indexJSON, os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-
-	var migration migrations.Migration026
-	if err := migration.Up(testRepo.DataPath(), "", true); err != nil {
-		t.Fatal(err)
-	}
-
-	var listingIndex []migrations.Migration026_ListingData
-	listingsJSON, err := ioutil.ReadFile(listingIndexPath)
+	appSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = json.Unmarshal(listingsJSON, &listingIndex); err != nil {
+
+	if err = appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+
+	if err := fsrepo.Init(appSchema.DataPath(), schema.MustDefaultConfig()); err != nil {
 		t.Fatal(err)
 	}
 
-	// See comment above on expectedListingHash
-	if listingIndex[0].Hash != expectedListingHash {
-		t.Errorf("Expected listing hash %s got %s", expectedListingHash, listingIndex[0].Hash)
+	r, err := fsrepo.Open(testRepoPath)
+	if err != nil {
+		t.Fatalf("opening repo: %s", err.Error())
 	}
 
-	assertCorrectRepoVer(t, repoverPath, "27")
+	err = r.Datastore().Put(ds.NewKey(ipnsKey), []byte("randomdata"))
+	if err != nil {
+		t.Fatal("unable to put ipns record")
+	}
+	err = r.Datastore().Put(ds.NewKey(ipnsFalsePositiveKey), []byte("randomdata"))
+	if err != nil {
+		t.Fatal("unable to put other record")
+	}
+	err = r.Datastore().Put(ds.NewKey(otherKey), []byte("randomdata"))
+	if err != nil {
+		t.Fatal("unable to put other record")
+	}
 
-	if err := migration.Down(testRepo.DataPath(), "", true); err != nil {
+	// run migration up
+	if err := migration.Up(appSchema.DataPath(), "", true); err != nil {
 		t.Fatal(err)
 	}
 
-	assertCorrectRepoVer(t, repoverPath, "26")
-}
-
-func extractListingData26(listing *pb.Listing) *migrations.Migration026_ListingData {
-	descriptionLength := len(listing.Item.Description)
-
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
+	// validate state
+	if _, err := r.Datastore().Get(ds.NewKey(ipnsKey)); err != ds.ErrNotFound {
+		t.Errorf("expected the IPNS record to be removed, but was not")
+	}
+	if val, err := r.Datastore().Get(ds.NewKey(ipnsFalsePositiveKey)); err != nil {
+		t.Errorf("expected the false-positive record to be present, but was not")
+	} else {
+		if !bytes.Equal([]byte("randomdata"), val) {
+			t.Errorf("expected the false-positive record data to be intact, but was not")
 		}
-		return false
 	}
-
-	var shipsTo []string
-	var freeShipping []string
-	for _, shippingOption := range listing.ShippingOptions {
-		for _, region := range shippingOption.Regions {
-			if !contains(shipsTo, region.String()) {
-				shipsTo = append(shipsTo, region.String())
-			}
-			for _, service := range shippingOption.Services {
-				if service.BigPrice == "0" && !contains(freeShipping, region.String()) {
-					freeShipping = append(freeShipping, region.String())
-				}
-			}
+	if val, err := r.Datastore().Get(ds.NewKey(otherKey)); err != nil {
+		t.Errorf("expected the other record to be present, but was not")
+	} else {
+		if !bytes.Equal([]byte("randomdata"), val) {
+			t.Errorf("expected the other record data to be intact, but was not")
 		}
 	}
 
-	amt, _ := strconv.ParseUint(listing.Item.BigPrice, 10, 64)
-
-	ld := &migrations.Migration026_ListingData{
-		Hash:         "aabbcc",
-		Slug:         listing.Slug,
-		Title:        listing.Item.Title,
-		Categories:   listing.Item.Categories,
-		NSFW:         listing.Item.Nsfw,
-		ContractType: listing.Metadata.ContractType.String(),
-		Description:  listing.Item.Description[:descriptionLength],
-		Thumbnail:    migrations.Migration026_Thumbnail{listing.Item.Images[0].Tiny, listing.Item.Images[0].Small, listing.Item.Images[0].Medium},
-		Price: migrations.Migration026_Price{
-			CurrencyCode: listing.Item.PriceCurrency.Code,
-			Amount:       amt,
-			Modifier:     listing.Metadata.PriceModifier,
-		},
-		ShipsTo:            shipsTo,
-		FreeShipping:       freeShipping,
-		Language:           listing.Metadata.Language,
-		ModeratorIDs:       listing.Moderators,
-		AcceptedCurrencies: listing.Metadata.AcceptedCurrencies,
+	if err = appSchema.VerifySchemaVersion("27"); err != nil {
+		t.Fatal(err)
 	}
-	return ld
+
+	// run migration down
+	if err := migration.Down(appSchema.DataPath(), "", true); err != nil {
+		t.Fatal(err)
+	}
+
+	// validate state
+	if err = appSchema.VerifySchemaVersion("26"); err != nil {
+		t.Fatal(err)
+	}
 }

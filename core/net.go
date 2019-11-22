@@ -131,7 +131,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		err := n.Pubsub.Publisher.Publish(ctx, ipfs.MessageTopicPrefix+pointer.Cid.String(), ciphertext)
+		err := n.Pubsub.Publisher.Publish(ctx, pointer.Cid.String(), ciphertext)
 		if err != nil {
 			log.Error(err)
 		}
@@ -327,7 +327,8 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
-			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m},
+			"", 0, contract.VendorListings[0].VendorID.Pubkeys.Identity)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER), err)
 		}
@@ -367,7 +368,8 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
-			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m},
+			"", 0, contract.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_CONFIRMATION), err)
 		}
@@ -385,18 +387,22 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 	//try to get public key from order
 	order, _, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 	var kp *libp2p.PubKey
+	var pub []byte
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
+		pub = order.BuyerOrder.BuyerID.Pubkeys.Identity
 	} else {
 		k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Identity)
 		if err != nil {
 			return err
 		}
 		kp = &k
+		pub = order.VendorListings[0].VendorID.Pubkeys.Identity
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
-		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m})
+		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m},
+		"", 0, pub)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_ORDER_CANCEL), err)
 	}
@@ -415,10 +421,12 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 		Payload:     a,
 	}
 	var kp *libp2p.PubKey
+	var pub []byte
 	//try to get public key from order
 	order, _, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
+		pub = order.BuyerOrder.BuyerID.Pubkeys.Identity
 	} else {
 		k, err := libp2p.UnmarshalPublicKey(order.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 		if err != nil {
@@ -426,10 +434,11 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 			return err
 		}
 		kp = &k
+		pub = order.VendorListings[0].VendorID.Pubkeys.Identity
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
-		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m})
+		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m}, "", 0, pub)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT), err)
 	}
@@ -472,7 +481,8 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
-			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m},
+			"", 0, fulfillmentMessage.VendorListings[0].VendorID.Pubkeys.Identity)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_FULFILLMENT), err)
 		}
@@ -497,7 +507,8 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
-			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m},
+			"", 0, completionMessage.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
 		}

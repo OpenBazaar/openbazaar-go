@@ -33,6 +33,7 @@ func main() {
 			if core.Node != nil {
 				if core.Node.MessageRetriever != nil {
 					core.Node.RecordAgingNotifier.Stop()
+					core.Node.InboundMsgScanner.Stop()
 					close(core.Node.MessageRetriever.DoneChan)
 					core.Node.MessageRetriever.Wait()
 				}

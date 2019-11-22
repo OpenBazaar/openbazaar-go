@@ -1381,7 +1381,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 
 	if requiredBalance.Cmp(currentBalance) > 0 {
 		// the wallet does not have the required balance
-		return nil, errors.New("insufficient balance to release funds or confirm order")
+		return nil, wi.ErrInsufficientFunds
 	}
 
 	//var tx *types.Transaction
