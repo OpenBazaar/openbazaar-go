@@ -1,8 +1,9 @@
 package migrations
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/schema"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func TestMigration025(t *testing.T) {

@@ -16,12 +16,7 @@ import (
 	"time"
 )
 
-const (
-	MessageTopicPrefix = "/offlinemessage/"
-	GlobalIPNSTopic    = "IPNS"
-	GlobalBlockTopic   = "BLOCK"
-	GlobalCIDTopic     = "CID"
-)
+const messageTopicPrefix = "/offlinemessage/"
 
 type Pubsub struct {
 	Subscriber *PubsubSubscriber
@@ -79,40 +74,42 @@ func NewPubsubSubscriber(ctx context.Context, host p2phost.Host, cr routing.Cont
 
 func (p *PubsubPublisher) Publish(ctx context.Context, topic string, data []byte) error {
 	p.mx.Lock()
-	_, ok := p.subs[topic]
+	id := messageTopicPrefix + topic
+	_, ok := p.subs[id]
 
 	if !ok {
-		p.subs[topic] = struct{}{}
+		p.subs[id] = struct{}{}
 		p.mx.Unlock()
 
-		bootstrapPubsub(p.ctx, p.cr, p.host, topic)
+		bootstrapPubsub(p.ctx, p.cr, p.host, id)
 	} else {
 		p.mx.Unlock()
 	}
 
-	log.Debugf("PubsubPublish: publish data for %s", topic)
-	return p.ps.Publish(topic, data)
+	log.Debugf("PubsubPublish: publish data for %s", id)
+	return p.ps.Publish(id, data)
 }
 
 func (r *PubsubSubscriber) Subscribe(ctx context.Context, topic string) (chan []byte, error) {
 	r.mx.Lock()
 	// see if we already have a pubsub subscription; if not, subscribe
-	_, ok := r.subs[topic]
+	id := messageTopicPrefix + topic
+	_, ok := r.subs[id]
 	resp := make(chan []byte)
 	if !ok {
-		sub, err := r.ps.Subscribe(topic)
+		sub, err := r.ps.Subscribe(id)
 		if err != nil {
 			r.mx.Unlock()
 			return nil, err
 		}
 
-		log.Debugf("PubsubSubscribe: subscribed to %s", topic)
+		log.Debugf("PubsubSubscribe: subscribed to %s", id)
 
-		r.subs[topic] = sub
+		r.subs[id] = sub
 
 		ctx, cancel := context.WithCancel(r.ctx)
-		go r.handleSubscription(sub, topic, resp, cancel)
-		go bootstrapPubsub(ctx, r.cr, r.host, topic)
+		go r.handleSubscription(sub, id, resp, cancel)
+		go bootstrapPubsub(ctx, r.cr, r.host, id)
 	}
 	r.mx.Unlock()
 	return resp, nil

@@ -2206,10 +2206,10 @@ func validateCryptocurrencyQuantity(listing *pb.Listing) error {
 				return fmt.Errorf("cannot validate nil sku")
 			}
 			if s.BigQuantity == "" {
-				return fmt.Errorf("sku bigQuantity empty")
+				return fmt.Errorf("sku quantity empty")
 			}
-			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) <= 0 {
-				return fmt.Errorf("sku bigQuantity zero or less")
+			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) < 0 {
+				return fmt.Errorf("sku quantity cannot be negative")
 			}
 			return nil
 		}

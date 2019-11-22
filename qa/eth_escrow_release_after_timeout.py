@@ -22,10 +22,12 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         # generate some coins and send them to bob
         time.sleep(4)
         api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
+        print("bob's locn : ", api_url)
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             address = resp["address"]
+            print("bob's addr : ", address)
         elif r.status_code == 404:
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Address endpoint not found")
         else:
@@ -201,6 +203,9 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Alice failed to order fulfillment")
+
+        for i in range(6):
+            time.sleep(600)
 
         # Alice attempt to release funds before timeout hit
         release = {

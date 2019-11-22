@@ -1,198 +1,241 @@
 package migrations
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"math/big"
-	"time"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
-type Migration031 struct {
-	AM01
-}
+const (
+	am01EthereumRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
+	am01EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
+	am01EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+	am01UpVersion                      = 31
+	am01DownVersion                    = 30
+)
 
-// AM01 migrates the listing and order data to use higher precision.
-type AM01 struct{}
+// am01 - required migration struct
+type am01 struct{}
 
-var AM01UpVer = 32
-var AM01DownVer = 31
+type Migration031 struct{ am01 }
 
-type AM01_TransactionRecord_beforeMigration struct {
-	Txid      string
-	Index     uint32
-	Value     int64
-	Address   string
-	Spent     bool
-	Timestamp time.Time
-}
-
-type AM01_TransactionRecord_afterMigration struct {
-	Txid      string
-	Index     uint32
-	Value     big.Int
-	Address   string
-	Spent     bool
-	Timestamp time.Time
-}
-
-type AM01_record struct {
-	orderID                string
-	coin                   string
-	unmigratedTransactions []AM01_TransactionRecord_beforeMigration
-	migratedTransactions   []AM01_TransactionRecord_afterMigration
-}
-
-func (AM01) Up(repoPath string, dbPassword string, testnet bool) (err error) {
-	db, err := OpenDB(repoPath, dbPassword, testnet)
-	if err != nil {
-		return fmt.Errorf("opening db: %s", err.Error())
-	}
-	saleMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", false)
-	if err != nil {
-		return fmt.Errorf("get sales rows: %s", err.Error())
-	}
-	purchaseMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", false)
-	if err != nil {
-		return fmt.Errorf("get purchase rows: %s", err.Error())
-	}
-
-	if err := withTransaction(db, func(tx *sql.Tx) error {
-		err := AM01_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, false)
-		if err != nil {
-			return fmt.Errorf("update sales: %s", err.Error())
-		}
-		err = AM01_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, false)
-		if err != nil {
-			return fmt.Errorf("update purchases: %s", err.Error())
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("migrating up: %s", err.Error())
-	}
-
-	return writeRepoVer(repoPath, AM01UpVer)
-}
-
-func (AM01) Down(repoPath string, dbPassword string, testnet bool) (err error) {
-	db, err := OpenDB(repoPath, dbPassword, testnet)
-	if err != nil {
-		return fmt.Errorf("opening db: %s", err.Error())
-	}
-	saleMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", true)
-	if err != nil {
-		return fmt.Errorf("get sales rows: %s", err.Error())
-	}
-	purchaseMigrationRecords, err := AM01_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", true)
-	if err != nil {
-		return fmt.Errorf("get purchase rows: %s", err.Error())
-	}
-
-	if err := withTransaction(db, func(tx *sql.Tx) error {
-		err := AM01_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, true)
-		if err != nil {
-			return fmt.Errorf("update sales: %s", err.Error())
-		}
-		err = AM01_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, true)
-		if err != nil {
-			return fmt.Errorf("update purchases: %s", err.Error())
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("migrating down: %s", err.Error())
-	}
-
-	return writeRepoVer(repoPath, AM01DownVer)
-}
-
-func AM01_extractRecords(db *sql.DB, query string, migrateDown bool) ([]AM01_record, error) {
+// Up - upgrade the state
+func (am01) Up(repoPath, dbPassword string, testnet bool) error {
 	var (
-		results   = make([]AM01_record, 0)
-		rows, err = db.Query(query)
+		configMap        = map[string]interface{}{}
+		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
 	)
 	if err != nil {
-		return nil, fmt.Errorf("selecting rows: %s", err.Error())
+		return fmt.Errorf("reading config: %s", err.Error())
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var (
-			serializedTransactions sql.NullString
-			r                      = AM01_record{}
-		)
-		if err := rows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
-			return nil, fmt.Errorf("scanning rows: %s", err.Error())
-		}
-		if !serializedTransactions.Valid {
-			continue
-		}
-		if migrateDown {
-			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.migratedTransactions); err != nil {
-				return nil, fmt.Errorf("unmarshal migrated transactions: %s", err.Error())
-			}
-		} else {
-			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.unmigratedTransactions); err != nil {
-				return nil, fmt.Errorf("unmarshal unmigrated transactions: %s", err.Error())
-			}
-		}
-		results = append(results, r)
+
+	if err = json.Unmarshal(configBytes, &configMap); err != nil {
+		return fmt.Errorf("unmarshal config: %s", err.Error())
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating rows: %s", err.Error())
+
+	c, ok := configMap["Wallets"]
+	if !ok {
+		return errors.New("invalid config: missing key Wallets")
 	}
-	return results, nil
+
+	walletCfg, ok := c.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid key Wallets")
+	}
+
+	btc, ok := walletCfg["BTC"]
+	if !ok {
+		return errors.New("invalid config: missing BTC Wallet")
+	}
+
+	btcWalletCfg, ok := btc.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid BTC Wallet")
+	}
+
+	btcWalletCfg["APIPool"] = []string{"https://btc.api.openbazaar.org/api"}
+	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.api.openbazaar.org/api"}
+
+	bch, ok := walletCfg["BCH"]
+	if !ok {
+		return errors.New("invalid config: missing BCH Wallet")
+	}
+
+	bchWalletCfg, ok := bch.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid BCH Wallet")
+	}
+
+	bchWalletCfg["APIPool"] = []string{"https://bch.api.openbazaar.org/api"}
+	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.api.openbazaar.org/api"}
+
+	ltc, ok := walletCfg["LTC"]
+	if !ok {
+		return errors.New("invalid config: missing LTC Wallet")
+	}
+
+	ltcWalletCfg, ok := ltc.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid LTC Wallet")
+	}
+
+	ltcWalletCfg["APIPool"] = []string{"https://ltc.api.openbazaar.org/api"}
+	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.api.openbazaar.org/api"}
+
+	zec, ok := walletCfg["ZEC"]
+	if !ok {
+		return errors.New("invalid config: missing ZEC Wallet")
+	}
+
+	zecWalletCfg, ok := zec.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid ZEC Wallet")
+	}
+
+	zecWalletCfg["APIPool"] = []string{"https://zec.api.openbazaar.org/api"}
+	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.api.openbazaar.org/api"}
+
+	eth, ok := walletCfg["ETH"]
+	if !ok {
+		return errors.New("invalid config: missing ETH Wallet")
+	}
+
+	ethWalletCfg, ok := eth.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid ETH Wallet")
+	}
+
+	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
+	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
+	ethWalletCfg["WalletOptions"] = map[string]interface{}{
+		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
+	}
+
+	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
+	if err != nil {
+		return fmt.Errorf("marshal migrated config: %s", err.Error())
+	}
+
+	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
+		return fmt.Errorf("writing migrated config: %s", err.Error())
+	}
+
+	if err := writeRepoVer(repoPath, am01UpVersion); err != nil {
+		return fmt.Errorf("bumping repover to %d: %s", am01UpVersion, err.Error())
+	}
+	return nil
 }
 
-func AM01_updateRecords(tx *sql.Tx, records []AM01_record, query string, testMode bool, migrateDown bool) error {
-	var update, err = tx.Prepare(query)
+// Down - downgrade/restore the state
+func (am01) Down(repoPath, dbPassword string, testnet bool) error {
+	var (
+		configMap        = map[string]interface{}{}
+		configBytes, err = ioutil.ReadFile(path.Join(repoPath, "config"))
+	)
 	if err != nil {
-		return fmt.Errorf("prepare update statement: %s", err.Error())
+		return fmt.Errorf("reading config: %s", err.Error())
 	}
-	defer update.Close()
-	for _, beforeRecord := range records {
 
-		if migrateDown {
-			var migratedTransactionRecords = make([]AM01_TransactionRecord_beforeMigration, 0)
-			for _, beforeTx := range beforeRecord.migratedTransactions {
-				var migratedRecord = AM01_TransactionRecord_beforeMigration{
-					Txid:      beforeTx.Txid,
-					Index:     beforeTx.Index,
-					Value:     beforeTx.Value.Int64(),
-					Spent:     beforeTx.Spent,
-					Timestamp: beforeTx.Timestamp,
-					Address:   beforeTx.Address,
-				}
-				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
-			}
-			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
-			if err != nil {
-				return fmt.Errorf("marshal transactions: %s", err.Error())
-			}
-			if _, err := update.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
-				return fmt.Errorf("updating record: %s", err.Error())
-			}
-		} else {
-			var migratedTransactionRecords = make([]AM01_TransactionRecord_afterMigration, 0)
-			for _, beforeTx := range beforeRecord.unmigratedTransactions {
-				n := big.NewInt(beforeTx.Value)
-				var migratedRecord = AM01_TransactionRecord_afterMigration{
-					Txid:      beforeTx.Txid,
-					Index:     beforeTx.Index,
-					Value:     *n,
-					Spent:     beforeTx.Spent,
-					Timestamp: beforeTx.Timestamp,
-					Address:   beforeTx.Address,
-				}
-				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
-			}
-			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
-			if err != nil {
-				return fmt.Errorf("marhsal transactions: %s", err.Error())
-			}
-			if _, err := update.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
-				return fmt.Errorf("updating record: %s", err.Error())
-			}
-		}
+	if err = json.Unmarshal(configBytes, &configMap); err != nil {
+		return fmt.Errorf("unmarshal config: %s", err.Error())
+	}
 
+	c, ok := configMap["Wallets"]
+	if !ok {
+		return errors.New("invalid config: missing key Wallets")
+	}
+
+	walletCfg, ok := c.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid key Wallets")
+	}
+
+	btc, ok := walletCfg["BTC"]
+	if !ok {
+		return errors.New("invalid config: missing BTC Wallet")
+	}
+
+	btcWalletCfg, ok := btc.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid BTC Wallet")
+	}
+
+	btcWalletCfg["APIPool"] = []string{"https://btc.blockbook.api.openbazaar.org/api"}
+	btcWalletCfg["APITestnetPool"] = []string{"https://tbtc.blockbook.api.openbazaar.org/api"}
+
+	bch, ok := walletCfg["BCH"]
+	if !ok {
+		return errors.New("invalid config: missing BCH Wallet")
+	}
+
+	bchWalletCfg, ok := bch.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid BCH Wallet")
+	}
+
+	bchWalletCfg["APIPool"] = []string{"https://bch.blockbook.api.openbazaar.org/api"}
+	bchWalletCfg["APITestnetPool"] = []string{"https://tbch.blockbook.api.openbazaar.org/api"}
+
+	ltc, ok := walletCfg["LTC"]
+	if !ok {
+		return errors.New("invalid config: missing LTC Wallet")
+	}
+
+	ltcWalletCfg, ok := ltc.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid LTC Wallet")
+	}
+
+	ltcWalletCfg["APIPool"] = []string{"https://ltc.blockbook.api.openbazaar.org/api"}
+	ltcWalletCfg["APITestnetPool"] = []string{"https://tltc.blockbook.api.openbazaar.org/api"}
+
+	zec, ok := walletCfg["ZEC"]
+	if !ok {
+		return errors.New("invalid config: missing ZEC Wallet")
+	}
+
+	zecWalletCfg, ok := zec.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid ZEC Wallet")
+	}
+
+	zecWalletCfg["APIPool"] = []string{"https://zec.blockbook.api.openbazaar.org/api"}
+	zecWalletCfg["APITestnetPool"] = []string{"https://tzec.blockbook.api.openbazaar.org/api"}
+
+	eth, ok := walletCfg["ETH"]
+	if !ok {
+		return errors.New("invalid config: missing ETH Wallet")
+	}
+
+	ethWalletCfg, ok := eth.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config: invalid ETH Wallet")
+	}
+
+	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
+	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
+	ethWalletCfg["WalletOptions"] = map[string]interface{}{
+		"RegistryAddress":        am01EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": am01EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": am01EthereumRegistryAddressRopsten,
+	}
+
+	newConfigBytes, err := json.MarshalIndent(configMap, "", "    ")
+	if err != nil {
+		return fmt.Errorf("marshal migrated config: %s", err.Error())
+	}
+
+	if err := ioutil.WriteFile(path.Join(repoPath, "config"), newConfigBytes, os.ModePerm); err != nil {
+		return fmt.Errorf("writing migrated config: %s", err.Error())
+	}
+
+	if err := writeRepoVer(repoPath, am01DownVersion); err != nil {
+		return fmt.Errorf("dropping repover to %d: %s", am01DownVersion, err.Error())
 	}
 	return nil
 }

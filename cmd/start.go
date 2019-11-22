@@ -23,12 +23,10 @@ import (
 	dht "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	config "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
-	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	oniontp "gx/ipfs/QmYv2MbwHn7qcvAPFisZ94w85crQVpwUuv8G7TuUeBnfPb/go-onion-transport"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	manet "gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	proto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -53,7 +51,6 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
@@ -407,16 +404,8 @@ func (x *Start) Execute(args []string) error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if r, ok := router.(*ipfs.CachingRouter); ok {
-			r.APIRouter().Start(torDialer)
-			dhtRouting, err = r.DHT()
-			if err != nil {
-				return err
-			}
-		} else if x.Regtest {
-			if r, ok := router.(*dht.IpfsDHT); ok {
-				dhtRouting = r
-			}
+		if r, ok := router.(*dht.IpfsDHT); ok {
+			dhtRouting = r
 		}
 	}
 	if dhtRouting == nil {
@@ -424,26 +413,18 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Get current directory root hash
-	ipnskey := namesys.IpnsDsKey(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
+	cachedIPNSRecord, hasherr := ipfs.GetCachedIPNSRecord(nd.Repo.Datastore(), nd.Identity)
 	if hasherr != nil {
-		log.Error("get ipns key:", hasherr)
-	}
-	ourIpnsRecord := new(ipnspb.IpnsEntry)
-	err = proto.Unmarshal(ival, ourIpnsRecord)
-	if err != nil {
-		log.Error("unmarshal record value", err)
-		err = nd.Repo.Datastore().Delete(ipnskey)
-		if err != nil {
-			log.Error(err)
+		log.Warning(err)
+		if err := ipfs.DeleteCachedIPNSRecord(nd.Repo.Datastore(), nd.Identity); err != nil {
+			log.Errorf("deleting invalid IPNS record: %s", err.Error())
 		}
 	}
 
 	if x.ForceKeyCachePurge {
 		log.Infof("forcing key purge from namesys cache...")
-		err = nd.Repo.Datastore().Delete(ipnskey)
-		if err != nil {
-			log.Error(err)
+		if err := ipfs.DeleteCachedIPNSRecord(nd.Repo.Datastore(), nd.Identity); err != nil {
+			log.Errorf("force-purging IPNS record: %s", err.Error())
 		}
 	}
 
@@ -597,6 +578,11 @@ func (x *Start) Execute(args []string) error {
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
+	var rootHash string
+	if cachedIPNSRecord != nil {
+		rootHash = string(cachedIPNSRecord.Value)
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
@@ -611,7 +597,7 @@ func (x *Start) Execute(args []string) error {
 		PushNodes:                     pushNodes,
 		RegressionTestEnable:          x.Regtest,
 		RepoPath:                      repoPath,
-		RootHash:                      string(ourIpnsRecord.Value),
+		RootHash:                      rootHash,
 		TestnetEnable:                 x.Testnet,
 		TorDialer:                     torDialer,
 		UserAgent:                     core.USERAGENT,
@@ -697,6 +683,7 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
+		core.Node.StartInboundMsgScanner()
 
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
