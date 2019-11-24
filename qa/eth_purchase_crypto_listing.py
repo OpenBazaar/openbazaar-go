@@ -56,7 +56,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 350000000:
+        if resp["ether"]["inventory"] != '350000000':
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
@@ -65,7 +65,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        if resp[0]["price"]["currency"]["code"] != "TETH":
+        if resp[0]["coinType"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
         listingId = resp[0]["hash"]
 
@@ -195,7 +195,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 250000000:
+        if resp["ether"]["inventory"] != "250000000":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("EthPurchaseCryptoListingTest - PASS")

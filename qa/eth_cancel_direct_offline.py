@@ -160,6 +160,8 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
+        print("resp for alice after order fetch  : ")
+        print(resp)
         if resp["state"] != "CANCELED":
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Alice failed to detect order cancellation")
 
