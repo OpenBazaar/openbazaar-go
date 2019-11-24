@@ -124,7 +124,9 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 	if l.Metadata.Version == 0 {
 		l.Metadata.Version = ListingVersion
 	}
-	l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
+	if l.Metadata.EscrowTimeoutHours == 0 {
+		l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
+	}
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -2128,7 +2130,7 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	}
 	if listing.Item.PriceCurrency != nil &&
 		len(listing.Item.PriceCurrency.Code) > 0 {
-		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+		return ErrCryptocurrencyListingIllegalField("item.pricingCurrency")
 	}
 	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid

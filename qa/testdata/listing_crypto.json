@@ -15,10 +15,6 @@
         "description": "",
         "processingTime": "1 to 2 hours",
         "price": "0",
-        "priceCurrency": {
-            "code": "TETH",
-            "divisibility": 8
-        },
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",
             "small": "QmXSEqXLCzpCByJU4wqbJ37TcBEj77FKMUWUP1qLh56847",

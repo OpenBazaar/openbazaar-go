@@ -152,7 +152,7 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(45)
+        time.sleep(160)
 
         # check alice detected order
         api_url = alice["gateway_url"] + "ob/order/" + orderId

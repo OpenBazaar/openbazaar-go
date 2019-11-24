@@ -1187,7 +1187,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		outValue := big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
 				if err != nil {
 					return nil, err
 				}

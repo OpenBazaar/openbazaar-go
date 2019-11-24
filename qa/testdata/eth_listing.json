@@ -84,45 +84,45 @@
 				"variantCombo": [0,0],
 				"productID": "932-33-2945",
 				"bigSurcharge": "0",
-				"quantity": 12
+				"bigQuantity": "12"
 			},
 			{
 				"variantCombo": [0,1],
 				"bigSurcharge": "0",
-				"quantity": 100
+				"bigQuantity": "100"
 			},
 			{
 				"variantCombo": [1,0],
 				"productID": "123-99-1111",
 				"bigSurcharge": "0",
-				"quantity": 44
+				"bigQuantity": "44"
 			},
 			{
 				"variantCombo": [1,1],
 				"productID": "229-00-3333",
 				"bigSurcharge": "0",
-				"quantity": 19
+				"bigQuantity": "19"
 			},
 			{
 				"variantCombo": [2,0],
 				"productID": "987-54-3456",
 				"bigSurcharge": "0",
-				"quantity": 7
+				"bigQuantity": "7"
 			},
 			{
 				"variantCombo": [2,1],
 				"bigSurcharge": "0",
-				"quantity": 3
+				"bigQuantity": "3"
 			},
 			{
 				"variantCombo": [3,0],
 				"bigSurcharge": "1000",
-				"quantity": 16
+				"bigQuantity": "16"
 			},
 			{
 				"variantCombo": [3,1],
 				"bigSurcharge": "1000",
-				"quantity": 12
+				"bigQuantity": "12"
 			}
 		]
 	},
@@ -155,12 +155,12 @@
 		"services": [
 			{
 				"name": "Standard",
-        "bigPrice": "800000000",
+        		"bigPrice": "800000000",
 				"estimatedDelivery": "6-8 days"
 			},
 			{
 				"name": "Express",
-        "bigPrice": "15000000000",
+        		"bigPrice": "15000000000",
 				"estimatedDelivery": "2-3 days"
 			}
 		]
