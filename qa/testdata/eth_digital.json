@@ -5,19 +5,19 @@
 		"contractType": "DIGITAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2030-08-17T04:52:19.000Z",
-		"acceptedCurrencies": ["ETH"]
+		"acceptedCurrencies": ["TETH"]
 	},
 	"item": {
 		"title": "Citizenfour",
 		"description": "A documentarian and a reporter travel to Hong Kong for the first of many meetings with Edward Snowden.",
 		"processingTime": "1 confirmation",
 		"bigPrice": "12000000",
-    "priceCurrency": {
-      "code": "ETH",
-      "divisibility": 18,
-      "name": "Eth",
-      "currencyType": "crypto"
-    },
+		"priceCurrency": {
+			"code": "TETH",
+			"divisibility": 18,
+			"name": "Eth",
+			"currencyType": "crypto"
+		},
 		"tags": [
 			"documentary"
 		],
