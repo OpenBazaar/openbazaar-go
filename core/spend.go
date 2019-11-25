@@ -107,7 +107,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
-		case err == wallet.ErrorInsuffientFunds:
+		case err == wallet.ErrInsufficientFunds:
 			return nil, ErrInsufficientFunds
 		case err == wallet.ErrorDustAmount:
 			return nil, ErrSpendAmountIsDust
