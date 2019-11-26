@@ -603,7 +603,7 @@ func (w *ZcashdWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.F
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
 		if err != nil {
-			return total, inputs, []btc.Amount{}, scripts, wallet.ErrorInsuffientFunds
+			return total, inputs, []btc.Amount{}, scripts, wallet.ErrInsufficientFunds
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)

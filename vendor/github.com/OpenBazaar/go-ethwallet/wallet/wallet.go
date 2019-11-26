@@ -676,6 +676,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			hash, err = wallet.callAddTransaction(ethScript, &amount, feeLevel)
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
+				return nil, wi.ErrInsufficientFunds
 			}
 		} else {
 			if !wallet.balanceCheck(feeLevel, amount) {

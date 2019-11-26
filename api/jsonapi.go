@@ -3423,7 +3423,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	fee, err := wal.EstimateSpendFee(*amount, feeLevel)
 	if err != nil {
 		switch {
-		case err == wallet.ErrorInsuffientFunds:
+		case err == wallet.ErrInsufficientFunds:
 			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
 			return
 		case err == wallet.ErrorDustAmount:
