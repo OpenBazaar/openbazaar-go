@@ -4,6 +4,7 @@ package core
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 )
 
@@ -27,6 +28,16 @@ func CheckAndSetUlimit() error {
 		setting = true
 	}
 
+	// If we're on darwin, work around the fact that Getrlimit reports
+	// the wrong value. See https://github.com/golang/go/issues/30401
+	if runtime.GOOS == "darwin" && rLimit.Cur > 10240 {
+		// The max file limit is 10240, even though
+		// the max returned by Getrlimit is 1<<63-1.
+		// This is OPEN_MAX in sys/syslimits.h.
+		rLimit.Max = 10240
+		rLimit.Cur = 10240
+	}
+
 	// Try updating the limit. If it fails, try using the previous maximum instead
 	// of our new maximum. Not all users have permissions to increase the maximum.
 	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
@@ -44,6 +55,6 @@ func CheckAndSetUlimit() error {
 		return nil
 	}
 
-	log.Debug("Successfully raised file descriptor limit to", fileDescriptorLimit)
+	log.Debug("Successfully raised file descriptor limit to", rLimit.Cur)
 	return nil
 }
