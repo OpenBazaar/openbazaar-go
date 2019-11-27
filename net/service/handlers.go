@@ -410,7 +410,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := wal.DecodeAddress(order.Payment.Address)
+		addr, err := wal.DecodeAddress(ut.NormalizeAddress(order.Payment.Address))
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
@@ -447,7 +447,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := wal.DecodeAddress(order.Payment.Address)
+		addr, err := wal.DecodeAddress(ut.NormalizeAddress(order.Payment.Address))
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
@@ -712,7 +712,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	err = service.node.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMsg.OrderID, int(pb.Message_ORDER_REJECT)),
 		rejectMsg.OrderID, pb.Message_ORDER_REJECT, p.Pretty(), repo.Message{Msg: *pmes},
-		"", time.Now().UnixNano(), contract.BuyerOrder.BuyerID.Pubkeys.Identity)
+		"", time.Now().UnixNano(), []byte(p))
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rejectMsg.OrderID, int(pb.Message_ORDER_REJECT), err)
 	}
@@ -727,11 +727,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
-				hash, err := hex.DecodeString(r.Txid)
+				hash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
 				if err != nil {
 					return nil, err
 				}
-				addr, err := wal.DecodeAddress(r.Address)
+				addr, err := wal.DecodeAddress(ut.NormalizeAddress(r.Address))
 				if err != nil {
 					return nil, err
 				}
@@ -762,7 +762,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(ut.NormalizeAddress(order.RefundAddress))
 		if err != nil {
 			return nil, err
 		}
@@ -775,7 +775,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		outValue := big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
 				if err != nil {
 					return nil, err
 				}
@@ -785,7 +785,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(ut.NormalizeAddress(order.RefundAddress))
 		if err != nil {
 			return nil, err
 		}
@@ -922,7 +922,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		outValue := big.NewInt(0)
 		for _, r := range records {
 			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(ut.NormalizeAddress(r.Txid))
 				if err != nil {
 					return nil, err
 				}
@@ -932,7 +932,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(ut.NormalizeAddress(order.RefundAddress))
 		if err != nil {
 			return nil, err
 		}
@@ -1202,7 +1202,8 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		}
 		var payoutAddress btcutil.Address
 		if len(contract.VendorOrderFulfillment) > 0 {
-			payoutAddress, err = wal.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
+			payoutAddress, err = wal.DecodeAddress(
+				ut.NormalizeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress))
 			if err != nil {
 				return nil, err
 			}

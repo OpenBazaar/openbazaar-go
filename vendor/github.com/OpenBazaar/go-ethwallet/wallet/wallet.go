@@ -44,6 +44,7 @@ import (
 const (
 	// InfuraAPIKey is the hard coded Infura API key
 	InfuraAPIKey = "v3/91c82af0169c4115940c76d331410749"
+	maxGasLimit  = 400000
 )
 
 var (
@@ -844,7 +845,7 @@ func (wallet *EthereumWallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int)
 	}
 	// lets check if the caller has enough balance to make the
 	// multisign call
-	requiredBalance := new(big.Int).Mul(&fee, big.NewInt(4000000))
+	requiredBalance := new(big.Int).Mul(&fee, big.NewInt(maxGasLimit))
 	requiredBalance = new(big.Int).Add(requiredBalance, &amount)
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
@@ -929,8 +930,8 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = value      // in wei
-	auth.GasLimit = 4000000 // in units
+	auth.Value = value          // in wei
+	auth.GasLimit = maxGasLimit // in units
 	auth.GasPrice = gasPrice
 
 	// lets check if the caller has enough balance to make the
@@ -1380,13 +1381,13 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0) // in wei
-	auth.GasLimit = 4000000    // in units
+	auth.Value = big.NewInt(0)  // in wei
+	auth.GasLimit = maxGasLimit // in units
 	auth.GasPrice = gasPrice
 
 	// lets check if the caller has enough balance to make the
 	// multisign call
-	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(4000000))
+	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(maxGasLimit))
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
 		log.Error("err fetching eth wallet balance")
