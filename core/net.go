@@ -319,7 +319,7 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
 			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m},
-			"", 0, contract.VendorListings[0].VendorID.Pubkeys.Identity)
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER), err)
 		}
@@ -360,7 +360,7 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
 			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m},
-			"", 0, contract.BuyerOrder.BuyerID.Pubkeys.Identity)
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_CONFIRMATION), err)
 		}
@@ -473,7 +473,7 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
 			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m},
-			"", 0, fulfillmentMessage.VendorListings[0].VendorID.Pubkeys.Identity)
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_FULFILLMENT), err)
 		}
@@ -499,7 +499,7 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
 			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m},
-			"", 0, completionMessage.BuyerOrder.BuyerID.Pubkeys.Identity)
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
 		}

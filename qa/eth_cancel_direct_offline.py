@@ -143,12 +143,8 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        print("resp for bob after order fetch  : ")
-        print(resp)
         if resp["state"] != "CANCELED":
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to save as canceled")
-        ##if "refundAddressTransaction" not in resp or resp["refundAddressTransaction"] == {}:
-        ##    raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
         # startup alice again
         self.start_node(alice)
@@ -169,12 +165,6 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            print("confirmed : ", confirmed)
-            print("bob bal : ", bob_balance)
-            print("pymnt amt : ", int(payment_amount["amount"]))
-            #unconfirmed = int(resp["unconfirmed"])
-            ##if confirmed <= bob_balance - int(payment_amount["amount"]):
-            ##    raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Failed to query Bob's balance")
 

@@ -70,7 +70,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("EthMarketPriceModifierTest - FAIL: Couldn't get vendor local listings")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("EthMarketPriceModifierTest - FAIL: Vendor's local listings index doesn't include price modifier")
 
         # check vendor's listings from buyer and check for modifier
@@ -80,7 +80,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("EthMarketPriceModifierTest - FAIL: Couldn't get vendor listings from buyer")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("EthMarketPriceModifierTest - FAIL: Vendor's listings don't include price modifier from buyer")
 
         # get listing hashes
