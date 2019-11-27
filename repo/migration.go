@@ -53,6 +53,7 @@ var (
 		migrations.Migration030{},
 		migrations.Migration031{},
 		migrations.Migration032{},
+		migrations.Migration033{},
 	}
 )
 
