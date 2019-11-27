@@ -8,7 +8,6 @@ import (
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	"gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
@@ -29,10 +28,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-const (
-	DefaultPointerPrefixLength = 14
-	KeyCachePrefix             = "/pubkey/"
-)
+const DefaultPointerPrefixLength = 14
 
 var log = logging.MustGetLogger("retriever")
 
@@ -348,8 +344,13 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 		return
 	}
 
-	m.node.Peerstore.AddPubKey(id, pubkey)
-	m.node.Repo.Datastore().Put(datastore.NewKey(KeyCachePrefix+id.Pretty()), env.Pubkey)
+	if err := m.node.Peerstore.AddPubKey(id, pubkey); err != nil {
+		log.Errorf("adding pubkey to peerstore: %s", err.Error())
+	}
+	store := m.node.Repo.Datastore()
+	if err := ipfs.PutCachedPubkey(store, id.Pretty(), env.Pubkey); err != nil {
+		log.Errorf("caching pubkey: %s", err.Error())
+	}
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {

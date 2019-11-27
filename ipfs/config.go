@@ -55,7 +55,7 @@ func PrepareIPFSConfig(r repo.Repo, routerAPIEndpoint string, testEnable, regtes
 }
 
 func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	dhtRouting, err := dht.New(
+	return dht.New(
 		ctx, host,
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
@@ -64,12 +64,6 @@ func constructRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching
 			IPFSProtocolDHTMainnetLegacy,
 		),
 	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := NewAPIRouter(routerCacheURI, dhtRouting.Validator)
-	cachingRouter := NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
 }
 
 func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
@@ -85,21 +79,13 @@ func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.B
 }
 
 func constructTestnetRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	var (
-		dhtRouting, err = dht.New(
-			ctx, host,
-			dhtopts.Datastore(dstore),
-			dhtopts.Validator(validator),
-			dhtopts.Protocols(
-				IPFSProtocolKademliaTestnetOne,
-				IPFSProtocolAppTestnetOne,
-			),
-		)
+	return dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+		dhtopts.Protocols(
+			IPFSProtocolKademliaTestnetOne,
+			IPFSProtocolAppTestnetOne,
+		),
 	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := NewAPIRouter(routerCacheURI, dhtRouting.Validator)
-	cachingRouter := NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
 }

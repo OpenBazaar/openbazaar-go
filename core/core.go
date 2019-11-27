@@ -10,7 +10,6 @@ import (
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	"gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 
@@ -35,7 +34,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.13.5"
+	VERSION = "0.13.6"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
@@ -332,8 +331,11 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
 	if peerKey == nil {
-		var pubKey libp2p.PubKey
-		keyval, err := n.IpfsNode.Repo.Datastore().Get(datastore.NewKey(KeyCachePrefix + peerID.Pretty()))
+		var (
+			pubKey libp2p.PubKey
+			store  = n.IpfsNode.Repo.Datastore()
+		)
+		keyval, err := ipfs.GetCachedPubkey(store, peerID.Pretty())
 		if err != nil {
 			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, peerID)
 			if err != nil {

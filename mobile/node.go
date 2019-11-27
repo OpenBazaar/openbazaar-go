@@ -19,14 +19,12 @@ import (
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	ipfsconfig "gx/ipfs/QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs/go-ipfs-config"
 	ds "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
-	ipnspb "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns/pb"
 	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	p2phost "gx/ipfs/QmYrWiWM4qtrnCeT3R14jY3ZZyirDNJgwK57q4qFYePgbd/go-libp2p-host"
 	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	"gx/ipfs/QmbeHtaBy9nZsW4cHRcvgVY4CnDhXudE2Dr6qDxS7yg9rX/go-libp2p-record"
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
-	"gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -38,7 +36,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
@@ -50,7 +47,6 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
@@ -309,19 +305,12 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 }
 
 func constructMobileRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
-	dhtRouting, err := dht.New(
+	return dht.New(
 		ctx, host,
 		dhtopts.Client(true),
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 	)
-	if err != nil {
-		return nil, err
-	}
-	apiRouter := ipfs.NewAPIRouter(schema.IPFSCachingRouterDefaultURI, dhtRouting.Validator)
-	apiRouter.Start(nil)
-	cachingRouter := ipfs.NewCachingRouter(dhtRouting, &apiRouter)
-	return cachingRouter, nil
 }
 
 // startIPFSNode start the node
@@ -387,11 +376,8 @@ func (n *Node) start() error {
 	}
 	var dhtRouting *dht.IpfsDHT
 	for _, router := range tiered.Routers {
-		if r, ok := router.(*ipfs.CachingRouter); ok {
-			dhtRouting, err = r.DHT()
-			if err != nil {
-				return err
-			}
+		if r, ok := router.(*dht.IpfsDHT); ok {
+			dhtRouting = r
 		}
 	}
 	if dhtRouting == nil {
@@ -402,17 +388,15 @@ func (n *Node) start() error {
 	n.OpenBazaarNode.DHT = dhtRouting
 
 	// Get current directory root hash
-	ipnskey := namesys.IpnsDsKey(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
-	if hasherr != nil {
-		log.Error("get ipns key:", hasherr)
-	}
-	ourIpnsRecord := new(ipnspb.IpnsEntry)
-	err = proto.Unmarshal(ival, ourIpnsRecord)
+	rec, err := ipfs.GetCachedIPNSRecord(nd.Repo.Datastore(), nd.Identity)
 	if err != nil {
-		log.Error("unmarshal record value", err)
+		log.Warning(err)
+		if err := ipfs.DeleteCachedIPNSRecord(nd.Repo.Datastore(), nd.Identity); err != nil {
+			log.Errorf("deleting invalid IPNS record: %s", err.Error())
+		}
+	} else {
+		n.OpenBazaarNode.RootHash = string(rec.Value)
 	}
-	n.OpenBazaarNode.RootHash = string(ourIpnsRecord.Value)
 
 	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
 	if err != nil {
