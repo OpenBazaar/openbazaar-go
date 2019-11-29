@@ -742,6 +742,11 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		}
 	}
 
+	payout.PayoutCurrency = &pb.CurrencyDefinition{
+		Code:         preferredOrder.Payment.AmountCurrency.Code,
+		Divisibility: preferredOrder.Payment.AmountCurrency.Divisibility,
+	}
+
 	d.Payout = payout
 
 	rc := new(pb.RicardianContract)
