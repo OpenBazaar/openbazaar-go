@@ -58,25 +58,36 @@ type Profile struct {
 func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 	var modInfo *ModeratorInfo
 	if p.ModeratorInfo != nil {
-		var (
-			fees             = p.ModeratorInfo.Fee
-			amtCurrency, err = AllCurrencies().Lookup(fees.FixedFee.AmountCurrency.Code)
-		)
-		if err != nil {
-			return nil, fmt.Errorf("lookup currency (%s): %s", fees.FixedFee.AmountCurrency, err.Error())
-		}
-		amtCurrency.Divisibility = uint(fees.FixedFee.AmountCurrency.Divisibility)
+		var fees = p.ModeratorInfo.Fee
 
-		modInfo = &ModeratorInfo{
-			Fee: &ModeratorFee{
-				FeeType: fees.FeeType.String(),
-				FixedFee: &ModeratorFixedFee{
-					Amount:         fees.FixedFee.BigAmount,
-					AmountCurrency: amtCurrency,
-				},
-				Percentage: fees.Percentage,
-			},
+		if fees == nil {
+			return nil, ErrMissingModeratorFee
 		}
+
+		if fees.FixedFee != nil {
+			amtCurrency, err := AllCurrencies().Lookup(fees.FixedFee.AmountCurrency.Code)
+			if err != nil {
+				return nil, fmt.Errorf("lookup currency (%s): %s", fees.FixedFee.AmountCurrency, err.Error())
+			}
+			amtCurrency.Divisibility = uint(fees.FixedFee.AmountCurrency.Divisibility)
+			modInfo = &ModeratorInfo{
+				Fee: &ModeratorFee{
+					FeeType: fees.FeeType.String(),
+					FixedFee: &ModeratorFixedFee{
+						Amount:         fees.FixedFee.BigAmount,
+						AmountCurrency: amtCurrency,
+					},
+				},
+			}
+		} else {
+			modInfo = &ModeratorInfo{
+				Fee: &ModeratorFee{
+					FeeType:    fees.FeeType.String(),
+					Percentage: fees.Percentage,
+				},
+			}
+		}
+
 	}
 
 	return &Profile{
