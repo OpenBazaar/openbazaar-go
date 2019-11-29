@@ -135,7 +135,7 @@ func (p *Profile) validateModeratorFees() error {
 		if p.ModeratorInfo.Fee.Percentage < 0 {
 			return ErrModeratorFeeHasNegativePercentage
 		}
-		if p.ModeratorInfo.Fee.FixedFee != nil {
+		if p.ModeratorInfo.Fee.FixedFee != nil && p.ModeratorInfo.Fee.FixedFee.Amount != "0" {
 			return ErrPercentageFeeHasFixedFee
 		}
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String():
