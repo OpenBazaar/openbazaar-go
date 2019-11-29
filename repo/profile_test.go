@@ -371,8 +371,6 @@ func TestProfileInvalidAsUserWithModeratorInfo(t *testing.T) {
 
 	if err := p.Valid(); err == nil {
 		t.Errorf("expected regular user with moderator info to be invalid")
-	} else if err != repo.ErrNonModeratorShouldNotHaveInfo {
-		t.Errorf("expected ErrNonModeratorShouldNotHaveInfo error, but got (%s)", err.Error())
 	}
 }
 
