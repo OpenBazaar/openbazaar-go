@@ -6,4 +6,4 @@ jobs:
 
     steps:
     - name: Running QA suite
-      run: ./qa.sh
+      run: ./run-qa.sh
