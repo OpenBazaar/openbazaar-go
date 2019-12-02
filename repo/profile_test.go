@@ -358,24 +358,6 @@ func TestProfileInvalidAsModeratorWithoutInfo(t *testing.T) {
 	}
 }
 
-func TestProfileInvalidAsUserWithModeratorInfo(t *testing.T) {
-	p := factory.NewProfile()
-	p.Moderator = false
-	p.ModeratorInfo = &repo.ModeratorInfo{
-		Fee: &repo.ModeratorFee{
-			FeeType:    pb.Moderator_Fee_PERCENTAGE.String(),
-			Percentage: 1.1,
-			FixedFee:   nil,
-		},
-	}
-
-	if err := p.Valid(); err == nil {
-		t.Errorf("expected regular user with moderator info to be invalid")
-	} else if err != repo.ErrNonModeratorShouldNotHaveInfo {
-		t.Errorf("expected ErrNonModeratorShouldNotHaveInfo error, but got (%s)", err.Error())
-	}
-}
-
 func TestProfileSetModeratorFixedFee(t *testing.T) {
 	p := factory.NewProfile()
 	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String()
