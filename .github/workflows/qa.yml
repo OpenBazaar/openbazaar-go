@@ -1,9 +1,7 @@
 on: push
 jobs:
-  linux:
-    name: Linux build on node ${{ matrix.node_version }}
-    runs-on: ubuntu-latest
-
+  run_qa:
     steps:
+    - uses: actions/checkout@v1
     - name: Running QA suite
-      run: ./run-qa.sh
+      uses: ../../docker-compose run --entrypoint=/bin/bash dev
