@@ -1546,11 +1546,36 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sl.Hash = hash
+
+	// Normalize pricing for v4 contract
+	if sl.Listing.Metadata.PricingCurrency != "" {
+		currency, err := repo.AllCurrencies().Lookup(sl.Listing.Metadata.PricingCurrency)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		sl.Listing.Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         currency.Code.String(),
+			Divisibility: uint32(currency.Divisibility),
+		}
+
+		sl.Listing.Item.BigPrice = strconv.FormatUint(sl.Listing.Item.Price, 10)
+
+		for idx, shippingOption := range sl.Listing.ShippingOptions {
+			for idx2, service := range shippingOption.Services {
+				service.BigPrice = strconv.FormatUint(service.Price, 10)
+				service.BigAdditionalItemPrice = strconv.FormatUint(service.AdditionalItemPrice, 10)
+				sl.Listing.ShippingOptions[idx].Services[idx2] = service
+			}
+		}
+	}
+
 	out, err := m.MarshalToString(sl)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	SanitizedResponseM(w, out, new(pb.SignedListing))
 }
 
