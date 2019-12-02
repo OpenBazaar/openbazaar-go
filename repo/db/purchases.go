@@ -247,7 +247,13 @@ func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
+			var paymentCoin string
+			if rc.BuyerOrder.Payment.AmountCurrency != nil {
+				paymentCoin = rc.BuyerOrder.Payment.AmountCurrency.Code
+			} else {
+				paymentCoin = rc.BuyerOrder.Payment.Coin
+			}
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: paymentCoin, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil

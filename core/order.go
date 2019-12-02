@@ -68,7 +68,12 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	var lookupCoin string
+	if contract.BuyerOrder.Payment.AmountCurrency != nil {
+		lookupCoin = contract.BuyerOrder.Payment.AmountCurrency.Code
+	} else {
+		lookupCoin = contract.BuyerOrder.Payment.Coin
+	}
 	_, err = n.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
