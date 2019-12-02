@@ -7,4 +7,4 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Running QA suite
-      uses: ../../docker-compose run --entrypoint=/bin/bash dev
+      run: ../../docker-compose run --entrypoint=/bin/bash dev
