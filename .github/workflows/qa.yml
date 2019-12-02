@@ -1,6 +1,9 @@
 on: push
 jobs:
   run_qa:
+
+    runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v1
     - name: Running QA suite
