@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+cd qa && ./run_test.sh ....

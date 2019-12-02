@@ -1,0 +1,9 @@
+on: push
+jobs:
+  linux:
+    name: Linux build on node ${{ matrix.node_version }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Running QA suite
+      run: ./qa.sh
