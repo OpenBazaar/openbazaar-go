@@ -10,8 +10,8 @@ jobs:
       uses: actions/docker/login@master
       env:
         DOCKER_REGISTRY_URL: docker.dev.ob1.io
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: Build docker image
       run: make docker
     - name: Push docker image
