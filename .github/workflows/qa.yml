@@ -6,8 +6,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Docker login
-      run: echo "{{ secrets.DOCKER_PASSWORD }}" | docker login docker.dev.ob1.io --username "{{ secrets.DOCKER_USERNAME }}" --password-stdin
+    - name: Log in to registry
+      uses: actions/docker/login@master
+      env:
+        DOCKER_REGISTRY_URL: docker.dev.ob1.io
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: Build docker image
       run: make docker
     - name: Push docker image
