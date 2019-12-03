@@ -6,10 +6,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Log in to registry
-      uses: actions/docker/login@master
+    - name: Login to GitHub Docker Registry
+      run: docker login docker.pkg.github.com --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
       env:
-        DOCKER_REGISTRY_URL: docker.dev.ob1.io
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: Build docker image
