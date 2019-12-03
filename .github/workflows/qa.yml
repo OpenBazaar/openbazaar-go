@@ -6,5 +6,5 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Running QA suite
-      run: ../../docker-compose run --entrypoint=/bin/bash dev
+    - name: Docker login
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --pasword-stdin
