@@ -351,11 +351,21 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 				}
 			}
 		}
+		def, err := repo.AllCurrencies().Lookup(contract.BuyerOrder.Payment.AmountCurrency.Code)
+		if err != nil {
+			log.Errorf("Error looking up currency: %s", err)
+			return
+		}
+		cv, err := repo.NewCurrencyValue(funding.String(), def)
+		if err != nil {
+			log.Errorf("Error creating currency value: %s", err)
+			return
+		}
 		n := repo.PaymentNotification{
 			ID:           repo.NewNotificationID(),
 			Type:         "payment",
 			OrderId:      orderId,
-			FundingTotal: funding.String(),
+			FundingTotal: cv,
 			CoinType:     contract.BuyerOrder.Payment.AmountCurrency.Code,
 		}
 		l.broadcast <- n

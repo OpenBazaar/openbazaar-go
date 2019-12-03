@@ -52,10 +52,10 @@ func NewLitecoinPriceFetcher(dialer proxy.Dialer) *LitecoinPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	z.providers = []*ExchangeRateProvider{
-		//{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
-		//{"https://bittrex.com/api/v1.1/public/getticker?market=btc-ltc", z.cache, client, BittrexDecoder{}, bp},
-		//{"https://api.bitfinex.com/v1/pubticker/ltcbtc", z.cache, client, BitfinexDecoder{}, bp},
-		//{"https://poloniex.com/public?command=returnTicker", z.cache, client, PoloniexDecoder{}, bp},
+		{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
+		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-ltc", z.cache, client, BittrexDecoder{}, bp},
+		{"https://api.bitfinex.com/v1/pubticker/ltcbtc", z.cache, client, BitfinexDecoder{}, bp},
+		{"https://poloniex.com/public?command=returnTicker", z.cache, client, PoloniexDecoder{}, bp},
 		{"https://api.kraken.com/0/public/Ticker?pair=LTCXBT", z.cache, client, KrakenDecoder{}, bp},
 	}
 	go z.run()
