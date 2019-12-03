@@ -4,7 +4,7 @@ VOLUME /var/lib/openbazaar
 RUN apt-get -y update
 RUN apt-get -y install software-properties-common
 RUN apt-get install -yq zlib1g-dev libssl-dev unzip
-RUN apt-get install python3 python3-pip
+RUN apt-get install -y python3 python3-pip
 
 COPY ./qa/requirements.txt ./requirements.txt
 
