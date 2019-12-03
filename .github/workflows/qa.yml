@@ -6,6 +6,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Build Docker Environment
+      run: docker-compose run --entrypoint=/bin/bash dev
     - name: Login to GitHub Docker Registry
       run: docker login docker.pkg.github.com --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
       env:
