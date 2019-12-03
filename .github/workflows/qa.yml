@@ -7,4 +7,8 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Docker login
-      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --pasword-stdin
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    - name: Build docker image
+      run: make docker
+    - name: Push docker image
+      run: make push_docker
