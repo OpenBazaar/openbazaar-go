@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"database/sql"
-	"log"
 	"os"
 	"path"
 
@@ -43,7 +42,7 @@ func (Migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 	if err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err0)
+			log.Error(err0)
 		}
 		return err
 	}
@@ -94,7 +93,7 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	if err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		return err
 	}
@@ -107,7 +106,7 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	if err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		return err
 	}
@@ -120,7 +119,7 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	if err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		return err
 	}
@@ -133,7 +132,7 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	if err != nil {
 		err0 := tx.Rollback()
 		if err0 != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		return err
 	}

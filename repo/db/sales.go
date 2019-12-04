@@ -46,15 +46,12 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		return err
 	}
 
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
 	stm := `insert or replace into sales(orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from sales where orderID="` + orderID + `"),(select transactions from sales where orderID="` + orderID + `"))`
-	stmt, err := tx.Prepare(stm)
+	stmt, err := s.db.Prepare(stm)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare sale sql: %s", err.Error())
 	}
+	defer stmt.Close()
 
 	handle := contract.BuyerOrder.BuyerID.Handle
 	shippingName := ""
@@ -70,7 +67,6 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		address = contract.VendorOrderConfirmation.PaymentAddress
 	}
 
-	defer stmt.Close()
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -89,14 +85,10 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("commit sale: %s", err.Error())
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 func (s *SalesDB) MarkAsRead(orderID string) error {
@@ -195,6 +187,10 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		var moderated bool
 		if rc.BuyerOrder != nil && rc.BuyerOrder.Payment != nil && rc.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 			moderated = true
+		}
+
+		if len(rc.VendorListings) > 0 && rc.VendorListings[0].Metadata != nil && rc.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+			coinType = ""
 		}
 
 		ret = append(ret, repo.Sale{
@@ -337,6 +333,7 @@ func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 	if err != nil {
 		return ret, err
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var orderID, paymentAddr string
@@ -352,7 +349,11 @@ func (s *SalesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
+			order, err := repo.ToV5Order(rc.BuyerOrder, repo.AllCurrencies().Lookup)
+			if err != nil {
+				return ret, err
+			}
+			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: order.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
 		}
 	}
 	return ret, nil
@@ -415,18 +416,24 @@ func (s *SalesDB) UpdateSalesLastDisputeTimeoutNotifiedAt(sales []*repo.SaleReco
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	tx, err := s.db.Begin()
+	tx, err := s.BeginTransaction()
 	if err != nil {
 		return fmt.Errorf("begin update sale transaction: %s", err.Error())
 	}
 	for _, sale := range sales {
 		_, err = tx.Exec("update sales set lastDisputeTimeoutNotifiedAt = ? where orderID = ?", int(sale.LastDisputeTimeoutNotifiedAt.Unix()), sale.OrderID)
 		if err != nil {
+			if rErr := tx.Rollback(); rErr != nil {
+				return fmt.Errorf("update sale: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+			}
 			return fmt.Errorf("update sale: %s", err.Error())
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("commit update sale transaction: %s", err.Error())
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("commit sale: (%s) w rollback error: (%s)", err.Error(), rErr.Error())
+		}
+		return fmt.Errorf("commit sale: %s", err.Error())
 	}
 
 	return nil

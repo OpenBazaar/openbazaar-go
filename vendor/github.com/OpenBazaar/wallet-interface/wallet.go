@@ -51,6 +51,11 @@ type Wallet interface {
 	walletCanBumpFee
 }
 
+var (
+	// ErrInsufficientFunds is returned when the wallet is unable to send the amount specified due to the balance being too low
+	ErrInsufficientFunds = errors.New("ERROR_INSUFFICIENT_FUNDS")
+)
+
 // WalletMustManuallyAssociateTransactionToOrder MUST be checked for by openbazaar-go to ensure
 // that wallets which require manual association between transactions and orders are properly
 // associated. If the interface is supported, AssociateTransactionToOrder must be called as
@@ -345,6 +350,5 @@ type Signature struct {
 
 // Errors
 var (
-	ErrorInsuffientFunds error = errors.New("insuffient funds")
-	ErrorDustAmount      error = errors.New("amount is below network dust treshold")
+	ErrorDustAmount error = errors.New("amount is below network dust treshold")
 )

@@ -13,6 +13,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
@@ -65,6 +66,59 @@ func TestSettings(t *testing.T) {
 	})
 }
 
+func TestSettingsSetModerator(t *testing.T) {
+	var (
+		validSettings      = factory.MustNewValidSettings()
+		jsonSettings, sErr = json.Marshal(validSettings)
+		moderatorUpdate    = `{"storeModerators": ["QmeRfQcEiefLYgEFRsNqn1WjjrLjrJVAddt85htU1Up32y"]}`
+	)
+	if sErr != nil {
+		t.Fatal(sErr)
+	}
+
+	expected := `{
+	"blockedNodes": [],
+	"country": "United State of Shipping",
+	"localCurrency": "USD",
+	"mispaymentBuffer": 1,
+	"paymentDataInQR": true,
+	"refundPolicy": "Refund policy.",
+	"shippingAddresses": [
+			{
+					"addressLineOne": "123 Address Street",
+					"addressLineTwo": "Suite H",
+					"addressNotes": "This is a fake yet valid address for testing.",
+					"city": "Shipping City",
+					"company": "Shipping Company",
+					"country": "United States of Shipping",
+					"name": "Shipping Name",
+					"postalCode": "12345-6789",
+					"state": "Shipping State"
+			}
+	],
+	"showNotifications": true,
+	"showNsfw": true,
+	"smtpSettings": {
+			"notifications": false,
+			"password": "",
+			"recipientEmail": "",
+			"senderEmail": "",
+			"serverAddress": "",
+			"username": ""
+	},
+	"storeModerators": [
+			"QmeRfQcEiefLYgEFRsNqn1WjjrLjrJVAddt85htU1Up32y"
+	],
+	"termsAndConditions": "Terms and Conditions",
+	"version": ""
+}`
+	runAPITests(t, apiTests{
+		{"POST", "/ob/settings", string(jsonSettings), 200, string(jsonSettings)},
+		{"PATCH", "/ob/settings", moderatorUpdate, 200, "{}"},
+		{"GET", "/ob/settings", "", 200, expected},
+	})
+}
+
 func TestProfile(t *testing.T) {
 	// Create, Update
 	runAPITests(t, apiTests{
@@ -72,6 +126,136 @@ func TestProfile(t *testing.T) {
 		{"POST", "/ob/profile", profileJSON, 409, AlreadyExistsUsePUTJSON("Profile")},
 		{"PUT", "/ob/profile", profileUpdateJSON, 200, anyResponseJSON},
 		{"PUT", "/ob/profile", profileUpdatedJSON, 200, anyResponseJSON},
+	})
+}
+
+func TestPatchProfileCurrencyUpdate(t *testing.T) {
+	var (
+		postProfile = `{
+	"handle": "test",
+	"name": "Test User",
+	"location": "Internet",
+	"about": "The test fixture",
+	"shortDescription": "Fixture",
+	"contactInfo": {
+		"website": "internet.com",
+		"email": "email@address.com",
+		"phoneNumber": "687-5309"
+	},
+	"nsfw": false,
+	"vendor": false,
+	"moderator": false,
+	"colors": {
+		"primary": "#000000",
+		"secondary": "#FFD700",
+		"text": "#ffffff",
+		"highlight": "#123ABC",
+		"highlightText": "#DEAD00"
+	},
+	"currencies": ["LTC"]
+}`
+		patchProfile    = `{"currencies": ["ETH"]}`
+		validateProfile = func(testRepo *test.Repository) error {
+			m, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+				DataPath:        testRepo.Path,
+				TestModeEnabled: true,
+			})
+			if err != nil {
+				return fmt.Errorf("schema setup: %s", err.Error())
+			}
+			profileBytes, err := ioutil.ReadFile(m.DataPathJoin("root", "profile.json"))
+			if err != nil {
+				return fmt.Errorf("get profile: %s", err.Error())
+			}
+
+			var actualProfile struct {
+				Currencies []string `json:"currencies"`
+			}
+			if err := json.Unmarshal(profileBytes, &actualProfile); err != nil {
+				return fmt.Errorf("unmarshal profile: %s", err.Error())
+			}
+
+			if actualProfile.Currencies[0] != "ETH" {
+				t.Errorf("expected profile currency to be PATCHed but was not")
+				t.Logf("expected 'ETH', found '%s'", actualProfile.Currencies[0])
+			}
+
+			if len(actualProfile.Currencies) != 1 {
+				t.Errorf("expected profile currency to have 1 currency, but had %d instead", len(actualProfile.Currencies))
+			}
+			return nil
+		}
+	)
+
+	runAPITestsWithSetup(t, apiTests{
+		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
+	}, nil, validateProfile)
+}
+
+func TestPatchProfileCanBeInvalid(t *testing.T) {
+	var (
+		// init profile for patch
+		postProfile = `{
+	"handle": "test",
+	"name": "Test User",
+	"location": "Internet",
+	"about": "The test fixture",
+	"shortDescription": "Fixture",
+	"contactInfo": {
+		"website": "internet.com",
+		"email": "email@address.com",
+		"phoneNumber": "687-5309"
+	},
+	"nsfw": false,
+	"vendor": false,
+	"moderator": false,
+	"colors": {
+		"primary": "#000000",
+		"secondary": "#FFD700",
+		"text": "#ffffff",
+		"highlight": "#123ABC",
+		"highlightText": "#DEAD00"
+	},
+	"currencies": ["LTC"]
+}`
+		// test valid patch
+		patchProfile = `{
+	"moderator": true,
+	"moderatorInfo": {
+		"description": "Fix plus percentage. Test moderator account. DO NOT USE.",
+		"fee": {
+			"feeType": "FIXED_PLUS_PERCENTAGE",
+			"fixedFee": {
+				"amountCurrency": {
+					"code": "USD",
+					"divisibility": 2
+				},
+				"bigAmount": "2"
+			},
+			"percentage": 0.1
+		},
+		"languages": [
+			"en-US"
+		],
+		"termsAndConditions": "Test moderator account. DO NOT USE."
+	}
+}`
+		// test invalid patch: percentage must be greater than 0
+		invalidPatchProfile = `{
+	"moderatorInfo": {
+		"fee": {
+			"percentage": -1
+		}
+	}
+}`
+	)
+
+	expectedErr := fmt.Errorf("invalid profile: %s", repo.ErrModeratorFeeHasNegativePercentage)
+	runAPITests(t, apiTests{
+		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", invalidPatchProfile, 500, errorResponseJSON(expectedErr)},
 	})
 }
 
@@ -394,7 +578,7 @@ func TestCryptoListingsQuantity(t *testing.T) {
 		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
 	})
 
-	listing.Item.Skus[0].BigQuantity = "0"
+	listing.Item.Skus[0].BigQuantity = "-1"
 	runAPITest(t, apiTest{
 		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrCryptocurrencySkuQuantityInvalid),
 	})

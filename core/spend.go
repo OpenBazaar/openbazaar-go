@@ -104,7 +104,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
-		case err == wallet.ErrorInsuffientFunds:
+		case err == wallet.ErrInsufficientFunds:
 			return nil, ErrInsufficientFunds
 		case err == wallet.ErrorDustAmount:
 			return nil, ErrSpendAmountIsDust
@@ -115,6 +115,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	txn, err := wal.GetTransaction(*txid)
 	if err != nil {
+		log.Errorf("get txn failed : %v", err.Error())
 		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
 	}
 

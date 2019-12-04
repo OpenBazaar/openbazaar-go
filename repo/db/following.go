@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -19,20 +20,14 @@ func NewFollowingStore(db *sql.DB, lock *sync.Mutex) repo.FollowingStore {
 func (f *FollowingDB) Put(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	tx, _ := f.db.Begin()
-	stmt, _ := tx.Prepare("insert into following(peerID) values(?)")
-	defer stmt.Close()
-	_, err := stmt.Exec(follower)
+	stmt, err := f.PrepareQuery("insert into following(peerID) values(?)")
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("prepare following sql: %s", err.Error())
 	}
-	err = tx.Commit()
+	defer stmt.Close()
+	_, err = stmt.Exec(follower)
 	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("commit following: %s", err.Error())
 	}
 	return nil
 }

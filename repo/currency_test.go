@@ -483,3 +483,51 @@ func TestCurrencyValueAdjustDivisibility(t *testing.T) {
 		}
 	}
 }
+
+func TestCurrencyValueCmp(t *testing.T) {
+	var examples = []struct {
+		subject     *repo.CurrencyValue
+		other       *repo.CurrencyValue
+		expected    int
+		expectedErr error
+	}{
+		{ // success case
+			subject:  factory.MustNewCurrencyValue("1234", "USD"),
+			other:    factory.MustNewCurrencyValue("12345", "USD"),
+			expected: -1, // subject.Amount.Cmp(other.Amount) == -1
+		},
+		{ // different divisibilities handled
+			subject:  factory.MustNewCurrencyValueUsingDiv("1234", "USD", 2),
+			other:    factory.MustNewCurrencyValueUsingDiv("123456", "USD", 4),
+			expected: -1, // subject.AdjustDivisibility(4).Amount.Cmp(other.Amount) == -1
+		},
+		{ // different divisibilities (reverse suject/other) handled
+			subject:  factory.MustNewCurrencyValueUsingDiv("123456", "USD", 4),
+			other:    factory.MustNewCurrencyValueUsingDiv("1234", "USD", 2),
+			expected: 1, // subject.AdjustDivisibility(4).Amount.Cmp(other.Amount) == 1
+		},
+		{ // different currencies return error
+			subject:     factory.MustNewCurrencyValue("1234", "USD"),
+			other:       factory.MustNewCurrencyValue("1234", "NOTUSD"),
+			expectedErr: repo.ErrCurrencyValueInvalidCmpDifferentCurrencies,
+		},
+	}
+
+	for _, e := range examples {
+		t.Logf("subject (%+v), other (%+v)", e.subject, e.other)
+		actual, err := e.subject.Cmp(e.other)
+		if e.expectedErr != nil {
+			if err != e.expectedErr {
+				t.Errorf("expected err (%s), but was (%s)", e.expectedErr.Error(), err.Error())
+			}
+		} else {
+			if err != nil {
+				t.Errorf("unexpected err: %s", err)
+				continue
+			}
+		}
+		if e.expected != actual {
+			t.Errorf("expected comparison result (%d), but was (%d)", e.expected, actual)
+		}
+	}
+}

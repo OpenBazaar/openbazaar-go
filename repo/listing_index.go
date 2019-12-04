@@ -31,7 +31,7 @@ type (
 		RatingCount        uint32           `json:"ratingCount"`
 		ModeratorIDs       []string         `json:"moderators"`
 		AcceptedCurrencies []string         `json:"acceptedCurrencies"`
-		CryptoCurrencyCode string           `json:"cryptoCurrencyCode"`
+		CryptoCurrencyCode string           `json:"coinType"`
 	}
 )
 

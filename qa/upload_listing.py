@@ -32,7 +32,7 @@ class UploadListingTest(OpenBazaarTestFramework):
             inv = resp["ron-swanson-tshirt"]
             if inv == None:
                 raise TestFailure("UploadListingTest - FAIL: Did not return inventory for listing")
-            if inv["inventory"] != 213:
+            if inv["inventory"] != "213":
                 raise TestFailure("UploadListingTest - FAIL: Returned incorrect amount of inventory: %d", inv["inventory"])
         elif r.status_code == 404:
             raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")

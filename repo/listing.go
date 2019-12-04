@@ -86,7 +86,7 @@ type shippingOption struct {
 
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
-	Quantity       uint64         `json:"quantity"`
+	Quantity       string         `json:"bigQuantity"`
 	Options        []option       `json:"options"`
 	Shipping       shippingOption `json:"shipping"`
 	Memo           string         `json:"memo"`
@@ -119,6 +119,13 @@ func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
 		if err != nil {
 			return nil, fmt.Errorf("new peer info: %s", err)
 		}
+	}
+
+	if l.Metadata.Version == 0 {
+		l.Metadata.Version = ListingVersion
+	}
+	if l.Metadata.EscrowTimeoutHours == 0 {
+		l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 	}
 
 	m := jsonpb.Marshaler{
@@ -169,6 +176,7 @@ func CreateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 		ld.Slug = slug
 	}
 	retListing, err := NewListingFromProtobuf(ld)
+
 	return *retListing, err
 }
 
@@ -1052,16 +1060,27 @@ func (l *Listing) GetOptions() ([]*pb.Listing_Item_Option, error) {
 // GetSkus - return item skus
 func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 	var (
-		sl  = &pb.SignedListing{}
-		err = json.Unmarshal(l.ListingBytes, &sl)
+		pbl = &pb.Listing{}
+		err = jsonpb.UnmarshalString(string(l.ListingBytes), pbl)
 	)
 	if err != nil {
 		return nil, err
 	}
-	if sl == nil || sl.Listing == nil || sl.Listing.Item == nil {
+	if pbl == nil || pbl.Item == nil {
 		return nil, nil
 	}
-	return sl.Listing.Item.Skus, nil
+	switch l.ListingVersion {
+	case 3, 4:
+		for i, sku := range pbl.Item.Skus {
+			surcharge := new(big.Int).SetInt64(sku.Surcharge)
+			quantity := new(big.Int).SetInt64(sku.Quantity)
+			pbl.Item.Skus[i].BigSurcharge = surcharge.String()
+			pbl.Item.Skus[i].BigQuantity = quantity.String()
+			pbl.Item.Skus[i].Quantity = 0
+			pbl.Item.Skus[i].Surcharge = 0
+		}
+	}
+	return pbl.Item.Skus, nil
 }
 
 // GetItem - return item
@@ -1551,9 +1570,6 @@ func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
 	if err := ValidateListing(l, isTestNet); err != nil {
 		return rsl, err
 	}
-
-	// Set listing version
-	listing.Metadata.Version = ListingVersion
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
@@ -2114,7 +2130,7 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	}
 	if listing.Item.PriceCurrency != nil &&
 		len(listing.Item.PriceCurrency.Code) > 0 {
-		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+		return ErrCryptocurrencyListingIllegalField("item.pricingCurrency")
 	}
 	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid
@@ -2124,12 +2140,9 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	if cryptoDivisibility == 0 {
 		return ErrListingCryptoDivisibilityInvalid
 	}
-	localDef, err := AllCurrencies().Lookup(listing.Metadata.CryptoCurrencyCode)
-	if err != nil {
-		return ErrCurrencyDefinitionUndefined
-	}
-	if uint(cryptoDivisibility) != localDef.Divisibility {
-		return ErrListingCryptoDivisibilityInvalid
+	def := NewUnknownCryptoDefinition(listing.Metadata.CryptoCurrencyCode, uint(cryptoDivisibility))
+	if err := def.Valid(); err != nil {
+		return fmt.Errorf("cryptocurrency metadata invalid: %s", err)
 	}
 	return nil
 }
@@ -2193,10 +2206,10 @@ func validateCryptocurrencyQuantity(listing *pb.Listing) error {
 				return fmt.Errorf("cannot validate nil sku")
 			}
 			if s.BigQuantity == "" {
-				return fmt.Errorf("sku bigQuantity empty")
+				return fmt.Errorf("sku quantity empty")
 			}
-			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) <= 0 {
-				return fmt.Errorf("sku bigQuantity zero or less")
+			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) < 0 {
+				return fmt.Errorf("sku quantity cannot be negative")
 			}
 			return nil
 		}

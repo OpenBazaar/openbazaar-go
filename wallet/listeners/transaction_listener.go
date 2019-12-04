@@ -226,12 +226,14 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		}
 
 		// update divisibility from contract listing
-		customDivisibility := currencyDivisibilityFromContract(l.multiwallet, contract)
-		if customDivisibility != currencyValue.Currency.Divisibility {
-			currencyValue.Currency.Divisibility = customDivisibility
-			if err := currencyValue.Valid(); err != nil {
-				log.Errorf("Invalid currency divisibility (%d) found in contract (%s): %s", customDivisibility, orderId, err.Error())
-				return
+		if contract.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+			customDivisibility := currencyDivisibilityFromContract(l.multiwallet, contract)
+			if customDivisibility != currencyValue.Currency.Divisibility {
+				currencyValue.Currency.Divisibility = customDivisibility
+				if err := currencyValue.Valid(); err != nil {
+					log.Errorf("Invalid currency divisibility (%d) found in contract (%s): %s", customDivisibility, orderId, err.Error())
+					return
+				}
 			}
 		}
 
@@ -349,11 +351,21 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 				}
 			}
 		}
+		def, err := repo.AllCurrencies().Lookup(contract.BuyerOrder.Payment.AmountCurrency.Code)
+		if err != nil {
+			log.Errorf("Error looking up currency: %s", err)
+			return
+		}
+		cv, err := repo.NewCurrencyValue(funding.String(), def)
+		if err != nil {
+			log.Errorf("Error creating currency value: %s", err)
+			return
+		}
 		n := repo.PaymentNotification{
 			ID:           repo.NewNotificationID(),
 			Type:         "payment",
 			OrderId:      orderId,
-			FundingTotal: funding.String(),
+			FundingTotal: cv,
 			CoinType:     contract.BuyerOrder.Payment.AmountCurrency.Code,
 		}
 		l.broadcast <- n

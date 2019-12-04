@@ -221,12 +221,12 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 		}
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
-		t.Mul(t, f)
-		total, _ := t.Int(transactionTotal)
-		if fixed.Add(fixed, total).Cmp(transactionTotal) > 0 {
+		percentAmt, _ := new(big.Float).Mul(t, f).Int(nil)
+		feeTotal := new(big.Int).Add(fixed, percentAmt)
+		if feeTotal.Cmp(transactionTotal) > 0 {
 			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
-		return fixed.Add(fixed, total), nil
+		return feeTotal, nil
 	default:
 		return big.NewInt(0), errors.New("Unrecognized fee type")
 	}
@@ -245,12 +245,12 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			sl := new(repo.SignedListing)
+			sl := new(pb.SignedListing)
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.RListing.Slug)
+			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
 			if err != nil {
 				return err
 			}
@@ -258,19 +258,24 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.RListing.ProtoListing.Coupons {
+			for _, coupon := range sl.Listing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.RListing.ProtoListing.Moderators = moderators
-			sl0, err := n.SignListing(sl.RListing)
+			sl.Listing.Moderators = moderators
+
+			rsl, err := repo.NewListingFromProtobuf(sl.Listing)
+			if err != nil {
+				return fmt.Errorf("create repo signed listing: %s", err.Error())
+			}
+			sl0, err := n.SignListing(*rsl)
 			if err != nil {
 				return err
 			}
-			sl = &sl0
+			sl = sl0.ProtoSignedListing
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,
@@ -292,7 +297,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			hashes[sl.RListing.Slug] = hash
+			hashes[sl.Listing.Slug] = hash
 
 			return nil
 		}
