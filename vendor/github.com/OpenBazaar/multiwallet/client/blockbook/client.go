@@ -254,7 +254,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 
 	Log.Infof("Retrieving: %s", req.URL.String())
 
-	time.Sleep(100)
+	time.Sleep(time.Millisecond*10)
 	resp, err := i.HTTPClient.Do(req)
 
 	if err != nil {
