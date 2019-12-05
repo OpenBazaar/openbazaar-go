@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -122,16 +121,20 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		return nil, err
 	}
 
-	dial := net.Dial
+	var customClient http.Client
 	if proxyDialer != nil {
-		dial = proxyDialer.Dial
+		dial := proxyDialer.Dial
+		tbTransport := &http.Transport{Dial: dial}
+		customClient = http.Client{Timeout: time.Second * 30, Transport: tbTransport}
+	} else {
+		customClient = http.Client{Timeout: time.Second * 30}
 	}
 
 	bch := make(chan model.Block)
 	tch := make(chan model.Transaction)
-	tbTransport := &http.Transport{Dial: dial}
+
 	ic := &BlockBookClient{
-		HTTPClient:      http.Client{Timeout: time.Second * 30, Transport: tbTransport},
+		HTTPClient:      customClient,
 		apiUrl:          u,
 		proxyDialer:     proxyDialer,
 		blockNotifyChan: bch,

@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -57,12 +56,14 @@ func NewEthereumPriceFetcher(dialer proxy.Dialer) *EthereumPriceFetcher {
 	z := EthereumPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	dial := net.Dial
+	var client *http.Client
 	if dialer != nil {
-		dial = dialer.Dial
+		dial := dialer.Dial
+		tbTransport := &http.Transport{Dial: dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Minute}
+	} else {
+		client = &http.Client{Timeout: time.Minute}
 	}
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	z.providers = []*ExchangeRateProvider{
 		{"https://api.kraken.com/0/public/Ticker?pair=ETHXBT", z.cache, client, KrakenDecoder{}, bp},
