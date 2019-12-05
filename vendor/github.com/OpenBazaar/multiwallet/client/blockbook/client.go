@@ -171,7 +171,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 	tch := make(chan model.Transaction)
 	tbTransport := &http.Transport{Dial: dial}
 	ic := &BlockBookClient{
-		HTTPClient:      http.Client{Timeout: time.Second * 30, Transport: tbTransport},
+		HTTPClient:      http.Client{Timeout: time.Second * 30},
 		apiUrl:          u,
 		proxyDialer:     proxyDialer,
 		blockNotifyChan: bch,
