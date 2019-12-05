@@ -31,6 +31,46 @@ import (
 
 var Log = logging.MustGetLogger("client")
 
+// RWMutex wraps a sync.RWMutex and adds logging around its actions
+type RWMutex struct {
+	name string
+	sync.RWMutex
+}
+
+// NewRWMutex creates a new `RWMutex` whose actions with be logged and labeled
+// with the given name
+func NewRWMutex(name string) RWMutex {
+	return RWMutex{name, sync.RWMutex{}}
+}
+
+// Lock intercepts calls to lock this mutex and wraps logging around it
+func (m *RWMutex) Lock() {
+	Log.Info("Locking mutex:", m.name)
+	m.RWMutex.Lock()
+	Log.Info("Locked mutex:", m.name)
+}
+
+// Unlock intercepts calls to unlock this mutex and wraps logging around it
+func (m *RWMutex) Unlock() {
+	Log.Info("Unlocking mutex:", m.name)
+	m.RWMutex.Unlock()
+	Log.Info("Unlocked mutex:", m.name)
+}
+
+// RLock intercepts calls to rlock this mutex and wraps logging around it
+func (m *RWMutex) RLock() {
+	Log.Info("RLocking mutex:", m.name)
+	m.RWMutex.RLock()
+	Log.Info("RLocked mutex:", m.name)
+}
+
+// RUnlock intercepts calls to runlock this mutex and wraps logging around it
+func (m *RWMutex) RUnlock() {
+	Log.Info("RUnlocking mutex:", m.name)
+	m.RWMutex.RUnlock()
+	Log.Info("RUnlocked mutex:", m.name)
+}
+
 type wsWatchdog struct {
 	client    *BlockBookClient
 	done      chan struct{}
@@ -109,7 +149,7 @@ type BlockBookClient struct {
 	HTTPClient   http.Client
 	RequestFunc  func(endpoint, method string, body []byte, query url.Values) (*http.Response, error)
 	SocketClient model.SocketClient
-	socketMutex  sync.RWMutex
+	socketMutex  RWMutex
 }
 
 func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClient, error) {
@@ -212,11 +252,15 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 	}
 	req.Header.Add("Content-Type", "application/json")
 
+	Log.Infof("Retrieving: %s", req.URL.String())
+
+	time.Sleep(100)
 	resp, err := i.HTTPClient.Do(req)
+
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
 			Log.Errorf("timed out executing: %s", err.Error())
-			return nil, clientErr.MakeFatal(err)
+			return nil, clientErr.MakeRetryable(err)
 		}
 		Log.Errorf("executing: %s", err.Error())
 		return nil, fmt.Errorf("executing: %s", err.Error())
@@ -237,7 +281,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		// mark 500 errors as fatal
 		if resp.StatusCode >= 500 {
 			err := fmt.Errorf("wallet server internal error (%s %s)", method, requestUrl.String())
-			return nil, clientErr.MakeFatal(clientErr.MakeFatal(err))
+			return nil, clientErr.MakeRetryable(clientErr.MakeFatal(err))
 		}
 		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
