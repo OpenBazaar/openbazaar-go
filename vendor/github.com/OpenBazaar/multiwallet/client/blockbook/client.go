@@ -216,7 +216,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
 			Log.Errorf("timed out executing: %s", err.Error())
-			return nil, clientErr.MakeRetryable(err)
+			return nil, clientErr.MakeFatal(err)
 		}
 		Log.Errorf("executing: %s", err.Error())
 		return nil, fmt.Errorf("executing: %s", err.Error())
@@ -237,7 +237,7 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		// mark 500 errors as fatal
 		if resp.StatusCode >= 500 {
 			err := fmt.Errorf("wallet server internal error (%s %s)", method, requestUrl.String())
-			return nil, clientErr.MakeRetryable(clientErr.MakeFatal(err))
+			return nil, clientErr.MakeFatal(clientErr.MakeFatal(err))
 		}
 		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
