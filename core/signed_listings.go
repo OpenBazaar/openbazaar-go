@@ -2,11 +2,9 @@ package core
 
 import (
 	"io/ioutil"
-	"math/big"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 func GetSignedListingFromPath(p string) (*pb.SignedListing, error) {
@@ -21,41 +19,4 @@ func GetSignedListingFromPath(p string) (*pb.SignedListing, error) {
 		return nil, err
 	}
 	return sl, nil
-}
-
-func SetAcceptedCurrencies(sl *pb.SignedListing, currencies []string) {
-	sl.Listing.Metadata.AcceptedCurrencies = currencies
-}
-
-func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) error {
-	for _, coupon := range sl.Listing.Coupons {
-		for _, c := range savedCoupons {
-			if coupon.GetHash() == c.Hash {
-				coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: c.Code}
-				break
-			}
-		}
-	}
-	return nil
-}
-
-func AssignMatchingQuantities(inventory map[int]*big.Int, sl *pb.SignedListing) error {
-	for variant, count := range inventory {
-		for i, s := range sl.Listing.Item.Skus {
-			if variant == i {
-				s.BigQuantity = count.String()
-				break
-			}
-		}
-	}
-	return nil
-}
-
-func ApplyShippingOptions(sl *pb.SignedListing) error {
-	for _, so := range sl.Listing.ShippingOptions {
-		for _, ser := range so.Services {
-			ser.BigAdditionalItemPrice = ser.BigPrice
-		}
-	}
-	return nil
 }

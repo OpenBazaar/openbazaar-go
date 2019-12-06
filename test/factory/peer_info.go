@@ -6,6 +6,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/jsonpb"
 )
 
 func MustNewPeerInfo() *repo.PeerInfo {
@@ -36,35 +37,32 @@ func NewPubkeysIdentityKeyBytes() []byte {
 func NewPubkeysProtobuf() *pb.ID_Pubkeys {
 	return &pb.ID_Pubkeys{
 		Identity: NewPubkeysIdentityKeyBytes(),
-		//Bitcoin:  []byte("AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"),
+		Bitcoin:  []byte("AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"),
 	}
 }
 
 // NewValidPeerIDProtobuf returns a PeerID protobuf example that is known to be valid
-func MustNewValidPeerIDProtobuf() *pb.ID {
-	validIdentity, err := base64.StdEncoding.DecodeString("CAESIII6nbBUBtCkK0blWtYRwm2lKS4kuAm36sElyoeC0n0u")
-	if err != nil {
+func MustNewPeerIDProtobuf() *pb.ID {
+	var idJSON = `{
+		"peerID": "QmSsRdJtKLHueUA6vsjZVoZo6N6fjQrMjao29CcVW7pX4g",
+		"pubkeys": {
+			"identity": "CAESIFD3dGlUgpYv1RsEIwZPriU/NnKLjOXOFPolx35Be6ff",
+			"bitcoin": "AgcLRxnvq37Yt3nCpez8Sj7Y7fzdpkJpULQh/B3vzl7C"
+		},
+		"bitcoinSig": "MEQCIEf8jOQquW3yCXo29NTdhMyh5pIcGTOgZSYJVL4QO5kyAiAk25Bl1q1SktRev4Oo+ZwAuSuNCM1YwtndqZp/0ET/ow=="
+}`
+	pbID := new(pb.ID)
+	if err := jsonpb.UnmarshalString(idJSON, pbID); err != nil {
 		panic(err)
 	}
-	return &pb.ID{
-		PeerID: "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
-		Handle: "",
-		Pubkeys: &pb.ID_Pubkeys{
-			Identity: validIdentity,
-			//Bitcoin:  []byte("Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"),
-		},
-		//BitcoinSig: []byte("MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="),
-	}
+	return pbID
 }
 
 // NewValidPeerInfo returns a PeerInfo example that is known to be valid
 func MustNewValidPeerInfo() *repo.PeerInfo {
-	var p, err = repo.NewPeerInfoFromProtobuf(MustNewValidPeerIDProtobuf())
-	if err != nil {
-		panic(err)
-	}
-	if isValid, errs := p.Valid(); !isValid {
-		panic(fmt.Sprintf("invalid peer: %+v", errs))
+	var p = repo.NewPeerInfoFromProtobuf(MustNewPeerIDProtobuf())
+	if err := p.Valid(); err != nil {
+		panic(fmt.Sprintf("invalid peer: %+v", err))
 	}
 	return p
 }

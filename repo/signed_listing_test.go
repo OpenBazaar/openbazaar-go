@@ -32,7 +32,7 @@ func TestListingUnmarshalJSONSignedListing(t *testing.T) {
 func TestSignedListingAttributes(t *testing.T) {
 	var examples = []struct {
 		fixtureName                string
-		expectedSchemaVersion      uint
+		expectedSchemaVersion      uint32
 		expectedTitle              string
 		expectedSlug               string
 		expectedPrice              *repo.CurrencyValue
@@ -109,11 +109,14 @@ func TestSignedListingAttributes(t *testing.T) {
 			expectedCryptoCurrencyCode: "",
 		},
 		{
-			fixtureName:                "v4-cryptocurrency",
-			expectedSchemaVersion:      4,
-			expectedTitle:              "LTC-XMR",
-			expectedSlug:               "ltc-xmr",
-			expectedPrice:              nil,
+			fixtureName:           "v4-cryptocurrency",
+			expectedSchemaVersion: 4,
+			expectedTitle:         "LTC-XMR",
+			expectedSlug:          "ltc-xmr",
+			expectedPrice: &repo.CurrencyValue{
+				Amount:   big.NewInt(0),
+				Currency: repo.NewUnknownCryptoDefinition("XMR", 0),
+			},
 			expectedAcceptedCurrencies: []string{"LTC"},
 			expectedCryptoDivisibility: 8,
 			expectedCryptoCurrencyCode: "XMR",
@@ -154,22 +157,26 @@ func TestSignedListingAttributes(t *testing.T) {
 		}
 
 		// test title
-		if title, _ := l.GetTitle(); title != e.expectedTitle {
+		if title := l.GetTitle(); title != e.expectedTitle {
 			t.Errorf("expected to have title response (%+v), but instead was (%+v)", e.expectedTitle, title)
 		}
 
 		// test slug
-		if slug, _ := l.GetSlug(); slug != e.expectedSlug {
+		if slug := l.GetSlug(); slug != e.expectedSlug {
 			t.Errorf("expected to have slug response (%+v), but instead was (%+v)", e.expectedSlug, slug)
 		}
 
 		// test price
-		if price, _ := l.GetPrice(); !price.Equal(e.expectedPrice) {
-			t.Errorf("expected to have price response (%+v), but instead was (%+v)", e.expectedPrice, price)
+		if price, err := l.GetPrice(); err == nil {
+			if !price.Equal(e.expectedPrice) {
+				t.Errorf("expected to have price response (%+v), but instead was (%+v)", e.expectedPrice, price)
+			}
+		} else {
+			t.Errorf("get price: %s", err.Error())
 		}
 
 		// test accepted currencies
-		if acceptedCurrencies, _ := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {
+		if acceptedCurrencies := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {
 			t.Errorf("expected to have acceptedCurrencies response (%+v), but instead was (%+v)", e.expectedAcceptedCurrencies, acceptedCurrencies)
 		}
 

@@ -21,44 +21,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-// SignListing Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing repo.Listing) (repo.SignedListing, error) {
-	var (
-		handle      string
-		timeout     = listing.GetEscrowTimeout()
-		currencyMap = make(map[string]bool)
-	)
-	// Temporary hack to work around test env shortcomings
-	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
-		if timeout == 0 {
-			timeout = 1
-		}
-	}
-	profile, err := n.GetProfile()
-	if err == nil {
-		handle = profile.Handle
-	}
-	currencies, err := listing.GetAcceptedCurrencies()
-	if err != nil {
-		return repo.SignedListing{}, err
-	}
-	for _, acceptedCurrency := range currencies {
-		currencyDef, err := n.LookupCurrency(acceptedCurrency)
-		if err != nil {
-			return repo.SignedListing{}, fmt.Errorf("lookup currency (%s): %s", acceptedCurrency, err)
-		}
-		_, err = n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
-		if err != nil {
-			return repo.SignedListing{}, fmt.Errorf("currency (%s) not supported by wallet", acceptedCurrency)
-		}
-		if currencyMap[currencyDef.CurrencyCode().String()] {
-			return repo.SignedListing{}, errors.New("duplicate accepted currency in listing")
-		}
-		currencyMap[currencyDef.CurrencyCode().String()] = true
-	}
-	return listing.Sign(n.IpfsNode, timeout, handle, n.TestNetworkEnabled() || n.RegressionNetworkEnabled(), n.MasterPrivateKey, &n.Datastore)
-}
-
 // SetListingInventory sets the inventory for the listing in the database. Does some basic validation
 // to make sure the inventory uses the correct variants.
 func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
@@ -66,13 +28,9 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	if err != nil {
 		return err
 	}
-	slug, err := l.GetSlug()
-	if err != nil {
-		return err
-	}
 
 	// Grab current inventory
-	currentInv, err := n.Datastore.Inventory().Get(slug)
+	currentInv, err := n.Datastore.Inventory().Get(l.GetSlug())
 	if err != nil {
 		return err
 	}
@@ -84,7 +42,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
-		err = n.Datastore.Inventory().Put(slug, 0, big.NewInt(-1))
+		err = n.Datastore.Inventory().Put(l.GetSlug(), 0, big.NewInt(-1))
 		if err != nil {
 			return err
 		}
@@ -95,7 +53,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 	} else {
 		// Update w provided inventory
 		for i, s := range listingInv {
-			err = n.Datastore.Inventory().Put(slug, i, s)
+			err = n.Datastore.Inventory().Put(l.GetSlug(), i, s)
 			if err != nil {
 				return err
 			}
@@ -108,7 +66,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 	// Delete anything that did not update
 	for i := range currentInv {
-		err = n.Datastore.Inventory().Delete(slug, i)
+		err = n.Datastore.Inventory().Delete(l.GetSlug(), i)
 		if err != nil {
 			return err
 		}
@@ -128,7 +86,7 @@ func (n *OpenBazaarNode) CreateListing(r []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return listing.ProtoListing.Slug, n.saveListing(listing, true)
+	return listing.GetSlug(), n.saveListing(listing, true)
 }
 
 // UpdateListing - update the listing
@@ -140,53 +98,78 @@ func (n *OpenBazaarNode) UpdateListing(r []byte, publish bool) error {
 	return n.saveListing(listing, publish)
 }
 
-func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
-	mods, err := listing.GetModerators()
-	if err != nil {
+func (n *OpenBazaarNode) validateListingIsSellable(l repo.Listing) error {
+	var isTestnet = n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
+
+	if err := l.ValidateListing(isTestnet); err != nil {
 		return err
 	}
+
+	var acceptedCurrenciesSeen = make(map[string]bool)
+	for _, c := range l.GetAcceptedCurrencies() {
+		if _, err := n.Multiwallet.WalletForCurrencyCode(c); err != nil {
+			return fmt.Errorf("currency (%s) not supported by wallet", c)
+		}
+
+		currDef, err := repo.AllCurrencies().Lookup(c)
+		if err != nil {
+			return fmt.Errorf("lookup currency (%s): %s", c, err.Error())
+		}
+
+		if acceptedCurrenciesSeen[currDef.CurrencyCode().String()] {
+			return errors.New("duplicate accepted currency in listing")
+		}
+		acceptedCurrenciesSeen[currDef.CurrencyCode().String()] = true
+	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) saveListing(l repo.Listing, publish bool) error {
+	mods := l.GetModerators()
 	if len(mods) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
-			err = listing.SetModerators(*sd.StoreModerators)
-			if err != nil {
+			if err := l.SetModerators(*sd.StoreModerators); err != nil {
 				return err
 			}
 		}
 	}
 
-	ct, err := listing.GetContractType()
-	if err != nil {
-		return err
-	}
+	ct := l.GetContractType()
 	if pb.Listing_Metadata_ContractType_value[ct] == int32(pb.Listing_Metadata_CRYPTOCURRENCY) {
-		err = listing.ValidateCryptoListing()
-		if err != nil {
+		if err := l.ValidateCryptoListing(); err != nil {
 			return err
 		}
 
-		err = listing.SetCryptocurrencyListingDefaults()
-		if err != nil {
+		if err := l.SetCryptocurrencyListingDefaults(); err != nil {
 			return err
 		}
 	}
 
-	err = n.SetListingInventory(listing)
+	if err := n.validateListingIsSellable(l); err != nil {
+		return fmt.Errorf("validate sellable listing (%s): %s", l.GetSlug(), err.Error())
+	}
+
+	if err := n.SetListingInventory(l); err != nil {
+		return err
+	}
+
+	if err := n.maybeMigrateImageHashes(&l); err != nil {
+		return err
+	}
+
+	// Update coupon db
+	if err := n.updateListingCoupons(&l); err != nil {
+		return fmt.Errorf("updating (%s) coupons: %s", l.GetSlug(), err.Error())
+	}
+
+	sl, err := l.Sign(n)
 	if err != nil {
 		return err
 	}
 
-	err = n.maybeMigrateImageHashes(listing.ProtoListing)
-	if err != nil {
-		return err
-	}
-
-	signedListing, err := n.SignListing(listing)
-	if err != nil {
-		return err
-	}
-
-	fName, err := repo.GetPathForListingSlug(signedListing.RListing.ProtoListing.Slug, n.RepoPath, n.TestNetworkEnabled())
+	fName, err := repo.GetPathForListingSlug(sl.GetSlug(), n.RepoPath, n.TestNetworkEnabled())
 	if err != nil {
 		return err
 	}
@@ -194,32 +177,25 @@ func prepListingForPublish(n *OpenBazaarNode, listing repo.Listing) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(signedListing.ProtoSignedListing)
+	out, err := sl.MarshalJSON()
 	if err != nil {
 		return err
 	}
-
-	if _, err := f.WriteString(out); err != nil {
+	if _, err := f.Write(out); err != nil {
 		return err
 	}
-	err = n.updateListingIndex(signedListing.ProtoSignedListing)
+
+	ld, err := n.toListingIndexData(&l)
 	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
-
-	err := prepListingForPublish(n, listing)
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	err = n.updateListingOnDisk(index, ld, false)
 	if err != nil {
 		return err
 	}
@@ -239,101 +215,83 @@ func (n *OpenBazaarNode) saveListing(listing repo.Listing, publish bool) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
-	ld, err := n.extractListingData(listing)
+func (n *OpenBazaarNode) updateListingCoupons(l *repo.Listing) error {
+	cs, err := l.GetCoupons()
 	if err != nil {
-		return err
+		return fmt.Errorf("get coupons: %s", err.Error())
 	}
-	index, err := n.getListingIndex()
-	if err != nil {
-		return err
+	var couponsToSave = make([]repo.Coupon, 0)
+	for _, c := range cs {
+		// check for redemption code and only persist if available
+		cCode, err := c.RedemptionCode()
+		if err != nil {
+			log.Warningf("not persisting coupon (%s): missing redemption code", c.Title())
+			continue
+		}
+
+		cHash, err := c.RedemptionHash()
+		if err != nil {
+			return fmt.Errorf("get redemption hash (%s): %s", c.Title(), err.Error())
+		}
+		couponsToSave = append(couponsToSave, repo.Coupon{
+			Slug: l.GetSlug(),
+			Code: cCode,
+			Hash: cHash,
+		})
 	}
-	return n.updateListingOnDisk(index, ld, false)
+	if len(couponsToSave) > 0 {
+		// check if some coupons have codes but not others to avoid missing coupons
+		if len(couponsToSave) != len(cs) {
+			return fmt.Errorf("not all coupons for listing (%s) could be persisted due to missing redemption codes", l.GetSlug())
+		}
+		if err := n.Datastore.Coupons().Delete(l.GetSlug()); err != nil {
+			log.Errorf("failed removing old coupons for listing (%s): %s", l.GetSlug(), err.Error())
+		}
+		if err := n.Datastore.Coupons().Put(couponsToSave); err != nil {
+			return fmt.Errorf("persisting coupons: %s", err.Error())
+		}
+	}
+	return nil
 }
 
-func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.ListingIndexData, error) {
-	listingPath := path.Join(n.RepoPath, "root", "listings", listing.Listing.Slug+".json")
+func (n *OpenBazaarNode) toListingIndexData(l *repo.Listing) (repo.ListingIndexData, error) {
+	var (
+		listingPath        = path.Join(n.RepoPath, "root", "listings", l.GetSlug()+".json")
+		shipTo, freeShipTo = l.GetShippingRegions()
+		previewImg         = l.GetImages()[0]
+	)
 
 	listingHash, err := ipfs.GetHashOfFile(n.IpfsNode, listingPath)
 	if err != nil {
-		return repo.ListingIndexData{}, err
+		return repo.ListingIndexData{}, fmt.Errorf("get hash: %s", err.Error())
+	}
+	priceValue, err := l.GetPrice()
+	if err != nil {
+		return repo.ListingIndexData{}, fmt.Errorf("get price: %s", err.Error())
 	}
 
-	descriptionLength := len(listing.Listing.Item.Description)
-	if descriptionLength > repo.ShortDescriptionLength {
-		descriptionLength = repo.ShortDescriptionLength
-	}
-
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
-		}
-		return false
-	}
-
-	shipsTo := []string{}
-	freeShipping := []string{}
-	for _, shippingOption := range listing.Listing.ShippingOptions {
-		for _, region := range shippingOption.Regions {
-			if !contains(shipsTo, region.String()) {
-				shipsTo = append(shipsTo, region.String())
-			}
-			for _, service := range shippingOption.Services {
-				if service.BigPrice == "" {
-					return repo.ListingIndexData{}, errors.New("expected shipping service price")
-				}
-				servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
-				if !ok {
-					return repo.ListingIndexData{}, errors.New("invalid shipping service price amount")
-				}
-				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
-					freeShipping = append(freeShipping, region.String())
-				}
-			}
-		}
-	}
-
-	var priceValue *repo.CurrencyValue
-	if listing.Listing.Item.PriceCurrency != nil && listing.Listing.Item.BigPrice != "" {
-		defn, err := n.LookupCurrency(listing.Listing.Item.PriceCurrency.Code)
-		if err != nil {
-			return repo.ListingIndexData{}, errors.New("invalid pricing currency")
-		}
-		amt, ok := new(big.Int).SetString(listing.Listing.Item.BigPrice, 10)
-		if !ok {
-			return repo.ListingIndexData{}, errors.New("invalid item price amount")
-		}
-		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
-	}
-
-	var priceModifier float32
-	if listing.Listing.Metadata.PriceModifier != 0 {
-		priceModifier = listing.Listing.Metadata.PriceModifier
-	} else if listing.Listing.Item.PriceModifier != 0 {
-		priceModifier = listing.Listing.Item.PriceModifier
-	}
-
-	ld := repo.ListingIndexData{
-		Hash:               listingHash,
-		Slug:               listing.Listing.Slug,
-		Title:              listing.Listing.Item.Title,
-		Categories:         listing.Listing.Item.Categories,
-		NSFW:               listing.Listing.Item.Nsfw,
-		ContractType:       listing.Listing.Metadata.ContractType.String(),
-		Description:        listing.Listing.Item.Description[:descriptionLength],
-		Thumbnail:          repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
+	return repo.ListingIndexData{
+		Hash:         listingHash,
+		Slug:         l.GetSlug(),
+		Title:        l.GetTitle(),
+		Categories:   l.GetCategories(),
+		NSFW:         l.GetNsfw(),
+		ContractType: l.GetContractType(),
+		Description:  l.GetShortDescription(),
+		Thumbnail: repo.ListingThumbnail{
+			previewImg.Tiny(),
+			previewImg.Small(),
+			previewImg.Medium(),
+		},
 		Price:              priceValue,
-		Modifier:           priceModifier,
-		ShipsTo:            shipsTo,
-		FreeShipping:       freeShipping,
-		Language:           listing.Listing.Metadata.Language,
-		ModeratorIDs:       listing.Listing.Moderators,
-		AcceptedCurrencies: listing.Listing.Metadata.AcceptedCurrencies,
-		CryptoCurrencyCode: listing.Listing.Metadata.CryptoCurrencyCode,
-	}
-	return ld, nil
+		Modifier:           l.GetPriceModifier(),
+		ShipsTo:            shipTo,
+		FreeShipping:       freeShipTo,
+		Language:           l.GetLanguage(),
+		ModeratorIDs:       l.GetModerators(),
+		AcceptedCurrencies: l.GetAcceptedCurrencies(),
+		CryptoCurrencyCode: l.GetCryptoCurrencyCode(),
+	}, nil
 }
 
 func (n *OpenBazaarNode) getListingIndex() ([]repo.ListingIndexData, error) {
@@ -687,36 +645,11 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 }
 
 func verifySignaturesOnListing(s repo.SignedListing) error {
-	sl := s.ProtoSignedListing
-	// Verify identity signature on listing
-	if err := verifySignature(
-		s.RListing.ProtoListing,
-		sl.Listing.VendorID.Pubkeys.Identity,
-		sl.Signature,
-		sl.Listing.VendorID.PeerID,
-	); err != nil {
-		switch err.(type) {
-		case invalidSigError:
-			return errors.New("vendor's identity signature on contact failed to verify")
-		case matchKeyError:
-			return errors.New("public key in order does not match reported buyer ID")
-		default:
-			return err
-		}
+	if err := s.VerifySignature(); err != nil {
+		return err
 	}
-
-	// Verify the bitcoin signature in the ID
-	if err := verifyBitcoinSignature(
-		sl.Listing.VendorID.Pubkeys.Bitcoin,
-		sl.Listing.VendorID.BitcoinSig,
-		sl.Listing.VendorID.PeerID,
-	); err != nil {
-		switch err.(type) {
-		case invalidSigError:
-			return errors.New("vendor's bitcoin signature on GUID failed to verify")
-		default:
-			return err
-		}
+	if err := s.GetVendorID().VerifyBitcoinSignature(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -730,56 +663,35 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 
 	walkpath := func(p string, f os.FileInfo, err error) error {
 		if !f.IsDir() && filepath.Ext(p) == ".json" {
-
-			sl, err := GetSignedListingFromPath(p)
+			signedProto, err := GetSignedListingFromPath(p)
 			if err != nil {
 				return err
 			}
+
+			oldSL := repo.NewSignedListingFromProtobuf(signedProto)
+			l := oldSL.GetListing()
 
 			// Cryptocurrency listings can only have one currency listed and since it's
 			// a trade for one specific currency for another specific currency it isn't
 			// appropriate to apply the bulk update to this type of listing.
-			if sl.Listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+			if l.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 				return nil
 			}
 
-			SetAcceptedCurrencies(sl, currencies)
-
-			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
-			if err != nil {
-				return err
-			}
-			err = AssignMatchingCoupons(savedCoupons, sl)
-			if err != nil {
+			if err := l.SetAcceptedCurrencies(currencies...); err != nil {
 				return err
 			}
 
-			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-				err = ApplyShippingOptions(sl)
-				if err != nil {
-					return err
-				}
+			lb, err := l.MarshalJSON()
+			if err != nil {
+				return fmt.Errorf("marshaling signed listing (%s): %s", l.GetSlug(), err.Error())
 			}
-
-			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			err = n.UpdateListing(lb, false)
 			if err != nil {
 				return err
 			}
-			err = AssignMatchingQuantities(inventory, sl)
-			if err != nil {
-				return err
-			}
-
-			rListing, err := repo.NewListingFromProtobuf(sl.Listing)
-			if err != nil {
-				return err
-			}
-			err = n.UpdateListing(rListing.ListingBytes, false)
-			if err != nil {
-				return err
-			}
-
 		}
+
 		return nil
 	}
 

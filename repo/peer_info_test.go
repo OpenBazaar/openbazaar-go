@@ -11,11 +11,8 @@ import (
 func TestPeerInfoFromProtobuf(t *testing.T) {
 	var (
 		validFixture = factory.MustNewValidPeerIDProtobuf()
-		subject, err = repo.NewPeerInfoFromProtobuf(validFixture)
+		subject      = repo.NewPeerInfoFromProtobuf(validFixture)
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	if hash, err := subject.Hash(); err == nil && hash != validFixture.PeerID {
 		t.Errorf("expected Hash() to be (%s), but was (%s)", validFixture.PeerID, hash)
@@ -38,10 +35,8 @@ func TestPeerInfoFromProtobuf(t *testing.T) {
 	}
 
 	newProto := subject.Protobuf()
-	duplicateSubject, err := repo.NewPeerInfoFromProtobuf(newProto)
-	if err != nil {
-		t.Fatal(err)
-	}
+	duplicateSubject := repo.NewPeerInfoFromProtobuf(newProto)
+
 	if !subject.Equal(duplicateSubject) {
 		t.Error("expected Protobuf() to produce recipricol of NewPeerInfoFromProtobuf, but did not")
 		t.Logf("\texpected: %+v\n", subject)
@@ -78,25 +73,11 @@ func TestPeerInfoValid(t *testing.T) {
 
 	var pp = factory.MustNewValidPeerIDProtobuf()
 	pp.PeerID = "invalidstring"
-	p, err := repo.NewPeerInfoFromProtobuf(pp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	v, errs := p.Valid()
-	if v == true {
-		t.Fatal("expected an invalid peer id to make the object invalid")
-	}
+	p := repo.NewPeerInfoFromProtobuf(pp)
 
-	// Check for ErrInvalidInlinePeerID
-	var foundErr bool
-	for _, e := range errs {
-		if e == repo.ErrInvalidInlinePeerID {
-			foundErr = true
-		}
-	}
-	if !foundErr {
-		t.Error("expected to find ErrInvalidInlinePeerID in errors, but did not")
-		t.Logf("errors: %+v", errs)
+	err := p.Valid()
+	if err == nil {
+		t.Fatal("expected peer info to not be valid")
 	}
 }
 
@@ -106,7 +87,7 @@ func TestNilPeerInfo(t *testing.T) {
 		t.Errorf("expected nil *PeerInfo.Equal() to be false, but was not")
 	}
 
-	if isValid, _ := nilPeer.Valid(); isValid {
+	if err := nilPeer.Valid(); err == nil {
 		t.Errorf("expected nil *PeerInfo to be invalid, but was valid")
 	}
 
