@@ -131,7 +131,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         self.send_bitcoin_cmd("generate", 1)
 
         # startup alice again
-        self.start_node(alice)
+        self.start_node(1, alice)
         time.sleep(45)
 
         # check alice detected order and payment

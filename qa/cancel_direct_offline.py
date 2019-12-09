@@ -149,7 +149,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
         # startup alice again
-        self.start_node(alice)
+        self.start_node(1, alice)
         self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
         time.sleep(45)
 

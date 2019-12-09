@@ -101,7 +101,7 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseOfflineErrorTest - FAIL: Bob incorrectly saved as funded")
 
         # startup alice again
-        self.start_node(alice)
+        self.start_node(1, alice)
         time.sleep(45)
 
         # check alice detected processing error

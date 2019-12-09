@@ -67,7 +67,7 @@ class ChatOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("ChatOfflineTest - FAIL: Did not record new conversation")
 
         # startup bob again
-        self.start_node(bob)
+        self.start_node(2, bob)
         time.sleep(45)
 
         # check bob saved message correctly
