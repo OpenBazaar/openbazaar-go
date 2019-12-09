@@ -202,7 +202,7 @@ func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *repo.Listing) error {
 				cidVer = id.Version()
 			}
 			if cidVer > 0 {
-				var imgPath = path.Join(n.RepoPath, "root", "images", size, i.Filename())
+				var imgPath = path.Join(n.RepoPath, "root", "images", size, i.GetFilename())
 				iHash, err := ipfs.AddFile(n.IpfsNode, imgPath)
 				if err != nil {
 					return fmt.Errorf("ipfs add (%s): %s", imgPath, err.Error())
@@ -214,19 +214,19 @@ func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *repo.Listing) error {
 			return nil
 		}
 
-		if err := updateHash("tiny", i.Tiny(), i.SetTiny); err != nil {
+		if err := updateHash("tiny", i.GetTiny(), i.SetTiny); err != nil {
 			return err
 		}
-		if err := updateHash("small", i.Small(), i.SetSmall); err != nil {
+		if err := updateHash("small", i.GetSmall(), i.SetSmall); err != nil {
 			return err
 		}
-		if err := updateHash("medium", i.Medium(), i.SetMedium); err != nil {
+		if err := updateHash("medium", i.GetMedium(), i.SetMedium); err != nil {
 			return err
 		}
-		if err := updateHash("large", i.Large(), i.SetLarge); err != nil {
+		if err := updateHash("large", i.GetLarge(), i.SetLarge); err != nil {
 			return err
 		}
-		if err := updateHash("original", i.Original(), i.SetOriginal); err != nil {
+		if err := updateHash("original", i.GetOriginal(), i.SetOriginal); err != nil {
 			return err
 		}
 	}

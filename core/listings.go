@@ -223,15 +223,15 @@ func (n *OpenBazaarNode) updateListingCoupons(l *repo.Listing) error {
 	var couponsToSave = make([]repo.Coupon, 0)
 	for _, c := range cs {
 		// check for redemption code and only persist if available
-		cCode, err := c.RedemptionCode()
+		cCode, err := c.GetRedemptionCode()
 		if err != nil {
-			log.Warningf("not persisting coupon (%s): missing redemption code", c.Title())
+			log.Warningf("not persisting coupon (%s): missing redemption code", c.GetTitle())
 			continue
 		}
 
-		cHash, err := c.RedemptionHash()
+		cHash, err := c.GetRedemptionHash()
 		if err != nil {
-			return fmt.Errorf("get redemption hash (%s): %s", c.Title(), err.Error())
+			return fmt.Errorf("get redemption hash (%s): %s", c.GetTitle(), err.Error())
 		}
 		couponsToSave = append(couponsToSave, repo.Coupon{
 			Slug: l.GetSlug(),
@@ -279,9 +279,9 @@ func (n *OpenBazaarNode) toListingIndexData(l *repo.Listing) (repo.ListingIndexD
 		ContractType: l.GetContractType(),
 		Description:  l.GetShortDescription(),
 		Thumbnail: repo.ListingThumbnail{
-			previewImg.Tiny(),
-			previewImg.Small(),
-			previewImg.Medium(),
+			previewImg.GetTiny(),
+			previewImg.GetSmall(),
+			previewImg.GetMedium(),
 		},
 		Price:              priceValue,
 		Modifier:           l.GetPriceModifier(),

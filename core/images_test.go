@@ -86,11 +86,11 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 				t.Errorf("%s image failed to migrate to v0", size)
 			}
 		}
-		checkImage(image.Large(), "large")
-		checkImage(image.Medium(), "medium")
-		checkImage(image.Small(), "small")
-		checkImage(image.Tiny(), "tiny")
-		checkImage(image.Original(), "original")
+		checkImage(image.GetLarge(), "large")
+		checkImage(image.GetMedium(), "medium")
+		checkImage(image.GetSmall(), "small")
+		checkImage(image.GetTiny(), "tiny")
+		checkImage(image.GetOriginal(), "original")
 	}
 
 	rl, err := repo.NewListingFromProtobuf(listing)

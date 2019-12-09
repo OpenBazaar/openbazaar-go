@@ -596,13 +596,13 @@ type ListingImage struct {
 	tiny     string
 }
 
-func (i *ListingImage) Filename() string { return i.filename }
-func (i *ListingImage) Original() string { return i.original }
-func (i *ListingImage) Large() string    { return i.large }
-func (i *ListingImage) Medium() string   { return i.medium }
-func (i *ListingImage) Small() string    { return i.small }
-func (i *ListingImage) Tiny() string     { return i.tiny }
-func (i *ListingImage) String() string   { return i.Filename() }
+func (i *ListingImage) GetFilename() string { return i.filename }
+func (i *ListingImage) GetOriginal() string { return i.original }
+func (i *ListingImage) GetLarge() string    { return i.large }
+func (i *ListingImage) GetMedium() string   { return i.medium }
+func (i *ListingImage) GetSmall() string    { return i.small }
+func (i *ListingImage) GetTiny() string     { return i.tiny }
+func (i *ListingImage) String() string      { return i.GetFilename() }
 
 func (i *ListingImage) imageProtobuf() (*pb.Listing_Item_Image, error) {
 	if i == nil ||
@@ -690,12 +690,12 @@ func (l *Listing) GetImages() []*ListingImage {
 		imgs[i] = &ListingImage{
 			listing:    l,
 			protoIndex: i,
-			filename:   img.Filename,
-			original:   img.Original,
-			large:      img.Large,
-			medium:     img.Medium,
-			small:      img.Small,
-			tiny:       img.Tiny,
+			filename:   img.GetFilename(),
+			original:   img.GetOriginal(),
+			large:      img.GetLarge(),
+			medium:     img.GetMedium(),
+			small:      img.GetSmall(),
+			tiny:       img.GetTiny(),
 		}
 	}
 	return imgs
@@ -901,10 +901,10 @@ type ListingTax struct {
 	taxableShipping bool
 }
 
-func (t ListingTax) Type() string                { return t.taxType }
-func (t ListingTax) ApplicableRegions() []string { return t.regions }
-func (t ListingTax) Rate() float32               { return t.rate }
-func (t ListingTax) TaxableShipping() bool       { return t.taxableShipping }
+func (t ListingTax) GetType() string                { return t.taxType }
+func (t ListingTax) GetApplicableRegions() []string { return t.regions }
+func (t ListingTax) GetRate() float32               { return t.rate }
+func (t ListingTax) GetTaxableShipping() bool       { return t.taxableShipping }
 
 // GetTaxes returns listing tax information
 func (l *Listing) GetTaxes() ListingTaxes {
@@ -916,9 +916,9 @@ func (l *Listing) GetTaxes() ListingTaxes {
 		}
 
 		ts[ti] = ListingTax{
-			taxType:         tax.TaxType,
-			rate:            tax.Percentage,
-			taxableShipping: tax.TaxShipping,
+			taxType:         tax.GetTaxType(),
+			rate:            tax.GetPercentage(),
+			taxableShipping: tax.GetTaxShipping(),
 			regions:         rs,
 		}
 	}
@@ -1010,15 +1010,15 @@ type ListingCoupon struct {
 	discountAmount  *CurrencyValue
 }
 
-func (c *ListingCoupon) ListingSlug() string { return c.listing.GetSlug() }
-func (c *ListingCoupon) Title() string       { return c.title }
-func (c *ListingCoupon) RedemptionCode() (string, error) {
+func (c *ListingCoupon) GetListingSlug() string { return c.listing.GetSlug() }
+func (c *ListingCoupon) GetTitle() string       { return c.title }
+func (c *ListingCoupon) GetRedemptionCode() (string, error) {
 	if c.redemptionCode != "" {
 		return c.redemptionCode, nil
 	}
 	return "", errors.New("redemption code not set")
 }
-func (c *ListingCoupon) RedemptionHash() (string, error) {
+func (c *ListingCoupon) GetRedemptionHash() (string, error) {
 	_, err := mh.FromB58String(c.redemptionHash)
 	if err != nil {
 		// if hash is invalid, let's try to produce a new one
@@ -1031,8 +1031,8 @@ func (c *ListingCoupon) RedemptionHash() (string, error) {
 	}
 	return c.redemptionHash, nil
 }
-func (c *ListingCoupon) PercentOff() float32       { return c.discountPercent }
-func (c *ListingCoupon) AmountOff() *CurrencyValue { return c.discountAmount }
+func (c *ListingCoupon) GetPercentOff() float32       { return c.discountPercent }
+func (c *ListingCoupon) GetAmountOff() *CurrencyValue { return c.discountAmount }
 
 func (c *ListingCoupon) SetRedemptionCode(code string) error {
 	newHash, err := ipfs.EncodeMultihash([]byte(code))
