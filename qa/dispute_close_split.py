@@ -43,7 +43,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # make charlie a moderator
-        with open('testdata/moderation.json') as listing_file:
+        with open('testdata/'+ self.moderator_version +'/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
         r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
@@ -56,13 +56,13 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/listing.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
@@ -86,7 +86,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["moderator"] = moderatorId

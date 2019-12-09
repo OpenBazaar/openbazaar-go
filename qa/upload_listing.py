@@ -8,24 +8,24 @@ class UploadListingTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 1
+        self.num_nodes = 2
 
     def setup_network(self):
         self.setup_nodes()
 
     def run_test(self):
-        with open('testdata/listing.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["item"]["priceCurrency"]["divisibility"] = 8
-        api_url = self.nodes[0]["gateway_url"] + "ob/listing"
+        api_url = self.nodes[1]["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("UploadListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        api_url = self.nodes[0]["gateway_url"] + "ob/inventory"
+        api_url = self.nodes[1]["gateway_url"] + "ob/inventory"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
