@@ -41,6 +41,9 @@ class OpenBazaarTestFramework(object):
     def __init__(self):
         self.nodes = []
         self.bitcoin_api = None
+        self.vendor_version = "v5"
+        self.buyer_version = "v5"
+        self.moderator_version = "v5"
 
     def setup_nodes(self):
         for i in range(self.num_nodes):
@@ -65,8 +68,15 @@ class OpenBazaarTestFramework(object):
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
         args = []
-        if self.binaries is not None:
-            args = [self.binaries[n], "init", "-d", dir_path, "--testnet"]
+        if n == 1 and self.v4vendor_binary is not None:
+            self.vendor_version = "v4"
+            args = [self.v4vendor_binary, "init", "-d", dir_path, "--testnet"]
+        elif n == 2 and self.v4buyer_binary is not None:
+            self.buyer_version = "v4"
+            args = [self.v4buyer_binary, "init", "-d", dir_path, "--testnet"]
+        elif n == 3 and self.v4moderator_binary is not None:
+            self.moderator_version = "v4"
+            args = [self.v4moderator_binary, "init", "-d", dir_path, "--testnet"]
         else:
             args = [self.binary, "init", "-d", dir_path, "--testnet"]
         if n < 3:
@@ -117,11 +127,26 @@ class OpenBazaarTestFramework(object):
                 if "OpenBazaar repo initialized" in str(o):
                     return
 
+<<<<<<< HEAD
     def start_node(self, node):
         if self.useTor:
             args = [self.binary, "start", "--tor", "-v", "-d", node["data_dir"], *self.options]
+=======
+    def start_node(self, n, node):
+        args = []
+        if n == 1 and self.v4vendor_binary is not None:
+            self.vendor_version = "v4"
+            args = [self.v4vendor_binary, "start", "-v", "-d", node["data_dir"], *self.options]
+        elif n == 2 and self.v4buyer_binary is not None:
+            self.buyer_version = "v4"
+            args = [self.v4buyer_binary, "start", "-v", "-d", node["data_dir"], *self.options]
+        elif n == 3 and self.v4moderator_binary is not None:
+            self.moderator_version = "v4"
+            args = [self.v4moderator_binary, "start", "-v", "-d", node["data_dir"], *self.options]
+>>>>>>> Update qa tests with data version selection
         else:
             args = [self.binary, "start", "-v", "-d", node["data_dir"], *self.options]
+
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process, node)
         node["peerId"] = peerId
@@ -195,16 +220,18 @@ class OpenBazaarTestFramework(object):
                     usage="python3 test_framework.py [options]"
         )
         parser.add_argument('-b', '--binary', help="the openbazaar-go binary")
-        parser.add_argument('-i', '--binaries', nargs='*', help="a list of binaries to use. Indexes map to the index of each node in the test.")
-        parser.add_argument('-v', '--versions', nargs='*', help="a list of versions mapped to the node index")
+        parser.add_argument('--v4buyer', help="path to a v4 binary if you want to use one")
+        parser.add_argument('--v4vendor', help="path to a v4 binary if you want to use one")
+        parser.add_argument('--v4moderator', help="path to a v4 binary if you want to use one")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
         parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
         parser.add_argument('-T', '--tor', help="use tor in QA testing", action='store_true')
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
-        self.binaries = args.binaries
-        self.versions = args.versions
+        self.v4buyer_binary = args.v4buyer
+        self.v4vendor_binary = args.v4vendor
+        self.v4moderator_binary = args.v4moderator
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
         self.cointype = args.cointype

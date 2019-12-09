@@ -30,13 +30,13 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # post profile for vendor
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = vendor["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to vendor
-        with open('testdata/listing_crypto.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
@@ -69,7 +69,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # buyer send order
-        with open('testdata/order_crypto.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["paymentCoin"] = "t" + self.cointype
@@ -163,7 +163,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if resp["funded"] == False:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as unfunded")
 
-        with open('testdata/fulfillment_crypto.json') as fulfillment_file:
+        with open('testdata/'+ self.vendor_version +'/fulfillment_crypto.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["orderId"] = orderId
         fulfillment_json["slug"] = slug

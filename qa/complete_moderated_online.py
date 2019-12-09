@@ -42,7 +42,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # make charlie a moderator
-        with open('testdata/moderation.json') as listing_file:
+        with open('testdata/'+ self.moderator_version +'/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
         r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
@@ -55,13 +55,13 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/listing.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
@@ -87,7 +87,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["moderator"] = moderatorId
@@ -167,7 +167,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice incorrectly saved as unfunded")
 
         # alice send order fulfillment
-        with open('testdata/fulfillment.json') as fulfillment_file:
+        with open('testdata/'+ self.vendor_version +'/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["slug"] = slug
         fulfillment_json["orderId"] = orderId
@@ -199,7 +199,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice failed to order fulfillment")
 
         # bob send order completion
-        with open('testdata/completion.json') as completion_file:
+        with open('testdata/'+ self.buyer_version +'/completion.json') as completion_file:
             completion_json = json.load(completion_file, object_pairs_hook=OrderedDict)
         completion_json["orderId"] = orderId
         completion_json["ratings"][0]["slug"] = slug
