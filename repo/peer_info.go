@@ -35,13 +35,6 @@ func NewPeerInfoFromProtobuf(id *pb.ID) *PeerInfo {
 	}
 }
 
-// NewPeerInfoFromIdentityKey returns a PeerInfo object based on the identity key
-func NewPeerInfoFromIdentityKey(k []byte) *PeerInfo {
-	return &PeerInfo{
-		keychain: &PeerKeychain{identity: k},
-	}
-}
-
 // PeerKeychain holds bytes representing key material suitable for extracting with libp2p-crypto
 type PeerKeychain struct {
 	bitcoin  []byte

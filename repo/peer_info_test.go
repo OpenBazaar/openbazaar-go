@@ -10,7 +10,7 @@ import (
 
 func TestPeerInfoFromProtobuf(t *testing.T) {
 	var (
-		validFixture = factory.MustNewValidPeerIDProtobuf()
+		validFixture = factory.MustNewPeerIDProtobuf()
 		subject      = repo.NewPeerInfoFromProtobuf(validFixture)
 	)
 
@@ -44,34 +44,11 @@ func TestPeerInfoFromProtobuf(t *testing.T) {
 	}
 }
 
-func TestPeerInfoFromIdentityKey(t *testing.T) {
-	var (
-		testPeer      = factory.MustNewValidPeerInfo()
-		testHash, err = testPeer.Hash()
-		subject       = repo.NewPeerInfoFromIdentityKey(testPeer.IdentityKeyBytes())
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var (
-		actual = repo.NewPeerInfoFromIdentityKey(testPeer.IdentityKeyBytes())
-	)
-
-	if !bytes.Equal(actual.IdentityKeyBytes(), testPeer.IdentityKeyBytes()) {
-		t.Error("expected peerInfo to have same internal key, but did not")
-	}
-
-	if hash, err := subject.Hash(); err == nil && hash != testHash {
-		t.Error("expected derived hash to match test peer, but did not")
-	}
-}
-
 func TestPeerInfoValid(t *testing.T) {
 	// MustNewValidPeerInfo forces a panic in the event internal logic has changed
 	factory.MustNewValidPeerInfo()
 
-	var pp = factory.MustNewValidPeerIDProtobuf()
+	var pp = factory.MustNewPeerIDProtobuf()
 	pp.PeerID = "invalidstring"
 	p := repo.NewPeerInfoFromProtobuf(pp)
 

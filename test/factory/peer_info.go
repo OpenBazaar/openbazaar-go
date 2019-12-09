@@ -9,14 +9,6 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 )
 
-func MustNewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
-}
-
-func NewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
-}
-
 func NewPeerIDProtobuf() *pb.ID {
 	return &pb.ID{
 		PeerID:  "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
@@ -41,7 +33,7 @@ func NewPubkeysProtobuf() *pb.ID_Pubkeys {
 	}
 }
 
-// NewValidPeerIDProtobuf returns a PeerID protobuf example that is known to be valid
+// MustNewPeerIDProtobuf returns a PeerID protobuf example that is known to be valid
 func MustNewPeerIDProtobuf() *pb.ID {
 	var idJSON = `{
 		"peerID": "QmSsRdJtKLHueUA6vsjZVoZo6N6fjQrMjao29CcVW7pX4g",
