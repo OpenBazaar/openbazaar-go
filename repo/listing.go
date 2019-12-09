@@ -795,16 +795,24 @@ func (l *Listing) GetCoupons() (ListingCoupons, error) {
 	}
 
 	for i, c := range protoCoupons {
-		var discAmt string
+		var (
+			discAmt   string
+			discValue *CurrencyValue
+		)
 		switch listingVersion {
 		case 5:
 			discAmt = c.GetBigPriceDiscount()
 		default:
 			discAmt = strconv.FormatUint(c.GetPriceDiscount(), 10)
 		}
-		discValue, err := NewCurrencyValue(discAmt, discPrice.Currency)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create coupon discount value for amount (%s %s): %s", discAmt, discPrice.Currency, err.Error())
+		if discAmt != "" {
+			dv, err := NewCurrencyValue(discAmt, discPrice.Currency)
+			if err != nil {
+				return nil, fmt.Errorf("unable to create coupon discount value for amount (%s %s): %s", discAmt, discPrice.Currency, err.Error())
+			}
+			discValue = dv
+		} else {
+			discValue = nil
 		}
 
 		cs[i] = &ListingCoupon{
