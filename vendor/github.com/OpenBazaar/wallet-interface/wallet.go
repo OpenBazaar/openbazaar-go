@@ -350,6 +350,5 @@ type Signature struct {
 
 // Errors
 var (
-	ErrorInsuffientFunds error = errors.New("insuffient funds")
-	ErrorDustAmount      error = errors.New("amount is below network dust treshold")
+	ErrorDustAmount error = errors.New("amount is below network dust treshold")
 )

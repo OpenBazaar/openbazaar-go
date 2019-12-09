@@ -137,6 +137,12 @@ func (*Listing) ProtoMessage()    {}
 
 // NewListingFromProtobuf - return Listing from pb.Listing
 func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
+	if l.Metadata.Version == 0 {
+		l.Metadata.Version = ListingVersion
+	}
+	if l.Metadata.EscrowTimeoutHours == 0 {
+		l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
+	}
 	return &Listing{
 		listingProto: l,
 	}, nil
@@ -1687,7 +1693,7 @@ func (l *Listing) ValidateCryptoListing() error {
 	}
 	if l.listingProto.Item.PriceCurrency != nil &&
 		len(l.listingProto.Item.PriceCurrency.Code) > 0 {
-		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+		return ErrCryptocurrencyListingIllegalField("item.pricingCurrency")
 	}
 	if len(l.listingProto.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid

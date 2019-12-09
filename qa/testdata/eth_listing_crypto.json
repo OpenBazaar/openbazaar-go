@@ -14,14 +14,7 @@
         "title": "Ether",
         "description": "",
         "processingTime": "1 to 2 hours",
-        "bigPrice": "0",
         "price": "0",
-        "priceCurrency": {
-            "code": "TETH",
-            "divisibility": 18,
-            "name": "A",
-            "currencyType": "A"
-        },
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",
             "small": "QmXSEqXLCzpCByJU4wqbJ37TcBEj77FKMUWUP1qLh56847",

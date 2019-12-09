@@ -218,6 +218,8 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
+        print("############        $$$$$$$$$$$$$$")
+        print(resp["state"])
         if resp["state"] != "COMPLETED":
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Alice failed to detect order completion")
 

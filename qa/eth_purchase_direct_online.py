@@ -162,7 +162,7 @@ class EthPurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect reason: %s", resp["reason"])
         if resp["code"] != "ERR_INSUFFICIENT_INVENTORY":
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect code: %s", resp["code"])
-        if resp["remainingInventory"] != 6:
+        if resp["remainingInventory"] != '6':
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect remainingInventory: %d", resp["remainingInventory"])
 
         print("EthPurchaseDirectOnlineTest - PASS")
