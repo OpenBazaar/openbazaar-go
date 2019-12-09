@@ -61,6 +61,9 @@ class OpenBazaarTestFramework(object):
     def send_bitcoin_cmd(self, *args):
         try:
             return self.bitcoin_api.call(*args)
+        except ConnectionResetError:
+            self.bitcoin_api = rpc.Proxy(btc_conf_file=self.btc_config)
+            return self.send_bitcoin_cmd(*args)
         except BrokenPipeError:
             self.bitcoin_api = rpc.Proxy(btc_conf_file=self.btc_config)
             return self.send_bitcoin_cmd(*args)
