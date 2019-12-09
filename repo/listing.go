@@ -301,32 +301,6 @@ func CreateSlugFor(slugName string) string {
 	return slug[:l]
 }
 
-//func (r Listing) eof() bool {
-//return len(r.ListingBytes) == 0
-//}
-
-//func (r *Listing) readByte(n int) byte {
-//// this function assumes that eof() check was done before
-//return r.ListingBytes[n]
-//}
-
-//func (r *Listing) Read(p []byte) (n int, err error) {
-//if n == len(r.ListingBytes)-1 {
-//return
-//}
-
-//if c := len(r.ListingBytes); c > 0 {
-//for n < c {
-//p[n] = r.readByte(n)
-//n++
-//if r.eof() {
-//break
-//}
-//}
-//}
-//return n, nil
-//}
-
 // ListingMetadata -
 type ListingMetadata struct {
 	Version uint `json:"version"`
@@ -701,63 +675,6 @@ func (l *Listing) GetImages() []*ListingImage {
 	return imgs
 }
 
-//type ListingVariants []ListingVariant
-
-//// ListingSKU represents a unique listing variant
-//type ListingVariant struct {
-//skuIndex  int
-//sku       string
-//surcharge *CurrencyValue
-//quantity  *big.Int
-//}
-
-//// GetVariants returns all unique SKUs and their options
-//func (l *Listing) GetVariants() (ListingVariants, error) {
-//var (
-//schemaVersion = l.GetVersion()
-//lvs           = make([]ListingVariant, len(l.listingProto.Item.Skus), len(l.listingProto.Item.Skus))
-//skuPrice, err = l.GetPrice()
-//)
-//if err != nil {
-//return nil, fmt.Errorf("get listing price for sku: %s", err.Error())
-//}
-//for i, s := range l.listingProto.Item.Skus {
-//switch schemaVersion {
-//case 5:
-//var (
-//skuQ, ok   = new(big.Int).SetString(s.BigQuantity, 10)
-//skuCV, err = NewCurrencyValue(s.BigSurcharge, skuPrice.Currency)
-//)
-//if !ok {
-//return nil, fmt.Errorf("parsing sku (%s) quantity: %s", s.ProductID, err.Error())
-//}
-//if err != nil {
-//return nil, fmt.Errorf("parsing sku (%s) surcharge: %s", s.ProductID, err.Error())
-//}
-
-//lvs[i] = ListingVariant{
-//skuIndex:  i,
-//sku:       s.ProductID,
-//surcharge: skuCV,
-//quantity:  skuQ,
-//}
-//case 4, 3, 2:
-//var skuCV, err = NewCurrencyValueFromInt(s.Surcharge, skuPrice.Currency)
-//if err != nil {
-//return nil, fmt.Errorf("parsing sku (%s) surcharge: %s", s.ProductID, err.Error())
-//}
-
-//lvs[i] = ListingVariant{
-//skuIndex:  i,
-//sku:       s.ProductID,
-//surcharge: skuCV,
-//quantity:  new(big.Int).SetInt64(s.Quantity),
-//}
-//}
-//}
-//return lvs, nil
-//}
-
 // GetSkus returns the listing SKUs
 func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 	switch l.GetVersion() {
@@ -773,102 +690,6 @@ func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 	}
 	return l.listingProto.Item.Skus, nil
 }
-
-// GetItem - return item
-//func (l *Listing) GetItem() (*pb.Listing_Item, error) {
-//title, err := l.GetTitle()
-//if err != nil {
-//return nil, err
-//}
-//description, err := l.GetDescription()
-//if err != nil {
-//return nil, err
-//}
-//processingtime, err := l.GetProcessingTime()
-//if err != nil {
-//return nil, err
-//}
-//nsfw, err := l.GetNsfw()
-//if err != nil {
-//return nil, err
-//}
-//tags, err := l.GetTags()
-//if err != nil {
-//return nil, err
-//}
-//images, err := l.GetImages()
-//if err != nil {
-//return nil, err
-//}
-//categories, err := l.GetCategories()
-//if err != nil {
-//return nil, err
-//}
-//grams, err := l.GetGrams()
-//if err != nil {
-//return nil, err
-//}
-//condition, err := l.GetCondition()
-//if err != nil {
-//return nil, err
-//}
-//options, err := l.GetOptions()
-//if err != nil {
-//return nil, err
-//}
-//skus, err := l.GetSkus()
-//if err != nil {
-//return nil, err
-//}
-//price, err := l.GetPrice()
-//if err != nil {
-//return nil, err
-//}
-//i := pb.Listing_Item{
-//Title:          title,
-//Description:    description,
-//ProcessingTime: processingtime,
-//Nsfw:           nsfw,
-//Tags:           tags,
-//Images:         images,
-//Categories:     categories,
-//Grams:          grams,
-//Condition:      condition,
-//Options:        options,
-//Skus:           skus,
-//BigPrice:       price.Amount.String(),
-//PriceCurrency: &pb.CurrencyDefinition{
-//Code:         price.Currency.Code.String(),
-//Divisibility: uint32(price.Currency.Divisibility),
-//},
-//}
-//return &i, nil
-//}
-
-// GetExpiry return listing expiry
-//func (l *Listing) GetExpiry() (*timestamp.Timestamp, error) {
-//type expiry struct {
-//Metadata struct {
-//Expiry string `json:"expiry"`
-//} `json:"metadata"`
-//}
-//var exp expiry
-//err := json.Unmarshal(l.ListingBytes, &exp)
-//if err != nil {
-//return nil, err
-//}
-//t := new(timestamp.Timestamp)
-
-//t0, err := time.Parse(time.RFC3339Nano, exp.Metadata.Expiry)
-//if err != nil {
-//return nil, err
-//}
-
-//t.Seconds = t0.Unix()
-//t.Nanos = int32(t0.Nanosecond())
-
-//return t, nil
-//}
 
 //GetLanguage return listing's language
 func (l *Listing) GetLanguage() string {
