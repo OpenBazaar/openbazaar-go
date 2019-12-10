@@ -489,12 +489,16 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 	ret := []wi.Txn{}
 	for _, t := range txns {
 		status := wi.StatusConfirmed
+		prefix := ""
 		if t.IsError != 0 {
 			status = wi.StatusError
 		}
+		if strings.ToLower(t.From) == strings.ToLower(wallet.address.String()) {
+			prefix = "-"
+		}
 		tnew := wi.Txn{
 			Txid:          util.EnsureCorrectPrefix(t.Hash),
-			Value:         t.Value.Int().String(),
+			Value:         prefix + t.Value.Int().String(),
 			Height:        int32(t.BlockNumber),
 			Timestamp:     t.TimeStamp.Time(),
 			WatchOnly:     false,
