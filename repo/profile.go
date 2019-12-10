@@ -13,6 +13,9 @@ var (
 	// ErrModeratorInfoMissing indicates when the moderator information is
 	// missing while also indicating they are a moderator
 	ErrModeratorInfoMissing = errors.New("moderator is enabled but information is missing")
+	// ErrNonModeratorShouldNotHaveInfo indicates when the moderator information
+	// is present, but not indicating moderator is enabled
+	ErrNonModeratorShouldNotHaveInfo = errors.New("moderator information is provided but moderator is not enabled")
 	// ErrMissingModeratorFee indicates the fee schedule is missing
 	ErrMissingModeratorFee = errors.New("moderator info is missing fee schedule")
 	// ErrUnknownModeratorFeeType indicates the feeType is unknown
@@ -203,6 +206,7 @@ func (p *Profile) Valid() error {
 	return nil
 }
 
+// IsModerationEnabled checks if the Moderator flag and info are present
 func (p *Profile) IsModerationEnabled() bool {
 	return p != nil && p.Moderator && p.ModeratorInfo != nil
 }
