@@ -126,7 +126,7 @@ func TestProfileInvalidWithInvalidFixedFeeCurrency(t *testing.T) {
 	p.ModeratorInfo.Fee = &repo.ModeratorFee{
 		FixedFee: &repo.ModeratorFixedFee{
 			Amount:         "1",
-			AmountCurrency: invalidCurrency,
+			AmountCurrency: &invalidCurrency,
 		},
 	}
 
@@ -150,9 +150,10 @@ func TestProfileInvalidWithInvalidFixedFeeCurrency(t *testing.T) {
 
 func TestProfileInvalidWithZeroFixedFee(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo.Fee = &repo.ModeratorFee{
 		FixedFee: &repo.ModeratorFixedFee{
-			AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+			AmountCurrency: &ac,
 		},
 	}
 
@@ -202,12 +203,13 @@ func TestProfileInvalidWithZeroFixedFee(t *testing.T) {
 
 func TestProfileValidFixedFee(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
 			FeeType: pb.Moderator_Fee_FIXED.String(),
 			FixedFee: &repo.ModeratorFixedFee{
 				Amount:         "1234",
-				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+				AmountCurrency: &ac,
 			},
 			Percentage: 0,
 		},
@@ -255,13 +257,14 @@ func TestProfileValidPercentageFeeZero(t *testing.T) {
 
 func TestProfileInvalidPercentageFeeWithFixedFee(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
 			FeeType:    pb.Moderator_Fee_PERCENTAGE.String(),
 			Percentage: 1,
 			FixedFee: &repo.ModeratorFixedFee{
 				Amount:         "1234",
-				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+				AmountCurrency: &ac,
 			},
 		},
 	}
@@ -275,13 +278,14 @@ func TestProfileInvalidPercentageFeeWithFixedFee(t *testing.T) {
 
 func TestProfileValidPercentageWithFixedFee(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
 			FeeType:    pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
 			Percentage: 1,
 			FixedFee: &repo.ModeratorFixedFee{
 				Amount:         "1234",
-				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+				AmountCurrency: &ac,
 			},
 		},
 	}
@@ -293,13 +297,14 @@ func TestProfileValidPercentageWithFixedFee(t *testing.T) {
 
 func TestProfileValidPercentWithFixedHavingZeroPercent(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
 			FeeType:    pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
 			Percentage: 0,
 			FixedFee: &repo.ModeratorFixedFee{
 				Amount:         "1234",
-				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+				AmountCurrency: &ac,
 			},
 		},
 	}
@@ -311,13 +316,14 @@ func TestProfileValidPercentWithFixedHavingZeroPercent(t *testing.T) {
 
 func TestProfileInvalidPercentWithFixedHavingNegativePercent(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.ModeratorInfo = &repo.ModeratorInfo{
 		Fee: &repo.ModeratorFee{
 			FeeType:    pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
 			Percentage: -1,
 			FixedFee: &repo.ModeratorFixedFee{
 				Amount:         "1234",
-				AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+				AmountCurrency: &ac,
 			},
 		},
 	}
@@ -406,7 +412,7 @@ func TestProfileSetModeratorFixedFee(t *testing.T) {
 	if p.ModeratorInfo.Fee.FixedFee.Amount != fee.Amount.String() {
 		t.Errorf("expected fixed fee amount to be (%s), but was (%s)", fee.Amount.String(), p.ModeratorInfo.Fee.FixedFee.Amount)
 	}
-	if !fee.Currency.Equal(p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
+	if !fee.Currency.Equal(*p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
 		t.Errorf("expected fixed fee amount currency to be (%s), but was (%s)", fee.Currency.String(), p.ModeratorInfo.Fee.FixedFee.AmountCurrency)
 	}
 }
@@ -442,18 +448,19 @@ func TestProfileSetModeratorFixedPlusPercentageFee(t *testing.T) {
 	if p.ModeratorInfo.Fee.FixedFee.Amount != fee.Amount.String() {
 		t.Errorf("expected fixed fee amount to be (%s), but was (%s)", fee.Amount.String(), p.ModeratorInfo.Fee.FixedFee.Amount)
 	}
-	if !fee.Currency.Equal(p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
+	if !fee.Currency.Equal(*p.ModeratorInfo.Fee.FixedFee.AmountCurrency) {
 		t.Errorf("expected fixed fee amount currency to be (%s), but was (%s)", fee.Currency.String(), p.ModeratorInfo.Fee.FixedFee.AmountCurrency)
 	}
 }
 
 func TestProfileSetModeratorPercentageFee(t *testing.T) {
 	percentage := float32(2.5)
+	ac := factory.NewCurrencyDefinition("BTC")
 	p := factory.NewProfile()
 	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED.String()
 	p.ModeratorInfo.Fee.FixedFee = &repo.ModeratorFixedFee{
 		Amount:         "1230",
-		AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+		AmountCurrency: &ac,
 	}
 	p.ModeratorInfo.Fee.Percentage = 0
 
@@ -477,11 +484,12 @@ func TestProfileSetModeratorPercentageFee(t *testing.T) {
 
 func TestProfileDisableModeration(t *testing.T) {
 	p := factory.NewProfile()
+	ac := factory.NewCurrencyDefinition("BTC")
 	p.Moderator = true
 	p.ModeratorInfo.Fee.FeeType = pb.Moderator_Fee_FIXED.String()
 	p.ModeratorInfo.Fee.FixedFee = &repo.ModeratorFixedFee{
 		Amount:         "1230",
-		AmountCurrency: factory.NewCurrencyDefinition("BTC"),
+		AmountCurrency: &ac,
 	}
 	p.ModeratorInfo.Fee.Percentage = 0
 
