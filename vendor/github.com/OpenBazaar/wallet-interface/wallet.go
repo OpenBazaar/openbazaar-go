@@ -86,6 +86,8 @@ type walletMustManager interface {
 	// involving them.
 	AddWatchedAddress(addr btc.Address) error
 
+	AddWatchedAddresses(addrs []btc.Address) error
+
 	// AddTransactionListener is how openbazaar-go registers to receive a callback whenever
 	// a transaction is received that is relevant to this wallet or any of its watch only
 	// addresses. An address is considered relevant if any inputs or outputs match an address
