@@ -69,12 +69,14 @@ type offlineMessage struct {
 
 func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	dial := gonet.Dial
+	var client *http.Client
 	if cfg.Dialer != nil {
 		dial = cfg.Dialer.Dial
+		tbTransport := &http.Transport{Dial: dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+	} else {
+		client = &http.Client{Timeout: time.Second * 30}
 	}
-
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{
 		db:         cfg.Db,
 		node:       cfg.IPFSNode,
