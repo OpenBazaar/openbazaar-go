@@ -480,7 +480,7 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 // Transactions - Returns a list of transactions for this wallet
 func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), nil, nil,
-		1, 0, true)
+		1, 0, false)
 	if err != nil {
 		log.Error("err fetching transactions : ", err)
 		return []wi.Txn{}, nil
