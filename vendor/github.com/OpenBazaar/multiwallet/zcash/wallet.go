@@ -340,6 +340,23 @@ func (w *ZCashWallet) AddWatchedAddress(addr btcutil.Address) error {
 	return nil
 }
 
+func (w *ZCashWallet) AddWatchedAddresses(addrs []btcutil.Address) error {
+
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		err = w.db.WatchedScripts().Put(script)
+		if err != nil {
+			return err
+		}
+	}
+
+	w.client.ListenAddresses(addrs)
+	return nil
+}
+
 func (w *ZCashWallet) AddWatchedScript(script []byte) error {
 	err := w.db.WatchedScripts().Put(script)
 	if err != nil {

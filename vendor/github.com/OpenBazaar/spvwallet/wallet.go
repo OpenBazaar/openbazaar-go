@@ -454,6 +454,25 @@ func (w *SPVWallet) AddWatchedAddress(addr btc.Address) error {
 	return err
 }
 
+func (w *SPVWallet) AddWatchedAddresses(addrs []btc.Address) error {
+
+	var err error
+
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		err = w.txstore.WatchedScripts().Put(script)
+		w.txstore.PopulateAdrs()
+
+		w.wireServilisce.MsgChan() <- updateFiltersMsg{}
+	}
+
+	return err
+}
+
+
 func (w *SPVWallet) DumpHeaders(writer io.Writer) {
 	w.blockchain.db.Print(writer)
 }
