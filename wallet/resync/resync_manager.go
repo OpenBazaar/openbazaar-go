@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil"
+
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
@@ -67,7 +69,7 @@ func (r *ResyncManager) CheckUnfunded() {
 					log.Errorf("Error decoding unfunded payment address(%s): %s", addr, err)
 					continue
 				}
-				if err := wal.AddWatchedAddress(iaddr); err != nil {
+				if err := wal.AddWatchedAddresses([]btcutil.Address{iaddr}...); err != nil {
 					log.Errorf("Error adding watched address(%s): %s", iaddr, err)
 				}
 			}
