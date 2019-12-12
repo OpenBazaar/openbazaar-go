@@ -570,33 +570,9 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
 		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
-		//time.Sleep(60 * time.Second)
-		flag := false
-		var rcpt *types.Receipt
-		for !flag {
-			rcpt, err = wallet.client.TransactionReceipt(context.Background(), hash)
-			if rcpt != nil {
-				flag = true
-			}
-			if err != nil {
-				log.Errorf("error fetching txn rcpt: %v", err)
-			}
-		}
-		if rcpt != nil {
-			// good. so the txn has been processed but we have to account for failed
-			// but valid txn like some contract condition causing revert
-			if rcpt.Status > 0 {
-				// all good to update order state
-
-			} else {
-				err = errors.New("transaction failed")
-			}
-		}
 	} else {
 		// this is a spend which means it has to be linked to an order
 		// specified using the referenceID
-
-		//twoMinutes, _ := time.ParseDuration("2m")
 
 		// check if the addr is a multisig addr
 		scripts, err := wallet.db.WatchedScripts().GetAll()
@@ -638,45 +614,26 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			}
 			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		flag := false
-		var rcpt *types.Receipt
-		for !flag {
-			rcpt, err = wallet.client.TransactionReceipt(context.Background(), hash)
-			if rcpt != nil {
-				flag = true
-			}
-			if err != nil {
-				log.Errorf("error fetching txn rcpt: %v", err)
-			}
-		}
-		if rcpt != nil && rcpt.Status > 0 {
-			// good. so the txn has been processed but we have to account for failed
-			// but valid txn like some contract condition causing revert
 
-			// all good to update order state
-			go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(util.EnsureCorrectPrefix(hash.Hex()), referenceID, actualRecipient, amount, time.Now(), false))
-		} else {
-			// txn is pending
-			nonce, err := wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
+		// txn is pending
+		nonce, err := wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
+		if err == nil {
+			data, err := SerializePendingTxn(PendingTxn{
+				TxnID:     hash,
+				Amount:    amount.String(),
+				OrderID:   referenceID,
+				Nonce:     nonce,
+				From:      wallet.address.EncodeAddress(),
+				To:        actualRecipient.EncodeAddress(),
+				WithInput: false,
+			})
 			if err == nil {
-				data, err := SerializePendingTxn(PendingTxn{
-					TxnID:     hash,
-					Amount:    amount.String(),
-					OrderID:   referenceID,
-					Nonce:     nonce,
-					From:      wallet.address.EncodeAddress(),
-					To:        actualRecipient.EncodeAddress(),
-					WithInput: false,
-				})
-				if err == nil {
-					err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), true)
-					if err0 != nil {
-						log.Error(err)
-					}
+				err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), true)
+				if err0 != nil {
+					log.Error(err)
 				}
 			}
 		}
@@ -893,20 +850,9 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 		log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
 
-	///smtct.CalculateRedeemScriptHash()
-
 	var tx *types.Transaction
-
-	//if script.Threshold == 1 {
 	tx, err = smtct.AddTransaction(auth, script.Buyer, script.Seller,
-		script.Moderator, script.Threshold,
-		script.Timeout, shash, script.TxnID)
-	//} else {
-	//	tx, err = smtct.AddTransaction(auth, script.Buyer, script.Seller,
-	//		script.Moderator, script.Threshold,
-	//		script.Timeout, shash, script.TxnID)
-	//}
-
+		script.Moderator, script.Threshold, script.Timeout, shash, script.TxnID)
 	if err == nil {
 		h = tx.Hash()
 	}
@@ -1355,57 +1301,25 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		WatchOnly: false,
 		Bytes:     tx.Data()})
 
-	flag := false
-	var rcpt *types.Receipt
-	for !flag {
-		rcpt, err = wallet.client.TransactionReceipt(context.Background(), tx.Hash())
-		if rcpt != nil {
-			flag = true
-		}
-		if err != nil {
-			log.Errorf("error fetching txn rcpt: %v", err)
-		}
+	// this is a pending txn
+	_, scrHash, err := GenScriptHash(rScript)
+	if err != nil {
+		log.Error(err)
 	}
-	if rcpt != nil && rcpt.Status > 0 {
-		// good. so the txn has been processed but we have to account for failed
-		// but valid txn like some contract condition causing revert
-
-		// all good to update order state
-		_, scrHash, err := GenScriptHash(rScript)
-		if err != nil {
+	data, err := SerializePendingTxn(PendingTxn{
+		TxnID:   tx.Hash(),
+		Amount:  "0",
+		OrderID: referenceID,
+		Nonce:   int32(nonce),
+		From:    wallet.address.EncodeAddress(),
+		To:      scrHash,
+	})
+	if err == nil {
+		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(tx.Hash().Hex()), "0", 0, time.Now(), true)
+		if err0 != nil {
 			log.Error(err)
 		}
-		addrScrHash := common.HexToAddress(scrHash)
-		go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(tx.Hash().Hex(),
-			referenceID, EthAddress{address: &addrScrHash}, *totalVal,
-			time.Now(), true))
-	} else {
-		// this is a pending txn
-		nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
-		_, scrHash, err := GenScriptHash(rScript)
-		if err != nil {
-			log.Error(err)
-		}
-
-		if err == nil {
-			data, err := SerializePendingTxn(PendingTxn{
-				TxnID:   tx.Hash(),
-				Amount:  "0",
-				OrderID: referenceID,
-				Nonce:   nonce,
-				From:    wallet.address.EncodeAddress(),
-				To:      scrHash,
-			})
-			if err == nil {
-				err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(tx.Hash().Hex()), "0", 0, time.Now(), true)
-				if err0 != nil {
-					log.Error(err)
-				}
-			}
-		}
 	}
-
-	//ret, err := tx.MarshalJSON()
 
 	return tx.Hash().Bytes(), nil
 }
