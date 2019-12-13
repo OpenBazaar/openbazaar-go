@@ -1066,7 +1066,7 @@ func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
 	if err != nil {
 		return nil, err
 	}
-	if pbl == nil || pbl.Item == nil {
+	if pbl.Item == nil {
 		return nil, nil
 	}
 	switch l.ListingVersion {

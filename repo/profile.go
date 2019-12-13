@@ -68,8 +68,7 @@ func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 		var fees = p.ModeratorInfo.Fee
 
 		// build FixedFee
-		if fees != nil ||
-			fees.FixedFee != nil {
+		if fees.FixedFee != nil {
 			var (
 				amtStr      string
 				amtCurrency *CurrencyDefinition
@@ -143,8 +142,8 @@ func (p *Profile) ToValidModeratorFee() (*pb.Moderator_Fee, error) {
 		return nil, ErrModeratorInfoMissing
 	}
 
-	var feeType pb.Moderator_Fee_FeeType
 	// Setters will normalize the fee schedule
+	var feeType pb.Moderator_Fee_FeeType
 	switch p.ModeratorInfo.Fee.FeeType {
 	case pb.Moderator_Fee_FIXED.String():
 		modFee, err := p.GetModeratedFixedFee()
@@ -155,12 +154,6 @@ func (p *Profile) ToValidModeratorFee() (*pb.Moderator_Fee, error) {
 			return nil, err
 		}
 		feeType = pb.Moderator_Fee_FIXED
-	case pb.Moderator_Fee_PERCENTAGE.String():
-		err := p.SetModeratorPercentageFee(p.ModeratorInfo.Fee.Percentage)
-		if err != nil {
-			return nil, err
-		}
-		feeType = pb.Moderator_Fee_PERCENTAGE
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String():
 		percentFee := p.ModeratorInfo.Fee.Percentage
 		modFee, err := p.GetModeratedFixedFee()
@@ -172,26 +165,37 @@ func (p *Profile) ToValidModeratorFee() (*pb.Moderator_Fee, error) {
 			return nil, err
 		}
 		feeType = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE
+	case pb.Moderator_Fee_PERCENTAGE.String():
+		err := p.SetModeratorPercentageFee(p.ModeratorInfo.Fee.Percentage)
+		if err != nil {
+			return nil, err
+		}
+		feeType = pb.Moderator_Fee_PERCENTAGE
 	}
 
 	if err := p.Valid(); err != nil {
 		return nil, fmt.Errorf("invalid profile: %s", err.Error())
 	}
 
-	var amtInt uint64
-	if ai, err := strconv.Atoi(p.ModeratorInfo.Fee.FixedFee.Amount); err == nil {
-		amtInt = uint64(ai)
-	}
-	return &pb.Moderator_Fee{
-		FixedFee: &pb.Moderator_Price{
-			CurrencyCode: p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code.String(),
+	var normalizedFixedFee *pb.Moderator_Price
+	if ff, err := p.GetModeratedFixedFee(); err == nil {
+		var amtInt uint64
+		if ai, err := strconv.Atoi(p.ModeratorInfo.Fee.FixedFee.Amount); err == nil {
+			amtInt = uint64(ai)
+		}
+		normalizedFixedFee = &pb.Moderator_Price{
+			CurrencyCode: ff.Currency.Code.String(),
 			AmountCurrency: &pb.CurrencyDefinition{
-				Code:         p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code.String(),
-				Divisibility: uint32(p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Divisibility),
+				Code:         ff.Currency.Code.String(),
+				Divisibility: uint32(ff.Currency.Divisibility),
 			},
-			BigAmount: p.ModeratorInfo.Fee.FixedFee.Amount,
+			BigAmount: ff.Amount.String(),
 			Amount:    amtInt,
-		},
+		}
+	}
+
+	return &pb.Moderator_Fee{
+		FixedFee:   normalizedFixedFee,
 		Percentage: p.ModeratorInfo.Fee.Percentage,
 		FeeType:    feeType,
 	}, nil
