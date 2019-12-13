@@ -181,6 +181,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		txNotifyChan:    tch,
 		listenLock:      sync.Mutex{},
 	}
+
 	ic.websocketWatchdog = newWebsocketWatchdog(ic)
 	ic.RequestFunc = ic.doRequest
 	return ic, nil
