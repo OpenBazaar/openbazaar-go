@@ -25,7 +25,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -272,7 +271,7 @@ func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contra
 	payment.Chaincode = hex.EncodeToString(chaincode)
 	contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
 
-	err = wal.AddWatchedAddresses([]btcutil.Address{addr}...)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +308,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	err = wal.AddWatchedAddresses([]btcutil.Address{addr}...)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -357,7 +356,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 
-	err = wal.AddWatchedAddresses([]btcutil.Address{addr}...)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", 0, false, err
 	}
