@@ -203,13 +203,13 @@ func TestProfileSwitchesFromPercentToFixedWithLegacySchema(t *testing.T) {
 			if amt := fixedFee.GetBigAmount(); amt != "1234" {
 				return fmt.Errorf("expected patched profile fixed fee big amount to be (1234), but was (%s)", amt)
 			}
-			if amt := fixedFee.GetAmount(); amt != 1234 {
+			if amt := fixedFee.GetAmount(); amt != 1234 { //nolint:staticcheck
 				return fmt.Errorf("expected patched profile fixed fee amount to be (1234), but was (%d)", amt)
 			}
 			if cc := fixedFee.GetAmountCurrency().GetCode(); cc != "USD" {
 				return fmt.Errorf("expected patched profile fixed fee currency to be (USD), but was (%s)", cc)
 			}
-			if cc := fixedFee.GetCurrencyCode(); cc != "USD" {
+			if cc := fixedFee.GetCurrencyCode(); cc != "USD" { //nolint:staticcheck
 				return fmt.Errorf("expected patched profile fixed fee currency code to be (USD), but was (%s)", cc)
 			}
 

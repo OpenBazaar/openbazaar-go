@@ -68,8 +68,7 @@ func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 		var fees = p.ModeratorInfo.Fee
 
 		// build FixedFee
-		if fees != nil ||
-			fees.FixedFee != nil {
+		if fees.FixedFee != nil {
 			var (
 				amtStr      string
 				amtCurrency *CurrencyDefinition
