@@ -1,10 +1,15 @@
+GIT_SHA ?= $(shell git rev-parse --short=8 HEAD)
+GIT_TAG ?= $(shell git describe --tags --abbrev=0)
+
 ##
 ## Building
 ##
 
+.PHONY: ios_framework
 ios_framework:
 	gomobile bind -target=ios github.com/OpenBazaar/openbazaar-go/mobile
 
+.PHONY: android_framework
 android_framework:
 	gomobile bind -target=android github.com/OpenBazaar/openbazaar-go/mobile
 
@@ -20,16 +25,34 @@ PKGMAP = $(P_TIMESTAMP),$(P_ANY)
 protos:
 	cd pb/protos && PATH=$(PATH):$(GOPATH)/bin protoc --go_out=$(PKGMAP):.. *.proto
 
+
+##
+## Testing
+##
+
+OPENBAZAARD_NAME ?= openbazaard-$(GIT_TAG)-$(GIT_SHA)
+BITCOIND_PATH ?= .
+
+.PHONY: openbazaard
+openbazaard:
+	$(info "Building openbazaar daemon...")
+	go build -o ./$(OPENBAZAARD_NAME) .
+
+.PHONY: qa
+qa: openbazaard
+	$(info "Running QA... (openbazaard: ../$(OPENBAZAARD_NAME) bitcoind: $(BITCOIND_PATH)/bin/bitcoind)")
+	(cd qa && ./runtests.sh ../$(OPENBAZAARD_NAME) $(BITCOIND_PATH)/bin/bitcoind)
+
 ##
 ## Docker
 ##
-DOCKER_PROFILE ?= openbazaar
-DOCKER_VERSION ?= $(shell git describe --tags --abbrev=0)
-DOCKER_IMAGE_NAME ?= $(DOCKER_PROFILE)/server:$(DOCKER_VERSION)
+PUBLIC_DOCKER_REGISTRY ?= openbazaar
+OB_DOCKER_REGISTRY ?= docker.dev.ob1.io
 
-DOCKER_QA_PROFILE ?= docker.dev.ob1.io
-DOCKER_QA_VERSION ?= $(shell git rev-parse --abbrev-ref HEAD)
-DOCKER_QA_IMAGE_NAME ?= $(DOCKER_QA_PROFILE)/openbazaar-qa:$(DOCKER_QA_VERSION)
+DOCKER_IMAGE_NAME ?= $(PUBLIC_DOCKER_REGISTRY_PROFILE)/server:$(GIT_TAG)
+DOCKER_QA_IMAGE_NAME ?= $(OB_DOCKER_REGISTRY)/openbazaar-qa:$(GIT_SHA)
+DOCKER_DEV_IMAGE_NAME ?= $(OB_DOCKER_REGISTRY)/openbazaar-dev:$(GIT_SHA)
+
 
 .PHONY: docker
 docker:
