@@ -1,23 +1,16 @@
 FROM golang:1.11
-VOLUME /var/lib/openbazaar
 
-ENV BITCOIN_VERSION=0.16.3
+ENV BITCOIND_VERSION=0.16.3
+ENV BITCOIND_PATH=/opt/bitcoin-${BITCOIND_VERSION}
 
-WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
-
-COPY . .
-
-# software installs:
-# apt-get installs + compile python 3.6 & protobuf
-RUN apt-get -y update
-RUN apt-get -y install software-properties-common
-RUN apt-get install -yq zlib1g-dev libssl-dev unzip
-RUN apt-get install -y python3 python3-pip
-
-RUN python3 -m pip install --upgrade pip && \
-    pip install -r ./qa/requirements.txt && \
-    wget https://bitcoin.org/bin/bitcoin-core-0.16.3/bitcoin-0.16.3-x86_64-linux-gnu.tar.gz && \
-    tar -xvzf bitcoin-0.16.3-x86_64-linux-gnu.tar.gz -C /opt
+# software installs, from most stable to most volatile
+RUN apt-get update -y
+RUN apt-get install -yq software-properties-common \
+                        zlib1g-dev \
+                        libssl-dev \
+                        unzip \
+                        python3 \
+                        python3-pip
 
 RUN wget https://github.com/google/protobuf/releases/download/v3.6.0/protoc-3.6.0-linux-x86_64.zip && \
     unzip ./protoc-3.6.0-linux-x86_64.zip -x readme.txt && \
@@ -37,8 +30,15 @@ RUN git checkout tags/v1.2.0 -b v1.2.0 && \
     cd protoc-gen-go && \
     go install
 
-# build current version of OpenBazaar
-WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
-# RUN go build -o /opt/openbazaard .
+COPY ./qa/requirements.txt ./requirements.txt
 
-ENTRYPOINT ["/go/src/github.com/OpenBazaar/openbazaar-go/build_qa.sh"]
+RUN python3 -m pip install --upgrade pip && \
+    pip install -r ./requirements.txt && \
+    wget https://bitcoin.org/bin/bitcoin-core-0.16.3/bitcoin-${BITCOIND_VERSION}-x86_64-linux-gnu.tar.gz && \
+    tar -xvzf bitcoin-${BITCOIND_VERSION}-x86_64-linux-gnu.tar.gz -C /opt
+
+WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
+COPY ./Makefile ./Makefile
+VOLUME /go/src/github.com/OpenBazaar/openbazaar-go
+
+CMD make qa
