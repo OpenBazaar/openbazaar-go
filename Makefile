@@ -51,7 +51,7 @@ OB_DOCKER_REGISTRY ?= docker.dev.ob1.io
 
 DOCKER_IMAGE_NAME ?= $(PUBLIC_DOCKER_REGISTRY_PROFILE)/server:$(GIT_TAG)
 DOCKER_QA_IMAGE_NAME ?= $(OB_DOCKER_REGISTRY)/openbazaar-qa:$(GIT_SHA)
-DOCKER_DEV_IMAGE_NAME ?= $(OB_DOCKER_REGISTRY)/openbazaar-dev:$(GIT_SHA)
+DOCKER_DEV_IMAGE_NAME ?= openbazaar-dev:$(GIT_SHA)
 
 
 .PHONY: docker
@@ -59,7 +59,7 @@ docker:
 	docker build -t $(DOCKER_IMAGE_NAME) .
 
 .PHONY: push_docker
-push_docker:
+push_docker: docker
 	docker push $(DOCKER_IMAGE_NAME)
 
 .PHONY: qa_docker
@@ -67,7 +67,7 @@ qa_docker:
 	docker build -t $(DOCKER_QA_IMAGE_NAME) -f ./Dockerfile.qa .
 
 .PHONY: push_qa_docker
-push_qa_docker:
+push_qa_docker: qa_docker
 	docker push $(DOCKER_QA_IMAGE_NAME)
 
 .PHONY: dev_docker
