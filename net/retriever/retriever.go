@@ -13,7 +13,6 @@ import (
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"io/ioutil"
-	gonet "net"
 	"net/http"
 	"sync"
 	"time"
@@ -68,10 +67,9 @@ type offlineMessage struct {
 }
 
 func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
-	dial := gonet.Dial
 	var client *http.Client
 	if cfg.Dialer != nil {
-		dial = cfg.Dialer.Dial
+		dial := cfg.Dialer.Dial
 		tbTransport := &http.Transport{Dial: dial}
 		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	} else {

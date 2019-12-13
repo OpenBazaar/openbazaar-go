@@ -88,11 +88,15 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		thumbnail string
 		title     string
 		memo      = args.Memo
+		peerID    string
 	)
 	if contract != nil {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 			title = contract.VendorListings[0].Item.Title
+		}
+		if contract.VendorListings[0].VendorID != nil {
+			peerID = contract.VendorListings[0].VendorID.PeerID
 		}
 	}
 	if memo == "" && title != "" {
@@ -124,6 +128,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
+		PeerID:             peerID,
 	}, nil
 }
 

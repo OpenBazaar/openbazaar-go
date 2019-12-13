@@ -328,7 +328,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return errorResponse(err.Error()), err
 	}
 
-	pro, err := service.node.GetProfile()
+	pro, _ := service.node.GetProfile()
 	if !pro.Vendor {
 		log.Debugf("sending message to buyer that our store is not accepting orders")
 		return errorResponse("the vendor turned his store off and is not accepting orders at this time"), errors.New("store is turned off")
