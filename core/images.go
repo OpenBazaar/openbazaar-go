@@ -9,7 +9,6 @@ import (
 	_ "image/png"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	netUrl "net/url"
 	"os"
@@ -167,10 +166,9 @@ func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string
 
 // GetBase64Image - fetch the image and return it as base64 encoded string
 func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename string, err error) {
-	dial := net.Dial
 	var client *http.Client
 	if n.TorDialer != nil {
-		dial = n.TorDialer.Dial
+		dial := n.TorDialer.Dial
 		tbTransport := &http.Transport{Dial: dial}
 		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	} else {
