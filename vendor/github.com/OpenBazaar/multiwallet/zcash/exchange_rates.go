@@ -45,7 +45,7 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 	z := ZcashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	
+
 	var client *http.Client
 	if dialer != nil {
 		dial := dialer.Dial
