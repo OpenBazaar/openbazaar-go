@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/multiwallet/util"
-	"net"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -44,7 +43,7 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 	z := ZcashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	
+
 	var client *http.Client
 	if dialer != nil {
 		dial := dialer.Dial

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/OpenBazaar/multiwallet/util"
 	"golang.org/x/net/proxy"
-	"net"
 	"net/http"
 	"reflect"
 	"sync"
