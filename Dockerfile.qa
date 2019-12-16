@@ -31,4 +31,4 @@ COPY ./Makefile ./Makefile
 
 VOLUME /go/src/github.com/OpenBazaar/openbazaar-go
 
-CMD make qa
+CMD make qa_test
