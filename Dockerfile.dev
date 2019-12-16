@@ -1,4 +1,4 @@
-FROM docker.dev.ob1.io/openbazaar-qa:0.10
+FROM openbazaar/server-qa:0.10
 
 RUN go get -u github.com/gogo/protobuf/proto \
               github.com/golang/protobuf/protoc-gen-go \
