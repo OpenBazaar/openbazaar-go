@@ -67,13 +67,12 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.Read = read
 	resp.State = state
 
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
-	_, err = n.LookupCurrency(lookupCoin)
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+		return nil, err
 	}
+	resp.Contract.BuyerOrder = v5Order
 
 	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 )
 
 func NewProfile() *repo.Profile {
+	var amtCurr = NewCurrencyDefinition("BTC")
 	return &repo.Profile{
 		Moderator: true,
 		ModeratorInfo: &repo.ModeratorInfo{
@@ -13,7 +14,7 @@ func NewProfile() *repo.Profile {
 				FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
 				FixedFee: &repo.ModeratorFixedFee{
 					Amount:         "1234",
-					AmountCurrency: NewCurrencyDefinition("BTC"),
+					AmountCurrency: &amtCurr,
 				},
 				Percentage: 1.1, // represents 0.011%
 			},

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -129,6 +130,99 @@ func TestProfile(t *testing.T) {
 	})
 }
 
+func TestProfileSwitchesFromPercentToFixedWithLegacySchema(t *testing.T) {
+	var (
+		postProfile = `{
+	"handle": "test",
+	"name": "Test User",
+	"location": "Internet",
+	"about": "The test fixture",
+	"shortDescription": "Fixture",
+	"contactInfo": {
+		"website": "internet.com",
+		"email": "email@address.com",
+		"phoneNumber": "687-5309"
+	},
+	"nsfw": false,
+	"vendor": false,
+	"moderator": true,
+	"moderatorInfo": {
+		"description": "Percentage. Test moderator account. DO NOT USE.",
+		"fee": {
+			"feeType": "PERCENTAGE",
+			"percentage": 12.0
+		}
+	},
+	"colors": {
+		"primary": "#000000",
+		"secondary": "#FFD700",
+		"text": "#ffffff",
+		"highlight": "#123ABC",
+		"highlightText": "#DEAD00"
+	},
+	"currencies": ["LTC"]
+}`
+		patchProfile = `{
+	"moderatorInfo": {
+		"fee": {
+			"feeType": "FIXED",
+			"fixedFee": {
+				"bigAmount": "1234",
+				"amountCurrency": {
+					"code": "USD",
+					"divisibility": 2
+				}
+			}
+		}
+	}
+}`
+		validateProfileFees = func(testRepo *test.Repository) error {
+			m, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+				DataPath:        testRepo.Path,
+				TestModeEnabled: true,
+			})
+			if err != nil {
+				return fmt.Errorf("schema setup: %s", err.Error())
+			}
+			profileBytes, err := ioutil.ReadFile(m.DataPathJoin("root", "profile.json"))
+			if err != nil {
+				return fmt.Errorf("get profile: %s", err.Error())
+			}
+
+			var actualProfile pb.Profile
+			if err := jsonpb.UnmarshalString(string(profileBytes), &actualProfile); err != nil {
+				return fmt.Errorf("unmarshal profile: %s", err.Error())
+			}
+
+			fees := actualProfile.ModeratorInfo.Fee
+			if ft := fees.GetFeeType().String(); ft != pb.Moderator_Fee_FIXED.String() {
+				return fmt.Errorf("expected patched profile fee type to be (%s), but was (%s)", pb.Moderator_Fee_FIXED.String(), ft)
+			}
+
+			fixedFee := fees.GetFixedFee()
+			if amt := fixedFee.GetBigAmount(); amt != "1234" {
+				return fmt.Errorf("expected patched profile fixed fee big amount to be (1234), but was (%s)", amt)
+			}
+			if amt := fixedFee.GetAmount(); amt != 1234 { //nolint:staticcheck
+				return fmt.Errorf("expected patched profile fixed fee amount to be (1234), but was (%d)", amt)
+			}
+			if cc := fixedFee.GetAmountCurrency().GetCode(); cc != "USD" {
+				return fmt.Errorf("expected patched profile fixed fee currency to be (USD), but was (%s)", cc)
+			}
+			if cc := fixedFee.GetCurrencyCode(); cc != "USD" { //nolint:staticcheck
+				return fmt.Errorf("expected patched profile fixed fee currency code to be (USD), but was (%s)", cc)
+			}
+
+			return nil
+		}
+	)
+
+	runAPITestsWithSetup(t, apiTests{
+		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, "{}"},
+	}, nil, validateProfileFees)
+}
+
 func TestPatchProfileCurrencyUpdate(t *testing.T) {
 	var (
 		postProfile = `{
@@ -189,7 +283,7 @@ func TestPatchProfileCurrencyUpdate(t *testing.T) {
 
 	runAPITestsWithSetup(t, apiTests{
 		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
-		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, "{}"},
 	}, nil, validateProfile)
 }
 
@@ -254,9 +348,96 @@ func TestPatchProfileCanBeInvalid(t *testing.T) {
 	expectedErr := fmt.Errorf("invalid profile: %s", repo.ErrModeratorFeeHasNegativePercentage)
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
-		{"PATCH", "/ob/profile", patchProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, "{}"},
 		{"PATCH", "/ob/profile", invalidPatchProfile, 500, errorResponseJSON(expectedErr)},
 	})
+}
+
+func TestProfileSwitchesFromFixedToPercent(t *testing.T) {
+	var (
+		postProfile = `{
+	"handle": "test",
+	"name": "Test User",
+	"location": "Internet",
+	"about": "The test fixture",
+	"shortDescription": "Fixture",
+	"contactInfo": {
+		"website": "internet.com",
+		"email": "email@address.com",
+		"phoneNumber": "687-5309"
+	},
+	"nsfw": false,
+	"vendor": false,
+	"moderator": true,
+	"moderatorInfo": {
+		"description": "Fix plus percentage. Test moderator account. DO NOT USE.",
+		"fee": {
+			"feeType": "FIXED_PLUS_PERCENTAGE",
+			"fixedFee": {
+				"amountCurrency": {
+					"code": "USD",
+					"divisibility": 2
+				},
+				"bigAmount": "2"
+			},
+			"percentage": 0.1
+		},
+		"languages": [
+			"en-US"
+		],
+		"termsAndConditions": "Test moderator account. DO NOT USE."
+	},
+	"colors": {
+		"primary": "#000000",
+		"secondary": "#FFD700",
+		"text": "#ffffff",
+		"highlight": "#123ABC",
+		"highlightText": "#DEAD00"
+	},
+	"currencies": ["LTC"]
+}`
+		patchProfile = `{
+	"moderatorInfo": {
+		"fee": {
+			"feeType": "PERCENTAGE",
+			"percentage": 0.1
+		}
+	}
+}`
+		validateProfileFees = func(testRepo *test.Repository) error {
+			m, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+				DataPath:        testRepo.Path,
+				TestModeEnabled: true,
+			})
+			if err != nil {
+				return fmt.Errorf("schema setup: %s", err.Error())
+			}
+			profileBytes, err := ioutil.ReadFile(m.DataPathJoin("root", "profile.json"))
+			if err != nil {
+				return fmt.Errorf("get profile: %s", err.Error())
+			}
+
+			var actualProfile pb.Profile
+			if err := jsonpb.UnmarshalString(string(profileBytes), &actualProfile); err != nil {
+				return fmt.Errorf("unmarshal profile: %s", err.Error())
+			}
+
+			fees := actualProfile.ModeratorInfo.Fee
+			if ft := fees.GetFeeType().String(); ft != pb.Moderator_Fee_PERCENTAGE.String() {
+				return fmt.Errorf("expected patched profile fee type to be (%s), but was (%s)", pb.Moderator_Fee_PERCENTAGE.String(), ft)
+			}
+
+			if p := fees.GetPercentage(); p != 0.1 {
+				return fmt.Errorf("expected patched profile fee percentage to be (0.1), but was (%f)", p)
+			}
+
+			return nil
+		}
+	)
+	runAPITestsWithSetup(t, apiTests{
+		{"POST", "/ob/profile", postProfile, 200, anyResponseJSON},
+		{"PATCH", "/ob/profile", patchProfile, 200, "{}"},
+	}, nil, validateProfileFees)
 }
 
 func TestAvatar(t *testing.T) {
