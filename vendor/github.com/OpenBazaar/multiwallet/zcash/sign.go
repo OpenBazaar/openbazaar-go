@@ -39,7 +39,7 @@ var (
 
 const (
 	sigHashMask     = 0x1f
-	saplingBranchID = 1991772603
+	branchID = 0x2BB40E60
 )
 
 func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
@@ -752,7 +752,7 @@ func calcSignatureHash(prevScriptBytes []byte, hashType txscript.SigHashType, tx
 	sigHash.Write(bSequence[:])
 
 	leBranchID := make([]byte, 4)
-	binary.LittleEndian.PutUint32(leBranchID, saplingBranchID)
+	binary.LittleEndian.PutUint32(leBranchID, branchID)
 	bl, _ := blake2b.New(&blake2b.Config{
 		Size:   32,
 		Person: append(sigHashPersonalization, leBranchID...),
