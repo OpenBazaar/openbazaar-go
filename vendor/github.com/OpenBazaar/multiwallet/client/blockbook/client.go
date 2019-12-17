@@ -559,6 +559,9 @@ func (i *BlockBookClient) setupListeners() error {
 		return nil
 	}
 
+	i.listenLock.Lock()
+	defer i.listenLock.Unlock()
+
 	// Add stored watch addresses to listenQueue if there are any
 	i.listenQueue = append(i.listenQueue, i.listenAddrs...)
 
