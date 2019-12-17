@@ -124,9 +124,12 @@ func (ws *WalletService) listen() {
 		txChan    = ws.client.TransactionNotify()
 		blockChan = ws.client.BlockNotify()
 	)
+
+	var listenAddrs []btcutil.Address
 	for _, sa := range addrs {
-		ws.client.ListenAddresses(sa.Addr)
+		listenAddrs = append(listenAddrs, sa.Addr)
 	}
+	ws.client.ListenAddresses(listenAddrs...)
 
 	for {
 		select {
