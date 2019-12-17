@@ -519,7 +519,7 @@ func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
 	defer i.socketMutex.RUnlock()
 	if i.SocketClient != nil {
 		i.listenAddrs = convertedAddrs
-		
+
 		args = append(args, convertedAddrs)
 		i.SocketClient.Emit("subscribe", args)
 	} else {
@@ -562,9 +562,6 @@ func (i *BlockBookClient) setupListeners() error {
 
 	// Add stored watch addresses to listenQueue if there are any
 	i.listenQueue = append(i.listenQueue, i.listenAddrs...)
-
-	i.listenLock.Lock()
-	defer i.listenLock.Unlock()
 
 	client, err := connectSocket(i.apiUrl, i.proxyDialer)
 	if err != nil {
