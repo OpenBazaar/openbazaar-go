@@ -44,7 +44,7 @@ protos: ## Build go files for proto definitions
 ##
 ## Testing
 ##
-OPENBAZAARD_NAME ?= openbazaard-$(GIT_TAG)-$(GIT_SHA)
+OPENBAZAARD_NAME ?= openbazaard-$(GIT_SHA)
 BITCOIND_PATH ?= .
 
 .PHONY: openbazaard
