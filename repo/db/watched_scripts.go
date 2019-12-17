@@ -18,6 +18,29 @@ func NewWatchedScriptStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinTyp
 	return &WatchedScriptsDB{modelStore{db, lock}, coinType}
 }
 
+func (w *WatchedScriptsDB) PutAll(scriptPubKeys [][]byte) error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	tx, _ := w.db.Begin()
+
+	for _, scriptPubKey := range scriptPubKeys {
+		stmt, err := tx.Prepare("insert or replace into watchedscripts(coin, scriptPubKey) values(?,?)")
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		_, err = stmt.Exec(w.coinType.CurrencyCode(), hex.EncodeToString(scriptPubKey))
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		stmt.Close()
+	}
+
+	tx.Commit()
+	return nil
+}
+
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
