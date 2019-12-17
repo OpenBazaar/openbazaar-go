@@ -397,7 +397,7 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	}
 
 	// BIP 69 sorting
-	txsort.InPlaceSort(tx)
+	//txsort.InPlaceSort(tx)
 
 	// Sign tx
 	privKey, err := key.ECPrivKey()
