@@ -523,9 +523,7 @@ func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
 	if i.SocketClient != nil {
 		i.SocketClient.Emit("subscribe", args)
 	} else {
-		for _, addr := range addrs {
-			i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
-		}
+		i.listenQueue = append(i.listenQueue, convertedAddrs...)
 	}
 }
 
