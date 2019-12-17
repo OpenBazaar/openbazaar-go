@@ -52,8 +52,11 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		return nil, wi.ErrorDustAmount
 	}
 
-	var additionalPrevScripts map[wire.OutPoint][]byte
-	var additionalKeysByAddress map[string]*btc.WIF
+	var (
+		additionalPrevScripts map[wire.OutPoint][]byte
+		additionalKeysByAddress map[string]*btc.WIF
+		inVals map[wire.OutPoint]btc.Amount
+	)
 
 	// Create input source
 	height, _ := w.ws.ChainTip()
@@ -75,6 +78,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
+		inVals =  make(map[wire.OutPoint]btc.Amount)
 		for _, c := range coins.Coins() {
 			total += c.Value()
 			outpoint := wire.NewOutPoint(c.Hash(), c.Index())
@@ -93,7 +97,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 			}
 			wif, _ := btc.NewWIF(privKey, w.params, true)
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
-			inputValues = append(inputValues, c.Value())
+			inVals[*outpoint] = c.Value()
 		}
 		return total, inputs, inputValues, scripts, nil
 	}
@@ -118,14 +122,9 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 	if optionalOutput != nil {
 		outputs = append(outputs, optionalOutput)
 	}
-	authoredTx, inputValues, err := newUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
+	authoredTx, err := newUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
 	if err != nil {
 		return nil, err
-	}
-
-	inValMap := make(map[int]btc.Amount)
-	for i, val := range inputValues {
-		inValMap[i] = val
 	}
 
 	// BIP 69 sorting
@@ -147,7 +146,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		if err != nil {
 			return nil, err
 		}
-		val := int64(inValMap[i].ToUnit(btc.AmountSatoshi))
+		val := int64(inVals[txIn.PreviousOutPoint].ToUnit(btc.AmountSatoshi))
 		sig, err := rawTxInSignature(authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, key, val)
 		if err != nil {
 			return nil, errors.New("failed to sign transaction")
@@ -234,7 +233,7 @@ func (w *ZCashWallet) buildSpendAllTx(addr btc.Address, feeLevel wi.FeeLevel) (*
 	return tx, nil
 }
 
-func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, []btc.Amount, error) {
+func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, error) {
 
 	var targetAmount btc.Amount
 	for _, txOut := range outputs {
@@ -243,15 +242,13 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 
 	estimatedSize := EstimateSerializeSize(1, outputs, true, P2PKH)
 	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
-	var inputValues []btc.Amount
 	for {
-		inputAmount, inputs, vals, scripts, err := fetchInputs(targetAmount + targetFee)
-		inputValues = vals
+		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + targetFee)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if inputAmount < targetAmount+targetFee {
-			return nil, nil, errors.New("insufficient funds available to construct transaction")
+			return nil, errors.New("insufficient funds available to construct transaction")
 		}
 
 		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, P2PKH)
@@ -274,10 +271,10 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
 			changeScript, err := fetchChange()
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			if len(changeScript) > P2PKHPkScriptSize {
-				return nil, nil, errors.New("fee estimation requires change " +
+				return nil, errors.New("fee estimation requires change " +
 					"scripts no larger than P2PKH output scripts")
 			}
 			change := wire.NewTxOut(int64(changeAmount), changeScript)
@@ -291,7 +288,7 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 			PrevScripts: scripts,
 			TotalInput:  inputAmount,
 			ChangeIndex: changeIndex,
-		}, inputValues, nil
+		}, nil
 	}
 }
 
