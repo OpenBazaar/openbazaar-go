@@ -560,9 +560,6 @@ func (i *BlockBookClient) setupListeners() error {
 	i.listenLock.Lock()
 	defer i.listenLock.Unlock()
 
-	// Add stored watch addresses to listenQueue if there are any
-	i.listenQueue = append(i.listenQueue, i.listenAddrs...)
-
 	client, err := connectSocket(i.apiUrl, i.proxyDialer)
 	if err != nil {
 		Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
@@ -629,6 +626,10 @@ func (i *BlockBookClient) setupListeners() error {
 			}
 		}
 	})
+
+	// Add stored watch addresses to listenQueue if there are any
+	i.listenQueue = append(i.listenQueue, i.listenAddrs...)
+	
 	for _, addr := range i.listenQueue {
 		var args []interface{}
 		args = append(args, "bitcoind/addresstxid")
