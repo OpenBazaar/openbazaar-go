@@ -515,12 +515,12 @@ func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
 		convertedAddrs = append(convertedAddrs, maybeConvertCashAddress(addr))
 	}
 
-	i.listenAddrs = convertedAddrs
-
-	args = append(args, convertedAddrs)
 	i.socketMutex.RLock()
 	defer i.socketMutex.RUnlock()
 	if i.SocketClient != nil {
+		i.listenAddrs = convertedAddrs
+		
+		args = append(args, convertedAddrs)
 		i.SocketClient.Emit("subscribe", args)
 	} else {
 		i.listenQueue = append(i.listenQueue, convertedAddrs...)
