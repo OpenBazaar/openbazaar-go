@@ -100,7 +100,7 @@ type BlockBookClient struct {
 	apiUrl            *url.URL
 	blockNotifyChan   chan model.Block
 	closeChan         chan<- error
-	listenLock        sync.Mutex
+	listenLock        sync.RWMutex
 	listenQueue       []string
 	listenAddrs       []string
 	proxyDialer       proxy.Dialer
@@ -137,7 +137,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		proxyDialer:     proxyDialer,
 		blockNotifyChan: bch,
 		txNotifyChan:    tch,
-		listenLock:      sync.Mutex{},
+		listenLock:      sync.RWMutex{},
 	}
 	ic.websocketWatchdog = newWebsocketWatchdog(ic)
 	ic.RequestFunc = ic.doRequest
