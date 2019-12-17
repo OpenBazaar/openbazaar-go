@@ -123,6 +123,11 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		return nil, err
 	}
 
+	inValMap := make(map[int]btc.Amount)
+	for i, val := range inputValues {
+		inValMap[i] = val
+	}
+
 	// BIP 69 sorting
 	txsort.InPlaceSort(authoredTx.Tx)
 
@@ -142,7 +147,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		if err != nil {
 			return nil, err
 		}
-		val := int64(inputValues[i].ToUnit(btc.AmountSatoshi))
+		val := int64(inValMap[i].ToUnit(btc.AmountSatoshi))
 		sig, err := rawTxInSignature(authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, key, val)
 		if err != nil {
 			return nil, errors.New("failed to sign transaction")
