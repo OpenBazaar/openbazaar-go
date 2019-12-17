@@ -503,18 +503,26 @@ func (i *BlockBookClient) TransactionNotify() <-chan model.Transaction {
 	return i.txNotifyChan
 }
 
-func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
+func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
 	i.listenLock.Lock()
 	defer i.listenLock.Unlock()
 	var args []interface{}
 	args = append(args, "bitcoind/addresstxid")
-	args = append(args, []string{maybeConvertCashAddress(addr)})
+
+	var convertedAddrs []string
+	for _, addr := range addrs {
+		convertedAddrs = append(convertedAddrs, maybeConvertCashAddress(addr))
+	}
+
+	args = append(args, convertedAddrs)
 	i.socketMutex.RLock()
 	defer i.socketMutex.RUnlock()
 	if i.SocketClient != nil {
 		i.SocketClient.Emit("subscribe", args)
 	} else {
-		i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
+		for _, addr := range addrs {
+			i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
+		}
 	}
 }
 

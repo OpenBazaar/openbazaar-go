@@ -125,7 +125,7 @@ func (ws *WalletService) listen() {
 		blockChan = ws.client.BlockNotify()
 	)
 	for _, sa := range addrs {
-		ws.client.ListenAddress(sa.Addr)
+		ws.client.ListenAddresses(sa.Addr)
 	}
 
 	for {

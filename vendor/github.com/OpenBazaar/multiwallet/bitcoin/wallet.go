@@ -325,16 +325,20 @@ func (w *BitcoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold 
 	return w.generateMultisigScript(keys, threshold, timeout, timeoutKey)
 }
 
-func (w *BitcoinWallet) AddWatchedAddress(addr btc.Address) error {
-	script, err := w.AddressToScript(addr)
-	if err != nil {
-		return err
+func (w *BitcoinWallet) AddWatchedAddresses(addrs ...btc.Address) error {
+
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		err = w.db.WatchedScripts().Put(script)
+		if err != nil {
+			return err
+		}
 	}
-	err = w.db.WatchedScripts().Put(script)
-	if err != nil {
-		return err
-	}
-	w.client.ListenAddress(addr)
+
+	w.client.ListenAddresses(addrs...)
 	return nil
 }
 

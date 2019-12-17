@@ -370,24 +370,27 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 	return utxos, err
 }
 
-// ListenAddress proxies the same request to the active client
-func (p *ClientPool) ListenAddress(addr btcutil.Address) {
+// ListenAddresses proxies the same request to the active client
+func (p *ClientPool) ListenAddresses(addrs ...btcutil.Address) {
 	p.listenAddrsLock.Lock()
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
-	p.listenAddrs = append(p.listenAddrs, addr)
-	client.ListenAddress(addr)
+
+	for _, addr := range addrs {
+		p.listenAddrs = append(p.listenAddrs, addr)
+	}
+
+	client.ListenAddresses(addrs...)
 }
 
 func (p *ClientPool) replayListenAddresses() {
+	fmt.Printf("Replaying addresses %s\n", p.listenAddrs)
 	p.listenAddrsLock.Lock()
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrent()
 	defer p.poolManager.ReleaseCurrent()
-	for _, addr := range p.listenAddrs {
-		client.ListenAddress(addr)
-	}
+	client.ListenAddresses(p.listenAddrs...)
 }
 
 // TransactionNotify proxies the active client's tx channel

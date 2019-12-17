@@ -63,15 +63,22 @@ func (r *ResyncManager) CheckUnfunded() {
 				log.Warningf("ResyncManager: no wallet for sale with payment coin %s", cc)
 				continue
 			}
+
+			var decodedAddresses []btcutil.Address
 			for _, addr := range addrs {
 				iaddr, err := wal.DecodeAddress(addr)
 				if err != nil {
 					log.Errorf("Error decoding unfunded payment address(%s): %s", addr, err)
 					continue
 				}
-				if err := wal.AddWatchedAddresses([]btcutil.Address{iaddr}...); err != nil {
-					log.Errorf("Error adding watched address(%s): %s", iaddr, err)
-				}
+
+				decodedAddresses = append(decodedAddresses, iaddr)
+			}
+
+			err = wal.AddWatchedAddresses(decodedAddresses...)
+			if err != nil {
+				log.Warningf("ResyncManager: couldn't add watched addresses for coin: %s", cc)
+				continue
 			}
 
 			log.Infof("Rescanning %s wallet looking for %d orders", cc, len(unfunded))

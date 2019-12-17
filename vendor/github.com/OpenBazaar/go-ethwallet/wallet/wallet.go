@@ -955,8 +955,8 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	return ret, err
 }
 
-// AddWatchedAddress - Add a script to the wallet and get notifications back when coins are received or spent from it
-func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
+// AddWatchedAddresses - Add a script to the wallet and get notifications back when coins are received or spent from it
+func (wallet *EthereumWallet) AddWatchedAddresses(address ...btcutil.Address) error {
 	// the reason eth wallet cannot use this as of now is because only the address
 	// is insufficient, the redeemScript is also required
 	return nil
