@@ -132,13 +132,6 @@ func DefaultWalletsConfig() *WalletsConfig {
 	}
 }
 
-func keyError(section string, key string) string {
-	if section == "" {
-		return fmt.Sprintf("Error parsing key '%s'", key)
-	}
-	return fmt.Sprintf("Error parsing key '%s' in section '%s'", key, section)
-}
-
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	const (
 		KeyAllowedIPs    = "AllowedIPs"
