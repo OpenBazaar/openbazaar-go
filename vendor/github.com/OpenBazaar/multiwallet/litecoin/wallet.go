@@ -342,7 +342,7 @@ func (w *LitecoinWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
 		watchedScripts = append(watchedScripts, script)
 	}
 
-	err = w.db.WatchedScripts().PutAll(watchedScripts)
+	err := w.db.WatchedScripts().PutAll(watchedScripts)
 	if err != nil {
 		return err
 	}
