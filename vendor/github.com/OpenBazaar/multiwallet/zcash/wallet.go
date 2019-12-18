@@ -42,6 +42,8 @@ type ZCashWallet struct {
 	log           *logging.Logger
 }
 
+var _ = wi.Wallet(&ZCashWallet{})
+
 func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 

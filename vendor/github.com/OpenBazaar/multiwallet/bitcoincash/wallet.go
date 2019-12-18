@@ -42,6 +42,8 @@ type BitcoinCashWallet struct {
 	exchangeRates wi.ExchangeRates
 }
 
+var _ = wi.Wallet(&BitcoinCashWallet{})
+
 func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 

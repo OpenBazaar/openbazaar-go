@@ -44,6 +44,8 @@ type LitecoinWallet struct {
 	log           *logging.Logger
 }
 
+var _ = wi.Wallet(&LitecoinWallet{})
+
 func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 

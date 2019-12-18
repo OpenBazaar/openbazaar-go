@@ -54,6 +54,8 @@ type SPVWallet struct {
 	exchangeRates wallet.ExchangeRates
 }
 
+var _ = wallet.Wallet(&SPVWallet{})
+
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"

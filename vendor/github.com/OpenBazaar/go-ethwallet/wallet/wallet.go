@@ -34,6 +34,8 @@ import (
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
 
+var _ = wi.Wallet(&EthereumWallet{})
+
 const (
 	// InfuraAPIKey is the hard coded Infura API key
 	InfuraAPIKey = "openbazaar"
@@ -956,7 +958,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 }
 
 // AddWatchedAddresses - Add a script to the wallet and get notifications back when coins are received or spent from it
-func (wallet *EthereumWallet) AddWatchedAddresses(address ...btcutil.Address) error {
+func (wallet *EthereumWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
 	// the reason eth wallet cannot use this as of now is because only the address
 	// is insufficient, the redeemScript is also required
 	return nil
