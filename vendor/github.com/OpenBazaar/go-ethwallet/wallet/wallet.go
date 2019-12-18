@@ -279,7 +279,7 @@ func (wallet *EthereumWallet) Start() {
 			}
 			for _, txn := range txns {
 				hash := common.HexToHash(txn.Txid)
-				go wallet.CheckTxnRcpt(&hash, txn.Bytes)
+				go wallet.checkTxnRcpt(&hash, txn.Bytes)
 			}
 		}
 	}(wallet)
@@ -684,8 +684,8 @@ func (wallet *EthereumWallet) AssociateTransactionWithOrder(txnCB wi.Transaction
 	}
 }
 
-// CheckTxnRcpt check the txn rcpt status
-func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*common.Hash, error) {
+// checkTxnRcpt check the txn rcpt status
+func (wallet *EthereumWallet) checkTxnRcpt(hash *common.Hash, data []byte) (*common.Hash, error) {
 	var rcpt *types.Receipt
 	pTxn, err := DeserializePendingTxn(data)
 	if err != nil {
@@ -707,19 +707,20 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 				return nil, err
 			}
 			err = wallet.db.Txns().Delete(chash)
+			if err != nil {
+				log.Errorf("err deleting the pending txn : %v", err)
+			}
 			n := new(big.Int)
 			n, _ = n.SetString(pTxn.Amount, 10)
+			toAddr := common.HexToAddress(pTxn.To)
+			withInput := true
 			if pTxn.Amount != "0" {
-				toAddr := common.HexToAddress(util.EnsureCorrectPrefix(pTxn.To))
-				go wallet.AssociateTransactionWithOrder(
-					wallet.createTxnCallback(util.EnsureCorrectPrefix(hash.Hex()), pTxn.OrderID, EthAddress{&toAddr},
-						*n, time.Now(), pTxn.WithInput))
-			} else {
-				addrScrHash := common.HexToAddress(pTxn.To)
-				go wallet.AssociateTransactionWithOrder(wallet.createTxnCallback(util.EnsureCorrectPrefix(hash.Hex()),
-					pTxn.OrderID, EthAddress{address: &addrScrHash}, *n,
-					time.Now(), true))
+				toAddr = common.HexToAddress(util.EnsureCorrectPrefix(pTxn.To))
+				withInput = pTxn.WithInput
 			}
+			go wallet.AssociateTransactionWithOrder(
+				wallet.createTxnCallback(util.EnsureCorrectPrefix(hash.Hex()), pTxn.OrderID, EthAddress{&toAddr},
+					*n, time.Now(), withInput))
 		}
 	}
 	return hash, nil
@@ -1325,7 +1326,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 }
 
 // AddWatchedAddress - Add a script to the wallet and get notifications back when coins are received or spent from it
-func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
+func (wallet *EthereumWallet) AddWatchedAddress(addrs btcutil.Address) error {
 	// the reason eth wallet cannot use this as of now is because only the address
 	// is insufficient, the redeemScript is also required
 	return nil
