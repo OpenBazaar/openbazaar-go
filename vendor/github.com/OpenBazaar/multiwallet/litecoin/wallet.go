@@ -333,15 +333,18 @@ func (w *LitecoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 
 func (w *LitecoinWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
 
+	var watchedScripts [][]byte
 	for _, addr := range addrs {
 		script, err := w.AddressToScript(addr)
 		if err != nil {
 			return err
 		}
-		err = w.db.WatchedScripts().Put(script)
-		if err != nil {
-			return err
-		}
+		watchedScripts = append(watchedScripts, script)
+	}
+
+	err = w.db.WatchedScripts().PutAll(watchedScripts)
+	if err != nil {
+		return err
 	}
 
 	w.client.ListenAddresses(addrs...)

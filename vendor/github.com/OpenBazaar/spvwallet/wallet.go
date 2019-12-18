@@ -445,17 +445,20 @@ func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
 func (w *SPVWallet) AddWatchedAddresses(addrs ...btc.Address) error {
 
 	var err error
+	var watchedScripts [][]byte
 
 	for _, addr := range addrs {
 		script, err := w.AddressToScript(addr)
 		if err != nil {
 			return err
 		}
-		err = w.txstore.WatchedScripts().Put(script)
-		w.txstore.PopulateAdrs()
-
-		w.wireService.MsgChan() <- updateFiltersMsg{}
+		watchedScripts = append(watchedScripts, script)
 	}
+
+	err = w.txstore.WatchedScripts().PutAll(watchedScripts)
+	w.txstore.PopulateAdrs()
+
+	w.wireService.MsgChan() <- updateFiltersMsg{}
 
 	return err
 }
