@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/OpenBazaar/multiwallet/util"
 	"golang.org/x/net/proxy"
-	"net"
 	"net/http"
 	"reflect"
 	"sync"
@@ -36,12 +35,15 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	b := BitcoinCashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	dial := net.Dial
+	
+	var client *http.Client
 	if dialer != nil {
-		dial = dialer.Dial
+		dial := dialer.Dial
+		tbTransport := &http.Transport{Dial: dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Minute}
+	} else {
+		client = &http.Client{Timeout: time.Minute}
 	}
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	b.providers = []*ExchangeRateProvider{
 		{"https://ticker.openbazaar.org/api", b.cache, client, OpenBazaarDecoder{}},

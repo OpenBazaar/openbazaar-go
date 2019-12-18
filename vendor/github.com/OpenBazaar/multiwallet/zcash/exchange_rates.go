@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/multiwallet/util"
-	"net"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -44,12 +43,15 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 	z := ZcashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	dial := net.Dial
+
+	var client *http.Client
 	if dialer != nil {
-		dial = dialer.Dial
+		dial := dialer.Dial
+		tbTransport := &http.Transport{Dial: dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Minute}
+	} else {
+		client = &http.Client{Timeout: time.Minute}
 	}
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	z.providers = []*ExchangeRateProvider{
 		{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
