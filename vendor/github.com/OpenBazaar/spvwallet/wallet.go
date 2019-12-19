@@ -54,6 +54,8 @@ type SPVWallet struct {
 	exchangeRates wallet.ExchangeRates
 }
 
+var _ = wallet.Wallet(&SPVWallet{})
+
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
@@ -442,15 +444,24 @@ func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
 	return sh.height, sh.header.BlockHash()
 }
 
-func (w *SPVWallet) AddWatchedAddress(addr btc.Address) error {
-	script, err := w.AddressToScript(addr)
-	if err != nil {
-		return err
+func (w *SPVWallet) AddWatchedAddresses(addrs ...btc.Address) error {
+
+	var err error
+	var watchedScripts [][]byte
+
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		watchedScripts = append(watchedScripts, script)
 	}
-	err = w.txstore.WatchedScripts().Put(script)
+
+	err = w.txstore.WatchedScripts().PutAll(watchedScripts)
 	w.txstore.PopulateAdrs()
 
 	w.wireService.MsgChan() <- updateFiltersMsg{}
+
 	return err
 }
 

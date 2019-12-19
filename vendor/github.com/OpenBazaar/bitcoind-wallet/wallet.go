@@ -1106,16 +1106,6 @@ func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 	return addr, redeemScript, nil
 }
 
-func (w *BitcoindWallet) AddWatchedAddress(addr btc.Address) error {
-	select {
-	case <-w.initChan:
-		return w.addWatchedScript(addr)
-	default:
-		w.addrsToWatch = append(w.addrsToWatch, addr)
-	}
-	return nil
-}
-
 func (w *BitcoindWallet) addWatchedScript(addr btc.Address) error {
 	return w.rpcClient.ImportAddressRescan(addr.EncodeAddress(), false)
 }

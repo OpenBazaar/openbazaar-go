@@ -1057,16 +1057,6 @@ func (w *ZcashdWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold i
 	return addr, redeemScript, nil
 }
 
-func (w *ZcashdWallet) AddWatchedAddress(addr btc.Address) error {
-	select {
-	case <-w.initChan:
-		return w.addWatchedScript(addr)
-	default:
-		w.addrsToWatch = append(w.addrsToWatch, addr)
-	}
-	return nil
-}
-
 func (w *ZcashdWallet) addWatchedScript(addr btc.Address) error {
 	a := `"` + addr.EncodeAddress() + `"`
 	_, err := w.rpcClient.RawRequest("importaddress", []json.RawMessage{json.RawMessage(a), json.RawMessage(`""`), json.RawMessage(`false`)})
