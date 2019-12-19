@@ -168,8 +168,7 @@ func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string
 func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename string, err error) {
 	var client *http.Client
 	if n.TorDialer != nil {
-		dial := n.TorDialer.Dial
-		tbTransport := &http.Transport{Dial: dial}
+		tbTransport := &http.Transport{Dial: n.TorDialer.Dial}
 		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	} else {
 		client = &http.Client{Timeout: time.Second * 30}
