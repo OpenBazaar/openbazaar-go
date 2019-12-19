@@ -246,11 +246,14 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, n *core.IpfsNode, addr ma.Mult
 	select {
 	case <-c:
 		if err != nil {
-			log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
+			log.Errorf("Error retrieving offline message from: %s, Error: %s", addr.String(), err.Error())
 			return
 		}
-		log.Debugf("Successfully downloaded offline message from %s", addr.String())
-		m.db.OfflineMessages().Put(addr.String())
+		log.Debugf("Successfully downloaded offline message %s from: %s", addr.String(), pid.Pretty())
+		err = m.db.OfflineMessages().Put(addr.String())
+		if err != nil {
+			log.Error(err)
+		}
 		m.attemptDecrypt(ciphertext, pid, addr)
 	case <-m.DoneChan:
 		return
@@ -302,7 +305,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	// Decrypt and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 	if err != nil {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt cipher text to plain text, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 
@@ -310,36 +313,38 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	env := pb.Envelope{}
 	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to unmarshal plaintext to encrypted Envelope, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 
 	// Validate the signature
 	ser, err := proto.Marshal(env.Message)
 	if err != nil {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to serialize the encrypted message, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 	if err != nil {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to unmarshal the public key from, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to verify message signature, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
-		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to get a peer ID from the pubkey, CID: %s: Error:%s\n", addr.String(), err.Error())
 		return
 	}
 
+	log.Debugf("Received offline message %s from: %s\n", addr.String(), id.Pretty())
+
 	if m.bm.IsBanned(id) {
-		log.Warningf("Received and dropped offline message from banned user: %s ", id.String())
+		log.Warningf("Received and dropped offline message from banned user: %s\n", id.Pretty())
 		return
 	}
 
