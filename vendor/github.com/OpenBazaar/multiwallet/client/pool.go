@@ -385,7 +385,6 @@ func (p *ClientPool) ListenAddresses(addrs ...btcutil.Address) {
 }
 
 func (p *ClientPool) replayListenAddresses() {
-	fmt.Printf("Replaying addresses %s\n", p.listenAddrs)
 	p.listenAddrsLock.Lock()
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrent()
