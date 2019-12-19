@@ -226,7 +226,7 @@ func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float6
 	if exRatio == nil {
 		return nil, 0, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
 	}
-	newAmount := new(big.Float).SetPrec(53).Mul(amt, exRatio)
+	newAmount := new(big.Float).SetPrec(64).Mul(amt, exRatio)
 
 	if v.Currency.Divisibility != final.Divisibility {
 		initMagnitude := math.Pow10(int(v.Currency.Divisibility))
