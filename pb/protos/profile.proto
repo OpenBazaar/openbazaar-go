@@ -36,6 +36,8 @@ message Profile {
 
     repeated string currencies             = 18;
 
+    uint32 version                         = 19;
+
     message Contact {
         string website                = 1;
         string email                  = 2;
