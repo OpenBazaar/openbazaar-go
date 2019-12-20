@@ -55,7 +55,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != "350000000":
+        check_amt = "350000000"
+        if self.vendor_version == 4:
+            check_amt = 350000000
+        if resp["ether"]["inventory"] != check_amt:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
@@ -84,7 +87,12 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
-        if int(payment_amount["amount"]) <= 0:
+        amt = 0
+        if self.buyer_version == 4:
+            amt = payment_amount
+        else:
+            amt = int(payment_amount["amount"])
+        if amt <= 0:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Purchase POST failed: paymentAmount is <= 0")
 
         # check the purchase saved correctly
@@ -127,6 +135,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             "feeLevel": "NORMAL",
             "requireAssociateOrder": False
         }
+        if self.buyer_version == 4:
+            spend["amount"] = payment_amount
+            spend["wallet"] = "T" + self.cointype
+
         api_url = buyer["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
@@ -191,7 +203,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != "250000000":
+        check_amt = "250000000"
+        if self.buyer_version == 4:
+            check_amt = 250000000
+        if resp["ether"]["inventory"] != check_amt:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")

@@ -24,7 +24,10 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
+        if self.vendor_version == 4:
+            listing_json["metadata"]["priceCurrency"] = "t" + self.cointype
+        else:
+            listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         listing_json["item"]["skus"][4]["quantity"] = 0
 
@@ -105,6 +108,10 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
             "feeLevel": "NORMAL",
             "requireAssociateOrder": False
         }
+        if self.buyer_version == 4:
+            spend["amount"] = payment_amount
+            spend["wallet"] = "T" + self.cointype
+
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:

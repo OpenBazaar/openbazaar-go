@@ -24,7 +24,10 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
+        if self.vendor_version == 4:
+            listing_json["metadata"]["priceCurrency"] = "t" + self.cointype
+        else:
+            listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
