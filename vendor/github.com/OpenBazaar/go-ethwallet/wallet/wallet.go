@@ -694,7 +694,7 @@ func (wallet *EthereumWallet) checkTxnRcpt(hash *common.Hash, data []byte) (*com
 
 	rcpt, err = wallet.client.TransactionReceipt(context.Background(), *hash)
 	if err != nil {
-		log.Errorf("error fetching txn rcpt: %v", err)
+		log.Infof("fetching txn rcpt: %v", err)
 	}
 
 	if rcpt != nil {
