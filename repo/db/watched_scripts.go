@@ -19,6 +19,37 @@ func NewWatchedScriptStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinTyp
 	return &WatchedScriptsDB{modelStore{db, lock}, coinType}
 }
 
+func (w *WatchedScriptsDB) PutAll(scriptPubKeys [][]byte) error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare("insert or replace into watchedscripts(coin, scriptPubKey) values(?,?)")
+	if err != nil {
+		if rErr := tx.Rollback(); rErr != nil {
+			return fmt.Errorf("put AND rollback failed: %s (rollback error: %s)", err.Error(), rErr.Error())
+		}
+		return err
+	}
+	defer stmt.Close()
+
+	for _, scriptPubKey := range scriptPubKeys {
+		_, err = stmt.Exec(w.coinType.CurrencyCode(), hex.EncodeToString(scriptPubKey))
+		if err != nil {
+			if rErr := tx.Rollback(); rErr != nil {
+				return fmt.Errorf("put AND rollback failed: %s (rollback error: %s)", err.Error(), rErr.Error())
+			}
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()

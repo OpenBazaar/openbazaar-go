@@ -71,7 +71,7 @@ type Node struct {
 
 var (
 	fileLogFormat = logging.MustStringFormatter(
-		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+		`%{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
 	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
