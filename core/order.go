@@ -1254,7 +1254,6 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	var (
 		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
 		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
-		reserveCurrencyDef, rErr = n.LookupCurrency(reserveCurrency)
 	)
 	if oErr != nil {
 		return big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
@@ -1262,14 +1261,13 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
 	}
-	if rErr != nil {
-		return big.NewInt(0), fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
-	}
 
+	// Check if currency conversion is necessary
 	if originCurrencyDef.Equal(paymentCurrencyDef) {
 		return amount, nil
 	}
 
+	// Convert to big.Int
 	originValue, err := repo.NewCurrencyValue(amount.String(), originCurrencyDef)
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("parsing amount: %s", err.Error())
@@ -1283,11 +1281,15 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	if wal.ExchangeRates() == nil {
 		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
+
+	// Get exchange rate in BTC for starting currency
 	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	originIntoReserveRate := 1 / reserveIntoOriginRate
+	startingRate := new(big.Float).SetFloat64(reserveIntoOriginRate)
+
+	// Calculate conversion ratios
 	reserveIntoResultRate, err := wal.ExchangeRates().GetExchangeRate(paymentCoin)
 	if err != nil {
 		// TODO: remove hack once ExchangeRates can be made aware of testnet currencies
@@ -1300,16 +1302,20 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 			return big.NewInt(0), err
 		}
 	}
+	destinationRate := new(big.Float).SetFloat64(reserveIntoResultRate)
+	finalRate := new(big.Float).Quo(destinationRate, startingRate)
+	originFloat := new(big.Float).SetInt(originValue.Amount)
 
-	reserveValue, _, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("converting to reserve: %s", err.Error())
-	}
-	resultValue, _, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
-	}
-	return resultValue.Amount, nil
+	// Final conversion value is finalRate * original amount
+	finalValue := new(big.Float).Mul(finalRate, originFloat)
+
+	newInt := new(big.Int)
+	result, _ := finalValue.Int(newInt)
+	divisibilityConversion := new(big.Int).SetInt64(int64(originCurrencyDef.Divisibility) - int64(paymentCurrencyDef.Divisibility))
+	converter := new(big.Int).Exp(new(big.Int).SetInt64(int64(10)), divisibilityConversion, nil)
+	result.Div(result, converter)
+
+	return result, nil
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
