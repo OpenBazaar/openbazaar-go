@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/websocket"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
@@ -152,6 +153,17 @@ func GenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
 	ahashStr := hexutil.Encode(retHash[:])
 
 	return retHash, ahashStr, nil
+}
+
+type subscription struct {
+	conn           *websocket.Conn
+	subscriptionID string
+}
+
+type subscriptionResp struct {
+	ID      int    `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	Result  string `json:"result"`
 }
 
 // EthereumWallet is the wallet implementation for ethereum
@@ -329,6 +341,43 @@ func (wallet *EthereumWallet) Start() {
 			}
 		}
 	}(wallet)
+
+	// prepare message to send to infura server
+	values := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "eth_subscribe",
+		"params":  []interface{}{"newPendingTransactions"},
+		"id":      1,
+	}
+	jsonValue, err := json.Marshal(values)
+	if err != nil {
+		log.Errorf("err json marshalling ws request: %v", err)
+		return
+	}
+
+	// send request to infura server
+	err = wallet.client.ws.WriteMessage(websocket.TextMessage, jsonValue)
+	if err != nil {
+		log.Errorf("err subscribing to the ws: %v", err)
+		return
+	}
+
+	for {
+		// Read message from infura server.
+		_, message, err := wallet.client.ws.ReadMessage()
+		if err != nil {
+			log.Errorf("err reading resp from ws: %v", err)
+		}
+
+		subResp := subscriptionResp{}
+		err = json.Unmarshal(message, &subResp)
+		if err != nil {
+			log.Errorf("err reading subscription resp from ws: %v", err)
+		}
+		sub := subscription{conn: wallet.client.ws}
+		sub.subscriptionID = subResp.Result
+
+	}
 
 }
 
