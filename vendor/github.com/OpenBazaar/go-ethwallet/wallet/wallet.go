@@ -155,15 +155,45 @@ func GenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
 	return retHash, ahashStr, nil
 }
 
-type subscription struct {
-	conn           *websocket.Conn
-	subscriptionID string
+type subs struct {
+	conn *websocket.Conn
+	ID   string
 }
 
-type subscriptionResp struct {
-	ID      int    `json:"id"`
-	JSONRPC string `json:"jsonrpc"`
-	Result  string `json:"result"`
+type subsResult struct {
+	ID     int    `json:"id"`
+	Result string `json:"result"`
+}
+
+type pendingTxnSubResult struct {
+	ID     string `json:"subscription"`
+	Result string `json:"result"`
+}
+
+type pendingTxnResult struct {
+	Method string              `json:"method"`
+	Params pendingTxnSubResult `json:"params"`
+}
+
+type logsDetails struct {
+	Address          string   `json:"address"`
+	BlockHash        string   `json:"blockHash"`
+	BlockNumber      string   `json:"blockNumber"`
+	Data             string   `json:"data"`
+	LogIndex         string   `json:"logIndex"`
+	Topics           []string `json:"topics"`
+	TransactionHash  string   `json:"transactionHash"`
+	TransactionIndex string   `json:"transactionIndex"`
+}
+
+type logsSubResult struct {
+	Subscription string      `json:"subscription"`
+	Result       logsDetails `json:"result"`
+}
+
+type logsResult struct {
+	Method string        `json:"method"`
+	Params logsSubResult `json:"params"`
 }
 
 // EthereumWallet is the wallet implementation for ethereum
@@ -223,6 +253,9 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 // NewEthereumWallet will return a reference to the Eth Wallet
 func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
 	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
+	fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$$   eth client ..... ")
+	fmt.Println(client)
+	fmt.Println(client.ws)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
 		return nil, err
@@ -324,6 +357,7 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int, spendAll bool,
 
 // Start will start the wallet daemon
 func (wallet *EthereumWallet) Start() {
+	fmt.Println("in wallet start .... ########################")
 	// start the ticker to check for pending txn rcpts
 	go func(wallet *EthereumWallet) {
 		ticker := time.NewTicker(5 * time.Second)
@@ -343,39 +377,76 @@ func (wallet *EthereumWallet) Start() {
 	}(wallet)
 
 	// prepare message to send to infura server
+	// values := map[string]interface{}{
+	// 	"jsonrpc": "2.0",
+	// 	"method":  "eth_subscribe",
+	// 	"params":  []interface{}{"newPendingTransactions"},
+	// 	"id":      1,
+	// }
 	values := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"method":  "eth_subscribe",
-		"params":  []interface{}{"newPendingTransactions"},
-		"id":      1,
+		"params": []interface{}{"logs",
+			map[string]string{"address": wallet.address.String()}},
+		"id": 1,
 	}
 	jsonValue, err := json.Marshal(values)
+	fmt.Println("@@@@@@$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%% : ", wallet.address.String())
+	fmt.Println(string(jsonValue))
 	if err != nil {
 		log.Errorf("err json marshalling ws request: %v", err)
 		return
 	}
 
 	// send request to infura server
+	fmt.Println("ws conn : ", wallet.client, "     ", wallet.client.ws)
 	err = wallet.client.ws.WriteMessage(websocket.TextMessage, jsonValue)
+	fmt.Println("created subscription .... err: ", err)
 	if err != nil {
 		log.Errorf("err subscribing to the ws: %v", err)
 		return
 	}
 
+	sub := subs{}
+	subResp := subsResult{}
 	for {
 		// Read message from infura server.
 		_, message, err := wallet.client.ws.ReadMessage()
+		fmt.Println("received a message .....", message, "   err: ", err)
 		if err != nil {
 			log.Errorf("err reading resp from ws: %v", err)
 		}
 
-		subResp := subscriptionResp{}
 		err = json.Unmarshal(message, &subResp)
+		fmt.Println("message unmarshalled ....err:", err, "   msg: ", subResp)
 		if err != nil {
 			log.Errorf("err reading subscription resp from ws: %v", err)
 		}
-		sub := subscription{conn: wallet.client.ws}
-		sub.subscriptionID = subResp.Result
+		sub.conn = wallet.client.ws
+		sub.ID = subResp.Result
+		break
+	}
+
+	fmt.Println("ssssssssssssssssssssssssssssssssssss", sub.ID)
+
+	if sub.ID == "" {
+		// we have a unsucessful subscription
+		return
+	}
+
+	fmt.Println("44444444444444444444444444444444444444444444")
+
+	resp := logsResult{}
+	for sub.conn.UnderlyingConn() != nil {
+
+		_, message, err := sub.conn.ReadMessage()
+		fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ : ", err)
+		if err != nil {
+			continue
+		}
+
+		err = json.Unmarshal(message, &resp)
+		fmt.Println("resp : ", resp, "   err : ", err)
 
 	}
 

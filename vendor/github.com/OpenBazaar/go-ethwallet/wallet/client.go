@@ -39,7 +39,7 @@ import (
 	Görli	JSON-RPC over websockets	wss://goerli.infura.io/ws/v3/YOUR-PROJECT-ID
 */
 
-var wsURLTemplate = "wss://%s.infura.io/ws/v3/%s"
+var wsURLTemplate = "wss://%s.infura.io/ws/%s"
 
 // EthClient represents the eth client
 type EthClient struct {
@@ -72,7 +72,9 @@ func NewEthClient(url string) (*EthClient, error) {
 	if conn, err = ethclient.Dial(url); err != nil {
 		return nil, err
 	}
+	fmt.Println("in new eth client before opening ws conn   : ")
 	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	fmt.Println("%%%%%%%%%%%   ", ws, "    err: ", err)
 	if err != nil {
 		log.Errorf("eth wallet unable to open ws conn: %v", err)
 		ws = nil
