@@ -1200,10 +1200,10 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	return shippingTotal, nil
 }
 
-func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount *big.Int) (*big.Int, error) {
+func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, originCurrencyCode string, amount *big.Int) (*big.Int, error) {
 	var reserveCurrency = n.reserveCurrency()
 	var (
-		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
+		originCurrencyDef, oErr  = n.LookupCurrency(originCurrencyCode)
 		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
 	)
 	if oErr != nil {
@@ -1213,60 +1213,70 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		return big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
 	}
 
-	// Check if currency conversion is necessary
+	// No conversion is necessary
 	if originCurrencyDef.Equal(paymentCurrencyDef) {
 		return amount, nil
 	}
 
-	// Convert to big.Int
-	originValue, err := repo.NewCurrencyValue(amount.String(), originCurrencyDef)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("parsing amount: %s", err.Error())
-	}
-
-	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCurrency)
+	reserveWallet, err := n.Multiwallet.WalletForCurrencyCode(reserveCurrency)
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
 	}
 
-	if wal.ExchangeRates() == nil {
-		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
-	}
+	// 1. Get conversion rates from reserve currency to origin/payment
+	// 2. Divide the conversion rates (payment rate / origin rate)
+	// 3. Multiply original amount * conversion rate
+	// 4. Divide final price / divisibility conversion factor
 
-	// Get exchange rate in BTC for starting currency
-	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
+	originRate, err := getConversionRate(reserveWallet, originCurrencyCode)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	startingRate := new(big.Float).SetFloat64(reserveIntoOriginRate)
 
-	// Calculate conversion ratios
-	reserveIntoResultRate, err := wal.ExchangeRates().GetExchangeRate(paymentCoin)
+	paymentRate, err := getConversionRate(reserveWallet, paymentCoin)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+
+	finalRate := new(big.Float).Quo(paymentRate, originRate)
+
+	originalAmount := new(big.Float).SetInt(amount)
+	finalPrice := new(big.Float).Mul(finalRate, originalAmount)
+
+	conversionFactor := getDivisibilityConversionFactor(originCurrencyDef.Divisibility, paymentCurrencyDef.Divisibility)
+
+	finalPriceInt, _ := finalPrice.Int(new(big.Int))
+	finalPriceInt.Div(finalPriceInt, conversionFactor)
+
+	return finalPriceInt, nil
+}
+
+func getDivisibilityConversionFactor(div1 uint, div2 uint) *big.Int {
+	deltaExponent := int64(div1) - int64(div2)
+	deltaExponent64 := new(big.Int).SetInt64(deltaExponent)
+	return new(big.Int).Exp(new(big.Int).SetUint64(10), deltaExponent64, nil)
+}
+
+func getConversionRate(wal wallet.Wallet, destinationCurrencyCode string) (*big.Float, error) {
+	if wal.ExchangeRates() == nil {
+		return big.NewFloat(0), ErrPriceCalculationRequiresExchangeRates
+	}
+
+	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(destinationCurrencyCode)
 	if err != nil {
 		// TODO: remove hack once ExchangeRates can be made aware of testnet currencies
-		if strings.HasPrefix(paymentCoin, "T") {
-			reserveIntoResultRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(paymentCoin, "T"))
+		if strings.HasPrefix(destinationCurrencyCode, "T") {
+			reserveIntoOriginRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(destinationCurrencyCode, "T"))
 			if err != nil {
-				return big.NewInt(0), err
+				return big.NewFloat(0), err
 			}
 		} else {
-			return big.NewInt(0), err
+			return big.NewFloat(0), err
 		}
 	}
-	destinationRate := new(big.Float).SetFloat64(reserveIntoResultRate)
-	finalRate := new(big.Float).Quo(destinationRate, startingRate)
-	originFloat := new(big.Float).SetInt(originValue.Amount)
 
-	// Final conversion value is finalRate * original amount
-	finalValue := new(big.Float).Mul(finalRate, originFloat)
-
-	newInt := new(big.Int)
-	result, _ := finalValue.Int(newInt)
-	divisibilityConversion := new(big.Int).SetInt64(int64(originCurrencyDef.Divisibility) - int64(paymentCurrencyDef.Divisibility))
-	converter := new(big.Int).Exp(new(big.Int).SetInt64(int64(10)), divisibilityConversion, nil)
-	result.Div(result, converter)
-
-	return result, nil
+	// Convert to big.Float
+	return new(big.Float).SetFloat64(reserveIntoOriginRate), nil
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
