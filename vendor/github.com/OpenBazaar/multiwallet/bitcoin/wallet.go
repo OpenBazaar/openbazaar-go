@@ -48,6 +48,7 @@ type BitcoinWallet struct {
 }
 
 var (
+	_                         = wi.Wallet(&BitcoinWallet{})
 	BitcoinCurrencyDefinition = wi.CurrencyDefinition{
 		Code:         "BTC",
 		Divisibility: 8,
@@ -337,16 +338,23 @@ func (w *BitcoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold 
 	return w.generateMultisigScript(keys, threshold, timeout, timeoutKey)
 }
 
-func (w *BitcoinWallet) AddWatchedAddress(addr btc.Address) error {
-	script, err := w.AddressToScript(addr)
+func (w *BitcoinWallet) AddWatchedAddresses(addrs ...btc.Address) error {
+
+	var watchedScripts [][]byte
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		watchedScripts = append(watchedScripts, script)
+	}
+
+	err := w.db.WatchedScripts().PutAll(watchedScripts)
 	if err != nil {
 		return err
 	}
-	err = w.db.WatchedScripts().Put(script)
-	if err != nil {
-		return err
-	}
-	w.client.ListenAddress(addr)
+
+	w.client.ListenAddresses(addrs...)
 	return nil
 }
 

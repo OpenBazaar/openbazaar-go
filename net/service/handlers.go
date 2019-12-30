@@ -414,7 +414,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
+		err = wal.AddWatchedAddresses(addr)
 		if err != nil {
 			log.Error(err)
 		}
@@ -451,7 +451,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
+		err = wal.AddWatchedAddresses(addr)
 		if err != nil {
 			log.Error(err)
 		}
@@ -492,7 +492,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
+		err = wal.AddWatchedAddresses(addr)
 		if err != nil {
 			log.Error(err)
 		}
