@@ -13,7 +13,6 @@ import (
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"io/ioutil"
-	gonet "net"
 	"net/http"
 	"sync"
 	"time"
@@ -68,13 +67,13 @@ type offlineMessage struct {
 }
 
 func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
-	dial := gonet.Dial
+	var client *http.Client
 	if cfg.Dialer != nil {
-		dial = cfg.Dialer.Dial
+		tbTransport := &http.Transport{Dial: cfg.Dialer.Dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+	} else {
+		client = &http.Client{Timeout: time.Second * 30}
 	}
-
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{
 		db:         cfg.Db,
 		node:       cfg.IPFSNode,
@@ -309,7 +308,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	// Decrypt and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 	if err != nil {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
@@ -317,36 +316,36 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	env := pb.Envelope{}
 	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	// Validate the signature
 	ser, err := proto.Marshal(env.Message)
 	if err != nil {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 	if err != nil {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warningf("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	if m.bm.IsBanned(id) {
-		log.Warning("Received and dropped offline message from banned user: %s ", id.String())
+		log.Warningf("Received and dropped offline message from banned user: %s ", id.String())
 		return
 	}
 
