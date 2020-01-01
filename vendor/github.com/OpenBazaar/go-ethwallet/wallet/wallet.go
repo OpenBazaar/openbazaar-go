@@ -378,79 +378,34 @@ func (wallet *EthereumWallet) Start() {
 		}
 	}(wallet)
 
-	// prepare message to send to infura server
-	// values := map[string]interface{}{
-	// 	"jsonrpc": "2.0",
-	// 	"method":  "eth_subscribe",
-	// 	"params":  []interface{}{"newPendingTransactions"},
-	// 	"id":      1,
-	// }
-	values := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"method":  "eth_subscribe",
-		"params": []interface{}{"logs",
-			map[string]string{"address": wallet.address.String()}},
-		"id": 1,
-	}
-	jsonValue, err := json.Marshal(values)
-	fmt.Println("@@@@@@$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%% : ", wallet.address.String())
-	fmt.Println(string(jsonValue))
-	if err != nil {
-		log.Errorf("err json marshalling ws request: %v", err)
-		return
-	}
+	// start the ticker to check for balance
+	go func(wallet *EthereumWallet) {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
 
-	// send request to infura server
-	fmt.Println("ws conn : ", wallet.client, "     ", wallet.client.ws)
-	err = wallet.client.ws.WriteMessage(websocket.TextMessage, jsonValue)
-	fmt.Println("created subscription .... err: ", err)
-	if err != nil {
-		log.Errorf("err subscribing to the ws: %v", err)
-		return
-	}
-
-	sub := subs{}
-	subResp := subsResult{}
-	for {
-		// Read message from infura server.
-		_, message, err := wallet.client.ws.ReadMessage()
-		fmt.Println("received a message .....", message, "   err: ", err)
+		currentBalance, err := wallet.GetBalance()
 		if err != nil {
-			log.Errorf("err reading resp from ws: %v", err)
+			log.Infof("err fetching initial balance: %v", err)
 		}
 
-		err = json.Unmarshal(message, &subResp)
-		fmt.Println("message unmarshalled ....err:", err, "   msg: ", subResp)
-		if err != nil {
-			log.Errorf("err reading subscription resp from ws: %v", err)
+		for range ticker.C {
+			// fetch the current balance
+			fetchedBalance, err := wallet.GetBalance()
+			if err != nil {
+				log.Infof("err fetching balance at %v: %v", time.Now(), err)
+				continue
+			}
+			if fetchedBalance.Cmp(currentBalance) != 0 {
+				// the balance has changed
+				fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% !!!!!!!!!!!!!!!!!!!!!!!!!")
+				fmt.Println("balance changed ......")
+				fmt.Println("prev bal was : ", currentBalance.Uint64())
+				fmt.Println("fetched bal is : ", fetchedBalance.Uint64())
+				currentBalance = fetchedBalance
+				fmt.Println("curr bal was : ", currentBalance.Uint64())
+			}
 		}
-		sub.conn = wallet.client.ws
-		sub.ID = subResp.Result
-		break
-	}
-
-	fmt.Println("ssssssssssssssssssssssssssssssssssss", sub.ID)
-
-	if sub.ID == "" {
-		// we have a unsucessful subscription
-		return
-	}
-
-	fmt.Println("44444444444444444444444444444444444444444444")
-
-	resp := logsResult{}
-	for sub.conn.UnderlyingConn() != nil {
-
-		_, message, err := sub.conn.ReadMessage()
-		fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ : ", err)
-		if err != nil {
-			continue
-		}
-
-		err = json.Unmarshal(message, &resp)
-		fmt.Println("resp : ", resp, "   err : ", err)
-
-	}
+	}(wallet)
 
 }
 
