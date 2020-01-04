@@ -38,8 +38,8 @@ var (
 )
 
 const (
-	sigHashMask     = 0x1f
-	branchID = 0x2BB40E60
+	sigHashMask = 0x1f
+	branchID    = 0x2BB40E60
 )
 
 func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
@@ -53,9 +53,9 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 	}
 
 	var (
-		additionalPrevScripts map[wire.OutPoint][]byte
+		additionalPrevScripts   map[wire.OutPoint][]byte
 		additionalKeysByAddress map[string]*btc.WIF
-		inVals map[wire.OutPoint]btc.Amount
+		inVals                  map[wire.OutPoint]btc.Amount
 	)
 
 	// Create input source
@@ -78,7 +78,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
-		inVals =  make(map[wire.OutPoint]btc.Amount)
+		inVals = make(map[wire.OutPoint]btc.Amount)
 		for _, c := range coins.Coins() {
 			total += c.Value()
 			outpoint := wire.NewOutPoint(c.Hash(), c.Index())
