@@ -403,10 +403,7 @@ func (p *ClientPool) ListenAddresses(addrs ...btcutil.Address) {
 	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 
-	for _, addr := range addrs {
-		p.listenAddrs = append(p.listenAddrs, addr)
-	}
-
+	p.listenAddrs = append(p.listenAddrs, addrs...)
 	client.ListenAddresses(addrs...)
 }
 
