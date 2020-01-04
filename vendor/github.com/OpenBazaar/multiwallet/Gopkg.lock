@@ -26,11 +26,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cdb20ba34409b4eb78ff013e71eafce40e49b42485dafcfb675b64c5cb3cdaca"
+  digest = "1:41045b2cbf58bf6007d65103b1fb17cbc092777af415546eb40fe4e005da3780"
   name = "github.com/OpenBazaar/wallet-interface"
   packages = ["."]
   pruneopts = "UT"
-  revision = "aa8e214acd9b86f0c7a190d2eaf269070f5b5f3c"
+  revision = "ba95db86ca2f75d561554d3270623db4d5ed0467"
 
 [[projects]]
   digest = "1:0f98f59e9a2f4070d66f0c9c39561f68fcd1dc837b22a852d28d0003aebd1b1e"
