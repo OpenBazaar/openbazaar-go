@@ -188,7 +188,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 		if !ok {
 			return big.NewInt(0), errors.New("invalid fixed fee amount")
 		}
-		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, amt)
+		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, amt, false)
 		if err != nil {
 			return big.NewInt(0), err
 		} else if fee.Cmp(transactionTotal) > 0 {
@@ -213,7 +213,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 			if !ok {
 				return big.NewInt(0), errors.New("invalid fixed fee amount")
 			}
-			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, f)
+			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, f, false)
 			if err != nil {
 				return big.NewInt(0), err
 			}

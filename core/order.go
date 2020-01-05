@@ -931,7 +931,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			} else if l.Item.PriceModifier != 0 {
 				priceModifier = float64(l.Item.PriceModifier)
 			}
-			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Metadata.CryptoCurrencyCode, GetOrderQuantity(l, item))
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Metadata.CryptoCurrencyCode, GetOrderQuantity(l, item), true)
 			if err != nil {
 				return big.NewInt(0), err
 			}
@@ -943,7 +943,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			if !ok {
 				return big.NewInt(0), errors.New("invalid price value")
 			}
-			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, p)
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, p, false)
 			if err != nil {
 				return big.NewInt(0), err
 			}
@@ -968,7 +968,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 				}
 				if surcharge.Cmp(big.NewInt(0)) != 0 {
 					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-						l.Item.PriceCurrency.Code, surcharge)
+						l.Item.PriceCurrency.Code, surcharge, false)
 					if err != nil {
 						return big.NewInt(0), err
 					}
@@ -994,7 +994,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 				if id.B58String() == vendorCoupon.GetHash() {
 					if d, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && d.Cmp(big.NewInt(0)) > 0 {
 						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-							l.Item.PriceCurrency.Code, d)
+							l.Item.PriceCurrency.Code, d, false)
 						if err != nil {
 							log.Errorf("failed to convert currency for coupon (%s): %s", couponCode, err)
 							continue
@@ -1101,7 +1101,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			return big.NewInt(0), errors.New("invalid service price")
 		}
 		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-			listing.Item.PriceCurrency.Code, servicePrice)
+			listing.Item.PriceCurrency.Code, servicePrice, false)
 		if err != nil {
 			return big.NewInt(0), err
 		}
@@ -1115,7 +1115,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 
 			if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
 				secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-					listing.Item.PriceCurrency.Code, serviceAddlItemPrice)
+					listing.Item.PriceCurrency.Code, serviceAddlItemPrice, false)
 				if err != nil {
 					return big.NewInt(0), err
 				}
@@ -1200,14 +1200,21 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	return shippingTotal, nil
 }
 
-func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, originCurrencyCode string, amount *big.Int) (*big.Int, error) {
+func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, originCurrencyCode string, amount *big.Int, isCryptoListing bool) (*big.Int, error) {
 	var reserveCurrency = n.reserveCurrency()
 	var (
 		originCurrencyDef, oErr  = n.LookupCurrency(originCurrencyCode)
 		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
 	)
 	if oErr != nil {
-		return big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
+		if isCryptoListing {
+			// if the currency is unknown assume the default divisibility
+			originCurrencyDef = repo.NewUnknownCryptoDefinition(paymentCoin, repo.DefaultCryptoDivisibility)
+		} else {
+			// Return error if not a valid listing currency code
+			return big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
+		}
+
 	}
 	if pErr != nil {
 		return big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
@@ -1223,60 +1230,20 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, originCurrencyCode strin
 		return big.NewInt(0), fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
 	}
 
-	// 1. Get conversion rates from reserve currency to origin/payment
-	// 2. Divide the conversion rates (payment rate / origin rate)
-	// 3. Multiply original amount * conversion rate
-	// 4. Divide final price / divisibility conversion factor
+	converter := repo.NewCurrencyConverter(reserveWallet)
 
-	originRate, err := getConversionRate(reserveWallet, originCurrencyCode)
+	finalPrice, err := converter.GetFinalPrice(originCurrencyDef, paymentCurrencyDef, amount)
 	if err != nil {
-		return big.NewInt(0), err
+		return nil, err
 	}
 
-	paymentRate, err := getConversionRate(reserveWallet, paymentCoin)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-
-	finalRate := new(big.Float).Quo(paymentRate, originRate)
-
-	originalAmount := new(big.Float).SetInt(amount)
-	finalPrice := new(big.Float).Mul(finalRate, originalAmount)
-
-	conversionFactor := getDivisibilityConversionFactor(originCurrencyDef.Divisibility, paymentCurrencyDef.Divisibility)
-
+	// Convert to satoshis
+	divisibility := new(big.Int).SetUint64(uint64(paymentCurrencyDef.Divisibility))
+	divisibilityFactor := new(big.Int).Exp(new(big.Int).SetInt64(10), divisibility, nil)
+	finalPrice.Mul(finalPrice, new(big.Float).SetInt(divisibilityFactor))
 	finalPriceInt, _ := finalPrice.Int(new(big.Int))
-	finalPriceInt.Div(finalPriceInt, conversionFactor)
 
 	return finalPriceInt, nil
-}
-
-func getDivisibilityConversionFactor(div1 uint, div2 uint) *big.Int {
-	deltaExponent := int64(div1) - int64(div2)
-	deltaExponent64 := new(big.Int).SetInt64(deltaExponent)
-	return new(big.Int).Exp(new(big.Int).SetUint64(10), deltaExponent64, nil)
-}
-
-func getConversionRate(wal wallet.Wallet, destinationCurrencyCode string) (*big.Float, error) {
-	if wal.ExchangeRates() == nil {
-		return big.NewFloat(0), ErrPriceCalculationRequiresExchangeRates
-	}
-
-	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(destinationCurrencyCode)
-	if err != nil {
-		// TODO: remove hack once ExchangeRates can be made aware of testnet currencies
-		if strings.HasPrefix(destinationCurrencyCode, "T") {
-			reserveIntoOriginRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(destinationCurrencyCode, "T"))
-			if err != nil {
-				return big.NewFloat(0), err
-			}
-		} else {
-			return big.NewFloat(0), err
-		}
-	}
-
-	// Convert to big.Float
-	return new(big.Float).SetFloat64(reserveIntoOriginRate), nil
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
@@ -1284,47 +1251,6 @@ func (n *OpenBazaarNode) reserveCurrency() string {
 		return "TBTC"
 	}
 	return "BTC"
-}
-
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount *big.Int) (*big.Int, error) {
-	var (
-		currencyDef, cErr = n.LookupCurrency(currencyCode)
-		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
-	)
-	if cErr != nil {
-		// if the currency is unknown, it is likely a cryptocurrency and will
-		// assume the default divisibility
-		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
-	}
-	if pErr != nil {
-		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
-	}
-
-	if currencyDef.Equal(pricingDef) {
-		return amount, nil
-	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingDef.CurrencyCode().String())
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("currency (%s) unsupported by wallet", pricingDef.CurrencyCode().String())
-	}
-	if wal.ExchangeRates() == nil {
-		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
-	}
-
-	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
-	if err != nil {
-		return big.NewInt(0), err
-	}
-
-	cv, err := repo.NewCurrencyValue(amount.String(), currencyDef)
-	if err != nil {
-		return nil, err
-	}
-	newCV, _, err := cv.ConvertTo(pricingDef, 1/rate)
-	if err != nil {
-		return nil, err
-	}
-	return newCV.Amount, nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
