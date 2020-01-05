@@ -17,9 +17,6 @@ var (
 	// ErrPurchaseUnknownListing - unavailable listing err
 	ErrPurchaseUnknownListing = errors.New("order contains a hash of a listing that is not currently for sale")
 
-	// ErrPriceCalculationRequiresExchangeRates - exchange rates dependency err
-	ErrPriceCalculationRequiresExchangeRates = errors.New("can't calculate price with exchange rates disabled")
-
 	// ErrCryptocurrencyListingCoinTypeRequired - missing coinType err
 	ErrCryptocurrencyListingCoinTypeRequired = errors.New("cryptocurrency listings require a coinType")
 	// ErrCryptocurrencyPurchasePaymentAddressRequired - missing payment address err
