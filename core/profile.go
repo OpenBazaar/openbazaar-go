@@ -67,6 +67,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return err
 	}
 
+	if profile.GetVersion() == 0 {
+		profile.Version = ListingVersion
+	}
+
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
