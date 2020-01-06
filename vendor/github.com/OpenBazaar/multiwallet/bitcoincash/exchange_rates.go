@@ -35,7 +35,6 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	b := BitcoinCashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	
 	var client *http.Client
 	if dialer != nil {
 		dial := dialer.Dial
@@ -44,6 +43,7 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	} else {
 		client = &http.Client{Timeout: time.Minute}
 	}
+
 
 	b.providers = []*ExchangeRateProvider{
 		{"https://ticker.openbazaar.org/api", b.cache, client, OpenBazaarDecoder{}},

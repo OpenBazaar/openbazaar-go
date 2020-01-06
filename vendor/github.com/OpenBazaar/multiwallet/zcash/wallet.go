@@ -42,6 +42,8 @@ type ZCashWallet struct {
 	log           *logging.Logger
 }
 
+var _ = wi.Wallet(&ZCashWallet{})
+
 func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
@@ -340,16 +342,25 @@ func (w *ZCashWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold in
 	return w.generateMultisigScript(keys, threshold, timeout, timeoutKey)
 }
 
-func (w *ZCashWallet) AddWatchedAddress(addr btcutil.Address) error {
-	script, err := w.AddressToScript(addr)
+func (w *ZCashWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
+
+	var watchedScripts [][]byte
+	for _, addr := range addrs {
+		if !w.HasKey(addr) {
+			script, err := w.AddressToScript(addr)
+			if err != nil {
+				return err
+			}
+			watchedScripts = append(watchedScripts, script)
+		}
+	}
+
+	err := w.db.WatchedScripts().PutAll(watchedScripts)
 	if err != nil {
 		return err
 	}
-	err = w.db.WatchedScripts().Put(script)
-	if err != nil {
-		return err
-	}
-	w.client.ListenAddress(addr)
+
+	w.client.ListenAddresses(addrs...)
 	return nil
 }
 
@@ -362,7 +373,7 @@ func (w *ZCashWallet) AddWatchedScript(script []byte) error {
 	if err != nil {
 		return err
 	}
-	w.client.ListenAddress(addr)
+	w.client.ListenAddresses(addr)
 	return nil
 }
 

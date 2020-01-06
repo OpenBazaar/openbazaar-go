@@ -826,11 +826,6 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	return ret, err
 }
 
-// AddWatchedAddress - Add a script to the wallet and get notifications back when coins are received or spent from it
-func (wallet *ERC20Wallet) AddWatchedAddress(address btcutil.Address) error {
-	return nil
-}
-
 // AddTransactionListener - add a txn listener
 func (wallet *ERC20Wallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service

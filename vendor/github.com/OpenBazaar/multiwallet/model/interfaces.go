@@ -29,8 +29,8 @@ type APIClient interface {
 	// when an existing transaction confirms for all addresses the API is listening on.
 	TransactionNotify() <-chan Transaction
 
-	// Listen for events on this addresses. Results are returned to TransactionNotify()
-	ListenAddress(addr btcutil.Address)
+	// Listen for events on these addresses. Results are returned to TransactionNotify()
+	ListenAddresses(addrs ...btcutil.Address)
 
 	// Broadcast a transaction to the network
 	Broadcast(tx []byte) (string, error)
