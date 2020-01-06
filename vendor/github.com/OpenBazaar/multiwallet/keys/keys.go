@@ -78,7 +78,7 @@ func (km *KeyManager) GetCurrentKey(purpose wallet.KeyPurpose) (*hd.ExtendedKey,
 		return nil, err
 	}
 	if len(i) == 0 {
-		return nil, errors.New("No unused keys in database")
+		return nil, errors.New("no unused keys in database")
 	}
 	return km.GenerateChildKey(purpose, uint32(i[0]))
 }
@@ -105,12 +105,27 @@ func (km *KeyManager) GetFreshKey(purpose wallet.KeyPurpose) (*hd.ExtendedKey, e
 	if err != nil {
 		return nil, err
 	}
-	p := wallet.KeyPath{wallet.KeyPurpose(purpose), index}
+	p := wallet.KeyPath{Purpose: purpose, Index: index}
 	err = km.datastore.Put(addr.ScriptAddress(), p)
 	if err != nil {
 		return nil, err
 	}
 	return childKey, nil
+}
+
+func (km *KeyManager) GetNextUnused(purpose wallet.KeyPurpose) (*hd.ExtendedKey, error) {
+	if err := km.lookahead(); err != nil {
+		return nil, err
+	}
+	i, err := km.datastore.GetUnused(purpose)
+	if err != nil {
+		return nil, err
+	}
+	key, err := km.GenerateChildKey(purpose, uint32(i[1]))
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 func (km *KeyManager) GetKeys() []*hd.ExtendedKey {
@@ -163,7 +178,7 @@ func (km *KeyManager) GenerateChildKey(purpose wallet.KeyPurpose, index uint32) 
 	} else if purpose == wallet.INTERNAL {
 		return km.internalKey.Child(index)
 	}
-	return nil, errors.New("Unknown key purpose")
+	return nil, errors.New("unknown key purpose")
 }
 
 func (km *KeyManager) lookahead() error {
