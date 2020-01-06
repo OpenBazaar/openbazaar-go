@@ -18,13 +18,38 @@ import (
 
 var Log = logging.MustGetLogger("pool")
 
+type Mutex struct {
+	name string
+	sync.Mutex
+}
+
+// NewMutex creates a new `Mutex` whose actions with be logged and labeled with
+// the given name
+func NewMutex(name string) Mutex {
+	return Mutex{name, sync.Mutex{}}
+}
+
+// Lock intercepts calls to lock this mutex and wraps logging around it
+func (m *Mutex) Lock() {
+	Log.Info("Locking mutex:", m.name)
+	m.Mutex.Lock()
+	Log.Info("Locked mutex:", m.name)
+}
+
+// Unlock intercepts calls to unlock this mutex and wraps logging around it
+func (m *Mutex) Unlock() {
+	Log.Info("Unlocking mutex:", m.name)
+	m.Mutex.Unlock()
+	Log.Info("Unlocked mutex:", m.name)
+}
+
 // ClientPool is an implementation of the APIClient interface which will handle
 // server failure, rotate servers, and retry API requests.
 type ClientPool struct {
 	blockChan        chan model.Block
 	cancelListenChan context.CancelFunc
 	listenAddrs      []btcutil.Address
-	listenAddrsLock  sync.Mutex
+	listenAddrsLock  Mutex
 	poolManager      *rotationManager
 	proxyDialer      proxy.Dialer
 	txChan           chan model.Transaction
@@ -60,6 +85,7 @@ func NewClientPool(endpoints []string, proxyDialer proxy.Dialer) (*ClientPool, e
 			blockChan:    make(chan model.Block),
 			poolManager:  &rotationManager{},
 			listenAddrs:  make([]btcutil.Address, 0),
+			listenAddrsLock: NewMutex("ListenAddressesLock"),
 			txChan:       make(chan model.Transaction),
 			unblockStart: make(chan struct{}, 1),
 		}
@@ -370,15 +396,14 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 	return utxos, err
 }
 
-// ListenAddresses proxies the same request to the active client
-func (p *ClientPool) ListenAddresses(addrs ...btcutil.Address) {
+// ListenAddress proxies the same request to the active client
+func (p *ClientPool) ListenAddress(addr btcutil.Address) {
 	p.listenAddrsLock.Lock()
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
-
-	p.listenAddrs = append(p.listenAddrs, addrs...)
-	client.ListenAddresses(addrs...)
+	p.listenAddrs = append(p.listenAddrs, addr)
+	client.ListenAddress(addr)
 }
 
 func (p *ClientPool) replayListenAddresses() {
@@ -386,7 +411,9 @@ func (p *ClientPool) replayListenAddresses() {
 	defer p.listenAddrsLock.Unlock()
 	var client = p.poolManager.AcquireCurrent()
 	defer p.poolManager.ReleaseCurrent()
-	client.ListenAddresses(p.listenAddrs...)
+	for _, addr := range p.listenAddrs {
+		client.ListenAddress(addr)
+	}
 }
 
 // TransactionNotify proxies the active client's tx channel
