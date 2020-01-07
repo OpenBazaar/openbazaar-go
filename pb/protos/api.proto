@@ -44,11 +44,12 @@ message CaseRespApi {
 
 message TransactionRecord {
     string txid                         = 1;
-    //int64 value                 = 2 [json_name = ""];
-    uint64 confirmations                = 3;
-    uint64 height                       = 4;
+    int64  value                        = 2  [deprecated = true];
+    uint32 confirmations                = 3;
+    uint32 height                       = 4;
     google.protobuf.Timestamp timestamp = 5;
-    CurrencyValue txnValue = 6 [json_name = "value"];
+    CurrencyDefinition currency         = 6;
+    string bigValue                     = 7;
 }
 
 message PeerAndProfile {

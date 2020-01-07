@@ -436,7 +436,7 @@ type PaymentNotification struct {
 	ID           string           `json:"notificationId"`
 	Type         NotificationType `json:"type"`
 	OrderId      string           `json:"orderId"`
-	FundingTotal string           `json:"fundingTotal"`
+	FundingTotal *CurrencyValue   `json:"fundingTotal"`
 	CoinType     string           `json:"coinType"`
 }
 

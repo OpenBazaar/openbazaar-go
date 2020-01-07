@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,10 +27,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
-
-// ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
-const ConfirmationsPerHour = 6
 
 // DisputeWg - waitgroup for disputes
 var DisputeWg = new(sync.WaitGroup)
@@ -54,8 +51,13 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	if !n.verifyEscrowFundsAreDisputeable(contract, records) {
 		return ErrOpenFailureOrderExpired
 	}
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
 	var isPurchase bool
-	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
+	if n.IpfsNode.Identity.Pretty() == order.BuyerID.PeerID {
 		isPurchase = true
 	}
 
@@ -75,17 +77,14 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	var outpoints []*pb.Outpoint
 	for _, r := range records {
 		o := new(pb.Outpoint)
-		o.Hash = strings.TrimPrefix(r.Txid, "0x")
+		o.Hash = util.NormalizeAddress(r.Txid)
 		o.Index = r.Index
-		o.NewValue = &pb.CurrencyValue{
-			Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
-			Amount:   r.Value.String(),
-		}
+		o.BigValue = r.Value.String()
 		outpoints = append(outpoints, o)
 	}
 	dispute.Outpoints = outpoints
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	contract.Signatures = append(contract.Signatures, rc.Signatures[0])
 
 	// Send to moderator
-	err = n.SendDisputeOpen(contract.BuyerOrder.Payment.Moderator, nil, rc)
+	err = n.SendDisputeOpen(order.Payment.Moderator, nil, rc)
 	if err != nil {
 		return err
 	}
@@ -126,8 +125,8 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 			return nil
 		}
 	} else {
-		counterparty = contract.BuyerOrder.BuyerID.PeerID
-		counterkey, err = libp2p.UnmarshalPublicKey(contract.BuyerOrder.BuyerID.Pubkeys.Identity)
+		counterparty = order.BuyerID.PeerID
+		counterkey, err = libp2p.UnmarshalPublicKey(order.BuyerID.Pubkeys.Identity)
 		if err != nil {
 			return nil
 		}
@@ -153,14 +152,22 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 }
 
 func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
-	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return false
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
+		return false
+	}
+	defn, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
 		return false
 	}
 	for _, r := range records {
-		hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
+		hash, err := chainhash.NewHashFromStr(util.NormalizeAddress(r.Txid))
 		if err != nil {
 			log.Errorf("Failed NewHashFromStr(%s): %s", r.Txid, err.Error())
 			return false
@@ -170,6 +177,8 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 			log.Errorf("Failed GetConfirmations(%s): %s", hash.String(), err.Error())
 			return false
 		}
+		confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours *
+			defn.ConfirmationsPerHour()
 		if actualConfirmations >= confirmationsForTimeout {
 			return false
 		}
@@ -243,6 +252,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("dispute message is nil")
 	}
 
+	dispute := repo.ToV5Dispute(rc.Dispute)
+
 	// Deserialize contract
 	contract := new(pb.RicardianContract)
 	err := proto.Unmarshal(rc.Dispute.SerializedContract, contract)
@@ -253,12 +264,17 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("serialized contract is malformatted")
 	}
 
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -269,8 +285,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
-		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
-			buyer = contract.BuyerOrder.BuyerID.PeerID
+		if order.BuyerID != nil {
+			buyer = order.BuyerID.PeerID
 		}
 	}
 
@@ -279,32 +295,32 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	var DisputerHandle string
 	var DisputeeID string
 	var DisputeeHandle string
-	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
+	if order.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
 		if contract.VendorListings[0].VendorID.PeerID == peerID {
 			DisputerID = contract.VendorListings[0].VendorID.PeerID
 			DisputerHandle = contract.VendorListings[0].VendorID.Handle
-			DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-			DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
+			DisputeeID = order.BuyerID.PeerID
+			DisputeeHandle = order.BuyerID.Handle
 			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, false, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}
-			err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, dispute.Outpoints)
 			if err != nil {
 				return err
 			}
-		} else if contract.BuyerOrder.BuyerID.PeerID == peerID {
-			DisputerID = contract.BuyerOrder.BuyerID.PeerID
-			DisputerHandle = contract.BuyerOrder.BuyerID.Handle
+		} else if order.BuyerID.PeerID == peerID {
+			DisputerID = order.BuyerID.PeerID
+			DisputerHandle = order.BuyerID.Handle
 			DisputeeID = contract.VendorListings[0].VendorID.PeerID
 			DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, true, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}
-			err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, dispute.Outpoints)
 			if err != nil {
 				return err
 			}
@@ -315,8 +331,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			return err
 		}
 	} else if contract.VendorListings[0].VendorID.PeerID == n.IpfsNode.Identity.Pretty() { // Vendor
-		DisputerID = contract.BuyerOrder.BuyerID.PeerID
-		DisputerHandle = contract.BuyerOrder.BuyerID.Handle
+		DisputerID = order.BuyerID.PeerID
+		DisputerHandle = order.BuyerID.Handle
 		DisputeeID = contract.VendorListings[0].VendorID.PeerID
 		DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 		// Load our version of the contract from the db
@@ -345,12 +361,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = strings.TrimPrefix(r.Txid, "0x")
+			o.Hash = util.NormalizeAddress(r.Txid)
 			o.Index = r.Index
-			o.NewValue = &pb.CurrencyValue{
-				Currency: myContract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   r.Value.String(),
-			}
+			o.BigValue = r.Value.String()
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -373,11 +386,11 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if err != nil {
 			return err
 		}
-	} else if contract.BuyerOrder.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() { // Buyer
+	} else if order.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() { // Buyer
 		DisputerID = contract.VendorListings[0].VendorID.PeerID
 		DisputerHandle = contract.VendorListings[0].VendorID.Handle
-		DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-		DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
+		DisputeeID = order.BuyerID.PeerID
+		DisputeeHandle = order.BuyerID.Handle
 
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
@@ -408,12 +421,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = strings.TrimPrefix(r.Txid, "0x")
+			o.Hash = util.NormalizeAddress(r.Txid)
 			o.Index = r.Index
-			o.NewValue = &pb.CurrencyValue{
-				Currency: myContract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   r.Value.String(),
-			}
+			o.BigValue = r.Value.String()
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -494,9 +504,13 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		dispute.BuyerContract = dispute.VendorContract
 	}
 	preferredContract := dispute.ResolutionPaymentContract(payDivision)
+	preferredOrder, err := repo.ToV5Order(preferredContract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
 
 	// TODO: Remove once broken contracts are migrated
-	paymentCoin := preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code
+	paymentCoin := preferredOrder.Payment.AmountCurrency.Code
 	_, err = n.LookupCurrency(paymentCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", paymentCoin, orderID)
@@ -523,9 +537,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	var (
 		vendorID = preferredContract.VendorListings[0].VendorID.PeerID
-		buyerID  = preferredContract.BuyerOrder.BuyerID.PeerID
+		buyerID  = preferredOrder.BuyerID.PeerID
 	)
-	buyerKey, err := libp2p.UnmarshalPublicKey(preferredContract.BuyerOrder.BuyerID.Pubkeys.Identity)
+	buyerKey, err := libp2p.UnmarshalPublicKey(preferredOrder.BuyerID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
@@ -537,32 +551,32 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Calculate total out value
 	totalOut := big.NewInt(0)
 	for _, o := range outpoints {
-		n, ok := new(big.Int).SetString(o.NewValue.Amount, 10)
+		n, ok := new(big.Int).SetString(o.BigValue, 10)
 		if !ok {
 			return errors.New("invalid total out amount")
 		}
 		totalOut = new(big.Int).Add(totalOut, n)
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredOrder.Payment.AmountCurrency.Code)
 	if err != nil {
-		return fmt.Errorf("currency (%s) not supported by wallet", preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		return fmt.Errorf("currency (%s) not supported by wallet", preferredOrder.Payment.AmountCurrency.Code)
 	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
 	outMap := make(map[string]wallet.TransactionOutput)
 	var outputs []wallet.TransactionOutput
 	var modAddr btcutil.Address
-	var modValue big.Int
+	var modValue *big.Int
 	modAddr = wal.CurrentAddress(wallet.EXTERNAL)
-	modValue, err = n.GetModeratorFee(*totalOut, preferredContract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	modValue, err = n.GetModeratorFee(totalOut, preferredOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 	if modValue.Cmp(big.NewInt(0)) > 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
-			Value:   modValue,
+			Value:   *modValue,
 			Index:   0,
 		}
 		outputs = append(outputs, out)
@@ -570,7 +584,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	var buyerAddr btcutil.Address
-	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
+	effectiveVal := new(big.Int).Sub(totalOut, modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
@@ -614,7 +628,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(o.NewValue.Amount, 10)
+		n, ok := new(big.Int).SetString(o.BigValue, 10)
 		if !ok {
 			return errors.New("invalid amount")
 		}
@@ -632,7 +646,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	// Calculate total fee
 	defaultFee := wal.GetFeePerByte(wallet.NORMAL)
-	txFee := wal.EstimateFee(inputs, outputs, dispute.ResolutionPaymentFeePerByte(payDivision, defaultFee))
+	txFee := wal.EstimateFee(inputs, outputs, *dispute.ResolutionPaymentFeePerByte(payDivision, defaultFee))
 
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
@@ -656,7 +670,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create moderator key
-	chaincode := preferredContract.BuyerOrder.Payment.Chaincode
+	chaincode := preferredOrder.Payment.Chaincode
 	chaincodeBytes, err := hex.DecodeString(chaincode)
 	if err != nil {
 		return err
@@ -687,7 +701,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create signatures
-	redeemScript := preferredContract.BuyerOrder.Payment.RedeemScript
+	redeemScript := preferredOrder.Payment.RedeemScript
 	redeemScriptBytes, err := hex.DecodeString(redeemScript)
 	if err != nil {
 		return err
@@ -712,29 +726,25 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if out, ok := outMap["buyer"]; ok {
 		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
-			AmountValue: &pb.CurrencyValue{
-				Currency: preferredContract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   out.Value.String(),
-			},
+			BigAmount:       out.Value.String(),
 		}
 	}
 	if out, ok := outMap["vendor"]; ok {
 		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
-			AmountValue: &pb.CurrencyValue{
-				Currency: preferredContract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   out.Value.String(),
-			},
+			BigAmount:       out.Value.String(),
 		}
 	}
 	if out, ok := outMap["moderator"]; ok {
 		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
-			AmountValue: &pb.CurrencyValue{
-				Currency: preferredContract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   out.Value.String(),
-			},
+			BigAmount:       out.Value.String(),
 		}
+	}
+
+	payout.PayoutCurrency = &pb.CurrencyDefinition{
+		Code:         preferredOrder.Payment.AmountCurrency.Code,
+		Divisibility: preferredOrder.Payment.AmountCurrency.Divisibility,
 	}
 
 	d.Payout = payout
@@ -912,12 +922,17 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 
 	// Verify the redeem script matches all the bitcoin keys
 	if contract.BuyerOrder.Payment != nil {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+		order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+		if err != nil {
+			validationErrors = append(validationErrors, fmt.Sprintf("Error converting to v5 order: %s", err))
+			return validationErrors
+		}
+		wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 		if err != nil {
 			validationErrors = append(validationErrors, "Contract uses a coin not found in wallet")
 			return validationErrors
 		}
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
@@ -932,7 +947,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
+		buyerKey, err := wal.ChildKey(order.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
@@ -949,11 +964,11 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 
-		if strings.TrimPrefix(contract.BuyerOrder.Payment.Address, "0x") != strings.TrimPrefix(addr.String(), "0x") {
+		if util.NormalizeAddress(order.Payment.Address) != util.NormalizeAddress(addr.String()) {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
 
-		if hex.EncodeToString(redeemScript) != contract.BuyerOrder.Payment.RedeemScript {
+		if hex.EncodeToString(redeemScript) != order.Payment.RedeemScript {
 			validationErrors = append(validationErrors, "The calculated redeem script doesn't match the redeem script in the order")
 		}
 	}
@@ -970,14 +985,18 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 	if contract.DisputeResolution.Payout == nil || len(contract.DisputeResolution.Payout.Sigs) == 0 {
 		return errors.New("DisputeResolution contains invalid payout")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 
 	if contract.VendorListings[0].VendorID.PeerID == n.IpfsNode.Identity.Pretty() && contract.DisputeResolution.Payout.VendorOutput != nil {
 		return n.verifyPaymentDestinationIsInWallet(contract.DisputeResolution.Payout.VendorOutput, wal)
-	} else if contract.BuyerOrder.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() && contract.DisputeResolution.Payout.BuyerOutput != nil {
+	} else if order.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() && contract.DisputeResolution.Payout.BuyerOutput != nil {
 		return n.verifyPaymentDestinationIsInWallet(contract.DisputeResolution.Payout.BuyerOutput, wal)
 	}
 	return nil
@@ -1041,19 +1060,27 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	currencyDef, err := n.LookupCurrency(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
-		return fmt.Errorf("unknown currency code (%s) in contract (%s) buyer order", contract.BuyerOrder.Payment.AmountValue.Currency.Code, orderID)
+		return err
+	}
+
+	currencyDef, err := n.LookupCurrency(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return fmt.Errorf("unknown currency code (%s) in contract (%s) buyer order", order.Payment.AmountCurrency.Code, orderID)
 	}
 
 	// Create inputs
-	var inputs []wallet.TransactionInput
-	for _, o := range contract.DisputeResolution.Payout.Inputs {
-		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
+	var (
+		inputs     []wallet.TransactionInput
+		resolution = repo.ToV5DisputeResolution(contract.DisputeResolution)
+	)
+	for _, o := range resolution.Payout.Inputs {
+		decodedHash, err := hex.DecodeString(util.NormalizeAddress(o.Hash))
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(o.NewValue.Amount, 10)
+		n, ok := new(big.Int).SetString(o.BigValue, 10)
 		if !ok {
 			return errors.New("invalid payout input")
 		}
@@ -1069,19 +1096,19 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if len(inputs) == 0 {
 		return errors.New("transaction has no inputs")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 
 	// Create outputs
 	var outputs []wallet.TransactionOutput
-	if contract.DisputeResolution.Payout.BuyerOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.BuyerOutput)
+	if resolution.Payout.BuyerOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.BuyerOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.BuyerOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1092,12 +1119,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		}
 		outputs = append(outputs, output)
 	}
-	if contract.DisputeResolution.Payout.VendorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.VendorOutput)
+	if resolution.Payout.VendorOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.VendorOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.VendorOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1108,12 +1135,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		}
 		outputs = append(outputs, output)
 	}
-	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, contract.DisputeResolution.Payout.ModeratorOutput)
+	if resolution.Payout.ModeratorOutput != nil {
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(wal, resolution.Payout.ModeratorOutput)
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.AmountValue.Amount, 10)
+		n, ok := new(big.Int).SetString(resolution.Payout.ModeratorOutput.BigAmount, 10)
 		if !ok {
 			return errors.New("invalid payout amount")
 		}
@@ -1126,7 +1153,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create signing key
-	chaincodeBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	chaincodeBytes, err := hex.DecodeString(order.Payment.Chaincode)
 	if err != nil {
 		return err
 	}
@@ -1140,7 +1167,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create signatures
-	redeemScriptBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	redeemScriptBytes, err := hex.DecodeString(order.Payment.RedeemScript)
 	if err != nil {
 		return err
 	}
@@ -1151,7 +1178,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	var moderatorSigs []wallet.Signature
-	for _, sig := range contract.DisputeResolution.Payout.Sigs {
+	for _, sig := range resolution.Payout.Sigs {
 		s := wallet.Signature{
 			Signature:  sig.Signature,
 			InputIndex: sig.InputIndex,
@@ -1169,10 +1196,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	accept.ClosedBy = n.IpfsNode.Identity.Pretty()
 	contract.DisputeAcceptance = accept
 
-	peerID := contract.BuyerOrder.BuyerID.PeerID
+	peerID := order.BuyerID.PeerID
 
 	// Update database
-	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
+	if n.IpfsNode.Identity.Pretty() == order.BuyerID.PeerID {
 		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DECIDED, true)
 		peerID = contract.VendorListings[0].VendorID.PeerID
 	} else {
@@ -1189,7 +1216,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	err = n.SendOrderPayment(&SpendResponse{
-		Txid:          strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
+		Txid:          util.NormalizeAddress(hexutil.Encode(txnID)),
 		Currency:      &currencyDef,
 		OrderID:       orderID,
 		PeerID:        peerID,

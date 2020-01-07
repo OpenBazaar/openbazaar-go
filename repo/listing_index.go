@@ -22,7 +22,7 @@ type (
 		ContractType       string           `json:"contractType"`
 		Description        string           `json:"description"`
 		Thumbnail          ListingThumbnail `json:"thumbnail"`
-		Price              CurrencyValue    `json:"price"`
+		Price              *CurrencyValue   `json:"price"`
 		Modifier           float32          `json:"modifier"`
 		ShipsTo            []string         `json:"shipsTo"`
 		FreeShipping       []string         `json:"freeShipping"`
@@ -31,6 +31,7 @@ type (
 		RatingCount        uint32           `json:"ratingCount"`
 		ModeratorIDs       []string         `json:"moderators"`
 		AcceptedCurrencies []string         `json:"acceptedCurrencies"`
+		CryptoCurrencyCode string           `json:"coinType"`
 	}
 )
 
@@ -105,21 +106,21 @@ func parseV4Data(data []byte) (ListingIndexData, error) {
 		RatingCount        uint32   `json:"ratingCount"`
 		ModeratorIDs       []string `json:"moderators"`
 		AcceptedCurrencies []string `json:"acceptedCurrencies"`
-		CoinType           string   `json:"coinType"`
+		CryptoCurrencyCode string   `json:"coinType"`
 	}
 	if err := json.Unmarshal(data, &v4); err != nil {
 		return ListingIndexData{}, err
 	}
-	priceDef, err := AllCurrencies().Lookup(v4.Price.CurrencyCode)
-	if err != nil {
-		return ListingIndexData{}, err
-	}
-	priceValue, err := NewCurrencyValueFromUint(uint64(v4.Price.Amount), priceDef)
-	if err != nil {
-		return ListingIndexData{}, err
-	}
-	if v4.CoinType != "" && v4.CoinType != v4.Price.CurrencyCode {
-		log.Debugf("parsing v4 listing: ignoring inconsistent coinType (%s), using price currencyCode (%s)", v4.CoinType, v4.Price.CurrencyCode)
+	var priceValue *CurrencyValue
+	if v4.Price.CurrencyCode != "" {
+		priceDef, err := AllCurrencies().Lookup(v4.Price.CurrencyCode)
+		if err != nil {
+			return ListingIndexData{}, err
+		}
+		priceValue, err = NewCurrencyValueFromUint(uint64(v4.Price.Amount), priceDef)
+		if err != nil {
+			return ListingIndexData{}, err
+		}
 	}
 	return ListingIndexData{
 		Hash:               v4.Hash,
@@ -131,7 +132,7 @@ func parseV4Data(data []byte) (ListingIndexData, error) {
 		Description:        v4.Description,
 		Thumbnail:          v4.Thumbnail,
 		Modifier:           v4.Price.Modifier,
-		Price:              *priceValue,
+		Price:              priceValue,
 		ShipsTo:            v4.ShipsTo,
 		FreeShipping:       v4.FreeShipping,
 		Language:           v4.Language,
@@ -139,5 +140,6 @@ func parseV4Data(data []byte) (ListingIndexData, error) {
 		RatingCount:        v4.RatingCount,
 		ModeratorIDs:       v4.ModeratorIDs,
 		AcceptedCurrencies: v4.AcceptedCurrencies,
+		CryptoCurrencyCode: v4.CryptoCurrencyCode,
 	}, nil
 }

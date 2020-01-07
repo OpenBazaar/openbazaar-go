@@ -68,7 +68,7 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = n.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
@@ -113,13 +113,6 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		return "", "", retCurrency, false, err
 	}
 	retCurrency.Currency = defn
-	currency := &pb.CurrencyDefinition{
-		Code:         defn.Code.String(),
-		Divisibility: uint32(defn.Divisibility),
-		Name:         defn.Name,
-		CurrencyType: defn.CurrencyType,
-	}
-
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", retCurrency, false, err
@@ -156,11 +149,12 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
-	payment.AmountValue = &pb.CurrencyValue{
-		Currency: currency,
-	}
 
 	contract.BuyerOrder.Payment = payment
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
+	}
 
 	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
@@ -168,17 +162,11 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		return "", "", retCurrency, false, err
 	}
 
-	payment.AmountValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{
-			Code:         defn.Code.String(),
-			Divisibility: uint32(defn.Divisibility),
-			Name:         defn.Name,
-			CurrencyType: defn.CurrencyType,
-		},
-		Amount: total.String(),
+	if wal.IsDust(*total) {
+		return "", "", retCurrency, false, ErrSpendAmountIsDust
 	}
 
-	contract.BuyerOrder.Payment = payment
+	payment.BigAmount = total.String()
 
 	contract, err = n.SignOrder(contract)
 	if err != nil {
@@ -211,11 +199,9 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	if err != nil {
 		return nil, errors.New("invalid payment coin")
 	}
-	payment.AmountValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{
-			Code:         defn.Code.String(),
-			Divisibility: uint32(defn.Divisibility),
-		},
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
 	}
 
 	profile, err := n.FetchProfile(data.Moderator, true)
@@ -234,22 +220,20 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 		return nil, errors.New("moderator does not accept our currency")
 	}
 	contract.BuyerOrder.Payment = payment
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
+	}
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return nil, err
 	}
-	payment.AmountValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{
-			Code:         defn.Code.String(),
-			Divisibility: uint32(defn.Divisibility),
-			Name:         defn.Name,
-			CurrencyType: defn.CurrencyType,
-		},
-		Amount: total.String(),
-	}
+	payment.BigAmount = total.String()
+	contract.BuyerOrder.Payment = payment
+
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
 	f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
-	t := new(big.Int).Div(&total, big.NewInt(4))
+	t := new(big.Int).Div(total, big.NewInt(4))
 
 	if f.Cmp(t) > 0 {
 		return nil, errors.New("transaction fee too high for moderated payment")
@@ -292,15 +276,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 	fee := wal.GetFeePerByte(wallet.NORMAL)
-	contract.BuyerOrder.RefundFeeValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{
-			Code:         defn.Code.String(),
-			Divisibility: uint32(defn.Divisibility),
-			Name:         defn.Name,
-			CurrencyType: defn.CurrencyType,
-		},
-		Amount: fee.String(),
-	}
+	contract.BuyerOrder.BigRefundFee = fee.String()
 
 	err = wal.AddWatchedAddress(addr)
 	if err != nil {
@@ -351,7 +327,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
@@ -362,7 +338,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	// Vendor offline
 	// Change payment code to direct
 
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
@@ -477,7 +453,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
@@ -516,7 +492,7 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 	if err != nil {
 		log.Error(err)
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.AmountValue.Amount, 10)
+	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
@@ -626,11 +602,23 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		}
 		i.ListingHash = listingID.String()
 
-		// If purchasing a listing version >=3 then the Quantity64 field must be used
-		if listing.ProtoListing.Metadata.Version < 3 {
-			i.Quantity = uint32(item.Quantity)
-		} else {
-			i.Quantity64 = item.Quantity
+		// set quantity according to schema version
+		// TODO: extract to repo package model
+		switch listing.ProtoListing.Metadata.Version {
+		case 5:
+			i.BigQuantity = item.Quantity
+		case 4, 3:
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity64 = q.Uint64()
+		default:
+			q, ok := new(big.Int).SetString(item.Quantity, 10)
+			if !ok {
+				return nil, errors.New("invalid quantity format")
+			}
+			i.Quantity = uint32(q.Uint64())
 		}
 
 		i.Memo = item.Memo
@@ -846,21 +834,19 @@ func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 }
 
 // EstimateOrderTotal - returns order total in satoshi/wei
-func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (big.Int, error) {
+func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (*big.Int, error) {
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
 	payment := new(pb.Order_Payment)
 	defn, err := n.LookupCurrency(data.PaymentCoin)
 	if err != nil {
-		return *big.NewInt(0), errors.New("invalid payment coin")
+		return big.NewInt(0), errors.New("invalid payment coin")
 	}
-	payment.AmountValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{
-			Code:         defn.Code.String(),
-			Divisibility: uint32(defn.Divisibility),
-		},
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
 	}
 	contract.BuyerOrder.Payment = payment
 	return n.CalculateOrderTotal(contract)
@@ -872,7 +858,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -951,10 +937,10 @@ func (n *OpenBazaarNode) CalcOrderID(order *pb.Order) (string, error) {
 }
 
 // CalculateOrderTotal - calculate the total in satoshi/wei
-func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (big.Int, error) {
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*big.Int, error) {
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
 	if wal.ExchangeRates() != nil {
 		_, err = wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
@@ -963,73 +949,86 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 		}
 	}
 
-	var total big.Int
+	var total *big.Int
 	physicalGoods := make(map[string]*pb.Listing)
 
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
 		var (
-			satoshis     big.Int
-			itemTotal    big.Int
-			itemQuantity uint64
+			satoshis  *big.Int
+			itemTotal *big.Int
 		)
 
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
-			return *big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
+			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
 		}
-
-		// Continue using the old 32-bit quantity field for all listings less than version 3
-		itemQuantity = GetOrderQuantity(l, item)
+		rl, err := repo.NewListingFromProtobuf(l)
+		if err != nil {
+			return big.NewInt(0), err
+		}
 
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
 		}
 
-		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
-			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountValue.Currency.Code, l.Metadata.PricingCurrencyDefn.Code, *big.NewInt(int64(itemQuantity)))
-			t0 := new(big.Float).Mul(big.NewFloat(float64(l.Metadata.PriceModifier)), new(big.Float).SetInt(&satoshis))
-			t1, _ := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
-			satoshis = *new(big.Int).Add(&satoshis, t1)
-			itemQuantity = 1
-		} else {
-			p, ok := new(big.Int).SetString(l.Item.PriceValue.Amount, 10)
-			if !ok {
-				return *big.NewInt(0), errors.New("invalid price value")
+		if l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
+			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+			var priceModifier float64
+			if l.Metadata.PriceModifier != 0 {
+				priceModifier = float64(l.Metadata.PriceModifier)
+			} else if l.Item.PriceModifier != 0 {
+				priceModifier = float64(l.Item.PriceModifier)
 			}
-			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountValue.Currency.Code, l.Metadata.PricingCurrencyDefn.Code, *p)
+			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Metadata.CryptoCurrencyCode, GetOrderQuantity(l, item))
+			if err != nil {
+				return big.NewInt(0), err
+			}
+			t0 := new(big.Float).Mul(big.NewFloat(priceModifier), new(big.Float).SetInt(satoshis))
+			t1, _ := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
+			satoshis = new(big.Int).Add(satoshis, t1)
+		} else {
+			p, ok := new(big.Int).SetString(l.Item.BigPrice, 10)
+			if !ok {
+				return big.NewInt(0), errors.New("invalid price value")
+			}
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, p)
+			if err != nil {
+				return big.NewInt(0), err
+			}
 		}
-		if err != nil {
-			return *big.NewInt(0), err
-		}
-		itemTotal = *new(big.Int).Add(&itemTotal, &satoshis)
+		itemTotal = new(big.Int).Set(satoshis)
 		selectedSku, err := GetSelectedSku(l, item.Options)
 		if err != nil {
-			return *big.NewInt(0), err
+			return big.NewInt(0), err
 		}
 		var skuExists bool
-		for i, sku := range l.Item.Skus {
+		skus, err := rl.GetSkus()
+		if err != nil {
+			return big.NewInt(0), err
+		}
+		for i, sku := range skus {
 			if selectedSku == i {
 				skuExists = true
-				surcharge0, ok := new(big.Int).SetString(sku.SurchargeValue.Amount, 10)
-				if !ok {
-					return *big.NewInt(0), errors.New("invalid surcharge value")
+				surcharge := big.NewInt(0)
+				surcharge0, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
+				if ok {
+					surcharge = new(big.Int).Abs(surcharge0)
 				}
-				surcharge := new(big.Int).Abs(surcharge0)
 				if surcharge.Cmp(big.NewInt(0)) != 0 {
-					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
-						l.Metadata.PricingCurrencyDefn.Code, *surcharge)
+					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
+						l.Item.PriceCurrency.Code, surcharge)
 					if err != nil {
-						return *big.NewInt(0), err
+						return big.NewInt(0), err
 					}
 					if surcharge0.Cmp(big.NewInt(0)) < 0 {
-						itemTotal = *new(big.Int).Sub(&itemTotal, &satoshis)
+						itemTotal = new(big.Int).Sub(itemTotal, satoshis)
 					} else {
-						itemTotal = *new(big.Int).Add(&itemTotal, &satoshis)
+						itemTotal = new(big.Int).Add(itemTotal, satoshis)
 					}
 				}
 				if !skuExists {
-					return *big.NewInt(0), errors.New("selected variant not found in listing")
+					return big.NewInt(0), errors.New("selected variant not found in listing")
 				}
 				break
 			}
@@ -1039,29 +1038,21 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 			for _, vendorCoupon := range l.Coupons {
 				id, err := ipfs.EncodeMultihash([]byte(couponCode))
 				if err != nil {
-					return *big.NewInt(0), err
+					return big.NewInt(0), err
 				}
 				if id.B58String() == vendorCoupon.GetHash() {
-					discount0 := vendorCoupon.GetPriceDiscountValue()
-					discount := big.NewInt(0)
-					var ok bool
-					if discount0 != nil {
-						discount, ok = new(big.Int).SetString(discount0.Amount, 10)
-						if !ok {
-							return *big.NewInt(0), errors.New("invalid discount amount")
-						}
-					}
-					if discount.Cmp(big.NewInt(0)) > 0 {
-						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
-							l.Metadata.PricingCurrencyDefn.Code, *discount)
+					if d, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && d.Cmp(big.NewInt(0)) > 0 {
+						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
+							l.Item.PriceCurrency.Code, d)
 						if err != nil {
-							return *big.NewInt(0), err
+							log.Errorf("failed to convert currency for coupon (%s): %s", couponCode, err)
+							continue
 						}
-						itemTotal = *new(big.Int).Sub(&itemTotal, &satoshis)
+						itemTotal = new(big.Int).Sub(itemTotal, satoshis)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
 						d := new(big.Float).Mul(big.NewFloat(float64(discountF)), big.NewFloat(0.01))
-						totalDiscount, _ := new(big.Float).Mul(d, new(big.Float).SetInt(&itemTotal)).Int(nil)
-						itemTotal = *new(big.Int).Sub(&itemTotal, totalDiscount)
+						totalDiscount, _ := new(big.Float).Mul(d, new(big.Float).SetInt(itemTotal)).Int(nil)
+						itemTotal = new(big.Int).Sub(itemTotal, totalDiscount)
 					}
 				}
 			}
@@ -1071,36 +1062,46 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (bi
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
 					t := new(big.Float).Mul(big.NewFloat(float64(tax.Percentage)), big.NewFloat(0.01))
-					totalTax, _ := new(big.Float).Mul(t, new(big.Float).SetInt(&itemTotal)).Int(nil)
-					itemTotal = *new(big.Int).Add(&itemTotal, totalTax)
+					totalTax, _ := new(big.Float).Mul(t, new(big.Float).SetInt(itemTotal)).Int(nil)
+					itemTotal = new(big.Int).Add(itemTotal, totalTax)
 					break
 				}
 			}
 		}
-		itemTotal = *new(big.Int).Mul(&itemTotal, big.NewInt(int64(itemQuantity)))
-		total = *new(big.Int).Add(&total, &itemTotal)
+
+		if !(l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
+			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE) {
+			itemQuantity := GetOrderQuantity(l, item)
+			if itemQuantity.Cmp(big.NewInt(0)) <= 0 {
+				itemQuantity = big.NewInt(1)
+				log.Debugf("missing quantity for order, assuming quantity 1")
+			}
+			itemTotal = new(big.Int).Mul(itemTotal, itemQuantity)
+		}
+
+		total = new(big.Int).Set(itemTotal)
 	}
 
 	shippingTotal, err := n.calculateShippingTotalForListings(contract, physicalGoods)
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
-	total = *new(big.Int).Add(&total, &shippingTotal)
+	total = new(big.Int).Add(total, shippingTotal)
 
 	return total, nil
 }
 
-func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (big.Int, error) {
+func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (*big.Int, error) {
 	type itemShipping struct {
-		primary               big.Int
-		secondary             big.Int
+		primary               *big.Int
+		secondary             *big.Int
 		quantity              uint64
 		shippingTaxPercentage float32
 		version               uint32
 	}
 	var (
 		is            []itemShipping
-		shippingTotal big.Int
+		shippingTotal *big.Int
 	)
 
 	// First loop through to validate and filter out non-physical items
@@ -1117,7 +1118,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
 		if !ok {
-			return *big.NewInt(0), errors.New("shipping option not found in listing")
+			return big.NewInt(0), errors.New("shipping option not found in listing")
 		}
 
 		if option.Type == pb.Listing_ShippingOption_LOCAL_PICKUP {
@@ -1132,7 +1133,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		_, shipsToMe := regions[contract.BuyerOrder.Shipping.Country]
 		_, shipsToAll := regions[pb.CountryCode_ALL]
 		if !shipsToMe && !shipsToAll {
-			return *big.NewInt(0), errors.New("listing does ship to selected country")
+			return big.NewInt(0), errors.New("listing does ship to selected country")
 		}
 
 		// Check service exists
@@ -1142,31 +1143,31 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 		service, ok := services[strings.ToLower(item.ShippingOption.Service)]
 		if !ok {
-			return *big.NewInt(0), errors.New("shipping service not found in listing")
+			return big.NewInt(0), errors.New("shipping service not found in listing")
 		}
-		servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+		servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
 		if !ok {
-			return *big.NewInt(0), errors.New("invalid service price")
+			return big.NewInt(0), errors.New("invalid service price")
 		}
-		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
-			listing.Metadata.PricingCurrencyDefn.Code, *servicePrice)
+		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
+			listing.Item.PriceCurrency.Code, servicePrice)
 		if err != nil {
-			return *big.NewInt(0), err
+			return big.NewInt(0), err
 		}
 
-		var secondarySatoshi big.Int
-		serviceAddlItemPrice := big.NewInt(0)
-		if service.AdditionalItemPriceValue != nil {
-			serviceAddlItemPrice, ok = new(big.Int).SetString(service.AdditionalItemPriceValue.Amount, 10)
+		secondarySatoshi := big.NewInt(0)
+		if service.BigAdditionalItemPrice != "" {
+			serviceAddlItemPrice, ok := new(big.Int).SetString(service.BigAdditionalItemPrice, 10)
 			if !ok {
-				return *big.NewInt(0), errors.New("invalid service additional price")
+				return big.NewInt(0), errors.New("invalid service additional price")
 			}
-		}
-		if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
-			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
-				listing.Metadata.PricingCurrencyDefn.Code, *serviceAddlItemPrice)
-			if err != nil {
-				return *big.NewInt(0), err
+
+			if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
+				secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
+					listing.Item.PriceCurrency.Code, serviceAddlItemPrice)
+				if err != nil {
+					return big.NewInt(0), err
+				}
 			}
 		}
 
@@ -1183,37 +1184,41 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			}
 		}
 
+		var qty uint64
+		if q := quantityForItem(listing.Metadata.Version, item); q.IsUint64() {
+			qty = q.Uint64()
+		}
 		is = append(is, itemShipping{
 			primary:               shippingSatoshi,
 			secondary:             secondarySatoshi,
-			quantity:              quantityForItem(listing.Metadata.Version, item),
+			quantity:              qty,
 			shippingTaxPercentage: shippingTaxPercentage,
 			version:               listing.Metadata.Version,
 		})
 	}
 
 	if len(is) == 0 {
-		return *big.NewInt(0), nil
+		return big.NewInt(0), nil
 	}
 
 	if len(is) == 1 {
 		s := int64(((1 + is[0].shippingTaxPercentage) * 100) + .5)
-		shippingTotalPrimary := new(big.Int).Mul(&is[0].primary, big.NewInt(s))
+		shippingTotalPrimary := new(big.Int).Mul(is[0].primary, big.NewInt(s))
 		stp, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary)).Int(nil)
-		shippingTotal = *stp
+		shippingTotal = stp
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				t1 := new(big.Int).Mul(stp, big.NewInt(int64(is[0].quantity-1)))
-				shippingTotal = *new(big.Int).Add(stp, t1)
+				shippingTotal = new(big.Int).Add(stp, t1)
 			} else if is[0].version >= 2 {
-				shippingTotalSecondary := new(big.Int).Mul(&is[0].secondary, big.NewInt(s))
+				shippingTotalSecondary := new(big.Int).Mul(is[0].secondary, big.NewInt(s))
 				sts, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary)).Int(nil)
 
 				t1 := new(big.Int).Mul(sts, big.NewInt(int64(is[0].quantity-1)))
-				shippingTotal = *new(big.Int).Add(stp, t1)
+				shippingTotal = new(big.Int).Add(stp, t1)
 
 			} else {
-				return *big.NewInt(0), errors.New("unknown listing version")
+				return big.NewInt(0), errors.New("unknown listing version")
 			}
 		}
 		return shippingTotal, nil
@@ -1223,36 +1228,28 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	var i int
 	for x, s := range is {
 		if s.primary.Cmp(highest) > 0 {
-			highest = new(big.Int).Set(&s.primary)
+			highest = new(big.Int).Set(s.primary)
 			i = x
 		}
 		s0 := int64(((1 + s.shippingTaxPercentage) * 100) + .5)
-		shippingTotalSec := new(big.Int).Mul(&s.secondary, big.NewInt(s0))
+		shippingTotalSec := new(big.Int).Mul(s.secondary, big.NewInt(s0))
 		sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSec)).Int(nil)
 		shippingTotal0 := new(big.Int).Mul(sts0, big.NewInt(int64(s.quantity)))
-		shippingTotal = *new(big.Int).Add(&shippingTotal, shippingTotal0)
+		shippingTotal = new(big.Int).Add(shippingTotal, shippingTotal0)
 	}
 	sp := int64(((1 + is[i].shippingTaxPercentage) * 100) + .5)
-	shippingTotalPrimary0 := new(big.Int).Mul(&is[i].primary, big.NewInt(sp))
+	shippingTotalPrimary0 := new(big.Int).Mul(is[i].primary, big.NewInt(sp))
 	stp0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalPrimary0)).Int(nil)
-	shippingTotal = *new(big.Int).Sub(&shippingTotal, stp0)
+	shippingTotal = new(big.Int).Sub(shippingTotal, stp0)
 
-	shippingTotalSecondary0 := new(big.Int).Mul(&is[i].secondary, big.NewInt(sp))
+	shippingTotalSecondary0 := new(big.Int).Mul(is[i].secondary, big.NewInt(sp))
 	sts0, _ := new(big.Float).Mul(big.NewFloat(0.01), new(big.Float).SetInt(shippingTotalSecondary0)).Int(nil)
-	shippingTotal = *new(big.Int).Add(&shippingTotal, sts0)
+	shippingTotal = new(big.Int).Add(shippingTotal, sts0)
 
 	return shippingTotal, nil
 }
 
-func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
-	if version < 3 {
-		return uint64(item.Quantity)
-	} else {
-		return item.Quantity64
-	}
-}
-
-func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount big.Int) (big.Int, error) {
+func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount *big.Int) (*big.Int, error) {
 	var reserveCurrency = n.reserveCurrency()
 	var (
 		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
@@ -1260,13 +1257,13 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		reserveCurrencyDef, rErr = n.LookupCurrency(reserveCurrency)
 	)
 	if oErr != nil {
-		return *big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
+		return big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
 	}
 	if pErr != nil {
-		return *big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
+		return big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
 	}
 	if rErr != nil {
-		return *big.NewInt(0), fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
+		return big.NewInt(0), fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
 	}
 
 	if originCurrencyDef.Equal(paymentCurrencyDef) {
@@ -1275,20 +1272,20 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 
 	originValue, err := repo.NewCurrencyValue(amount.String(), originCurrencyDef)
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("parsing amount: %s", err.Error())
+		return big.NewInt(0), fmt.Errorf("parsing amount: %s", err.Error())
 	}
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCurrency)
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
+		return big.NewInt(0), fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
 	}
 
 	if wal.ExchangeRates() == nil {
-		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
+		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
 	originIntoReserveRate := 1 / reserveIntoOriginRate
 	reserveIntoResultRate, err := wal.ExchangeRates().GetExchangeRate(paymentCoin)
@@ -1297,22 +1294,22 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		if strings.HasPrefix(paymentCoin, "T") {
 			reserveIntoResultRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(paymentCoin, "T"))
 			if err != nil {
-				return *big.NewInt(0), err
+				return big.NewInt(0), err
 			}
 		} else {
-			return *big.NewInt(0), err
+			return big.NewInt(0), err
 		}
 	}
 
-	reserveValue, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
+	reserveValue, _, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("converting to reserve: %s", err.Error())
+		return big.NewInt(0), fmt.Errorf("converting to reserve: %s", err.Error())
 	}
-	resultValue, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
+	resultValue, _, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
+		return big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
 	}
-	return *resultValue.Amount, nil
+	return resultValue.Amount, nil
 }
 
 func (n *OpenBazaarNode) reserveCurrency() string {
@@ -1322,16 +1319,18 @@ func (n *OpenBazaarNode) reserveCurrency() string {
 	return "BTC"
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount big.Int) (big.Int, error) {
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount *big.Int) (*big.Int, error) {
 	var (
 		currencyDef, cErr = n.LookupCurrency(currencyCode)
 		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
 	)
 	if cErr != nil {
-		return *big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", currencyCode, cErr)
+		// if the currency is unknown, it is likely a cryptocurrency and will
+		// assume the default divisibility
+		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
 	}
 	if pErr != nil {
-		return *big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
+		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
 	}
 
 	if currencyDef.Equal(pricingDef) {
@@ -1339,21 +1338,26 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingDef.CurrencyCode().String())
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("currency (%s) unsupported by wallet", pricingDef.CurrencyCode().String())
+		return big.NewInt(0), fmt.Errorf("currency (%s) unsupported by wallet", pricingDef.CurrencyCode().String())
 	}
 	if wal.ExchangeRates() == nil {
-		return *big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
+		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
 	}
 
 	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
-	r, _ := big.NewFloat(rate).Int(nil)
-	if r.Int64() == 0 {
-		return *big.NewInt(0), errors.New("invalid rate of zero value")
+
+	cv, err := repo.NewCurrencyValue(amount.String(), currencyDef)
+	if err != nil {
+		return nil, err
 	}
-	return *amount.Div(&amount, r), nil
+	newCV, _, err := cv.ConvertTo(pricingDef, 1/rate)
+	if err != nil {
+		return nil, err
+	}
+	return newCV.Amount, nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
@@ -1417,7 +1421,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract, checkInve
 		}
 	}
 
-	if !n.currencyInAcceptedCurrenciesList(contract.BuyerOrder.Payment.AmountValue.Currency.Code,
+	if !n.currencyInAcceptedCurrenciesList(contract.BuyerOrder.Payment.AmountCurrency.Code,
 		contract.VendorListings[0].Metadata.AcceptedCurrencies) {
 		return errors.New("payment coin not accepted")
 	}
@@ -1494,7 +1498,7 @@ collectListings:
 	type inventory struct {
 		Slug    string
 		Variant int
-		Count   int64
+		Count   *big.Int
 	}
 	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
@@ -1536,7 +1540,12 @@ collectListings:
 			return errors.New("not all options were selected")
 		}
 		// Create inventory paths to check later
-		inv.Count = int64(GetOrderQuantity(listingMap[item.ListingHash], item))
+		if q := GetOrderQuantity(listingMap[item.ListingHash], item); q.IsInt64() {
+			inv.Count = q
+		} else {
+			// TODO: https://github.com/OpenBazaar/openbazaar-go/issues/1739
+			return errors.New("big inventory quantity not supported")
+		}
 		inventoryList = append(inventoryList, inv)
 	}
 
@@ -1595,7 +1604,7 @@ collectListings:
 			if err != nil {
 				return errors.New("vendor has no inventory for the selected variant")
 			}
-			if amt >= 0 && amt < inv.Count {
+			if amt.Cmp(big.NewInt(0)) >= 0 && amt.Cmp(inv.Count) < 0 {
 				return NewErrOutOfInventory(amt)
 			}
 		}
@@ -1649,7 +1658,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -1681,7 +1690,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 
 // ValidateModeratedPaymentAddress - validate moderator address
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
-	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountValue.Currency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -1795,16 +1804,16 @@ func validateVersionNumber(listing *repo.Listing) error {
 }
 
 // ValidatePaymentAmount - validate amount requested
-func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount big.Int) bool {
+func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount *big.Int) bool {
 	settings, _ := n.Datastore.Settings().Get()
 	bufferPercent := float32(0)
 	if settings.MisPaymentBuffer != nil {
 		bufferPercent = *settings.MisPaymentBuffer
 	}
-	a := new(big.Float).SetInt(&requestedAmount)
+	a := new(big.Float).SetInt(requestedAmount)
 	buf := new(big.Float).Mul(a, big.NewFloat(float64(bufferPercent)))
 	buf = new(big.Float).Mul(buf, big.NewFloat(0.01))
-	rh := new(big.Float).SetInt(&paymentAmount)
+	rh := new(big.Float).SetInt(paymentAmount)
 	rh = new(big.Float).Add(rh, buf)
 	return rh.Cmp(a) >= 0
 }
@@ -1874,9 +1883,17 @@ func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {
 }
 
 // GetOrderQuantity - return the specified item quantity
-func GetOrderQuantity(l *pb.Listing, item *pb.Order_Item) uint64 {
-	if l.Metadata.Version < 3 {
-		return uint64(item.Quantity)
+func GetOrderQuantity(l *pb.Listing, item *pb.Order_Item) *big.Int {
+	return quantityForItem(l.Metadata.Version, item)
+}
+
+func quantityForItem(version uint32, item *pb.Order_Item) *big.Int {
+	switch version {
+	case 5:
+		i, _ := new(big.Int).SetString(item.BigQuantity, 10)
+		return i
+	case 3, 4:
+		return new(big.Int).SetUint64(item.Quantity64)
 	}
-	return item.Quantity64
+	return new(big.Int).SetUint64(uint64(item.Quantity))
 }

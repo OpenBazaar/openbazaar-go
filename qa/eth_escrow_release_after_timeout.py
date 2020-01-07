@@ -22,10 +22,12 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         # generate some coins and send them to bob
         time.sleep(4)
         api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
+        print("bob's locn : ", api_url)
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             address = resp["address"]
+            print("bob's addr : ", address)
         elif r.status_code == 404:
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Address endpoint not found")
         else:
@@ -65,7 +67,7 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         slug = listing_json["slug"]
         listing_json["moderators"] = [moderatorId]
@@ -202,6 +204,9 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         if resp["state"] != "FULFILLED":
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Alice failed to order fulfillment")
 
+        for i in range(6):
+            time.sleep(600)
+
         # Alice attempt to release funds before timeout hit
         release = {
             "OrderID": orderId,
@@ -211,7 +216,7 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         if r.status_code == 500:
             resp = json.loads(r.text)
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
-        elif r.status_code != 401:
+        elif r.status_code != 400:
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):

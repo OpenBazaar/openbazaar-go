@@ -37,7 +37,7 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -143,16 +143,12 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        print("resp for bob after order fetch  : ")
-        print(resp)
         if resp["state"] != "CANCELED":
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to save as canceled")
-        ##if "refundAddressTransaction" not in resp or resp["refundAddressTransaction"] == {}:
-        ##    raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(45)
+        time.sleep(160)
 
         # check alice detected order
         api_url = alice["gateway_url"] + "ob/order/" + orderId
@@ -169,12 +165,6 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            print("confirmed : ", confirmed)
-            print("bob bal : ", bob_balance)
-            print("pymnt amt : ", int(payment_amount["amount"]))
-            #unconfirmed = int(resp["unconfirmed"])
-            ##if confirmed <= bob_balance - int(payment_amount["amount"]):
-            ##    raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Failed to query Bob's balance")
 

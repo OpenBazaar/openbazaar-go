@@ -50,11 +50,16 @@ func main() {
 
 	time.Sleep(time.Second * 10)
 	fmt.Println("restarting...", time.Now())
-	go func() {
-		err := n.Restart()
-		fmt.Println(err.Error())
-	}()
 
 	wg.Add(1)
+
+	go func() {
+		err := n.Restart()
+		if err != nil {
+			panic(fmt.Sprintf("failed to restart: %s", err.Error()))
+		}
+	}()
+
 	wg.Wait()
+
 }

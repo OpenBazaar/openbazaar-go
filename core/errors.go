@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"strconv"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
@@ -67,17 +68,17 @@ func (err CodedError) Error() string {
 // purchasing too many of an item
 type ErrOutOfInventory struct {
 	CodedError
-	RemainingInventory int64 `json:"remainingInventory"`
+	RemainingInventory string `json:"remainingInventory"`
 }
 
 // NewErrOutOfInventory - return out of inventory err with available inventory
-func NewErrOutOfInventory(inventoryRemaining int64) ErrOutOfInventory {
+func NewErrOutOfInventory(inventoryRemaining *big.Int) ErrOutOfInventory {
 	return ErrOutOfInventory{
 		CodedError: CodedError{
 			Reason: "not enough inventory",
 			Code:   "ERR_INSUFFICIENT_INVENTORY",
 		},
-		RemainingInventory: inventoryRemaining,
+		RemainingInventory: inventoryRemaining.String(),
 	}
 }
 

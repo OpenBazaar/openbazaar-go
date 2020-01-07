@@ -11,7 +11,7 @@
 	"items": [
 		{
 			"listingHash": "",
-			"quantity": 1,
+			"bigQuantity": "1",
 			"options": [
 				{
 					"name": "Color",

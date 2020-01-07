@@ -37,7 +37,7 @@ class EthRejectDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"
@@ -143,7 +143,7 @@ class EthRejectDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthRejectDirectOfflineTest - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(120)
 
         # alice check order rejected correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

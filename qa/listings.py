@@ -35,7 +35,7 @@ class ListingsTest(OpenBazaarTestFramework):
         # POST listing
         with open('testdata/listing.json') as listing_file:
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
-        ljson["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        ljson["item"]["priceCurrency"]["code"] = "T" + self.cointype
         ljson["metadata"]["acceptedCurrencies"] = ["t" + self.cointype.lower()]
         currency = "T" + self.cointype
         api_url = vendor["gateway_url"] + "ob/listing"

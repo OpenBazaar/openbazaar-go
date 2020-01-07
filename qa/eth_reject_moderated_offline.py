@@ -62,7 +62,7 @@ class EthRejectModeratedOffline(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         listing_json["moderators"] = [moderatorId]
@@ -154,7 +154,7 @@ class EthRejectModeratedOffline(OpenBazaarTestFramework):
         if resp["state"] != "PENDING":
             raise TestFailure("EthRejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
 
-        
+
         # startup alice again
         self.start_node(alice)
         time.sleep(45)
@@ -171,7 +171,7 @@ class EthRejectModeratedOffline(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthRejectModeratedOffline - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(120)
 
         # alice check order rejected correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
@@ -195,7 +195,7 @@ class EthRejectModeratedOffline(OpenBazaarTestFramework):
         #if len(resp["paymentAddressTransactions"]) != 2:
         #    raise TestFailure("EthRejectModeratedOffline - FAIL: Bob failed to detect outgoing payment")
 
-        
+
         time.sleep(2)
 
         # Check the funds moved into bob's wallet

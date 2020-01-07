@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if moderator.Fee == nil {
 			return errors.New("moderator must have a fee set")
 		}
-		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFeeValue == nil {
+		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee.BigAmount == "" && moderator.Fee.FixedFee.Amount == 0 {
 			return errors.New("fixed fee must be set when using a fixed fee type")
 		}
 
@@ -147,88 +147,88 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 }
 
 // GetModeratorFee is called by the Moderator when determining their take of the dispute
-func (n *OpenBazaarNode) GetModeratorFee(transactionTotal big.Int, txCurrencyCode string) (big.Int, error) {
+func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCode string) (*big.Int, error) {
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
 	profile := new(pb.Profile)
 	err = jsonpb.UnmarshalString(string(file), profile)
 	if err != nil {
-		return *big.NewInt(0), err
+		return big.NewInt(0), err
 	}
 	txCurrency, err := n.LookupCurrency(txCurrencyCode)
 	if err != nil {
-		return *big.NewInt(0), fmt.Errorf("lookup dispute transaction currency (%s): %s", txCurrencyCode, err)
+		return big.NewInt(0), fmt.Errorf("lookup dispute transaction currency (%s): %s", txCurrencyCode, err)
 	}
-	t := new(big.Float).SetInt(&transactionTotal)
+	t := new(big.Float).SetInt(transactionTotal)
 	switch profile.ModeratorInfo.Fee.FeeType {
 	case pb.Moderator_Fee_PERCENTAGE:
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
 		t.Mul(t, f)
 		total, _ := t.Int(nil)
-		return *total, nil
+		return total, nil
 	case pb.Moderator_Fee_FIXED:
-		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
+		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
 		if err != nil {
-			return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
+			return big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, err)
 		}
-		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
 		if !ok {
-			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			return big.NewInt(0), errors.New("invalid fixed fee amount")
 		}
 		if modFeeCurrency.Equal(txCurrency) {
-			if fixedFee.Cmp(&transactionTotal) > 0 {
-				return *big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
+			if fixedFee.Cmp(transactionTotal) > 0 {
+				return big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
 			}
-			return *fixedFee, nil
+			return fixedFee, nil
 		}
-		amt, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+		amt, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
 		if !ok {
-			return *big.NewInt(0), errors.New("invalid fixed fee amount")
+			return big.NewInt(0), errors.New("invalid fixed fee amount")
 		}
-		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *amt)
+		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, amt)
 		if err != nil {
-			return *big.NewInt(0), err
-		} else if fee.Cmp(&transactionTotal) > 0 {
-			return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
+			return big.NewInt(0), err
+		} else if fee.Cmp(transactionTotal) > 0 {
+			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
 		return fee, err
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed *big.Int
 		var ok bool
-		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code)
+		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
 		if err != nil {
-			return *big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, err)
+			return big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, err)
 		}
 		if modFeeCurrency.Equal(txCurrency) {
-			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
 			if !ok {
-				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+				return big.NewInt(0), errors.New("invalid fixed fee amount")
 			}
 		} else {
-			f, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFeeValue.Amount, 10)
+			f, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
 			if !ok {
-				return *big.NewInt(0), errors.New("invalid fixed fee amount")
+				return big.NewInt(0), errors.New("invalid fixed fee amount")
 			}
-			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code, *f)
+			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, f)
 			if err != nil {
-				return *big.NewInt(0), err
+				return big.NewInt(0), err
 			}
-			fixed = &f0
+			fixed = f0
 		}
 		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
 		f.Mul(f, big.NewFloat(0.01))
-		t.Mul(t, f)
-		total, _ := t.Int(&transactionTotal)
-		if fixed.Add(fixed, total).Cmp(&transactionTotal) > 0 {
-			return *big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
+		percentAmt, _ := new(big.Float).Mul(t, f).Int(nil)
+		feeTotal := new(big.Int).Add(fixed, percentAmt)
+		if feeTotal.Cmp(transactionTotal) > 0 {
+			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
-		return *fixed.Add(fixed, total), nil
+		return feeTotal, nil
 	default:
-		return *big.NewInt(0), errors.New("Unrecognized fee type")
+		return big.NewInt(0), errors.New("Unrecognized fee type")
 	}
 }
 
@@ -245,12 +245,12 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			sl := new(repo.SignedListing)
+			sl := new(pb.SignedListing)
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.RListing.Slug)
+			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
 			if err != nil {
 				return err
 			}
@@ -258,19 +258,24 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, c := range coupons {
 				couponMap[c.Hash] = c.Code
 			}
-			for _, coupon := range sl.RListing.ProtoListing.Coupons {
+			for _, coupon := range sl.Listing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
-			sl.RListing.ProtoListing.Moderators = moderators
-			sl0, err := n.SignListing(sl.RListing)
+			sl.Listing.Moderators = moderators
+
+			rsl, err := repo.NewListingFromProtobuf(sl.Listing)
+			if err != nil {
+				return fmt.Errorf("create repo signed listing: %s", err.Error())
+			}
+			sl0, err := n.SignListing(*rsl)
 			if err != nil {
 				return err
 			}
-			sl = &sl0
+			sl = sl0.ProtoSignedListing
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,
@@ -292,7 +297,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			hashes[sl.RListing.Slug] = hash
+			hashes[sl.Listing.Slug] = hash
 
 			return nil
 		}

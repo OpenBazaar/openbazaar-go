@@ -25,12 +25,12 @@ import (
 	ipnspath "gx/ipfs/QmQAgv6Gaoe2tQpcabqwKXKChp2MZ7i3UXv9DqTTaxCaTR/go-path"
 	files "gx/ipfs/QmQmhotPUzVrMEWNK3x1R5jQ5ZHWyL7tVUrmRPjrBrvyCb/go-ipfs-files"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	datastore "gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
 	ipns "gx/ipfs/QmUwMnKKjH3JwGKNVZ3TcP37W93xzqNA4ECFFiMo6sXkkc/go-ipns"
 	iface "gx/ipfs/QmXLwxifxwfc2bAwq6rdjbYqAsGzWsDE9RM5TWMGtykyj6/interface-go-ipfs-core"
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
+	ggproto "gx/ipfs/QmddjPSGZb3ieihSseFeCfVRpZzcqczPNsD2DvarSwnjJB/gogo-protobuf/proto"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -47,7 +47,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
@@ -1045,19 +1044,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if settings.StoreModerators != nil {
-		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
-		go func(modsToAdd, modsToDelete []string) {
-			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
-				log.Error(err)
-			}
-		}(modsToAdd, modsToDelete)
-		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		}
-		if err := i.node.SeedNode(); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		}
+	err = i.node.Datastore.Settings().Update(settings)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	if settings.BlockedNodes != nil {
 		var blockedIds []peer.ID
@@ -1071,10 +1061,21 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
-	err = i.node.Datastore.Settings().Update(settings)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+	if settings.StoreModerators != nil {
+		modsToAdd, modsToDelete := extractModeratorChanges(*settings.StoreModerators, currentSettings.StoreModerators)
+		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if err := i.node.SeedNode(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		go func(modsToAdd, modsToDelete []string) {
+			if err := i.node.NotifyModerators(modsToAdd, modsToDelete); err != nil {
+				log.Error(err)
+			}
+		}(modsToAdd, modsToDelete)
 	}
 	SanitizedResponse(w, `{}`)
 }
@@ -1320,7 +1321,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
 		Variant  int    `json:"variant"`
-		Quantity int64  `json:"quantity"`
+		Quantity string `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var invList []inv
@@ -1330,7 +1331,12 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, in.Quantity)
+		q, ok := new(big.Int).SetString(in.Quantity, 10)
+		if !ok {
+			ErrorResponse(w, http.StatusBadRequest, "error parsing quantity")
+			return
+		}
+		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, q)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1619,7 +1625,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
@@ -1668,7 +1674,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -1773,7 +1779,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -1973,7 +1979,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
@@ -2014,7 +2020,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
@@ -2102,7 +2108,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
@@ -2249,7 +2255,7 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
@@ -2294,7 +2300,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
@@ -3417,7 +3423,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	fee, err := wal.EstimateSpendFee(*amount, feeLevel)
 	if err != nil {
 		switch {
-		case err == wallet.ErrorInsuffientFunds:
+		case err == wallet.ErrInsufficientFunds:
 			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
 			return
 		case err == wallet.ErrorDustAmount:
@@ -3870,6 +3876,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
+	ipfsStore := i.node.IpfsNode.Repo.Datastore()
 	_, peerID := path.Split(r.URL.Path)
 
 	pid, err := peer.IDB58Decode(peerID)
@@ -3878,7 +3885,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	val, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(pid))
+	peerIPNSRecord, err := ipfs.GetCachedIPNSRecord(ipfsStore, pid)
 	if err != nil { // No record in datastore
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -3887,7 +3894,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	var keyBytes []byte
 	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
 	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
-		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(datastore.NewKey(core.KeyCachePrefix + peerID))
+		keyval, err := ipfs.GetCachedPubkey(ipfsStore, peerID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3905,8 +3912,13 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		Pubkey string `json:"pubkey"`
 		Record string `json:"record"`
 	}
+	peerIPNSBytes, err := ggproto.Marshal(peerIPNSRecord)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling IPNS record: %s", err.Error()))
+		return
+	}
 
-	ret := KeyAndRecord{hex.EncodeToString(keyBytes), string(val)}
+	ret := KeyAndRecord{hex.EncodeToString(keyBytes), string(peerIPNSBytes)}
 	retBytes, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3936,9 +3948,14 @@ func (i *jsonAPIHandler) GETResolveIPNS(w http.ResponseWriter, r *http.Request) 
 	var response = respType{PeerID: peerID}
 
 	if i.node.IpfsNode.Identity.Pretty() == peerID {
-		ipnsBytes, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(i.node.IpfsNode.Identity))
+		rec, err := ipfs.GetCachedIPNSRecord(i.node.IpfsNode.Repo.Datastore(), i.node.IpfsNode.Identity)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self from datastore: %s", err))
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("retrieving self: %s", err))
+			return
+		}
+		ipnsBytes, err := proto.Marshal(rec)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("marshaling self: %s", err))
 			return
 		}
 		response.Record.Hex = hex.EncodeToString(ipnsBytes)

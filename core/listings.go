@@ -84,7 +84,7 @@ func (n *OpenBazaarNode) SetListingInventory(l repo.Listing) error {
 
 	// If SKUs were omitted, set a default with unlimited inventory
 	if len(listingInv) == 0 {
-		err = n.Datastore.Inventory().Put(slug, 0, -1)
+		err = n.Datastore.Inventory().Put(slug, 0, big.NewInt(-1))
 		if err != nil {
 			return err
 		}
@@ -281,9 +281,12 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 				shipsTo = append(shipsTo, region.String())
 			}
 			for _, service := range shippingOption.Services {
-				servicePrice, ok := new(big.Int).SetString(service.PriceValue.Amount, 10)
+				if service.BigPrice == "" {
+					return repo.ListingIndexData{}, errors.New("expected shipping service price")
+				}
+				servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
 				if !ok {
-					return repo.ListingIndexData{}, errors.New("invalid price amount")
+					return repo.ListingIndexData{}, errors.New("invalid shipping service price amount")
 				}
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
@@ -292,13 +295,24 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		}
 	}
 
-	defn, err := n.LookupCurrency(listing.Listing.Metadata.PricingCurrencyDefn.Code)
-	if err != nil {
-		return repo.ListingIndexData{}, errors.New("invalid pricing currency")
+	var priceValue *repo.CurrencyValue
+	if listing.Listing.Item.PriceCurrency != nil && listing.Listing.Item.BigPrice != "" {
+		defn, err := n.LookupCurrency(listing.Listing.Item.PriceCurrency.Code)
+		if err != nil {
+			return repo.ListingIndexData{}, errors.New("invalid pricing currency")
+		}
+		amt, ok := new(big.Int).SetString(listing.Listing.Item.BigPrice, 10)
+		if !ok {
+			return repo.ListingIndexData{}, errors.New("invalid item price amount")
+		}
+		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
 	}
-	amt, ok := new(big.Int).SetString(listing.Listing.Item.PriceValue.Amount, 10)
-	if !ok {
-		return repo.ListingIndexData{}, errors.New("invalid price amount")
+
+	var priceModifier float32
+	if listing.Listing.Metadata.PriceModifier != 0 {
+		priceModifier = listing.Listing.Metadata.PriceModifier
+	} else if listing.Listing.Item.PriceModifier != 0 {
+		priceModifier = listing.Listing.Item.PriceModifier
 	}
 
 	ld := repo.ListingIndexData{
@@ -310,13 +324,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		ContractType:       listing.Listing.Metadata.ContractType.String(),
 		Description:        listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:          repo.ListingThumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price:              repo.CurrencyValue{Currency: defn, Amount: amt},
-		Modifier:           listing.Listing.Metadata.PriceModifier,
+		Price:              priceValue,
+		Modifier:           priceModifier,
 		ShipsTo:            shipsTo,
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,
 		ModeratorIDs:       listing.Listing.Moderators,
 		AcceptedCurrencies: listing.Listing.Metadata.AcceptedCurrencies,
+		CryptoCurrencyCode: listing.Listing.Metadata.CryptoCurrencyCode,
 	}
 	return ld, nil
 }
@@ -661,9 +676,9 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 
 	// Build the inventory list
 	for variant, count := range inventory {
-		for i, s := range sl.Listing.Item.Skus {
+		for i := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = count
+				sl.Listing.Item.Skus[i].BigQuantity = count.String()
 				break
 			}
 		}

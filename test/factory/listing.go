@@ -52,26 +52,25 @@ func NewListing(slug string) *pb.Listing {
 		RefundPolicy:       "Sample Refund policy",
 		VendorID:           vendorID,
 		Metadata: &pb.Listing_Metadata{
-			Version:             5,
-			AcceptedCurrencies:  []string{"TBTC"},
-			PricingCurrencyDefn: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-			Expiry:              &timestamp.Timestamp{Seconds: 2147483647},
-			Format:              pb.Listing_Metadata_FIXED_PRICE,
-			ContractType:        pb.Listing_Metadata_PHYSICAL_GOOD,
+			Version:            5,
+			AcceptedCurrencies: []string{"TBTC"},
+			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
+			Format:             pb.Listing_Metadata_FIXED_PRICE,
+			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
 		},
 		Item: &pb.Listing_Item{
 			Skus: []*pb.Listing_Item_Sku{
 				{
-					SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
-					Quantity:       12,
-					ProductID:      "1",
-					VariantCombo:   []uint32{0, 0},
+					BigSurcharge: "0",
+					BigQuantity:  "12",
+					ProductID:    "1",
+					VariantCombo: []uint32{0, 0},
 				},
 				{
-					SurchargeValue: &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "0"},
-					Quantity:       44,
-					ProductID:      "2",
-					VariantCombo:   []uint32{0, 1},
+					BigSurcharge: "0",
+					BigQuantity:  "44",
+					ProductID:    "2",
+					VariantCombo: []uint32{0, 1},
 				},
 			},
 			Title: "Ron Swanson Tshirt",
@@ -94,12 +93,10 @@ func NewListing(slug string) *pb.Listing {
 					},
 				},
 			},
-			Nsfw:        false,
-			Description: "Example item",
-			PriceValue: &pb.CurrencyValue{
-				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-				Amount:   "2000",
-			},
+			Nsfw:           false,
+			Description:    "Example item",
+			BigPrice:       "2000",
+			PriceCurrency:  &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			ProcessingTime: "3 days",
 			Categories:     []string{"tshirts"},
 			Grams:          14,
@@ -121,11 +118,8 @@ func NewListing(slug string) *pb.Listing {
 				Regions: []pb.CountryCode{pb.CountryCode_ALL},
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
-						Name: "standard",
-						PriceValue: &pb.CurrencyValue{
-							Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"},
-							Amount:   "20",
-						},
+						Name:              "standard",
+						BigPrice:          "20",
 						EstimatedDelivery: "3 days",
 					},
 				},
@@ -133,9 +127,9 @@ func NewListing(slug string) *pb.Listing {
 		},
 		Coupons: []*pb.Listing_Coupon{
 			{
-				Title:    "Insider's Discount",
-				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
-				Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5},
+				Title:            "Insider's Discount",
+				Code:             &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				BigPriceDiscount: "5",
 			},
 		},
 	}
@@ -144,16 +138,16 @@ func NewListing(slug string) *pb.Listing {
 // NewCryptoListing - return new crypto listing
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
+	listing.Metadata.CryptoCurrencyCode = "TETH"
+	listing.Metadata.CryptoDivisibility = 18
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
-	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
-	listing.Metadata.PricingCurrencyDefn = &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8}
+	listing.Item.Skus = []*pb.Listing_Item_Sku{{BigQuantity: "100000000"}}
+	listing.Metadata.PricingCurrency = ""
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil
-	listing.Item.PriceValue = &pb.CurrencyValue{
-		Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
-		Amount:   "0",
-	}
+	listing.Item.BigPrice = "0"
+	listing.Item.PriceCurrency = nil
 	listing.Coupons = nil
 	return listing
 }
@@ -169,7 +163,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",
-					PriceValue:        &pb.CurrencyValue{Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8, Name: "A", CurrencyType: "A"}, Amount: "20"},
+					BigPrice:          "20",
 					EstimatedDelivery: "3 days",
 				},
 			},

@@ -5,28 +5,16 @@
         "contractType": "CRYPTOCURRENCY",
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
-        "pricingCurrency": {
-            "code": "TETH",
-            "divisibility": 18,
-            "name": "TETH",
-            "currencyType": "crypto"
-        },
-        "acceptedCurrencies": [],
-        "escrowTimeoutHours": 1080
+        "acceptedCurrencies": ["TBTC"],
+        "escrowTimeoutHours": 1080,
+        "coinType": "TETH",
+        "coinDivisibility": 18
     },
     "item": {
         "title": "Ether",
         "description": "",
         "processingTime": "1 to 2 hours",
-        "price": {
-            "currency": {
-                    "code": "TETH",
-                    "divisibility": 18,
-                    "name": "TETH",
-                    "currencyType": "crypto"
-                },
-                "amount": "0"
-        },
+        "price": "0",
         "images": [{
             "tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",
             "small": "QmXSEqXLCzpCByJU4wqbJ37TcBEj77FKMUWUP1qLh56847",
@@ -37,18 +25,7 @@
         }],
         "grams": 0,
         "options": [],
-        "skus": [{
-            "surcharge": {
-                "currency": {
-                    "code": "TETH",
-                    "divisibility": 18,
-                    "name": "TETH",
-                    "currencyType": "crypto"
-                },
-                "amount": "0"
-            },
-            "quantity": 350000000
-        }]
+        "skus": [{"bigQuantity":"350000000"}]
     },
     "moderators": [],
     "termsAndConditions": "NA",

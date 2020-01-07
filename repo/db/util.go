@@ -3,26 +3,22 @@ package db
 import "github.com/OpenBazaar/openbazaar-go/pb"
 
 func PaymentCoinForContract(contract *pb.RicardianContract) string {
-	paymentCoin := contract.BuyerOrder.Payment.AmountValue.Currency.Code
-	if paymentCoin != "" {
-		return paymentCoin
+	if contract.BuyerOrder.Payment.AmountCurrency != nil &&
+		contract.BuyerOrder.Payment.AmountCurrency.Code != "" {
+		return contract.BuyerOrder.Payment.AmountCurrency.Code
 	}
-
+	if contract.BuyerOrder.Payment.Coin != "" {
+		return contract.BuyerOrder.Payment.Coin
+	}
 	if len(contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
-		paymentCoin = contract.VendorListings[0].Metadata.AcceptedCurrencies[0]
+		return contract.VendorListings[0].Metadata.AcceptedCurrencies[0]
 	}
-
-	return paymentCoin
+	return ""
 }
 
 func CoinTypeForContract(contract *pb.RicardianContract) string {
-	coinType := ""
-
-	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Metadata.PricingCurrencyDefn != nil {
-		coinType = contract.VendorListings[0].Metadata.PricingCurrencyDefn.Code
-	} else if contract.BuyerOrder.Payment.AmountValue != nil {
-		coinType = contract.BuyerOrder.Payment.AmountValue.Currency.Code
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		return contract.VendorListings[0].Metadata.CryptoCurrencyCode
 	}
-
-	return coinType
+	return ""
 }

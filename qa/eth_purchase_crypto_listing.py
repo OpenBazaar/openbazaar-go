@@ -56,7 +56,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 350000000:
+        if resp["ether"]["inventory"] != '350000000':
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
@@ -65,7 +65,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        if resp[0]["price"]["amount"]["currency"]["code"] != "TETH":
+        if resp[0]["coinType"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
         listingId = resp[0]["hash"]
 
@@ -100,7 +100,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -115,7 +115,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
@@ -150,7 +150,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as unfunded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["pricingCurrency"]["code"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -195,7 +195,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 250000000:
+        if resp["ether"]["inventory"] != "250000000":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("EthPurchaseCryptoListingTest - PASS")

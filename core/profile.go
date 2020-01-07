@@ -25,9 +25,6 @@ import (
 	"github.com/imdario/mergo"
 )
 
-// KeyCachePrefix - cache prefix for public key
-const KeyCachePrefix = "/pubkey/"
-
 // ErrorProfileNotFound - profile not found error
 var ErrorProfileNotFound = errors.New("profile not found")
 
@@ -68,26 +65,28 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
-	var acceptedCurrencies []string
+	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
 	if err != nil {
 		log.Debug("settings not set, using default preferred currencies")
 	}
-	if settingsData.PreferredCurrencies != nil {
-		for _, ct := range *settingsData.PreferredCurrencies {
-			def, err := n.LookupCurrency(ct)
-			if err != nil {
-				return fmt.Errorf("lookup currency (%s): %s", ct, err)
+	if len(acceptedCurrencies) == 0 {
+		if settingsData.PreferredCurrencies != nil {
+			for _, ct := range *settingsData.PreferredCurrencies {
+				def, err := n.LookupCurrency(ct)
+				if err != nil {
+					return fmt.Errorf("lookup currency (%s): %s", ct, err)
+				}
+				acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 			}
-			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
-		}
-	} else {
-		for ct := range n.Multiwallet {
-			def, err := n.LookupCurrency(ct.CurrencyCode())
-			if err != nil {
-				return fmt.Errorf("lookup currency (%s): %s", ct.CurrencyCode(), err)
+		} else {
+			for ct := range n.Multiwallet {
+				def, err := n.LookupCurrency(ct.CurrencyCode())
+				if err != nil {
+					return fmt.Errorf("lookup currency (%s): %s", ct.CurrencyCode(), err)
+				}
+				acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 			}
-			acceptedCurrencies = append(acceptedCurrencies, def.CurrencyCode().String())
 		}
 	}
 
@@ -97,22 +96,24 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 
 		// Update moderator info fixed fee details
 		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFeeValue != nil {
-				if profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil {
-					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFeeValue)
+			if profile.ModeratorInfo.Fee.FixedFee != nil {
+				if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency != nil {
+					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
 					if err != nil {
-						return fmt.Errorf("unable to parse fixed fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFeeValue.String(), err.Error())
+						return fmt.Errorf("unable to parse fixed fee currency: %s", err.Error())
 					}
 					normalizedFee, err := fixedFee.Normalize()
 					if err != nil {
-						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Divisibility)
+						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Divisibility)
 						return fmt.Errorf("converting divisibility for fixed fee (%s) from (%d) to (%d): %s", fixedFee.Currency.String(), fixedFee.Currency.Divisibility, feeDivisibility, err.Error())
 					}
-					pbNormalizedFee, err := normalizedFee.Protobuf()
-					if err != nil {
-						return fmt.Errorf("setting moderator fixed fee value: %s", err.Error())
+					profile.ModeratorInfo.Fee.FixedFee = &pb.Moderator_Price{
+						AmountCurrency: &pb.CurrencyDefinition{
+							Code:         normalizedFee.Currency.CurrencyCode().String(),
+							Divisibility: uint32(normalizedFee.Currency.Divisibility),
+						},
+						BigAmount: normalizedFee.Amount.String(),
 					}
-					profile.ModeratorInfo.Fee.FixedFeeValue = pbNormalizedFee
 				}
 			}
 		}
@@ -200,7 +201,6 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
 	if err != nil {
 		return err
@@ -209,6 +209,16 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err
 	}
+
+	repoProfile, err := repo.ProfileFromProtobuf(p)
+	if err != nil {
+		return fmt.Errorf("building profile for validation: %s", err.Error())
+	}
+
+	if err := repoProfile.Valid(); err != nil {
+		return fmt.Errorf("invalid profile: %s", err.Error())
+	}
+
 	return n.UpdateProfile(p)
 }
 
@@ -363,9 +373,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFeeValue != nil &&
-				profile.ModeratorInfo.Fee.FixedFeeValue.Currency != nil &&
-				len(profile.ModeratorInfo.Fee.FixedFeeValue.Currency.Code) > repo.WordMaxCharacters {
+			if profile.ModeratorInfo.Fee.FixedFee != nil &&
+				len(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code) > repo.WordMaxCharacters {
 				return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}

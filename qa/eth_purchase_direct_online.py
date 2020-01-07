@@ -41,7 +41,7 @@ class EthPurchaseDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to vendor
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = vendor["gateway_url"] + "ob/listing"
@@ -162,7 +162,7 @@ class EthPurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect reason: %s", resp["reason"])
         if resp["code"] != "ERR_INSUFFICIENT_INVENTORY":
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect code: %s", resp["code"])
-        if resp["remainingInventory"] != 6:
+        if resp["remainingInventory"] != '6':
             raise TestFailure("EthPurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect remainingInventory: %d", resp["remainingInventory"])
 
         print("EthPurchaseDirectOnlineTest - PASS")

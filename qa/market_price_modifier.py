@@ -40,11 +40,11 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["pricingCurrency"]["code"] = "TBCH"
-            listing_json["metadata"]["pricingCurrency"]["divisibility"] = 8
+            listing_json["metadata"]["coinType"] = "TBCH"
+            listing_json["metadata"]["coinDivisibility"] = 8
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
-            listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
+            listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -71,7 +71,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Couldn't get vendor local listings")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("MarketPriceModifierTest - FAIL: Vendor's local listings index doesn't include price modifier")
 
         # check vendor's listings from buyer and check for modifier
@@ -81,7 +81,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Couldn't get vendor listings from buyer")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("MarketPriceModifierTest - FAIL: Vendor's listings don't include price modifier from buyer")
 
         # get listing hashes
@@ -122,7 +122,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id_with_modifier
-        order_json["paymentCoin"] = "t" + self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:

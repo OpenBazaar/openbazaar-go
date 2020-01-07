@@ -23,29 +23,20 @@ func NewConfigurationStore(db *sql.DB, lock *sync.Mutex) repo.ConfigurationStore
 func (s *SettingsDB) Put(settings repo.SettingsData) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
+
 	b, err := json.MarshalIndent(&settings, "", "    ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal settings: %s", err.Error())
 	}
-	stmt, err := tx.Prepare("insert or replace into config(key, value) values(?,?)")
+	stmt, err := s.PrepareQuery("insert or replace into config(key, value) values(?,?)")
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare settings sql: %s", err.Error())
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec("settings", string(b))
 	if err != nil {
-		if errRollback := tx.Rollback(); errRollback != nil {
-			return fmt.Errorf("rollback: %s\n also: %s", errRollback.Error(), err.Error())
-		}
-		return err
-	}
-	if err := tx.Commit(); err != nil {
-		return err
+		return fmt.Errorf("commit settings: %s", err.Error())
 	}
 	return nil
 }

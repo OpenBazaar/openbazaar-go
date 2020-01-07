@@ -2,6 +2,7 @@ package core
 
 import (
 	"io/ioutil"
+	"math/big"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -38,11 +39,11 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) err
 	return nil
 }
 
-func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) error {
+func AssignMatchingQuantities(inventory map[int]*big.Int, sl *pb.SignedListing) error {
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = count
+				s.BigQuantity = count.String()
 				break
 			}
 		}
@@ -53,7 +54,7 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) err
 func ApplyShippingOptions(sl *pb.SignedListing) error {
 	for _, so := range sl.Listing.ShippingOptions {
 		for _, ser := range so.Services {
-			ser.AdditionalItemPriceValue = ser.PriceValue
+			ser.BigAdditionalItemPrice = ser.BigPrice
 		}
 	}
 	return nil

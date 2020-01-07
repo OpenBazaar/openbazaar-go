@@ -26,29 +26,23 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return nil, nil, err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
 
-	// Consolidate any transactions with multiple outputs into a single record
 	for _, r := range records {
-		record, ok := payments[r.Txid]
-		if ok {
-			n, _ := new(big.Int).SetString(record.TxnValue.Amount, 10)
-			sum := new(big.Int).Add(n, &r.Value)
-			record.TxnValue = &pb.CurrencyValue{
-				Currency: record.TxnValue.Currency,
-				Amount:   sum.String(),
-			}
-			payments[r.Txid] = record
-		} else {
+		_, ok := payments[r.Txid]
+		if !ok {
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
-			tx.TxnValue = &pb.CurrencyValue{
-				Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
-				Amount:   r.Value.String(),
-			} // r.Value
+			tx.BigValue = r.Value.String()
+			tx.Currency = order.Payment.AmountCurrency
+
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
 				return paymentRecords, nil, err
@@ -62,8 +56,8 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, nil, err
 			}
-			tx.Height = uint64(height)
-			tx.Confirmations = uint64(confirmations)
+			tx.Height = height
+			tx.Confirmations = confirmations
 			payments[r.Txid] = tx
 		}
 	}
@@ -71,18 +65,16 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		paymentRecords = append(paymentRecords, rec)
 	}
 	var refundRecord *pb.TransactionRecord
-	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && contract.BuyerOrder != nil && contract.BuyerOrder.Payment != nil {
+	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && order.Payment != nil {
 		// For multisig we can use the outgoing from the payment address
-		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
+		if order.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
-				val, _ := new(big.Int).SetString(rec.TxnValue.Amount, 10)
+				val, _ := new(big.Int).SetString(rec.BigValue, 10)
 				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.TxnValue = &pb.CurrencyValue{
-						Currency: rec.TxnValue.Currency,
-						Amount:   "-" + rec.TxnValue.Amount,
-					} //-rec.Value
+					refundRecord.BigValue = "-" + rec.BigValue
+					refundRecord.Currency = rec.Currency
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
@@ -90,6 +82,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				}
 			}
 		} else if contract.Refund != nil && contract.Refund.RefundTransaction != nil && contract.Refund.Timestamp != nil {
+			refund := repo.ToV5Refund(contract.Refund)
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
 			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
@@ -100,29 +93,20 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
-			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.TxnValue = contract.Refund.RefundTransaction.NewValue
-			refundRecord.Timestamp = contract.Refund.Timestamp
-			refundRecord.Confirmations = uint64(confirmations)
-			refundRecord.Height = uint64(height)
+			refundRecord.Txid = refund.RefundTransaction.Txid
+			refundRecord.BigValue = refund.RefundTransaction.BigValue
+			refundRecord.Currency = refund.RefundTransaction.ValueCurrency
+			refundRecord.Timestamp = refund.Timestamp
+			refundRecord.Confirmations = confirmations
+			refundRecord.Height = height
 		}
 	}
 	return paymentRecords, refundRecord, nil
 }
 
-// LookupCurrency looks up the CurrencyDefinition, first by crypto for the current network
-// (mainnet or testnet) and then by fiat code
+// LookupCurrency looks up the CurrencyDefinition from available currencies
 func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefinition, error) {
-	if n.TestnetEnable || n.RegressionTestEnable {
-		if def, err := repo.TestnetCurrencies().Lookup(currencyCode); err == nil {
-			return def, nil
-		}
-	} else {
-		if def, err := repo.MainnetCurrencies().Lookup(currencyCode); err == nil {
-			return def, nil
-		}
-	}
-	return repo.FiatCurrencies().Lookup(currencyCode)
+	return repo.AllCurrencies().Lookup(currencyCode)
 }
 
 // exchangeRateCode strips the T off the currency code if we are on testnet or regtest.

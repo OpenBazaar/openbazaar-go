@@ -25,7 +25,7 @@ func TestListingUnmarshalJSON(t *testing.T) {
 			_, err       = repo.UnmarshalJSONListing(fixtureBytes)
 		)
 		if err != nil {
-			t.Fatal(err)
+			t.Errorf("exmaple (%s): %s", e, err)
 		}
 	}
 }
@@ -36,15 +36,17 @@ func TestListingAttributes(t *testing.T) {
 		expectedResponse           uint
 		expectedTitle              string
 		expectedSlug               string
-		expectedPrice              repo.CurrencyValue
+		expectedPrice              *repo.CurrencyValue
 		expectedAcceptedCurrencies []string
+		expectedCryptoDivisibility uint32
+		expectedCryptoCurrencyCode string
 	}{
 		{
 			fixtureName:      "v3-physical-good",
 			expectedResponse: 3,
 			expectedTitle:    "Physical Listing",
 			expectedSlug:     "physical-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(1235000000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
@@ -53,13 +55,15 @@ func TestListingAttributes(t *testing.T) {
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BCH"},
+			expectedCryptoDivisibility: 0,
+			expectedCryptoCurrencyCode: "",
 		},
 		{
 			fixtureName:      "v4-physical-good",
 			expectedResponse: 4,
 			expectedTitle:    "Physical Good Listing",
 			expectedSlug:     "physical-good-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(12345678000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BCH"),
@@ -68,13 +72,15 @@ func TestListingAttributes(t *testing.T) {
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BTC", "BCH"},
+			expectedCryptoDivisibility: 0,
+			expectedCryptoCurrencyCode: "",
 		},
 		{
 			fixtureName:      "v4-digital-good",
 			expectedResponse: 4,
 			expectedTitle:    "Digital Good Listing",
 			expectedSlug:     "digital-good-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(1320),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
@@ -83,13 +89,15 @@ func TestListingAttributes(t *testing.T) {
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC"},
+			expectedCryptoDivisibility: 0,
+			expectedCryptoCurrencyCode: "",
 		},
 		{
 			fixtureName:      "v4-service",
 			expectedResponse: 4,
 			expectedTitle:    "Service Listing",
 			expectedSlug:     "service-listing",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(9877000000),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("BTC"),
@@ -98,28 +106,25 @@ func TestListingAttributes(t *testing.T) {
 				},
 			},
 			expectedAcceptedCurrencies: []string{"ZEC", "LTC", "BCH", "BTC"},
+			expectedCryptoDivisibility: 0,
+			expectedCryptoCurrencyCode: "",
 		},
 		{
-			fixtureName:      "v4-cryptocurrency",
-			expectedResponse: 4,
-			expectedTitle:    "LTC-XMR",
-			expectedSlug:     "ltc-xmr",
-			expectedPrice: repo.CurrencyValue{
-				Amount: big.NewInt(0),
-				Currency: repo.CurrencyDefinition{
-					Code:         repo.CurrencyCode("XMR"),
-					Divisibility: 8,
-					CurrencyType: "crypto",
-				},
-			},
+			fixtureName:                "v4-cryptocurrency",
+			expectedResponse:           4,
+			expectedTitle:              "LTC-XMR",
+			expectedSlug:               "ltc-xmr",
+			expectedPrice:              nil,
 			expectedAcceptedCurrencies: []string{"LTC"},
+			expectedCryptoDivisibility: 8,
+			expectedCryptoCurrencyCode: "XMR",
 		},
 		{
 			fixtureName:      "v5-physical-good",
 			expectedResponse: 5,
 			expectedTitle:    "ETH - $1",
 			expectedSlug:     "eth-1",
-			expectedPrice: repo.CurrencyValue{
+			expectedPrice: &repo.CurrencyValue{
 				Amount: big.NewInt(100),
 				Currency: repo.CurrencyDefinition{
 					Code:         repo.CurrencyCode("USD"),
@@ -128,10 +133,13 @@ func TestListingAttributes(t *testing.T) {
 				},
 			},
 			expectedAcceptedCurrencies: []string{"BTC", "BCH", "ZEC", "LTC", "ETH"},
+			expectedCryptoDivisibility: 0,
+			expectedCryptoCurrencyCode: "",
 		},
 	}
 
 	for _, e := range examples {
+		t.Logf("example listing (%s)", e.fixtureName)
 		var (
 			fixtureBytes = factory.MustLoadListingFixture(e.fixtureName)
 			l, err       = repo.UnmarshalJSONListing(fixtureBytes)
@@ -141,19 +149,25 @@ func TestListingAttributes(t *testing.T) {
 			continue
 		}
 		if l.Metadata.Version != e.expectedResponse {
-			t.Errorf("expected example (%s) to have version response (%+v), but instead was (%+v)", e.fixtureName, e.expectedResponse, l.Metadata.Version)
+			t.Errorf("expected to have version response (%+v), but instead was (%+v)", e.expectedResponse, l.Metadata.Version)
 		}
 		if title, _ := l.GetTitle(); title != e.expectedTitle {
-			t.Errorf("expected example (%s) to have title response (%+v), but instead was (%+v)", e.fixtureName, e.expectedTitle, title)
+			t.Errorf("expected to have title response (%+v), but instead was (%+v)", e.expectedTitle, title)
 		}
 		if slug, _ := l.GetSlug(); slug != e.expectedSlug {
-			t.Errorf("expected example (%s) to have slug response (%+v), but instead was (%+v)", e.fixtureName, e.expectedSlug, slug)
+			t.Errorf("expected to have slug response (%+v), but instead was (%+v)", e.expectedSlug, slug)
 		}
-		if price, _ := l.GetPrice(); !price.Equal(&e.expectedPrice) {
-			t.Errorf("expected example (%s) to have price response (%+v), but instead was (%+v)", e.fixtureName, e.expectedPrice, price)
+		if price, _ := l.GetPrice(); !price.Equal(e.expectedPrice) {
+			t.Errorf("expected to have price response (%+v), but instead was (%+v)", e.expectedPrice, price)
 		}
 		if acceptedCurrencies, _ := l.GetAcceptedCurrencies(); len(acceptedCurrencies) != len(e.expectedAcceptedCurrencies) {
-			t.Errorf("expected example (%s) to have acceptedCurrencies response (%+v), but instead was (%+v)", e.fixtureName, e.expectedAcceptedCurrencies, acceptedCurrencies)
+			t.Errorf("expected to have acceptedCurrencies response (%+v), but instead was (%+v)", e.expectedAcceptedCurrencies, acceptedCurrencies)
+		}
+		if actual := l.GetCryptoDivisibility(); actual != e.expectedCryptoDivisibility {
+			t.Errorf("expected to have divisibility (%d), but was (%d)", e.expectedCryptoDivisibility, actual)
+		}
+		if actual := l.GetCryptoCurrencyCode(); actual != e.expectedCryptoCurrencyCode {
+			t.Errorf("expected to have currency code (%s), but was (%s)", e.expectedCryptoCurrencyCode, actual)
 		}
 	}
 }

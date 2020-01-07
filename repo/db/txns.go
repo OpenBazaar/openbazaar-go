@@ -23,34 +23,20 @@ func NewTransactionStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinType)
 func (t *TxnsDB) Put(raw []byte, txid, value string, height int, timestamp time.Time, watchOnly bool) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	tx, err := t.db.Begin()
+
+	stmt, err := t.PrepareQuery("insert or replace into txns(coin, txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?,?)")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert or replace into txns(coin, txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?,?)")
-	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
+		return fmt.Errorf("prepare txn sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	watchOnlyInt := 0
 	if watchOnly {
 		watchOnlyInt = 1
 	}
 	_, err = stmt.Exec(t.coinType.CurrencyCode(), txid, value, height, int(timestamp.Unix()), watchOnlyInt, raw)
 	if err != nil {
-		err0 := tx.Rollback()
-		if err0 != nil {
-			log.Error(err0)
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		log.Error(err)
+		return fmt.Errorf("update txn: %s", err.Error())
 	}
 	return nil
 }
@@ -144,27 +130,15 @@ func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int, timestamp time.Time) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	tx, err := t.db.Begin()
+
+	stmt, err := t.PrepareQuery("update txns set height=?, timestamp=? where txid=? and coin=?")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("update txns set height=?, timestamp=? where txid=? and coin=?")
-	if err != nil {
-		if rErr := tx.Rollback(); rErr != nil {
-			return fmt.Errorf("%s (db rollback: %s)", err.Error(), rErr.Error())
-		}
-		return err
+		return fmt.Errorf("prepare txn sql: %s", err.Error())
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(height, int(timestamp.Unix()), txid.String(), t.coinType.CurrencyCode())
 	if err != nil {
-		if rErr := tx.Rollback(); rErr != nil {
-			return fmt.Errorf("%s (db rollback: %s)", err.Error(), rErr.Error())
-		}
-		return err
-	}
-	if err := tx.Commit(); err != nil {
-		return err
+		return fmt.Errorf("update txns: %s", err.Error())
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"math/big"
 	"strings"
 	"time"
@@ -26,11 +27,15 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountValue.Currency.Code)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return err
+	}
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -45,7 +50,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return err
 		}
@@ -54,7 +59,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return err
 		}
@@ -66,11 +71,11 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return err
 		}
-		f, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFeeValue.Amount, 10)
+		f, _ := new(big.Int).SetString(order.BigRefundFee, 10)
 		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
 		if err != nil {
 			return err
@@ -88,7 +93,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 				outValue = new(big.Int).Add(outValue, &r.Value)
 			}
 		}
-		refundAddr, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddr, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return err
 		}
@@ -98,10 +103,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		}
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
-		txinfo.NewValue = &pb.CurrencyValue{
-			Currency: contract.BuyerOrder.Payment.AmountValue.Currency,
-			Amount:   outValue.String(),
-		} // uint64(outValue)
+		txinfo.BigValue = outValue.String()
 		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg
@@ -109,7 +111,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	if err != nil {
 		return err
 	}
-	err = n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
+	err = n.SendRefund(order.BuyerID.PeerID, contract)
 	if err != nil {
 		// TODO: do we retry a failed refund send?
 		log.Error(err)

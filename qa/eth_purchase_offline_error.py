@@ -24,7 +24,7 @@ class EthPurchaseOfflineErrorTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
 
         api_url = alice["gateway_url"] + "ob/listing"

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -26,6 +27,8 @@ type (
 		Divisibility uint `json:"divisibility"`
 		// CurrencyType indicates whether the currency is "fiat" or "crypto" currency
 		CurrencyType string `json:"currencyType,omitempty"`
+		// BlockTime is the general/approximate duration for a block to be mined
+		BlockTime time.Duration `json:"-"`
 	}
 	// CurrencyDictionaryProcessingError represents a list of errors after
 	// processing a CurrencyDictionary
@@ -41,7 +44,9 @@ const (
 	Fiat   = "fiat"
 	Crypto = "crypto"
 
-	NilCurrencyCode = CurrencyCode("")
+	DefaultCryptoDivisibility = 8
+	NilCurrencyCode           = CurrencyCode("")
+	DefaultBlockTime          = 10 * time.Minute
 )
 
 var (
@@ -53,7 +58,7 @@ var (
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
 	ErrDictionaryCurrencyCodeCollision = errors.New("currency code is used by more than one currency")
 
-	NilCurrencyDefinition = CurrencyDefinition{Name: "", Code: NilCurrencyCode, Divisibility: 0, CurrencyType: ""}
+	NilCurrencyDefinition = CurrencyDefinition{Name: "", Code: NilCurrencyCode, Divisibility: 0, CurrencyType: "", BlockTime: 0 * time.Second}
 
 	// holds validated dictionary singleton after initial load
 	validatedMainnetCurrencies *CurrencyDictionary
@@ -62,18 +67,18 @@ var (
 	validatedAllCurrencies     *CurrencyDictionary
 
 	mainnetCryptoDefinitions = map[string]CurrencyDefinition{
-		"BTC": {Name: "Bitcoin", Code: CurrencyCode("BTC"), CurrencyType: Crypto, Divisibility: 8},
-		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), CurrencyType: Crypto, Divisibility: 8},
-		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), CurrencyType: Crypto, Divisibility: 8},
-		"ZEC": {Name: "Zcash", Code: CurrencyCode("ZEC"), CurrencyType: Crypto, Divisibility: 8},
-		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18},
+		"BTC": {Name: "Bitcoin", Code: CurrencyCode("BTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
+		"ZEC": {Name: "Zcash", Code: CurrencyCode("ZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
 	testnetCryptoDefinitions = map[string]CurrencyDefinition{
-		"TBTC": {Name: "Testnet Bitcoin", Code: CurrencyCode("TBTC"), CurrencyType: Crypto, Divisibility: 8},
-		"TBCH": {Name: "Testnet Bitcoin Cash", Code: CurrencyCode("TBCH"), CurrencyType: Crypto, Divisibility: 8},
-		"TLTC": {Name: "Testnet Litecoin", Code: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8},
-		"TZEC": {Name: "Testnet Zcash", Code: CurrencyCode("TZEC"), CurrencyType: Crypto, Divisibility: 8},
-		"TETH": {Name: "Testnet Ethereum", Code: CurrencyCode("TETH"), CurrencyType: Crypto, Divisibility: 18},
+		"TBTC": {Name: "Testnet Bitcoin", Code: CurrencyCode("TBTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"TBCH": {Name: "Testnet Bitcoin Cash", Code: CurrencyCode("TBCH"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"TLTC": {Name: "Testnet Litecoin", Code: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
+		"TZEC": {Name: "Testnet Zcash", Code: CurrencyCode("TZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
+		"TETH": {Name: "Testnet Ethereum", Code: CurrencyCode("TETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
 	fiatDefinitions = map[string]CurrencyDefinition{
 		"AED": {Name: "UAE Dirham", Code: CurrencyCode("AED"), CurrencyType: Fiat, Divisibility: 2},
@@ -244,6 +249,20 @@ func (c CurrencyCode) String() string {
 	return string(c)
 }
 
+// NewUnknownCryptoDefinition returns a suitable crypto definition
+// when one does not already exist in local dictionaries
+func NewUnknownCryptoDefinition(code string, div uint) CurrencyDefinition {
+	if div == 0 {
+		div = DefaultCryptoDivisibility
+	}
+	return CurrencyDefinition{
+		Name:         fmt.Sprintf("Unknown Currency (%s)", code),
+		Code:         CurrencyCode(code),
+		Divisibility: div,
+		CurrencyType: Crypto,
+	}
+}
+
 // String returns a readable representation of CurrencyDefinition
 func (c CurrencyDefinition) String() string {
 	if c == NilCurrencyDefinition {
@@ -353,14 +372,11 @@ func NewCurrencyDictionary(defs map[string]CurrencyDefinition) (*CurrencyDiction
 
 // Valid asserts that the CurrencyDefinition is either valid or has at least one error
 func (c CurrencyDefinition) Valid() error {
-	if c == NilCurrencyDefinition {
+	if c.Equal(NilCurrencyDefinition) {
 		return ErrCurrencyDefinitionUndefined
 	}
-	if len(c.Code) < CurrencyCodeValidMinimumLength || len(c.Code) > CurrencyCodeValidMaximumLength {
+	if c.Code == NilCurrencyCode {
 		return ErrCurrencyCodeLengthInvalid
-	}
-	if len(c.Code) == 4 && strings.Index(strings.ToLower(string(c.Code)), "t") != 0 {
-		return ErrCurrencyCodeTestSymbolInvalid
 	}
 	if c.CurrencyType != Crypto && c.CurrencyType != Fiat {
 		return ErrCurrencyTypeInvalid
@@ -375,9 +391,6 @@ func (c CurrencyDefinition) Valid() error {
 // Equal indicates if the receiver and other have the same code
 // and divisibility
 func (c CurrencyDefinition) Equal(other CurrencyDefinition) bool {
-	if c == NilCurrencyDefinition || other == NilCurrencyDefinition {
-		return false
-	}
 	if c.Code != other.Code {
 		return false
 	}
@@ -388,6 +401,18 @@ func (c CurrencyDefinition) Equal(other CurrencyDefinition) bool {
 		return false
 	}
 	return true
+}
+
+// ConfirmationsPerHour will calculate the no of confirmations in 1 hr
+// this is valid only for a crypto
+func (c CurrencyDefinition) ConfirmationsPerHour() uint32 {
+	if c.CurrencyType != "crypto" {
+		return 1
+	}
+	if c.BlockTime.Seconds() <= 0 {
+		return 1
+	}
+	return uint32((1.0 * 60 * 60) / c.BlockTime.Seconds())
 }
 
 // Lookup returns the CurrencyDefinition out of the loaded dictionary. Lookup normalizes the code

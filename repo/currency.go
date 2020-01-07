@@ -17,10 +17,11 @@ const (
 )
 
 var (
-	ErrCurrencyValueInsufficientPrecision = errors.New("unable to accurately represent value as int64")
-	ErrCurrencyValueNegativeRate          = errors.New("conversion rate must be greater than zero")
-	ErrCurrencyValueAmountInvalid         = errors.New("invalid amount")
-	ErrCurrencyValueDefinitionInvalid     = errors.New("invalid currency definition")
+	ErrCurrencyValueInsufficientPrecision         = errors.New("unable to accurately represent value as int64")
+	ErrCurrencyValueNegativeRate                  = errors.New("conversion rate must be greater than zero")
+	ErrCurrencyValueAmountInvalid                 = errors.New("invalid amount")
+	ErrCurrencyValueDefinitionInvalid             = errors.New("invalid currency definition")
+	ErrCurrencyValueInvalidCmpDifferentCurrencies = errors.New("unable to compare two different currencies")
 )
 
 // CurrencyValue represents the amount and variety of currency
@@ -64,17 +65,6 @@ func (c *CurrencyValue) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-func NewCurrencyValueFromProtobuf(value *pb.CurrencyValue) (*CurrencyValue, error) {
-	cv, err := NewCurrencyValueWithLookup(value.Amount, value.Currency.Code)
-	if err != nil {
-		return nil, err
-	}
-	newCurrencyDef := cv.Currency
-	newCurrencyDef.Divisibility = uint(value.Currency.Divisibility)
-	cv.Currency = newCurrencyDef
-	return cv, nil
-}
-
 // NewCurrencyValueWithLookup accepts a string value as a base10 integer
 // and uses the currency code to lookup the CurrencyDefinition
 func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, error) {
@@ -86,6 +76,20 @@ func NewCurrencyValueWithLookup(amount, currencyCode string) (*CurrencyValue, er
 		return NewCurrencyValue("0", def)
 	}
 	return NewCurrencyValue(amount, def)
+}
+
+// NewCurrencyValueFromProtobuf consumes the string and pb.CurrencyDefinition
+// objects from parsed Listings and converts them into CurrencyValue objects
+func NewCurrencyValueFromProtobuf(amount string, currency *pb.CurrencyDefinition) (*CurrencyValue, error) {
+	if currency == nil {
+		return nil, ErrCurrencyDefinitionUndefined
+	}
+	value, err := NewCurrencyValueWithLookup(amount, currency.Code)
+	if err != nil {
+		return nil, err
+	}
+	value.Currency.Divisibility = uint(currency.Divisibility)
+	return value, nil
 }
 
 // NewCurrencyValueFromInt is a convenience function which converts an int64
@@ -108,21 +112,6 @@ func NewCurrencyValue(amount string, currency CurrencyDefinition) (*CurrencyValu
 		return nil, ErrCurrencyValueAmountInvalid
 	}
 	return &CurrencyValue{Amount: i, Currency: currency}, nil
-}
-
-func (v *CurrencyValue) Protobuf() (*pb.CurrencyValue, error) {
-	if !v.Amount.IsInt64() {
-		return nil, ErrCurrencyValueInsufficientPrecision
-	}
-	return &pb.CurrencyValue{
-		Amount: string(v.Amount.Int64()),
-		Currency: &pb.CurrencyDefinition{
-			Name:         v.Currency.Name,
-			Code:         string(v.Currency.Code),
-			Divisibility: uint32(v.Currency.Divisibility),
-			CurrencyType: v.Currency.CurrencyType,
-		},
-	}, nil
 }
 
 // AmountInt64 returns a valid int64 or an error
@@ -170,6 +159,9 @@ func (v *CurrencyValue) Valid() error {
 
 // Equal indicates if the amount and variety of currency is equivalent
 func (v *CurrencyValue) Equal(other *CurrencyValue) bool {
+	if v == nil && other == nil {
+		return true
+	}
 	if v == nil || other == nil {
 		return false
 	}
@@ -196,16 +188,17 @@ func (v *CurrencyValue) Normalize() (*CurrencyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	return v.AdjustDivisibility(localDef.Divisibility)
+	val, _, err := v.AdjustDivisibility(localDef.Divisibility)
+	return val, err
 }
 
 // AdjustDivisibility updates the Currency.Divisibility and adjusts the Amount to match the new
 // value. An error will be returned if the new divisibility is invalid or produces an unreliable
 // result. This is a helper function which is equivalent to ConvertTo using a copy of the
 // CurrencyDefinition using the updated divisibility and an exchangeRatio of 1.0
-func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, error) {
+func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, big.Accuracy, error) {
 	if v.Currency.Divisibility == div {
-		return v, nil
+		return v, 0, nil
 	}
 	defWithNewDivisibility := v.Currency
 	defWithNewDivisibility.Divisibility = div
@@ -215,22 +208,23 @@ func (v *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, error) {
 // ConvertTo will perform the following math given its arguments are valid:
 // v.Amount * exchangeRatio * (final.Currency.Divisibility/v.Currency.Divisibility)
 // where v is the receiver, exchangeRatio is the ratio of (1 final.Currency/v.Currency)
-// v and final must both be Valid() and exchangeRatio must not be zero.
-func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, error) {
+// v and final must both be Valid() and exchangeRatio must not be zero. The accuracy
+// indicates if decimal values were trimmed when converting the value back to integer.
+func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, big.Accuracy, error) {
 	if err := v.Valid(); err != nil {
-		return nil, fmt.Errorf("cannot convert invalid value: %s", err.Error())
+		return nil, 0, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}
 	if err := final.Valid(); err != nil {
-		return nil, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
+		return nil, 0, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
 	}
 	if exchangeRatio <= 0 {
-		return nil, ErrCurrencyValueNegativeRate
+		return nil, 0, ErrCurrencyValueNegativeRate
 	}
 
 	amt := new(big.Float).SetInt(v.Amount)
 	exRatio := new(big.Float).SetFloat64(exchangeRatio)
 	if exRatio == nil {
-		return nil, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
+		return nil, 0, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
 	}
 	newAmount := new(big.Float).SetPrec(53).Mul(amt, exRatio)
 
@@ -239,13 +233,39 @@ func (v *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float6
 		finalMagnitude := math.Pow10(int(final.Divisibility))
 		divisibilityRatio := new(big.Float).SetFloat64(finalMagnitude / initMagnitude)
 		newAmount.Mul(newAmount, divisibilityRatio)
-
-		// confirm no significant figures will be lost in the decimal
-		if !newAmount.IsInt() {
-			return nil, ErrCurrencyValueInsufficientPrecision
-		}
 	}
 
-	result, _ := newAmount.Int(nil)
-	return &CurrencyValue{Amount: result, Currency: final}, nil
+	var roundedAmount *big.Float
+	newFloat, _ := newAmount.Float64()
+	if newFloat >= 0 {
+		roundedAmount = big.NewFloat(math.Ceil(newFloat))
+	} else {
+		roundedAmount = big.NewFloat(math.Floor(newFloat))
+	}
+	roundedInt, _ := roundedAmount.Int(nil)
+	roundedAcc := big.Accuracy(roundedAmount.Cmp(newAmount))
+	return &CurrencyValue{Amount: roundedInt, Currency: final}, roundedAcc, nil
+}
+
+// Cmp exposes the (*big.Int).Cmp behavior after verifying currency and adjusting
+// for different currency divisibilities.
+func (v *CurrencyValue) Cmp(other *CurrencyValue) (int, error) {
+	if v.Currency.Code.String() != other.Currency.Code.String() {
+		return 0, ErrCurrencyValueInvalidCmpDifferentCurrencies
+	}
+	if v.Currency.Equal(other.Currency) {
+		return v.Amount.Cmp(other.Amount), nil
+	}
+	if v.Currency.Divisibility > other.Currency.Divisibility {
+		adjOther, _, err := other.AdjustDivisibility(v.Currency.Divisibility)
+		if err != nil {
+			return 0, fmt.Errorf("adjusting other divisibility: %s", err.Error())
+		}
+		return v.Amount.Cmp(adjOther.Amount), nil
+	}
+	selfAdj, _, err := v.AdjustDivisibility(other.Currency.Divisibility)
+	if err != nil {
+		return 0, fmt.Errorf("adjusting self divisibility: %s", err.Error())
+	}
+	return selfAdj.Amount.Cmp(other.Amount), nil
 }

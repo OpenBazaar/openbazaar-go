@@ -62,7 +62,7 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["metadata"]["pricingCurrency"]["code"] = "T" + self.cointype
+        listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
         slug = listing_json["slug"]
         listing_json["moderators"] = [moderatorId]
@@ -218,6 +218,8 @@ class EthCompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
+        print("############        $$$$$$$$$$$$$$")
+        print(resp["state"])
         if resp["state"] != "COMPLETED":
             raise TestFailure("EthCompleteModeratedOnlineTest - FAIL: Alice failed to detect order completion")
 

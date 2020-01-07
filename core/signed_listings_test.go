@@ -1,16 +1,15 @@
 package core_test
 
 import (
-	"path/filepath"
+	"math/big"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
 
 func TestOpenBazaarSignedListings_GetSignedListingFromPath(t *testing.T) {
-
-	absPathInvalid, _ := filepath.Abs("../test/contracts/signed_listings_1_invalid.json")
 
 	// Check for non-existent file
 	_, err := core.GetSignedListingFromPath("nonsense.file")
@@ -19,20 +18,23 @@ func TestOpenBazaarSignedListings_GetSignedListingFromPath(t *testing.T) {
 	}
 
 	// Check for invalid listing
-	_, err = core.GetSignedListingFromPath(absPathInvalid)
+	invalidBytes := []byte(`{ "listings": }`)
+	_, err = repo.UnmarshalJSONSignedListing(invalidBytes)
 	if err == nil {
 		t.Error(err)
 	}
 }
 
 func TestOpenBazaarSignedListings_SetAcceptedCurrencies(t *testing.T) {
-	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
 	currencies := []string{"TEST"}
 
-	listing, err := core.GetSignedListingFromPath(absPath)
+	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
+	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
 	if err != nil {
 		t.Error(err)
 	}
+	listing := slisting.ProtoSignedListing
+
 	oldCurrencies := listing.Listing.Metadata.AcceptedCurrencies
 
 	core.SetAcceptedCurrencies(listing, currencies)
@@ -47,16 +49,18 @@ func TestOpenBazaarSignedListings_SetAcceptedCurrencies(t *testing.T) {
 }
 
 func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
-	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
 	coupons := []repo.Coupon{
 		{Slug: "signed_listings_1", Code: "test", Hash: "QmQ5vueeX64fsSo6fU9Z1dDFMR9rky5FjowEr7m7cSiGd8"},
 		{Slug: "signed_listings_1", Code: "bad", Hash: "BADHASH"},
 	}
 
-	listing, err := core.GetSignedListingFromPath(absPath)
+	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
+	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
 	if err != nil {
 		t.Error(err)
 	}
+	listing := slisting.ProtoSignedListing
+
 	//old_coupons := listing.Listing.Coupons
 
 	err = core.AssignMatchingCoupons(coupons, listing)
@@ -74,34 +78,36 @@ func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
 }
 
 func TestOpenBazaarSignedListings_AssignMatchingQuantities(t *testing.T) {
-	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
-
-	inventory := map[int]int64{
-		0: 1000,
+	inventory := map[int]*big.Int{
+		0: big.NewInt(1000),
 	}
 
-	listing, err := core.GetSignedListingFromPath(absPath)
+	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
+	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
 	if err != nil {
 		t.Error(err)
 	}
+
+	listing := slisting.ProtoSignedListing
 
 	err = core.AssignMatchingQuantities(inventory, listing)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if listing.Listing.Item.Skus[0].Quantity != 1000 {
+	if listing.Listing.Item.Skus[0].BigQuantity != "1000" {
 		t.Error("Inventory was not set properly")
 	}
 }
 
 func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
-	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
-
-	listing, err := core.GetSignedListingFromPath(absPath)
+	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
+	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
 	if err != nil {
 		t.Error(err)
 	}
+
+	listing := slisting.ProtoSignedListing
 
 	option := listing.Listing.ShippingOptions[0].Services[0]
 
@@ -110,7 +116,7 @@ func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
 		t.Error(err)
 	}
 
-	if option.AdditionalItemPriceValue.Amount != "100" {
+	if option.BigAdditionalItemPrice != "100" {
 		t.Error("Shipping options were not applied properly")
 	}
 }
