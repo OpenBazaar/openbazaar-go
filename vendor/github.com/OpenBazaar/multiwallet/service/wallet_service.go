@@ -125,9 +125,12 @@ func (ws *WalletService) listen() {
 		txChan    = ws.client.TransactionNotify()
 		blockChan = ws.client.BlockNotify()
 	)
+
+	var listenAddrs []btcutil.Address
 	for _, sa := range addrs {
-		ws.client.ListenAddress(sa.Addr)
+		listenAddrs = append(listenAddrs, sa.Addr)
 	}
+	ws.client.ListenAddresses(listenAddrs...)
 
 	for {
 		select {
@@ -523,7 +526,7 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 	cb.Value = *value
 	cb.WatchOnly = (hits == 0)
 	saved, err := ws.db.Txns().Get(*txHash)
-	if err != nil {
+	if err != nil || saved.WatchOnly != cb.WatchOnly {
 		ts := time.Now()
 		if u.Confirmations > 0 {
 			ts = time.Unix(u.BlockTime, 0)
@@ -620,7 +623,9 @@ func (ws *WalletService) getStoredAddresses() map[string]storedAddress {
 			}
 			addr = ltcAddr
 		}
-		addrs[addr.String()] = storedAddress{addr, true}
+		if _, ok := addrs[addr.String()]; !ok {
+			addrs[addr.String()] = storedAddress{addr, true}
+		}
 	}
 
 	return addrs
