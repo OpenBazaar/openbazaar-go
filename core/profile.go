@@ -216,8 +216,12 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
 	}
 
-	if err := repoProfile.Valid(); err != nil {
-		return fmt.Errorf("invalid profile: %s", err.Error())
+	if repoProfile.IsModerationEnabled() {
+		validatedFees, err := repoProfile.ToValidModeratorFee()
+		if err != nil {
+			return err
+		}
+		p.ModeratorInfo.Fee = validatedFees
 	}
 
 	return n.UpdateProfile(p)
