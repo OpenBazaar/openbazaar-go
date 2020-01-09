@@ -21,10 +21,6 @@
 			"Rev": "f03afa92d3ffad9e5ff762aa549908afe674f01e"
 		},
 		{
-			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
-			"Rev": "6c59e2405456eac2ea76c13e7472bb51b655bdd3"
-		},
-		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/util",
 			"Rev": "4303d34a6a57a2d34fb33939a2dd67d98a5a648d"
 		},
@@ -131,14 +127,6 @@
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
 			"Rev": "ed1c16b1331fc11f83a37810e2a693557c30e8ae"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
-			"Rev": "2b76590b8874e3eb371c51362eed6cb7a10c09b4"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/zcashd-wallet/exchangerates",
-			"Rev": "2b76590b8874e3eb371c51362eed6cb7a10c09b4"
 		},
 		{
 			"ImportPath": "github.com/agl/ed25519/edwards25519",
