@@ -387,6 +387,7 @@ func (wallet *EthereumWallet) Start() {
 		if err != nil {
 			log.Infof("err fetching initial balance: %v", err)
 		}
+		currentTip, _ := wallet.ChainTip()
 
 		for range ticker.C {
 			// fetch the current balance
@@ -396,17 +397,41 @@ func (wallet *EthereumWallet) Start() {
 				continue
 			}
 			if fetchedBalance.Cmp(currentBalance) != 0 {
-				// the balance has changed
-				fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% !!!!!!!!!!!!!!!!!!!!!!!!!")
-				fmt.Println("balance changed ......")
-				fmt.Println("prev bal was : ", currentBalance.Uint64())
-				fmt.Println("fetched bal is : ", fetchedBalance.Uint64())
+				// process balance change
+				go wallet.processBalanceChange(currentBalance, fetchedBalance, currentTip)
+				currentTip, _ = wallet.ChainTip()
 				currentBalance = fetchedBalance
-				fmt.Println("curr bal was : ", currentBalance.Uint64())
 			}
 		}
 	}(wallet)
+}
 
+func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalance *big.Int, currentHead uint32) {
+	count := 0
+	cTip := int(currentHead)
+	value := new(big.Int).Sub(currentBalance, previousBalance)
+	for count < 30 {
+		txns, err := wallet.TransactionsFromBlock(&cTip)
+		if err == nil && len(txns) > 0 {
+			count = 30
+			txncb := wi.TransactionCallback{
+				Txid:      util.EnsureCorrectPrefix(txns[0].Txid),
+				Outputs:   []wi.TransactionOutput{},
+				Inputs:    []wi.TransactionInput{},
+				Height:    1,
+				Timestamp: time.Now(),
+				Value:     *value,
+				WatchOnly: false,
+			}
+			for _, l := range wallet.listeners {
+				go l(txncb)
+			}
+			continue
+		}
+		log.Error("err fetching latest transactions : ", err)
+		time.Sleep(1 * time.Second)
+		count++
+	}
 }
 
 // CurrencyCode returns ETH
@@ -554,9 +579,9 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 	return balance, ucbalance
 }
 
-// Transactions - Returns a list of transactions for this wallet
-func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
-	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), nil, nil,
+// TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
+func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
+	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
 		1, 0, true)
 	if err != nil {
 		log.Error("err fetching transactions : ", err)
@@ -587,6 +612,11 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 	}
 
 	return ret, nil
+}
+
+// Transactions - Returns a list of transactions for this wallet
+func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
+	return wallet.TransactionsFromBlock(nil)
 }
 
 // GetTransaction - Get info on a specific transaction
