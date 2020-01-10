@@ -22,11 +22,11 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/util",
-			"Rev": "4303d34a6a57a2d34fb33939a2dd67d98a5a648d"
+			"Rev": "4eb397613e4a5fd35900be91d902cab75fa13208"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/wallet",
-			"Rev": "4303d34a6a57a2d34fb33939a2dd67d98a5a648d"
+			"Rev": "4eb397613e4a5fd35900be91d902cab75fa13208"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/golang-socketio",
@@ -2734,6 +2734,11 @@
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/crypto/scrypt",
 			"Rev": "6cd7f7b4c959dd313f120ebe4db22f0117f260f0"
+		},
+		{
+			"ImportPath": "github.com/nanmu42/etherscan-api",
+			"Comment": "v1.1.0",
+			"Rev": "586884d258b6b8b22d5bd039e270d33572888f54"
 		}
 	]
 }
