@@ -374,7 +374,7 @@ func (i *BlockBookClient) GetTransactions(addrs []btcutil.Address) ([]model.Tran
 	for toe := range txChan {
 		if toe.Err != nil {
 			Log.Errorf("Error querying address from blockbook: %s", toe.Err.Error())
-			continue
+			return nil, toe.Err
 		}
 		txs = append(txs, toe.Txs...)
 	}
@@ -511,7 +511,7 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 	for toe := range utxoChan {
 		if toe.Err != nil {
 			Log.Errorf("Error querying utxos from blockbook: %s", toe.Err.Error())
-			continue
+			return nil, toe.Err
 		}
 		if toe.Utxo != nil {
 			ret = append(ret, *toe.Utxo)
@@ -544,9 +544,7 @@ func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
 	}
 
 	if i.SocketClient != nil {
-		var args = []string{"bitcoind/addresstxid"}
-		args = append(args, convertedAddrs...)
-		i.SocketClient.Emit("subscribe", protocol.ToArgArray(args))
+		i.SocketClient.Emit("subscribe", []interface{}{"bitcoind/addresstxid", convertedAddrs})
 	} else {
 		i.listenQueue = append(i.listenQueue, convertedAddrs...)
 	}
@@ -654,9 +652,7 @@ func (i *BlockBookClient) setupListeners() error {
 
 	// Subscribe to queued addresses
 	if len(i.listenQueue) != 0 {
-		var args = []string{"bitcoind/addresstxid"}
-		args = append(args, i.listenQueue...)
-		i.SocketClient.Emit("subscribe", protocol.ToArgArray(args))
+		i.SocketClient.Emit("subscribe", []interface{}{"bitcoind/addresstxid", i.listenQueue})
 		i.listenQueue = []string{}
 	}
 
