@@ -200,6 +200,10 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		p.ModeratorInfo.Fee = validatedFees
 	}
 
+	if err := repoProfile.Valid(); err != nil {
+		return fmt.Errorf("invalid profile: %s", err.Error())
+	}
+
 	return n.UpdateProfile(p)
 }
 
