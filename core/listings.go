@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -284,10 +285,13 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 				if service.BigPrice == "" {
 					return repo.ListingIndexData{}, errors.New("expected shipping service price")
 				}
-				servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
-				if !ok {
+				floatingExponent, ok := strconv.ParseFloat(service.BigPrice, 64)
+				if ok != nil {
 					return repo.ListingIndexData{}, errors.New("invalid shipping service price amount")
 				}
+
+				servicePrice := FloatToBigInt(floatingExponent)
+
 				if servicePrice.Cmp(big.NewInt(0)) == 0 && !contains(freeShipping, region.String()) {
 					freeShipping = append(freeShipping, region.String())
 				}
@@ -301,10 +305,14 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		if err != nil {
 			return repo.ListingIndexData{}, errors.New("invalid pricing currency")
 		}
-		amt, ok := new(big.Int).SetString(listing.Listing.Item.BigPrice, 10)
-		if !ok {
+
+		floatingExponent, ok := strconv.ParseFloat(listing.Listing.Item.BigPrice, 64)
+		if ok != nil {
 			return repo.ListingIndexData{}, errors.New("invalid item price amount")
 		}
+
+		amt := FloatToBigInt(floatingExponent)
+		
 		priceValue = &repo.CurrencyValue{Currency: defn, Amount: amt}
 	}
 
@@ -334,6 +342,21 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (repo.Lis
 		CryptoCurrencyCode: listing.Listing.Metadata.CryptoCurrencyCode,
 	}
 	return ld, nil
+}
+
+func FloatToBigInt(val float64) *big.Int {
+	bigval := new(big.Float)
+	bigval.SetFloat64(val)
+
+	coin := new(big.Float)
+	coin.SetInt(big.NewInt(1000000000000000000))
+	bigval.Mul(bigval, coin)
+
+	result := new(big.Int)
+	f,_ := bigval.Uint64()
+	result.SetUint64(f)
+
+	return result
 }
 
 func (n *OpenBazaarNode) getListingIndex() ([]repo.ListingIndexData, error) {
