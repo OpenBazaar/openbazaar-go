@@ -1,5 +1,7 @@
 package migrations
 
+import "errors"
+
 // Migration014 is deprecated to remove support for bitcoind and zcashd runtime
 // dependencies. The migration behavior is intact for historical purposes.
 type Migration014 struct{}

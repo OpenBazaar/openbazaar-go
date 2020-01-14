@@ -53,7 +53,6 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 		client = &http.Client{Timeout: time.Minute}
 	}
 
-
 	z.providers = []*ExchangeRateProvider{
 		{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
 		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-zec", z.cache, client, BittrexDecoder{}, bp},
