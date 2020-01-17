@@ -7,16 +7,12 @@ do
    b=$(basename $SCRIPT)
    extension="${b##*.}"
    p="py"
-   if [[ $extension = $p ]]; then
-     if [[ -z $3 ]]; then
-       echo "python3 $SCRIPT -b $1 -d $2"
-       python3 $SCRIPT -b $1 -d $2
-     else
-       # filter only the scripts of interest
-       if [[ $SCRIPT == *"$3"* ]]; then
-         echo "python3 $SCRIPT -b $1 -d $2"
-         python3 $SCRIPT -b $1 -d $2
-       fi
-     fi
+   if [[ $extension = $p ]]
+   then
+      python3 $SCRIPT -b $1 -d $2 $3
+      ret=$?
+      if [[ $ret -ne 0 ]]; then
+        kill -1 $$
+      fi
    fi
 done
