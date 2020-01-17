@@ -3,7 +3,6 @@ package litecoin
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"reflect"
 	"strconv"
