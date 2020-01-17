@@ -47,12 +47,7 @@ type LitecoinWallet struct {
 	log           *logging.Logger
 }
 
-var (
-	LitecoinCurrencyDefinition = wi.CurrencyDefinition{
-		Code:         "LTC",
-		Divisibility: 8,
-	}
-)
+var _ = wi.Wallet(&LitecoinWallet{})
 
 func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
@@ -344,16 +339,23 @@ func (w *LitecoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 	return w.generateMultisigScript(keys, threshold, timeout, timeoutKey)
 }
 
-func (w *LitecoinWallet) AddWatchedAddress(addr btcutil.Address) error {
-	script, err := w.AddressToScript(addr)
+func (w *LitecoinWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
+
+	var watchedScripts [][]byte
+	for _, addr := range addrs {
+		script, err := w.AddressToScript(addr)
+		if err != nil {
+			return err
+		}
+		watchedScripts = append(watchedScripts, script)
+	}
+
+	err := w.db.WatchedScripts().PutAll(watchedScripts)
 	if err != nil {
 		return err
 	}
-	err = w.db.WatchedScripts().Put(script)
-	if err != nil {
-		return err
-	}
-	w.client.ListenAddress(addr)
+
+	w.client.ListenAddresses(addrs...)
 	return nil
 }
 
@@ -366,7 +368,7 @@ func (w *LitecoinWallet) AddWatchedScript(script []byte) error {
 	if err != nil {
 		return err
 	}
-	w.client.ListenAddress(addr)
+	w.client.ListenAddresses(addr)
 	return nil
 }
 

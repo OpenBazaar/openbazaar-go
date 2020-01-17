@@ -69,8 +69,7 @@ type offlineMessage struct {
 func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	var client *http.Client
 	if cfg.Dialer != nil {
-		dial := cfg.Dialer.Dial
-		tbTransport := &http.Transport{Dial: dial}
+		tbTransport := &http.Transport{Dial: cfg.Dialer.Dial}
 		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	} else {
 		client = &http.Client{Timeout: time.Second * 30}

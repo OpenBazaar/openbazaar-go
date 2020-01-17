@@ -414,17 +414,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
-		if err != nil {
-			log.Error(err)
-		}
-		log.Debugf("added address to wallet to watch: %s", addr)
-		log.Debugf("storing sales order %s in database", orderId)
-		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if err != nil {
-			log.Error(err)
-		}
-		log.Debugf("successfully processed direct ORDER message from %s", peer.Pretty())
+		wal.AddWatchedAddresses(addr)
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if order.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		log.Debugf("processing moderated online order from %s", peer.Pretty())
@@ -451,7 +443,8 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
+		wal.AddWatchedAddresses(addr)
+		contract, err = service.node.NewOrderConfirmation(contract, false, false)
 		if err != nil {
 			log.Error(err)
 		}
@@ -492,16 +485,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		err = wal.AddWatchedAddress(addr)
-		if err != nil {
-			log.Error(err)
-		}
-		log.Debugf("storing sales order %s in database", orderId)
-		err = service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if err != nil {
-			log.Error(err)
-		}
-		log.Debugf("successfully processed offline moderated ORDER message from %s", peer.Pretty())
+		wal.AddWatchedAddresses(addr)
+		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		return nil, nil
 	}
 	log.Errorf("Unrecognized payment type on order (%s)", contract.VendorOrderConfirmation.OrderID)
