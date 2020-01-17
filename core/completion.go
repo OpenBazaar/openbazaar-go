@@ -365,22 +365,6 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if len(txInputs) == 0 {
 		return errors.New("there are no inputs available for this transaction")
 	}
-	mECKey, err := n.MasterPrivateKey.ECPrivKey()
-	if err != nil {
-		return err
-	}
-	vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
-	if err != nil {
-		return err
-	}
-	redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
-	if err != nil {
-		return err
-	}
-	_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
-	if err != nil {
-		return err
-	}
 
 	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 	if err != nil {

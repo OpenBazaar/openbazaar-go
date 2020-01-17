@@ -68,6 +68,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		profile.Version = ListingVersion
 	}
 
+	if profile.GetVersion() == 0 {
+		profile.Version = ListingVersion
+	}
+
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
