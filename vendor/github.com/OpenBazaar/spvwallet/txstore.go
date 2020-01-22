@@ -314,9 +314,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 				ts.Stxos().Put(st)
 				ts.Utxos().Delete(u)
 				utxos = append(utxos[:i], utxos[i+1:]...)
-				val, _ := strconv.ParseInt(u.Value, 10, 64)
+				val0, _ := new(big.Int).SetString(u.Value, 10)
 				if !u.WatchOnly {
-					value -= val
+					value -= val0.Int64()
 					hits++
 				} else {
 					matchesWatchOnly = true
@@ -330,7 +330,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 					OutpointHash:  u.Op.Hash.CloneBytes(),
 					OutpointIndex: u.Op.Index,
 					LinkedAddress: addr,
-					Value:         *big.NewInt(val),
+					Value:         *val0,
 				}
 				cb.Inputs = append(cb.Inputs, in)
 				break
@@ -379,9 +379,8 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 			ts.Txns().UpdateHeight(tx.TxHash(), int(height), txn.Timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
-				n := new(big.Int)
-				n, _ = n.SetString(txn.Value, 10)
-				cb.Value = *n
+				val0, _ := new(big.Int).SetString(txn.Value, 10)
+				cb.Value = *val0
 				shouldCallback = true
 			}
 		}
@@ -462,12 +461,12 @@ func (ts *TxStore) processReorg(lastGoodHeight uint32) error {
 		if txns[i].Height > int32(lastGoodHeight) {
 			txid, err := chainhash.NewHashFromStr(txns[i].Txid)
 			if err != nil {
-				log.Error(err)
+				log.Error(err.Error())
 				continue
 			}
 			err = ts.markAsDead(*txid)
 			if err != nil {
-				log.Error(err)
+				log.Error(err.Error())
 				continue
 			}
 		}

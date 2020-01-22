@@ -247,7 +247,17 @@ func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
+			v5Order, err := repo.ToV5Order(rc.BuyerOrder, repo.AllCurrencies().Lookup)
+			if err != nil {
+				log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+				return nil, err
+			}
+			ret = append(ret, repo.UnfundedOrder{
+				OrderId:        orderID,
+				Timestamp:      time.Unix(int64(timestamp), 0),
+				PaymentCoin:    v5Order.Payment.AmountCurrency.Code,
+				PaymentAddress: paymentAddr,
+			})
 		}
 	}
 	return ret, nil

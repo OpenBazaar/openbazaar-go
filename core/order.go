@@ -67,13 +67,12 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.Read = read
 	resp.State = state
 
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
-	_, err = n.LookupCurrency(lookupCoin)
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+		return nil, err
 	}
+	resp.Contract.BuyerOrder = v5Order
 
 	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
 	if err != nil {
@@ -278,7 +277,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	fee := wal.GetFeePerByte(wallet.NORMAL)
 	contract.BuyerOrder.BigRefundFee = fee.String()
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +314,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
@@ -374,7 +373,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}

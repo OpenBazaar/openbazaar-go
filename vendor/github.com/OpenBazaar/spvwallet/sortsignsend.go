@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/OpenBazaar/wallet-interface"
@@ -81,8 +80,8 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 		if u.AtHeight > 0 {
 			confirmations = int32(height) - u.AtHeight
 		}
-		val, _ := strconv.ParseInt(u.Value, 10, 64)
-		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(val), int64(confirmations), u.ScriptPubkey)
+		val0, _ := new(big.Int).SetString(u.Value, 10)
+		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(val0.Int64()), int64(confirmations), u.ScriptPubkey)
 		addr, err := w.ScriptToAddress(u.ScriptPubkey)
 		if err != nil {
 			continue
@@ -203,13 +202,12 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
-			n := new(big.Int)
-			n, _ = n.SetString(u.Value, 10)
+			val0, _ := new(big.Int).SetString(u.Value, 10)
 			in := wallet.TransactionInput{
 				LinkedAddress: addr,
 				OutpointIndex: u.Op.Index,
 				OutpointHash:  h,
-				Value:         *n,
+				Value:         *val0,
 			}
 			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, key, nil, wallet.FEE_BUMP)
 			if err != nil {
@@ -256,8 +254,8 @@ func (w *SPVWallet) EstimateSpendFee(amount big.Int, feeLevel wallet.FeeLevel) (
 	for _, input := range tx.TxIn {
 		for _, utxo := range utxos {
 			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index {
-				val, _ := strconv.ParseInt(utxo.Value, 10, 64)
-				inval += val
+				val0, _ := new(big.Int).SetString(utxo.Value, 10)
+				inval += val0.Int64()
 				break
 			}
 		}

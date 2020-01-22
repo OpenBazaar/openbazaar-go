@@ -64,6 +64,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return fmt.Errorf("getting public key: %s", err.Error())
 	}
 
+	profile.Version = repo.ListingVersion
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
@@ -93,30 +94,6 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	profile.Currencies = acceptedCurrencies
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
-
-		// Update moderator info fixed fee details
-		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFee != nil {
-				if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency != nil {
-					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
-					if err != nil {
-						return fmt.Errorf("unable to parse fixed fee currency: %s", err.Error())
-					}
-					normalizedFee, err := fixedFee.Normalize()
-					if err != nil {
-						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Divisibility)
-						return fmt.Errorf("converting divisibility for fixed fee (%s) from (%d) to (%d): %s", fixedFee.Currency.String(), fixedFee.Currency.Divisibility, feeDivisibility, err.Error())
-					}
-					profile.ModeratorInfo.Fee.FixedFee = &pb.Moderator_Price{
-						AmountCurrency: &pb.CurrencyDefinition{
-							Code:         normalizedFee.Currency.CurrencyCode().String(),
-							Divisibility: uint32(normalizedFee.Currency.Divisibility),
-						},
-						BigAmount: normalizedFee.Amount.String(),
-					}
-				}
-			}
-		}
 	}
 
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
@@ -213,6 +190,14 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	repoProfile, err := repo.ProfileFromProtobuf(p)
 	if err != nil {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
+	}
+
+	if repoProfile.IsModerationEnabled() {
+		validatedFees, err := repoProfile.ToValidModeratorFee()
+		if err != nil {
+			return err
+		}
+		p.ModeratorInfo.Fee = validatedFees
 	}
 
 	if err := repoProfile.Valid(); err != nil {
