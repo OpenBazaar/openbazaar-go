@@ -644,16 +644,6 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	return sl, nil
 }
 
-func verifySignaturesOnListing(s repo.SignedListing) error {
-	if err := s.VerifySignature(); err != nil {
-		return err
-	}
-	if err := s.GetVendorID().VerifyBitcoinSignature(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // SetCurrencyOnListings - set currencies accepted for a listing
 func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))

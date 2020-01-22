@@ -722,7 +722,7 @@ func TestCryptoListingsPriceModifier(t *testing.T) {
 
 	listing.Item.PriceModifier = repo.PriceModifierMax + 0.01
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(fmt.Errorf("validate sellable listing (crypto): %s", outOfRangeErr)),
 	})
 
 	listing.Item.PriceModifier = repo.PriceModifierMin - 0.001
@@ -732,7 +732,7 @@ func TestCryptoListingsPriceModifier(t *testing.T) {
 
 	listing.Item.PriceModifier = repo.PriceModifierMin - 1
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(fmt.Errorf("validate sellable listing (crypto): %s", outOfRangeErr)),
 	})
 }
 
@@ -844,7 +844,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.PriceCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(repo.ErrMarketPriceListingIllegalField("item.bigPrice"))},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(fmt.Errorf("validate sellable listing (listing): %s", repo.ErrMarketPriceListingIllegalField("item.bigPrice")))},
 	})
 }
 

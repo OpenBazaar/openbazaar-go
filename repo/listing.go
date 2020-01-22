@@ -77,7 +77,7 @@ type option struct {
 type options []option
 
 func (os options) ToOrderOptionSetProtobuf() []*pb.Order_Item_Option {
-	var optionProtos = make([]*pb.Order_Item_Option, len(os), len(os))
+	var optionProtos = make([]*pb.Order_Item_Option, len(os))
 	for i, o := range os {
 		optionProtos[i] = &pb.Order_Item_Option{
 			Name:  o.Name,
@@ -92,6 +92,7 @@ type shippingOption struct {
 	Service string `json:"service"`
 }
 
+// Item represents a purchased item
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
 	Quantity       string         `json:"bigQuantity"`
@@ -102,7 +103,7 @@ type Item struct {
 	PaymentAddress string         `json:"paymentAddress"`
 }
 
-// PurchaseData - record purchase data
+// PurchaseData represents purchase request metadata
 type PurchaseData struct {
 	ShipTo               string  `json:"shipTo"`
 	Address              string  `json:"address"`
@@ -118,7 +119,7 @@ type PurchaseData struct {
 	PaymentCoin          string  `json:"paymentCoin"`
 }
 
-// IndividualListingContainer -
+// IndividualListingContainer is a wrapper for a single listing
 type IndividualListingContainer struct {
 	Listing `json:"listing"`
 }
@@ -401,7 +402,6 @@ func (l *Listing) GetCryptoDivisibility() uint32 {
 		}
 		return div
 	}
-	return 0
 }
 
 // GetCryptoCurrencyCode returns the listing crypto currency code
@@ -570,13 +570,26 @@ type ListingImage struct {
 	tiny     string
 }
 
+// GetFilename returns the image filename
 func (i *ListingImage) GetFilename() string { return i.filename }
+
+// GetOriginal returns the image's original size
 func (i *ListingImage) GetOriginal() string { return i.original }
-func (i *ListingImage) GetLarge() string    { return i.large }
-func (i *ListingImage) GetMedium() string   { return i.medium }
-func (i *ListingImage) GetSmall() string    { return i.small }
-func (i *ListingImage) GetTiny() string     { return i.tiny }
-func (i *ListingImage) String() string      { return i.GetFilename() }
+
+// GetLarge returns the image's large size
+func (i *ListingImage) GetLarge() string { return i.large }
+
+// GetMedium returns the image's medium size
+func (i *ListingImage) GetMedium() string { return i.medium }
+
+// GetSmall returns the image's small size
+func (i *ListingImage) GetSmall() string { return i.small }
+
+// GetTiny returns the image's tiny size
+func (i *ListingImage) GetTiny() string { return i.tiny }
+
+// String satisfies Stringer and returns the image filename
+func (i *ListingImage) String() string { return i.GetFilename() }
 
 func (i *ListingImage) imageProtobuf() (*pb.Listing_Item_Image, error) {
 	if i == nil ||
@@ -598,6 +611,7 @@ func (i *ListingImage) imageProtobuf() (*pb.Listing_Item_Image, error) {
 	return pbImg, nil
 }
 
+// SetOriginal updates CID for the original image
 func (i *ListingImage) SetOriginal(cid string) error {
 	var pbi, err = i.imageProtobuf()
 	if err != nil {
@@ -608,6 +622,7 @@ func (i *ListingImage) SetOriginal(cid string) error {
 	return nil
 }
 
+// SetLarge updates CID for the large image
 func (i *ListingImage) SetLarge(cid string) error {
 	var pbi, err = i.imageProtobuf()
 	if err != nil {
@@ -618,6 +633,7 @@ func (i *ListingImage) SetLarge(cid string) error {
 	return nil
 }
 
+// SetMedium updates CID for the medium image
 func (i *ListingImage) SetMedium(cid string) error {
 	var pbi, err = i.imageProtobuf()
 	if err != nil {
@@ -628,6 +644,7 @@ func (i *ListingImage) SetMedium(cid string) error {
 	return nil
 }
 
+// SetSmall updates CID for the small image
 func (i *ListingImage) SetSmall(cid string) error {
 	var pbi, err = i.imageProtobuf()
 	if err != nil {
@@ -638,6 +655,7 @@ func (i *ListingImage) SetSmall(cid string) error {
 	return nil
 }
 
+// SetTiny updates CID for the tiny image
 func (i *ListingImage) SetTiny(cid string) error {
 	var pbi, err = i.imageProtobuf()
 	if err != nil {
@@ -654,11 +672,11 @@ func (l *Listing) GetImages() []*ListingImage {
 		l.listingProto == nil ||
 		l.listingProto.Item == nil ||
 		l.listingProto.Item.Images == nil {
-		return make([]*ListingImage, 0, 0)
+		return make([]*ListingImage, 0)
 	}
 	var (
 		protoImgs = l.listingProto.Item.Images
-		imgs      = make([]*ListingImage, len(protoImgs), len(protoImgs))
+		imgs      = make([]*ListingImage, len(protoImgs))
 	)
 	for i, img := range protoImgs {
 		imgs[i] = &ListingImage{
@@ -713,8 +731,10 @@ func (l *Listing) GetPriceModifier() float32 {
 	return 0
 }
 
+// ListingTaxes is a set of taxes
 type ListingTaxes []ListingTax
 
+// ListingTax describes how a listing is taxed in each region
 type ListingTax struct {
 	taxType         string
 	regions         []string
@@ -722,16 +742,23 @@ type ListingTax struct {
 	taxableShipping bool
 }
 
-func (t ListingTax) GetType() string                { return t.taxType }
+// GetType returns the tax type
+func (t ListingTax) GetType() string { return t.taxType }
+
+// GetApplicableRegions returns the regions affected by the tax
 func (t ListingTax) GetApplicableRegions() []string { return t.regions }
-func (t ListingTax) GetRate() float32               { return t.rate }
-func (t ListingTax) GetTaxableShipping() bool       { return t.taxableShipping }
+
+// GetRate returns the tax rate
+func (t ListingTax) GetRate() float32 { return t.rate }
+
+// GetTaxableShipping indicates whether the shipping is subject to the tax
+func (t ListingTax) GetTaxableShipping() bool { return t.taxableShipping }
 
 // GetTaxes returns listing tax information
 func (l *Listing) GetTaxes() ListingTaxes {
-	var ts = make([]ListingTax, len(l.listingProto.Taxes), len(l.listingProto.Taxes))
+	var ts = make([]ListingTax, len(l.listingProto.Taxes))
 	for ti, tax := range l.listingProto.Taxes {
-		var rs = make([]string, len(tax.TaxRegions), len(tax.TaxRegions))
+		var rs = make([]string, len(tax.TaxRegions))
 		for ri, region := range tax.TaxRegions {
 			rs[ri] = region.String()
 		}
@@ -786,7 +813,7 @@ func (l *Listing) UpdateCouponsFromDatastore(cdb couponGetter) error {
 func (l *Listing) GetCoupons() (ListingCoupons, error) {
 	var (
 		protoCoupons   = l.listingProto.GetCoupons()
-		cs             = make([]*ListingCoupon, len(protoCoupons), len(protoCoupons))
+		cs             = make([]*ListingCoupon, len(protoCoupons))
 		listingVersion = l.GetVersion()
 		discPrice, err = l.GetPrice()
 	)
@@ -803,6 +830,7 @@ func (l *Listing) GetCoupons() (ListingCoupons, error) {
 		case 5:
 			discAmt = c.GetBigPriceDiscount()
 		default:
+			//nolint:staticcheck
 			discAmt = strconv.FormatUint(c.GetPriceDiscount(), 10)
 		}
 		if discAmt != "" {
@@ -827,7 +855,10 @@ func (l *Listing) GetCoupons() (ListingCoupons, error) {
 	return cs, nil
 }
 
+// ListingCoupons is a set of listing coupons
 type ListingCoupons []*ListingCoupon
+
+// ListingCoupon represents an coupon which can be applied to a listing for a discount
 type ListingCoupon struct {
 	listing *Listing
 
@@ -839,14 +870,21 @@ type ListingCoupon struct {
 	discountAmount  *CurrencyValue
 }
 
+// GetListingSlug returns the slug for the coupon's listing
 func (c *ListingCoupon) GetListingSlug() string { return c.listing.GetSlug() }
-func (c *ListingCoupon) GetTitle() string       { return c.title }
+
+// GetTitle returns the coupon's title
+func (c *ListingCoupon) GetTitle() string { return c.title }
+
+// GetRedemptionCode returns the coupon redemption code
 func (c *ListingCoupon) GetRedemptionCode() (string, error) {
 	if c.redemptionCode != "" {
 		return c.redemptionCode, nil
 	}
 	return "", errors.New("redemption code not set")
 }
+
+// GetRedemptionHash returns the hashed representation of the code
 func (c *ListingCoupon) GetRedemptionHash() (string, error) {
 	_, err := mh.FromB58String(c.redemptionHash)
 	if err != nil {
@@ -860,9 +898,14 @@ func (c *ListingCoupon) GetRedemptionHash() (string, error) {
 	}
 	return c.redemptionHash, nil
 }
-func (c *ListingCoupon) GetPercentOff() float32       { return c.discountPercent }
+
+// GetPercentOff returns the percentage amount to reduce listing by
+func (c *ListingCoupon) GetPercentOff() float32 { return c.discountPercent }
+
+// GetAmountOff returns the value to reduce listing by
 func (c *ListingCoupon) GetAmountOff() *CurrencyValue { return c.discountAmount }
 
+// SetRedemptionCode sets the coupon's redemption code
 func (c *ListingCoupon) SetRedemptionCode(code string) error {
 	newHash, err := ipfs.EncodeMultihash([]byte(code))
 	if err != nil {
@@ -909,11 +952,11 @@ func (l *Listing) GetShippingRegions() ([]string, []string) {
 	}
 
 	var returnShipTo = make([]string, 0)
-	for s, _ := range shipsTo {
+	for s := range shipsTo {
 		returnShipTo = append(returnShipTo, s)
 	}
 	var returnFreeShipTo = make([]string, 0)
-	for s, _ := range freeShippingTo {
+	for s := range freeShippingTo {
 		returnFreeShipTo = append(returnFreeShipTo, s)
 	}
 	return returnShipTo, returnFreeShipTo
@@ -1539,6 +1582,7 @@ func (l *Listing) ValidateCryptoListing() error {
 	return nil
 }
 
+// SetCryptocurrencyListingDefaults ensures appropriate defaults are set for Crypto listings
 func (l *Listing) SetCryptocurrencyListingDefaults() error {
 	l.listingProto.Coupons = []*pb.Listing_Coupon{}
 	l.listingProto.Item.Options = []*pb.Listing_Item_Option{}
@@ -1577,6 +1621,7 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 	return nil
 }
 
+// ValidateShippingRegion ensures shipping options are valid
 func ValidateShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 	for _, region := range shippingOption.Regions {
 		if int32(region) == 0 {
@@ -1595,6 +1640,7 @@ func ValidateShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 	return nil
 }
 
+// ValidatePurchaseItemOptions ensures item options are valid
 func (l *Listing) ValidatePurchaseItemOptions(itemOptions []option) error {
 	if l.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
 		len(itemOptions) > 0 {
@@ -1624,6 +1670,7 @@ func (l *Listing) ValidatePurchaseItemOptions(itemOptions []option) error {
 	return nil
 }
 
+// ValidateListingOptions is a helper to ensure item options are valid
 func ValidateListingOptions(listingItemOptions []*pb.Listing_Item_Option, itemOptions []option) ([]*pb.Order_Item_Option, error) {
 	var validatedListingOptions []*pb.Order_Item_Option
 	listingOptions := make(map[string]*pb.Listing_Item_Option)

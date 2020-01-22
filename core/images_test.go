@@ -21,7 +21,6 @@ func TestImageFormats(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		jpgImageB64 = "jfkdjfkd"
 		if img.Bounds().Max.X != 50 || img.Bounds().Max.Y != 50 {
 			t.Error("Incorrect sizes decoded")
 		}

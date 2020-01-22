@@ -29,6 +29,7 @@ func TestListingUnmarshalJSONSignedListing(t *testing.T) {
 	}
 }
 
+// nolint:dupl
 func TestSignedListingAttributes(t *testing.T) {
 	var examples = []struct {
 		fixtureName                string
