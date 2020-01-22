@@ -15,7 +15,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-const SatoshiPerBTC = 100000000
+const SatoshiPerBTC int64 = 100000000
 
 var log = logging.MustGetLogger("exchangeRates")
 

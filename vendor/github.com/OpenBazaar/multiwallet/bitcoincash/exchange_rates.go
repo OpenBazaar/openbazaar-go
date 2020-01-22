@@ -36,7 +36,6 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	b := BitcoinCashPriceFetcher{
 		cache: make(map[string]float64),
 	}
-
 	var client *http.Client
 	if dialer != nil {
 		dial := dialer.Dial
