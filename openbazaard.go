@@ -105,13 +105,6 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	_, err = parser.AddCommand("convert",
-		"convert this node to a different coin type",
-		"This command will convert the node to use a different cryptocurrency",
-		&cmd.Convert{})
-	if err != nil {
-		log.Error(err)
-	}
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
 		fmt.Println(core.VERSION)
 		return

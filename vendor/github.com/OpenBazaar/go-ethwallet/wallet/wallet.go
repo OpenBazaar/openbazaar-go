@@ -34,12 +34,15 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/websocket"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
 
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
+
+var _ = wi.Wallet(&EthereumWallet{})
 
 const (
 	// InfuraAPIKey is the hard coded Infura API key
@@ -152,6 +155,47 @@ func GenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
 	ahashStr := hexutil.Encode(retHash[:])
 
 	return retHash, ahashStr, nil
+}
+
+type subs struct {
+	conn *websocket.Conn
+	ID   string
+}
+
+type subsResult struct {
+	ID     int    `json:"id"`
+	Result string `json:"result"`
+}
+
+type pendingTxnSubResult struct {
+	ID     string `json:"subscription"`
+	Result string `json:"result"`
+}
+
+type pendingTxnResult struct {
+	Method string              `json:"method"`
+	Params pendingTxnSubResult `json:"params"`
+}
+
+type logsDetails struct {
+	Address          string   `json:"address"`
+	BlockHash        string   `json:"blockHash"`
+	BlockNumber      string   `json:"blockNumber"`
+	Data             string   `json:"data"`
+	LogIndex         string   `json:"logIndex"`
+	Topics           []string `json:"topics"`
+	TransactionHash  string   `json:"transactionHash"`
+	TransactionIndex string   `json:"transactionIndex"`
+}
+
+type logsSubResult struct {
+	Subscription string      `json:"subscription"`
+	Result       logsDetails `json:"result"`
+}
+
+type logsResult struct {
+	Method string        `json:"method"`
+	Params logsSubResult `json:"params"`
 }
 
 // EthereumWallet is the wallet implementation for ethereum
@@ -330,6 +374,60 @@ func (wallet *EthereumWallet) Start() {
 		}
 	}(wallet)
 
+	// start the ticker to check for balance
+	go func(wallet *EthereumWallet) {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+
+		currentBalance, err := wallet.GetBalance()
+		if err != nil {
+			log.Infof("err fetching initial balance: %v", err)
+		}
+		currentTip, _ := wallet.ChainTip()
+
+		for range ticker.C {
+			// fetch the current balance
+			fetchedBalance, err := wallet.GetBalance()
+			if err != nil {
+				log.Infof("err fetching balance at %v: %v", time.Now(), err)
+				continue
+			}
+			if fetchedBalance.Cmp(currentBalance) != 0 {
+				// process balance change
+				go wallet.processBalanceChange(currentBalance, fetchedBalance, currentTip)
+				currentTip, _ = wallet.ChainTip()
+				currentBalance = fetchedBalance
+			}
+		}
+	}(wallet)
+}
+
+func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalance *big.Int, currentHead uint32) {
+	count := 0
+	cTip := int(currentHead)
+	value := new(big.Int).Sub(currentBalance, previousBalance)
+	for count < 30 {
+		txns, err := wallet.TransactionsFromBlock(&cTip)
+		if err == nil && len(txns) > 0 {
+			count = 30
+			txncb := wi.TransactionCallback{
+				Txid:      util.EnsureCorrectPrefix(txns[0].Txid),
+				Outputs:   []wi.TransactionOutput{},
+				Inputs:    []wi.TransactionInput{},
+				Height:    1,
+				Timestamp: time.Now(),
+				Value:     *value,
+				WatchOnly: false,
+			}
+			for _, l := range wallet.listeners {
+				go l(txncb)
+			}
+			continue
+		}
+		log.Error("err fetching latest transactions : ", err)
+		time.Sleep(1 * time.Second)
+		count++
+	}
 }
 
 // CurrencyCode returns ETH
@@ -477,10 +575,10 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 	return balance, ucbalance
 }
 
-// Transactions - Returns a list of transactions for this wallet
-func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
-	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), nil, nil,
-		1, 0, false)
+// TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
+func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
+	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
+		1, 0, true)
 	if err != nil {
 		log.Error("err fetching transactions : ", err)
 		return []wi.Txn{}, nil
@@ -510,6 +608,11 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 	}
 
 	return ret, nil
+}
+
+// Transactions - Returns a list of transactions for this wallet
+func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
+	return wallet.TransactionsFromBlock(nil)
 }
 
 // GetTransaction - Get info on a specific transaction
@@ -1465,8 +1568,8 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	return tx.Hash().Bytes(), nil
 }
 
-// AddWatchedAddress - Add a script to the wallet and get notifications back when coins are received or spent from it
-func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
+// AddWatchedAddresses - Add a script to the wallet and get notifications back when coins are received or spent from it
+func (wallet *EthereumWallet) AddWatchedAddresses(addrs ...btcutil.Address) error {
 	// the reason eth wallet cannot use this as of now is because only the address
 	// is insufficient, the redeemScript is also required
 	return nil

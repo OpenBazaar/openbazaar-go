@@ -64,6 +64,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return fmt.Errorf("getting public key: %s", err.Error())
 	}
 
+	profile.Version = repo.ListingVersion
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
@@ -197,6 +198,10 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 			return err
 		}
 		p.ModeratorInfo.Fee = validatedFees
+	}
+
+	if err := repoProfile.Valid(); err != nil {
+		return fmt.Errorf("invalid profile: %s", err.Error())
 	}
 
 	return n.UpdateProfile(p)
