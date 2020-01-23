@@ -116,7 +116,7 @@ func (h *HeaderDB) Put(sh StoredHeader, newBestHeader bool) error {
 	go func() {
 		err := h.putToDB(sh, newBestHeader)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 	}()
 	return nil
@@ -131,7 +131,7 @@ func (h *HeaderDB) put(sh StoredHeader, newBestHeader bool) error {
 	h.lock.Unlock()
 	err := h.putToDB(sh, newBestHeader)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	return nil
 }

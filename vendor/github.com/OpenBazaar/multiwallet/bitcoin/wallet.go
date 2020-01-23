@@ -48,6 +48,7 @@ type BitcoinWallet struct {
 }
 
 var (
+	_                         = wi.Wallet(&BitcoinWallet{})
 	BitcoinCurrencyDefinition = wi.CurrencyDefinition{
 		Code:         "BTC",
 		Divisibility: 8,
@@ -153,17 +154,30 @@ func (w *BitcoinWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey
 }
 
 func (w *BitcoinWallet) CurrentAddress(purpose wi.KeyPurpose) btc.Address {
-	key, _ := w.km.GetCurrentKey(purpose)
-	addr, _ := key.Address(w.params)
-	return btc.Address(addr)
+	key, err := w.km.GetCurrentKey(purpose)
+	if err != nil {
+		w.log.Errorf("Error generating current key: %s", err)
+	}
+	addr, err := w.km.KeyToAddress(key)
+	if err != nil {
+		w.log.Errorf("Error converting key to address: %s", err)
+	}
+	return addr
 }
 
 func (w *BitcoinWallet) NewAddress(purpose wi.KeyPurpose) btc.Address {
-	i, _ := w.db.Keys().GetUnused(purpose)
-	key, _ := w.km.GenerateChildKey(purpose, uint32(i[1]))
-	addr, _ := key.Address(w.params)
-	w.db.Keys().MarkKeyAsUsed(addr.ScriptAddress())
-	return btc.Address(addr)
+	key, err := w.km.GetNextUnused(purpose)
+	if err != nil {
+		w.log.Errorf("Error generating next unused key: %s", err)
+	}
+	addr, err := w.km.KeyToAddress(key)
+	if err != nil {
+		w.log.Errorf("Error converting key to address: %s", err)
+	}
+	if err := w.db.Keys().MarkKeyAsUsed(addr.ScriptAddress()); err != nil {
+		w.log.Errorf("Error marking key as used: %s", err)
+	}
+	return addr
 }
 
 func (w *BitcoinWallet) DecodeAddress(addr string) (btc.Address, error) {
@@ -337,16 +351,25 @@ func (w *BitcoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold 
 	return w.generateMultisigScript(keys, threshold, timeout, timeoutKey)
 }
 
-func (w *BitcoinWallet) AddWatchedAddress(addr btc.Address) error {
-	script, err := w.AddressToScript(addr)
+func (w *BitcoinWallet) AddWatchedAddresses(addrs ...btc.Address) error {
+
+	var watchedScripts [][]byte
+	for _, addr := range addrs {
+		if !w.HasKey(addr) {
+			script, err := w.AddressToScript(addr)
+			if err != nil {
+				return err
+			}
+			watchedScripts = append(watchedScripts, script)
+		}
+	}
+
+	err := w.db.WatchedScripts().PutAll(watchedScripts)
 	if err != nil {
 		return err
 	}
-	err = w.db.WatchedScripts().Put(script)
-	if err != nil {
-		return err
-	}
-	w.client.ListenAddress(addr)
+
+	w.client.ListenAddresses(addrs...)
 	return nil
 }
 

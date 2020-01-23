@@ -277,7 +277,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	fee := wal.GetFeePerByte(wallet.NORMAL)
 	contract.BuyerOrder.BigRefundFee = fee.String()
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +314,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
@@ -373,7 +373,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}

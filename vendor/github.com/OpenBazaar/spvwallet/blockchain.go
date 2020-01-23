@@ -198,7 +198,7 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 	// We are on a difficulty adjustment period so we need to correctly calculate the new difficulty.
 	epoch, err := b.GetEpoch()
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return 0, err
 	}
 	return calcDiffAdjust(*epoch, prevHeader.header, b.params), nil

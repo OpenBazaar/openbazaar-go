@@ -1,9 +1,5 @@
 package mobile
 
-import (
-	"github.com/OpenBazaar/wallet-interface"
-)
-
 // NodeConfig struct of the config parameters to be passed when creating a new node
 type NodeConfig struct {
 
@@ -25,9 +21,6 @@ type NodeConfig struct {
 	// Processes to disable
 	DisableWallet        bool
 	DisableExchangerates bool
-
-	// The coin to use
-	CoinType wallet.CoinType
 
 	// Run the pprof profiler on port 6060
 	Profile bool

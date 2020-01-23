@@ -407,6 +407,15 @@ type MockWatchedScriptsStore struct {
 	sync.Mutex
 }
 
+func (m *MockWatchedScriptsStore) PutAll(scriptPubKeys [][]byte) error {
+	m.Lock()
+	defer m.Unlock()
+	for _, scriptPubKey := range scriptPubKeys {
+		m.scripts[hex.EncodeToString(scriptPubKey)] = scriptPubKey
+	}
+	return nil
+}
+
 func (m *MockWatchedScriptsStore) Put(scriptPubKey []byte) error {
 	m.Lock()
 	defer m.Unlock()
