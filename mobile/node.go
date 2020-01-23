@@ -70,7 +70,7 @@ type Node struct {
 
 var (
 	fileLogFormat = logging.MustStringFormatter(
-		`%{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+		`[Haven] %{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
 	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
@@ -122,7 +122,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	obFileBackend := logging.NewLogBackend(obLog, "", 0)
 	obFileBackendFormatted := logging.NewBackendFormatter(obFileBackend, fileLogFormat)
-	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted)
+	stdoutBackend := logging.NewLogBackend(os.Stdout, "", 0)
+	stdoutBackendFormatted := logging.NewBackendFormatter(stdoutBackend, fileLogFormat)
+	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted, stdoutBackendFormatted)
 	logging.SetLevel(logging.INFO, "")
 
 	migrations.WalletCoinType = config.CoinType
