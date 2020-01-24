@@ -6,19 +6,25 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/jsonpb"
 )
 
 func NewPeerIDProtobuf() *pb.ID {
+	privKey := MustNewBitcoinPrivKey()
+	bitcoinSig, err := privKey.Sign([]byte("QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5"))
+	if err != nil {
+		panic(fmt.Sprintf("signing peerid: %s", err.Error()))
+	}
 	return &pb.ID{
-		PeerID:  "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
-		Handle:  "",
-		Pubkeys: NewPubkeysProtobuf(),
-		//BitcoinSig: []byte("MEQCIGqBDqGyLGs8tVewab+b8BIMCY73uGrxg7wPro3+JuVmAiBa2wk55FwGWWQoyLYW1mGhP62FLHyk6pfkAt59A1tU8Q=="),
+		PeerID:     "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
+		Handle:     "",
+		Pubkeys:    MustNewPubkeysProtobuf(privKey),
+		BitcoinSig: bitcoinSig.Serialize(),
 	}
 }
 
-func NewPubkeysIdentityKeyBytes() []byte {
+func MustNewPubkeysIdentityKeyBytes() []byte {
 	keyBytes, err := base64.StdEncoding.DecodeString("CAESIII6nbBUBtCkK0blWtYRwm2lKS4kuAm36sElyoeC0n0u")
 	if err != nil {
 		panic(err)
@@ -26,10 +32,21 @@ func NewPubkeysIdentityKeyBytes() []byte {
 	return keyBytes
 }
 
-func NewPubkeysProtobuf() *pb.ID_Pubkeys {
+func MustNewBitcoinPrivKey() *btcec.PrivateKey {
+	priv, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		panic(err)
+	}
+	return priv
+}
+
+func MustNewPubkeysProtobuf(bitcoinKey *btcec.PrivateKey) *pb.ID_Pubkeys {
+	if bitcoinKey == nil {
+		panic("nil bitcoin pubkey cannot produce pubkey protobuf")
+	}
 	return &pb.ID_Pubkeys{
-		Identity: NewPubkeysIdentityKeyBytes(),
-		Bitcoin:  []byte("AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"),
+		Identity: MustNewPubkeysIdentityKeyBytes(),
+		Bitcoin:  bitcoinKey.PubKey().SerializeCompressed(),
 	}
 }
 
