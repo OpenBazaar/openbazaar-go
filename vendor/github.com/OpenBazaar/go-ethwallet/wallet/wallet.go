@@ -42,7 +42,7 @@ import (
 )
 
 var _ = wi.Wallet(&EthereumWallet{})
-var done chan bool
+var done, doneBalanceTicker chan bool
 
 const (
 	// InfuraAPIKey is the hard coded Infura API key
@@ -270,6 +270,7 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int, spendAll bool,
 // Start will start the wallet daemon
 func (wallet *EthereumWallet) Start() {
 	done = make(chan bool)
+	doneBalanceTicker = make(chan bool)
 	// start the ticker to check for pending txn rcpts
 	go func(wallet *EthereumWallet) {
 		ticker := time.NewTicker(5 * time.Second)
@@ -309,18 +310,23 @@ func (wallet *EthereumWallet) Start() {
 		}
 		currentTip, _ := wallet.ChainTip()
 
-		for range ticker.C {
-			// fetch the current balance
-			fetchedBalance, err := wallet.GetBalance()
-			if err != nil {
-				log.Infof("err fetching balance at %v: %v", time.Now(), err)
-				continue
-			}
-			if fetchedBalance.Cmp(currentBalance) != 0 {
-				// process balance change
-				go wallet.processBalanceChange(currentBalance, fetchedBalance, currentTip)
-				currentTip, _ = wallet.ChainTip()
-				currentBalance = fetchedBalance
+		for {
+			select {
+			case <-doneBalanceTicker:
+				return
+			case <-ticker.C:
+				// fetch the current balance
+				fetchedBalance, err := wallet.GetBalance()
+				if err != nil {
+					log.Infof("err fetching balance at %v: %v", time.Now(), err)
+					continue
+				}
+				if fetchedBalance.Cmp(currentBalance) != 0 {
+					// process balance change
+					go wallet.processBalanceChange(currentBalance, fetchedBalance, currentTip)
+					currentTip, _ = wallet.ChainTip()
+					currentBalance = fetchedBalance
+				}
 			}
 		}
 	}(wallet)
@@ -706,7 +712,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			if err == nil {
 				err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), true)
 				if err0 != nil {
-					log.Error(err.Error())
+					log.Error(err0.Error())
 				}
 			}
 		}
@@ -1388,7 +1394,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	if err == nil {
 		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(tx.Hash().Hex()), "0", 0, time.Now(), true)
 		if err0 != nil {
-			log.Error(err.Error())
+			log.Error(err0.Error())
 		}
 	}
 
@@ -1463,6 +1469,7 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 func (wallet *EthereumWallet) Close() {
 	// stop the wallet daemon
 	done <- true
+	doneBalanceTicker <- true
 }
 
 // CreateAddress - used to generate a new address
