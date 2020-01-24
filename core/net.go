@@ -1,17 +1,23 @@
 package core
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9/go-datastore"
+	"gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/net"
+
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
+	"gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
@@ -39,6 +45,7 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	n.SendRelayedMessage(p, k, &message) // send relayed message immediately
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
@@ -51,30 +58,82 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	return nil
 }
 
-// SendOfflineMessage Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
-func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
-	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+// SendRelayedMessage - send message through web relay manager to recipient
+func (n *OpenBazaarNode) SendRelayedMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
+	messageBytes, err := n.getMessageBytes(m)
 	if err != nil {
 		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	defer cancel()
+	if k == nil {
+		var pubKey libp2p.PubKey
+		keyval, err := n.IpfsNode.Repo.Datastore().Get(datastore.NewKey("/pubkey/" + p.Pretty()))
+		if err != nil {
+			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, p)
+			if err != nil {
+				log.Errorf("Failed to find public key for %s", p.Pretty())
+				return err
+			}
+		} else {
+			pubKey, err = libp2p.UnmarshalPublicKey(keyval)
+			if err != nil {
+				log.Errorf("Failed to find public key for %s", p.Pretty())
+				return err
+			}
+		}
+		k = &pubKey
+	}
+
+	relayciphertext, err := net.Encrypt(*k, messageBytes)
+	if err != nil {
+		return fmt.Errorf("Error: %s", err.Error())
+	}
+
+	// Base64 encode
+	encodedCipherText := base64.StdEncoding.EncodeToString(relayciphertext)
+
+	n.WebRelayManager.SendRelayMessage(encodedCipherText, p.Pretty())
+
+	return nil
+}
+
+func (n *OpenBazaarNode) getMessageBytes(m *pb.Message) ([]byte, error) {
+	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, err
 	}
 	ser, err := proto.Marshal(m)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	env := pb.Envelope{Message: m, Pubkey: pubKeyBytes, Signature: sig}
 	messageBytes, merr := proto.Marshal(&env)
 	if merr != nil {
-		return merr
+		return nil, merr
 	}
+	return messageBytes, nil
+}
+
+// SendOfflineMessage Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
+func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
+	messageBytes, err := n.getMessageBytes(m)
+	if err != nil {
+		return err
+	}
+
 	// TODO: this function blocks if the recipient's public key is not on the local machine
 	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
 	if cerr != nil {
 		return cerr
 	}
+
 	addr, aerr := n.MessageStorage.Store(p, ciphertext)
 	if aerr != nil {
 		return aerr
@@ -84,7 +143,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		return mherr
 	}
 	/* TODO: We are just using a default prefix length for now. Eventually we will want to customize this,
-	   but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
+	but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
 	pointer, err := ipfs.NewPointer(mh, DefaultPointerPrefixLength, addr, ciphertext)
 	if err != nil {
 		return err
@@ -279,6 +338,8 @@ func (n *OpenBazaarNode) ResendCachedOrderMessage(orderID string, msgType pb.Mes
 	if err != nil {
 		return fmt.Errorf("unable to decode invalid peer ID for order (%s) and message type (%s)", orderID, msgType.String())
 	}
+
+	n.SendRelayedMessage(p, nil, &msg.Msg) // send relayed message immediately
 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
@@ -575,6 +636,7 @@ func (n *OpenBazaarNode) SendChat(peerID string, chatMessage *pb.Chat) error {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	n.SendRelayedMessage(p, nil, &m) // send relayed message immediately
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil && chatMessage.Flag != pb.Chat_TYPING {
@@ -795,6 +857,9 @@ func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.Orde
 	if err != nil {
 		return err
 	}
+
+	n.SendRelayedMessage(p, nil, &m) // send relayed message immediately
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
 	cancel()

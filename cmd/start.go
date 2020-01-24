@@ -237,6 +237,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan data sharing config:", err)
 		return err
 	}
+	webRelays, err := schema.GetWebRelays(configFile)
+	if err != nil {
+		log.Error("scan web relays config:", err)
+		return err
+	}
 	dropboxToken, err := schema.GetDropboxApiToken(configFile)
 	if err != nil {
 		log.Error("scan dropbox api token:", err)
@@ -583,6 +588,8 @@ func (x *Start) Execute(args []string) error {
 		rootHash = string(cachedIPNSRecord.Value)
 	}
 
+	wm := obnet.NewWebRelayManager(webRelays, identity.PeerID)
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
@@ -595,6 +602,7 @@ func (x *Start) Execute(args []string) error {
 		OfflineMessageFailoverTimeout: 30 * time.Second,
 		Pubsub:                        ps,
 		PushNodes:                     pushNodes,
+		WebRelayManager:               wm,
 		RegressionTestEnable:          x.Regtest,
 		RepoPath:                      repoPath,
 		RootHash:                      rootHash,
@@ -676,6 +684,7 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
+
 		core.Node.Service = service.New(core.Node, sqliteDB)
 		core.Node.Service.WaitForReady()
 		log.Info("OpenBazaar Service Ready")
@@ -683,6 +692,8 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
+
+		core.Node.WebRelayManager.ConnectToRelays(core.Node.Service)
 
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
