@@ -6,26 +6,25 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/golang/protobuf/jsonpb"
 )
 
-func MustNewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
-}
-
-func NewPeerInfo() *repo.PeerInfo {
-	return repo.NewPeerInfoFromIdentityKey(NewPubkeysIdentityKeyBytes())
-}
-
 func NewPeerIDProtobuf() *pb.ID {
+	privKey := MustNewBitcoinPrivKey()
+	bitcoinSig, err := privKey.Sign([]byte("QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5"))
+	if err != nil {
+		panic(fmt.Sprintf("signing peerid: %s", err.Error()))
+	}
 	return &pb.ID{
-		PeerID:  "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
-		Handle:  "",
-		Pubkeys: NewPubkeysProtobuf(),
-		//BitcoinSig: []byte("MEQCIGqBDqGyLGs8tVewab+b8BIMCY73uGrxg7wPro3+JuVmAiBa2wk55FwGWWQoyLYW1mGhP62FLHyk6pfkAt59A1tU8Q=="),
+		PeerID:     "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
+		Handle:     "",
+		Pubkeys:    MustNewPubkeysProtobuf(privKey),
+		BitcoinSig: bitcoinSig.Serialize(),
 	}
 }
 
-func NewPubkeysIdentityKeyBytes() []byte {
+func MustNewPubkeysIdentityKeyBytes() []byte {
 	keyBytes, err := base64.StdEncoding.DecodeString("CAESIII6nbBUBtCkK0blWtYRwm2lKS4kuAm36sElyoeC0n0u")
 	if err != nil {
 		panic(err)
@@ -33,38 +32,46 @@ func NewPubkeysIdentityKeyBytes() []byte {
 	return keyBytes
 }
 
-func NewPubkeysProtobuf() *pb.ID_Pubkeys {
-	return &pb.ID_Pubkeys{
-		Identity: NewPubkeysIdentityKeyBytes(),
-		//Bitcoin:  []byte("AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"),
-	}
-}
-
-// NewValidPeerIDProtobuf returns a PeerID protobuf example that is known to be valid
-func MustNewValidPeerIDProtobuf() *pb.ID {
-	validIdentity, err := base64.StdEncoding.DecodeString("CAESIII6nbBUBtCkK0blWtYRwm2lKS4kuAm36sElyoeC0n0u")
+func MustNewBitcoinPrivKey() *btcec.PrivateKey {
+	priv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		panic(err)
 	}
-	return &pb.ID{
-		PeerID: "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
-		Handle: "",
-		Pubkeys: &pb.ID_Pubkeys{
-			Identity: validIdentity,
-			//Bitcoin:  []byte("Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"),
-		},
-		//BitcoinSig: []byte("MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="),
+	return priv
+}
+
+func MustNewPubkeysProtobuf(bitcoinKey *btcec.PrivateKey) *pb.ID_Pubkeys {
+	if bitcoinKey == nil {
+		panic("nil bitcoin pubkey cannot produce pubkey protobuf")
 	}
+	return &pb.ID_Pubkeys{
+		Identity: MustNewPubkeysIdentityKeyBytes(),
+		Bitcoin:  bitcoinKey.PubKey().SerializeCompressed(),
+	}
+}
+
+// MustNewPeerIDProtobuf returns a PeerID protobuf example that is known to be valid
+func MustNewPeerIDProtobuf() *pb.ID {
+	var idJSON = `{
+		"peerID": "QmSsRdJtKLHueUA6vsjZVoZo6N6fjQrMjao29CcVW7pX4g",
+		"pubkeys": {
+			"identity": "CAESIFD3dGlUgpYv1RsEIwZPriU/NnKLjOXOFPolx35Be6ff",
+			"bitcoin": "AgcLRxnvq37Yt3nCpez8Sj7Y7fzdpkJpULQh/B3vzl7C"
+		},
+		"bitcoinSig": "MEQCIEf8jOQquW3yCXo29NTdhMyh5pIcGTOgZSYJVL4QO5kyAiAk25Bl1q1SktRev4Oo+ZwAuSuNCM1YwtndqZp/0ET/ow=="
+}`
+	pbID := new(pb.ID)
+	if err := jsonpb.UnmarshalString(idJSON, pbID); err != nil {
+		panic(err)
+	}
+	return pbID
 }
 
 // NewValidPeerInfo returns a PeerInfo example that is known to be valid
 func MustNewValidPeerInfo() *repo.PeerInfo {
-	var p, err = repo.NewPeerInfoFromProtobuf(MustNewValidPeerIDProtobuf())
-	if err != nil {
-		panic(err)
-	}
-	if isValid, errs := p.Valid(); !isValid {
-		panic(fmt.Sprintf("invalid peer: %+v", errs))
+	var p = repo.NewPeerInfoFromProtobuf(MustNewPeerIDProtobuf())
+	if err := p.Valid(); err != nil {
+		panic(fmt.Sprintf("invalid peer: %+v", err))
 	}
 	return p
 }

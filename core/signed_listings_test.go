@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -26,98 +25,27 @@ func TestOpenBazaarSignedListings_GetSignedListingFromPath(t *testing.T) {
 }
 
 func TestOpenBazaarSignedListings_SetAcceptedCurrencies(t *testing.T) {
-	currencies := []string{"TEST"}
+	currencies := []string{"ETH"}
 
 	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
 	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
 	if err != nil {
 		t.Error(err)
 	}
-	listing := slisting.ProtoSignedListing
+	listing := slisting.GetListing()
 
-	oldCurrencies := listing.Listing.Metadata.AcceptedCurrencies
+	oldCurrencies := listing.GetAcceptedCurrencies()
 
-	core.SetAcceptedCurrencies(listing, currencies)
+	if err := listing.SetAcceptedCurrencies(currencies...); err != nil {
+		t.Fatal(err)
+	}
 
-	if EqualStringSlices(listing.Listing.Metadata.AcceptedCurrencies, oldCurrencies) {
+	if EqualStringSlices(listing.GetAcceptedCurrencies(), oldCurrencies) {
 		t.Error("Accepted currencies were not updated")
 	}
 
-	if !EqualStringSlices(listing.Listing.Metadata.AcceptedCurrencies, currencies) {
+	if !EqualStringSlices(listing.GetAcceptedCurrencies(), currencies) {
 		t.Error("Accepted currencies changed but not correctly")
-	}
-}
-
-func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
-	coupons := []repo.Coupon{
-		{Slug: "signed_listings_1", Code: "test", Hash: "QmQ5vueeX64fsSo6fU9Z1dDFMR9rky5FjowEr7m7cSiGd8"},
-		{Slug: "signed_listings_1", Code: "bad", Hash: "BADHASH"},
-	}
-
-	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
-	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
-	if err != nil {
-		t.Error(err)
-	}
-	listing := slisting.ProtoSignedListing
-
-	//old_coupons := listing.Listing.Coupons
-
-	err = core.AssignMatchingCoupons(coupons, listing)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if listing.Listing.Coupons[0].GetDiscountCode() != "test" {
-		t.Error("Coupons were not assigned")
-	}
-
-	if listing.Listing.Coupons[0].GetDiscountCode() == "bad" || listing.Listing.Coupons[1].GetDiscountCode() == "bad" {
-		t.Error("Coupons were assigned improperly")
-	}
-}
-
-func TestOpenBazaarSignedListings_AssignMatchingQuantities(t *testing.T) {
-	inventory := map[int]*big.Int{
-		0: big.NewInt(1000),
-	}
-
-	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
-	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
-	if err != nil {
-		t.Error(err)
-	}
-
-	listing := slisting.ProtoSignedListing
-
-	err = core.AssignMatchingQuantities(inventory, listing)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if listing.Listing.Item.Skus[0].BigQuantity != "1000" {
-		t.Error("Inventory was not set properly")
-	}
-}
-
-func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
-	fixtureBytes := factory.MustLoadListingFixture("v5-signed-physical-good-2")
-	slisting, err := repo.UnmarshalJSONSignedListing(fixtureBytes)
-	if err != nil {
-		t.Error(err)
-	}
-
-	listing := slisting.ProtoSignedListing
-
-	option := listing.Listing.ShippingOptions[0].Services[0]
-
-	err = core.ApplyShippingOptions(listing)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if option.BigAdditionalItemPrice != "100" {
-		t.Error("Shipping options were not applied properly")
 	}
 }
 
