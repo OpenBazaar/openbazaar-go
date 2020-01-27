@@ -30,15 +30,15 @@
   name = "github.com/OpenBazaar/golang-socketio"
 
 [[constraint]]
-  branch = "master"
+  branch = "ethereum-master"
   name = "github.com/OpenBazaar/spvwallet"
 
 [[constraint]]
-  branch = "master"
+  branch = "ethereum-master"
   name = "github.com/OpenBazaar/wallet-interface"
 
 [[constraint]]
-  branch = "master"
+  version = "v0.20.1-beta"
   name = "github.com/btcsuite/btcd"
 
 [[constraint]]
@@ -46,7 +46,7 @@
   name = "github.com/btcsuite/btcutil"
 
 [[constraint]]
-  branch = "master"
+  version = "v0.11.0"
   name = "github.com/btcsuite/btcwallet"
 
 [[constraint]]
@@ -86,11 +86,11 @@
   name = "github.com/minio/blake2b-simd"
 
 [[constraint]]
-  branch = "master"
+  version = "v1.0"
   name = "github.com/op/go-logging"
 
 [[constraint]]
-  branch = "master"
+  version = "v1.0.2"
   name = "github.com/tyler-smith/go-bip39"
 
 [[constraint]]
@@ -109,6 +109,18 @@
   branch = "v1"
   name = "gopkg.in/jarcoal/httpmock.v1"
 
+[[override]]
+  revision = "758128399b1df3a87e92df6c26c1d2063da8fabe"
+  name = "github.com/syndtr/goleveldb"
+
 [prune]
   go-tests = true
   unused-packages = true
+
+[[prune.project]]
+  name = "github.com/ethereum/go-ethereum"
+  unused-packages = false
+
+[[prune.project]]
+  name = "github.com/karalabe/usb"
+  unused-packages = false

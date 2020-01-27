@@ -241,63 +241,44 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	hashes := make(map[string]string)
 	walkpath := func(p string, f os.FileInfo, err error) error {
 		if !f.IsDir() {
-			file, err := ioutil.ReadFile(p)
+			listingJSONBytes, err := ioutil.ReadFile(p)
 			if err != nil {
 				return err
 			}
-			sl := new(pb.SignedListing)
-			err = jsonpb.UnmarshalString(string(file), sl)
+			oldSL, err := repo.UnmarshalJSONSignedListing(listingJSONBytes)
 			if err != nil {
 				return err
 			}
-			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
-			if err != nil {
-				return err
-			}
-			couponMap := make(map[string]string)
-			for _, c := range coupons {
-				couponMap[c.Hash] = c.Code
-			}
-			for _, coupon := range sl.Listing.Coupons {
-				code, ok := couponMap[coupon.GetHash()]
-				if ok {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
-				}
+			l := oldSL.GetListing()
+
+			if err := l.SetModerators(moderators); err != nil {
+				return fmt.Errorf("settings moderator on (%s): %s", f.Name(), err.Error())
 			}
 
-			sl.Listing.Moderators = moderators
+			sl, err := l.Sign(n)
+			if err != nil {
+				return fmt.Errorf("signing listing (%s): %s", l.GetSlug(), err.Error())
+			}
 
-			rsl, err := repo.NewListingFromProtobuf(sl.Listing)
-			if err != nil {
-				return fmt.Errorf("create repo signed listing: %s", err.Error())
-			}
-			sl0, err := n.SignListing(*rsl)
-			if err != nil {
-				return err
-			}
-			sl = sl0.ProtoSignedListing
-			m := jsonpb.Marshaler{
-				EnumsAsInts:  false,
-				EmitDefaults: false,
-				Indent:       "    ",
-				OrigName:     false,
-			}
 			fi, err := os.Create(p)
 			if err != nil {
 				return err
 			}
-			out, err := m.MarshalToString(sl)
+			defer fi.Close()
+
+			slBytes, err := sl.MarshalJSON()
 			if err != nil {
-				return err
+				return fmt.Errorf("marshal signed listing (%s): %s", l.GetSlug(), err.Error())
 			}
-			if _, err := fi.WriteString(out); err != nil {
+
+			if _, err := fi.Write(slBytes); err != nil {
 				return err
 			}
 			hash, err := ipfs.GetHashOfFile(n.IpfsNode, p)
 			if err != nil {
 				return err
 			}
-			hashes[sl.Listing.Slug] = hash
+			hashes[sl.GetSlug()] = hash
 
 			return nil
 		}

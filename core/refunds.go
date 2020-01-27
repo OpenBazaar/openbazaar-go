@@ -104,6 +104,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
 		txinfo.BigValue = outValue.String()
+		txinfo.ValueCurrency = contract.BuyerOrder.Payment.AmountCurrency
 		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg

@@ -72,9 +72,7 @@ func NewEthClient(url string) (*EthClient, error) {
 	if conn, err = ethclient.Dial(url); err != nil {
 		return nil, err
 	}
-	fmt.Println("in new eth client before opening ws conn   : ")
 	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	fmt.Println("%%%%%%%%%%%   ", ws, "    err: ", err)
 	if err != nil {
 		log.Errorf("eth wallet unable to open ws conn: %v", err)
 		ws = nil

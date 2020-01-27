@@ -5,10 +5,10 @@ import (
 	"errors"
 	"io"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -21,8 +21,6 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-
-	"github.com/OpenBazaar/spvwallet/exchangerates"
 )
 
 type SPVWallet struct {
@@ -322,15 +320,15 @@ func (w *SPVWallet) Balance() (wallet.CurrencyValue, wallet.CurrencyValue) {
 	stxos, _ := w.txstore.Stxos().GetAll()
 	var confirmed, unconfirmed int64
 	for _, utxo := range utxos {
-		val, _ := strconv.ParseInt(utxo.Value, 10, 64)
 		if !utxo.WatchOnly {
+			val0, _ := new(big.Int).SetString(utxo.Value, 10)
 			if utxo.AtHeight > 0 {
-				confirmed += val
+				confirmed += val0.Int64()
 			} else {
 				if w.checkIfStxoIsConfirmed(utxo, stxos) {
-					confirmed += val
+					confirmed += val0.Int64()
 				} else {
-					unconfirmed += val
+					unconfirmed += val0.Int64()
 				}
 			}
 		}
@@ -389,9 +387,7 @@ func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 			if err != nil {
 				log.Warningf("error extracting address from txn pkscript: %v\n", err)
 			}
-			if len(addrs) == 0 {
-				addr = nil
-			} else {
+			if len(addrs) != 0 {
 				addr = addrs[0]
 			}
 			tout := wallet.TransactionOutput{

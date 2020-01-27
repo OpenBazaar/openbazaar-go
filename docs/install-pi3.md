@@ -57,7 +57,7 @@ It will use git to checkout the source code into `$GOPATH/src/github.com/OpenBaz
 
 Checkout a release version:
 ```
-git checkout v0.13.7
+git checkout v0.13.8
 ```
 
 Note: `go get` leaves the repo pointing at `master` which is a branch used for active development. Running OpenBazaar from `master` is NOT recommended. Check the [release versions](https://github.com/OpenBazaar/openbazaar-go/releases) for the available versions that you use iin checkout.

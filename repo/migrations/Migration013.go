@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/zcashd-wallet"
+	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
@@ -234,7 +234,7 @@ func Migration013_ScriptToAddress(coinType string, script []byte, testmodeEnanab
 		}
 		return addr.String(), nil
 	case "zec", "tzec":
-		addr, err := zcashd.ExtractPkScriptAddrs(script, params)
+		addr, err := zaddr.ExtractPkScriptAddrs(script, params)
 		if err != nil {
 			return "", fmt.Errorf("converting %s script to address: %s", coinType, err.Error())
 		}
@@ -287,11 +287,11 @@ func Migration013_AddressToScript(coinType string, addr string, testmodeEnanable
 		}
 		return script, nil
 	case "zec", "tzec":
-		addr, err := zcashd.DecodeAddress(addr, params)
+		addr, err := zaddr.DecodeAddress(addr, params)
 		if err != nil {
 			return nil, fmt.Errorf("decoding %s address: %s", coinType, err.Error())
 		}
-		script, err := zcashd.PayToAddrScript(addr)
+		script, err := zaddr.PayToAddrScript(addr)
 		if err != nil {
 			return nil, fmt.Errorf("converting %s address to script: %s", coinType, err.Error())
 		}

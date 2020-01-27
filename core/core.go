@@ -2,6 +2,10 @@ package core
 
 import (
 	"errors"
+	"fmt"
+	"path"
+	"sync"
+	"time"
 
 	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
@@ -10,15 +14,12 @@ import (
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 
-	"path"
-	"sync"
-	"time"
-
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -30,7 +31,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.13.7"
+	VERSION = "0.13.8"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
@@ -315,4 +316,45 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 // IPFSIdentityString - IPFS identifier
 func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
+}
+
+// GetNodeID returns the protobuf representing the node's identity and crypto
+// keys with the peer ID
+func (n *OpenBazaarNode) GetNodeID() (*pb.ID, error) {
+	var id = new(pb.ID)
+	id.PeerID = n.IpfsNode.Identity.Pretty()
+
+	if p, err := n.GetProfile(); err == nil {
+		id.Handle = p.Handle
+	}
+
+	p := new(pb.ID_Pubkeys)
+	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("ipfs pubkey bytes: %s", err.Error())
+	}
+	p.Identity = pubkey
+	coinPubkey, err := n.MasterPrivateKey.ECPubKey()
+	if err != nil {
+		return nil, fmt.Errorf("master pubkey: %s", err.Error())
+	}
+	p.Bitcoin = coinPubkey.SerializeCompressed()
+	id.Pubkeys = p
+
+	coinPrivKey, err := n.MasterPrivateKey.ECPrivKey()
+	if err != nil {
+		return nil, fmt.Errorf("master privkey: %s", err.Error())
+	}
+	coinSig, err := coinPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return nil, fmt.Errorf("sign id: %s", err.Error())
+	}
+	id.BitcoinSig = coinSig.Serialize()
+
+	return id, nil
+}
+
+// Sign returns a signature for the payload signed by the IPFS private key
+func (n *OpenBazaarNode) Sign(payload []byte) ([]byte, error) {
+	return n.IpfsNode.PrivateKey.Sign(payload)
 }

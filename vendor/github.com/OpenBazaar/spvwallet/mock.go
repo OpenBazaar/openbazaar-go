@@ -288,6 +288,13 @@ func (m *mockWatchedScriptsStore) Put(scriptPubKey []byte) error {
 	return nil
 }
 
+func (m *mockWatchedScriptsStore) PutAll(ss [][]byte) error {
+	for _, s := range ss {
+		m.Put(s)
+	}
+	return nil
+}
+
 func (m *mockWatchedScriptsStore) GetAll() ([][]byte, error) {
 	var ret [][]byte
 	for _, b := range m.scripts {

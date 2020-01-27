@@ -67,13 +67,12 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 	resp.Read = read
 	resp.State = state
 
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
-	_, err = n.LookupCurrency(lookupCoin)
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+		return nil, err
 	}
+	resp.Contract.BuyerOrder = v5Order
 
 	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
 	if err != nil {
@@ -546,11 +545,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		order.RefundAddress = wal.NewAddress(wallet.INTERNAL).EncodeAddress()
 	}
 
-	contractIdentity, err := getContractIdentity(n)
+	nodeID, err := n.GetNodeID()
 	if err != nil {
 		return nil, err
 	}
-	order.BuyerID = &contractIdentity
+	order.BuyerID = nodeID
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
@@ -577,7 +576,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		var listing *repo.Listing
 		if !exists {
-			sl, err := getSignedListing(n, contract, item)
+			sl, err := getListing(n, contract, item)
 			if err != nil {
 				return nil, err
 			}
@@ -587,12 +586,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 			listing = addedListings[item.ListingHash]
 		}
 
-		acceptedCurrencies, err := listing.GetAcceptedCurrencies()
-		if err != nil || !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, acceptedCurrencies) {
+		if err != nil || !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.GetAcceptedCurrencies()) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
-		ser, err := proto.Marshal(listing.ProtoListing)
+		ser, err := listing.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
@@ -604,7 +602,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		// set quantity according to schema version
 		// TODO: extract to repo package model
-		switch listing.ProtoListing.Metadata.Version {
+		switch listing.GetVersion() {
 		case 5:
 			i.BigQuantity = item.Quantity
 		case 4, 3:
@@ -623,36 +621,28 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		i.Memo = item.Memo
 
-		contractType, err := listing.GetContractType()
-		if err != nil {
-			return nil, err
-		}
-
-		if contractType != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		if listing.GetContractType() != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 			// Remove any duplicate coupons
 			i.CouponCodes = dedupeCoupons(item.Coupons)
-
-			// Validate the selected options
-			validatedOptions, err := repo.ValidateListingOptions(listing.ProtoListing.Item.Options, item.Options)
-			if err != nil {
-				return nil, err
-			}
-			i.Options = validatedOptions
 		}
+
+		// Validate the selected options
+		if err := listing.ValidatePurchaseItemOptions(item.Options); err != nil {
+			return nil, fmt.Errorf("validating purchase options: %s", err.Error())
+		}
+		i.Options = item.Options.ToOrderOptionSetProtobuf()
 
 		// Add shipping to physical listings, and include it for digital and service
 		// listings for legacy compatibility
-		if contractType == pb.Listing_Metadata_PHYSICAL_GOOD.String() ||
-			contractType == pb.Listing_Metadata_DIGITAL_GOOD.String() ||
-			contractType == pb.Listing_Metadata_SERVICE.String() {
+		if ct := listing.GetContractType(); ct == pb.Listing_Metadata_PHYSICAL_GOOD.String() ||
+			ct == pb.Listing_Metadata_DIGITAL_GOOD.String() ||
+			ct == pb.Listing_Metadata_SERVICE.String() {
 
 			i.ShippingOption = &pb.Order_Item_ShippingOption{
 				Name:    item.Shipping.Name,
 				Service: item.Shipping.Service,
 			}
-		}
-
-		if contractType == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		} else if ct == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 			i.PaymentAddress = item.PaymentAddress
 			err = validateCryptocurrencyOrderItem(i)
 			if err != nil {
@@ -685,7 +675,7 @@ func dedupeCoupons(itemCoupons []string) []string {
 	return coupons
 }
 
-func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item) (*repo.Listing, error) {
+func getListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item) (*repo.Listing, error) {
 	// Let's fetch the listing, should be cached
 	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 	if err != nil {
@@ -697,24 +687,22 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	if err != nil {
 		return nil, err
 	}
-	if err := validateVersionNumber(&sl.RListing); err != nil {
+	if sl.GetVersion() > repo.ListingVersion {
+		return nil, errors.New("unknown listing version, must upgrade to purchase this listing")
+	}
+	if err := sl.GetListing().GetVendorID().Valid(); err != nil {
+		return nil, fmt.Errorf("invalid vendor info: %s", err.Error())
+	}
+
+	if err := sl.ValidateListing(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
+		return nil, fmt.Errorf("validating listing (%s): %s", sl.GetSlug(), err.Error())
+	}
+	if err := sl.VerifySignature(); err != nil {
 		return nil, err
 	}
-	if err := validateVendorID(&sl.RListing); err != nil {
-		return nil, err
-	}
-	if err := repo.ValidateListing(&sl.RListing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
-		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
-	}
-	if err := verifySignaturesOnListing(sl); err != nil {
-		return nil, err
-	}
-	contract.VendorListings = append(contract.VendorListings, sl.RListing.ProtoListing)
-	s := new(pb.Signature)
-	s.Section = pb.Signature_LISTING
-	s.SignatureBytes = sl.Signature
-	contract.Signatures = append(contract.Signatures, s)
-	return &sl.RListing, nil
+	contract.VendorListings = append(contract.VendorListings, sl.GetListing().GetProtobuf())
+	contract.Signatures = append(contract.Signatures, sl.GetListingSigProtobuf())
+	return sl.GetListing(), nil
 }
 
 func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
@@ -739,39 +727,6 @@ func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *times
 	return ratingKeys, nil
 }
 
-func getContractIdentity(n *OpenBazaarNode) (pb.ID, error) {
-	id := pb.ID{}
-	profile, err := n.GetProfile()
-	if err == nil {
-		id.Handle = profile.Handle
-	}
-
-	id.PeerID = n.IpfsNode.Identity.Pretty()
-	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
-	if err != nil {
-		return id, err
-	}
-	keys := new(pb.ID_Pubkeys)
-	keys.Identity = pubkey
-	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
-	if err != nil {
-		return id, err
-	}
-	keys.Bitcoin = ecPubKey.SerializeCompressed()
-	id.Pubkeys = keys
-	// Sign the PeerID with the Bitcoin key
-	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
-	if err != nil {
-		return id, err
-	}
-	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
-	if err != nil {
-		return id, err
-	}
-	id.BitcoinSig = sig.Serialize()
-	return id, nil
-}
-
 func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(checkCode string, acceptedCurrencies []string) bool {
 	checkDef, err := n.LookupCurrency(checkCode)
 	if err != nil {
@@ -791,11 +746,7 @@ func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(checkCode string, acce
 
 func containsPhysicalGood(addedListings map[string]*repo.Listing) bool {
 	for _, listing := range addedListings {
-		contractType, err := listing.GetContractType()
-		if err != nil {
-			return false
-		}
-		if contractType == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+		if listing.GetContractType() == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
 			return true
 		}
 	}
@@ -1764,43 +1715,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	s.SignatureBytes = idSig
 	contract.Signatures = append(contract.Signatures, s)
 	return contract, nil
-}
-
-func validateVendorID(l *repo.Listing) error {
-
-	listing := l.ProtoListing
-
-	if listing == nil {
-		return errors.New("listing is nil")
-	}
-	if listing.VendorID == nil {
-		return errors.New("vendorID is nil")
-	}
-	if listing.VendorID.Pubkeys == nil {
-		return errors.New("vendor pubkeys is nil")
-	}
-	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.VendorID.Pubkeys.Identity)
-	if err != nil {
-		return err
-	}
-	vendorID, err := peer.IDB58Decode(listing.VendorID.PeerID)
-	if err != nil {
-		return err
-	}
-	if !vendorID.MatchesPublicKey(vendorPubKey) {
-		return errors.New("invalid vendorID")
-	}
-	return nil
-}
-
-func validateVersionNumber(listing *repo.Listing) error {
-	if listing == nil {
-		return errors.New("listing is nil")
-	}
-	if listing.Metadata.Version > repo.ListingVersion {
-		return errors.New("unknown listing version, must upgrade to purchase this listing")
-	}
-	return nil
 }
 
 // ValidatePaymentAmount - validate amount requested

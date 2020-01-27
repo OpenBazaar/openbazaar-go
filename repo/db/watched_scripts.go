@@ -58,6 +58,7 @@ func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 		return fmt.Errorf("prepare watch script sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	_, err = stmt.Exec(w.coinType.CurrencyCode(), hex.EncodeToString(scriptPubKey))
 	if err != nil {
 		return fmt.Errorf("commit watch script: %s", err.Error())
