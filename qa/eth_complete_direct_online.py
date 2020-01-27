@@ -111,7 +111,7 @@ class EthCompleteDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/orderspend"
         print("################################")
         print("before spend post : ", api_url)
-        print(json.dumps(spend, indent=4))        
+        print(json.dumps(spend, indent=4))
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
             raise TestFailure("EthCompleteDirectOnlineTest - FAIL: Spend post endpoint not found")
@@ -141,7 +141,7 @@ class EthCompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("EthCompleteDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("EthCompleteDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice send order fulfillment
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)

@@ -198,7 +198,9 @@ func (client *EthClient) GetTokenBalance(destAccount, tokenAddress common.Addres
 		GethLocation: client.url,
 		Logs:         true,
 	}
-	configs.Connect()
+	if err := configs.Connect(); err != nil {
+		return nil, err
+	}
 
 	// insert a Token Contract address and Wallet address
 	contract := tokenAddress.String()
@@ -265,6 +267,7 @@ func (client *EthClient) EstimateGasSpend(from common.Address, value *big.Int) (
 // GetTxnNonce - used to fetch nonce for a submitted txn
 func (client *EthClient) GetTxnNonce(txID string) (int32, error) {
 	txnsLock.Lock()
+	defer txnsLock.Unlock()
 	for _, txn := range txns {
 		if txn.Txid == txID {
 			return txn.Height, nil
