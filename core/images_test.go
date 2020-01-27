@@ -10,7 +10,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/schema"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/ipfs/go-ipfs/core/mock"
 )
@@ -21,7 +21,6 @@ func TestImageFormats(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		jpgImageB64 = "jfkdjfkd"
 		if img.Bounds().Max.X != 50 || img.Bounds().Max.Y != 50 {
 			t.Error("Incorrect sizes decoded")
 		}
@@ -76,7 +75,7 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 		}
 	}
 
-	checkImages := func(image *pb.Listing_Item_Image) {
+	checkImages := func(image *repo.ListingImage) {
 		checkImage := func(imageHash, size string) {
 			id, err := cid.Decode(imageHash)
 			if err != nil {
@@ -86,28 +85,33 @@ func TestOpenBazaarNode_maybeMigrateImageHashes(t *testing.T) {
 				t.Errorf("%s image failed to migrate to v0", size)
 			}
 		}
-		checkImage(image.Large, "large")
-		checkImage(image.Medium, "medium")
-		checkImage(image.Small, "small")
-		checkImage(image.Tiny, "tiny")
-		checkImage(image.Original, "original")
+		checkImage(image.GetLarge(), "large")
+		checkImage(image.GetMedium(), "medium")
+		checkImage(image.GetSmall(), "small")
+		checkImage(image.GetTiny(), "tiny")
+		checkImage(image.GetOriginal(), "original")
 	}
 
-	// Test converting v1 to v0
-	if err := node.maybeMigrateImageHashes(listing); err != nil {
+	rl, err := repo.NewListingFromProtobuf(listing)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, image := range listing.Item.Images {
+	// Test converting v1 to v0
+	if err := node.maybeMigrateImageHashes(rl); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, image := range rl.GetImages() {
 		checkImages(image)
 	}
 
 	// Test v0 remaining at v0
-	if err := node.maybeMigrateImageHashes(listing); err != nil {
+	if err := node.maybeMigrateImageHashes(rl); err != nil {
 		t.Fatal(err)
 	}
 
-	for _, image := range listing.Item.Images {
+	for _, image := range rl.GetImages() {
 		checkImages(image)
 	}
 }
