@@ -73,11 +73,15 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.BigValue = "-" + rec.BigValue
+					refundRecord.BigValue = rec.BigValue
 					refundRecord.Currency = rec.Currency
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
+
+					if !strings.HasPrefix(refundRecord.BigValue, "-") {
+						refundRecord.BigValue = "-" + refundRecord.BigValue
+					}
 					break
 				}
 			}
