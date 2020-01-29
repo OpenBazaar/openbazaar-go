@@ -1,8 +1,11 @@
 package repo
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"runtime/debug"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 
@@ -115,15 +118,16 @@ func (l SignedListing) ValidateListing(isTestnet bool) error {
 // VerifySignature checks the listings signature was produced by the vendor's
 // Identity key and that the key was derived from the vendor's peerID
 func (l SignedListing) VerifySignature() error {
-	ser, err := proto.Marshal(l.GetListing().listingProto)
+	ser, err := l.GetListing().MarshalProtobuf()
 	if err != nil {
 		return fmt.Errorf("marshaling listing: %s", err.Error())
 	}
+
 	pubkey, err := l.GetListing().GetVendorID().IdentityKey()
 	if err != nil {
 		return fmt.Errorf("getting identity pubkey: %s", err.Error())
 	}
-	valid, err := pubkey.Verify(ser, l.signedListingProto.GetSignature())
+	valid, err := pubkey.Verify(ser, l.GetSignature())
 	if err != nil {
 		return fmt.Errorf("verifying signature: %s", err.Error())
 	}

@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -962,6 +965,11 @@ func (l *Listing) GetShippingRegions() ([]string, []string) {
 	return returnShipTo, returnFreeShipTo
 }
 
+// MarshalProtobuf returns the byte serialization of the underlying protobuf
+func (l *Listing) MarshalProtobuf() ([]byte, error) {
+	return proto.Marshal(l.listingProto)
+}
+
 type listingSigner interface {
 	TestNetworkEnabled() bool
 	RegressionNetworkEnabled() bool
@@ -969,6 +977,7 @@ type listingSigner interface {
 	Sign([]byte) ([]byte, error)
 }
 
+// MarshalJSON returns the json serialization of the underlying protobuf
 func (l *Listing) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1030,7 +1039,7 @@ func (l *Listing) Sign(n listingSigner) (*SignedListing, error) {
 	l.listingProto.VendorID = id
 
 	// Sign listing
-	serializedListing, err := l.MarshalJSON()
+	serializedListing, err := l.MarshalProtobuf()
 	if err != nil {
 		return nil, fmt.Errorf("serializing listing: %s", err.Error())
 	}

@@ -1,10 +1,12 @@
 package repo_test
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
 
@@ -190,5 +192,60 @@ func TestSignedListingAttributes(t *testing.T) {
 		if actual := l.GetCryptoCurrencyCode(); actual != e.expectedCryptoCurrencyCode {
 			t.Errorf("expected to have currency code (%s), but was (%s)", e.expectedCryptoCurrencyCode, actual)
 		}
+	}
+}
+
+func TestSignAndVerifyListing(t *testing.T) {
+	testnode, err := test.NewNode()
+	if err != nil {
+		t.Fatalf("create test node: %v", err)
+	}
+	lpb := factory.NewListing("test")
+	l, err := repo.NewListingFromProtobuf(lpb)
+	if err != nil {
+		t.Fatalf("create repo listing: %v", err)
+	}
+
+	sl, err := l.Sign(testnode)
+	if err != nil {
+		t.Fatalf("sign listing: %v", err)
+	}
+
+	// get identities from node and listing and compare
+	nodeID, err := testnode.GetNodeID()
+	if err != nil {
+		t.Fatalf("get node id: %v", err)
+	}
+	nodeIdentityBytes := nodeID.GetPubkeys().GetIdentity()
+	listingIdentityBytes := sl.GetListing().GetVendorID().IdentityKeyBytes()
+	if !bytes.Equal(nodeIdentityBytes, listingIdentityBytes) {
+		t.Fatal("expected listing and node identity bytes to match, but did not")
+	}
+
+	// get peer IDs from node and listing and compare
+	listingPeerHash, err := sl.GetListing().GetVendorID().Hash()
+	if err != nil {
+		t.Fatalf("get listing peer hash: %v", err)
+	}
+	if listingPeerHash != nodeID.PeerID {
+		t.Errorf("expected listing has to be (%s), but was (%s)", nodeID.PeerID, listingPeerHash)
+	}
+
+	// get listing signature and ensure it's as expected
+	serializedListing, err := l.MarshalProtobuf()
+	if err != nil {
+		t.Fatalf("serialize listing: %v", err)
+	}
+	expectedSig, err := testnode.IpfsNode.PrivateKey.Sign(serializedListing)
+	if err != nil {
+		t.Fatalf("sign listing: %v", err)
+	}
+	actualSig := sl.GetSignature()
+	if !bytes.Equal(expectedSig, actualSig) {
+		t.Fatal("expected signature on listing to match generated signature, but did not")
+	}
+
+	if err := sl.VerifySignature(); err != nil {
+		t.Errorf("verify signed listing: %v", err)
 	}
 }
