@@ -67,6 +67,11 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		address = contract.VendorOrderConfirmation.PaymentAddress
 	}
 
+	paymentCoin, err := PaymentCoinForContract(&contract)
+	if err != nil {
+		return err
+	}
+
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -81,7 +86,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		shippingName,
 		shippingAddress,
 		address,
-		PaymentCoinForContract(&contract),
+		paymentCoin,
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
@@ -193,13 +198,22 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			coinType = ""
 		}
 
+		cur, err := repo.AllCurrencies().Lookup(paymentCoin)
+		if err != nil {
+			return nil, 0, err
+		}
+		cv, err := repo.NewCurrencyValue(totalStr, cur)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		ret = append(ret, repo.Sale{
 			OrderId:         orderID,
 			Slug:            slug,
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           totalStr,
+			Total:           *cv,
 			BuyerId:         buyerID,
 			BuyerHandle:     buyerHandle,
 			ShippingName:    shippingName,

@@ -303,7 +303,11 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			DisputerHandle = contract.VendorListings[0].VendorID.Handle
 			DisputeeID = order.BuyerID.PeerID
 			DisputeeHandle = order.BuyerID.Handle
-			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, false, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
+			paymentCoin, err := db.PaymentCoinForContract(contract)
+			if err != nil {
+				return err
+			}
+			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, false, rc.Dispute.Claim, paymentCoin, db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}
@@ -316,7 +320,11 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			DisputerHandle = order.BuyerID.Handle
 			DisputeeID = contract.VendorListings[0].VendorID.PeerID
 			DisputeeHandle = contract.VendorListings[0].VendorID.Handle
-			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, true, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
+			paymentCoin, err := db.PaymentCoinForContract(contract)
+			if err != nil {
+				return err
+			}
+			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, true, rc.Dispute.Claim, paymentCoin, db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}

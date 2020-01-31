@@ -67,6 +67,10 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if dispute != nil {
 		disputedAt = int(dispute.Timestamp.Seconds)
 	}
+	paymentCoin, err := PaymentCoinForContract(&contract)
+	if err != nil {
+		return err
+	}
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -81,7 +85,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		shippingName,
 		shippingAddress,
 		paymentAddr,
-		PaymentCoinForContract(&contract),
+		paymentCoin,
 		CoinTypeForContract(&contract),
 		disputedAt,
 	)
@@ -193,13 +197,22 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 			coinType = ""
 		}
 
+		cur, err := repo.AllCurrencies().Lookup(paymentCoin)
+		if err != nil {
+			return nil, 0, err
+		}
+		cv, err := repo.NewCurrencyValue(totalStr, cur)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		ret = append(ret, repo.Purchase{
 			OrderId:         orderID,
 			Slug:            slug,
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           totalStr,
+			Total:           *cv,
 			VendorId:        vendorID,
 			VendorHandle:    vendorHandle,
 			ShippingName:    shippingName,

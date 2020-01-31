@@ -1,19 +1,22 @@
 package db
 
-import "github.com/OpenBazaar/openbazaar-go/pb"
+import (
+	"errors"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+)
 
-func PaymentCoinForContract(contract *pb.RicardianContract) string {
+func PaymentCoinForContract(contract *pb.RicardianContract) (string, error) {
 	if contract.BuyerOrder.Payment.AmountCurrency != nil &&
 		contract.BuyerOrder.Payment.AmountCurrency.Code != "" {
-		return contract.BuyerOrder.Payment.AmountCurrency.Code
+		return contract.BuyerOrder.Payment.AmountCurrency.Code, nil
 	}
 	if contract.BuyerOrder.Payment.Coin != "" {
-		return contract.BuyerOrder.Payment.Coin
+		return contract.BuyerOrder.Payment.Coin, nil
 	}
 	if len(contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
-		return contract.VendorListings[0].Metadata.AcceptedCurrencies[0]
+		return contract.VendorListings[0].Metadata.AcceptedCurrencies[0], nil
 	}
-	return ""
+	return "", errors.New("payment coin not foun")
 }
 
 func CoinTypeForContract(contract *pb.RicardianContract) string {

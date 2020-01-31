@@ -1068,10 +1068,6 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			cryptoListing bool
 		}{
 			{
-				"",
-				true,
-			},
-			{
 				"TBTC",
 				true,
 			},
@@ -1092,7 +1088,6 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		//contract.VendorListings[0].Metadata.CoinType = testCoin
 		paymentCoin := repo.CurrencyCode(test.coinType)
 
 		if test.cryptoListing {
