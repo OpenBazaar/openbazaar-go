@@ -79,16 +79,23 @@ func (p *Profile) GetVersion() uint32 {
 // GetModeratedFixedFee returns the fixed CurrencyValue for moderator services
 // currently set on the Profile
 func (p *Profile) GetModeratedFixedFee() (*CurrencyValue, error) {
-	switch p.GetVersion() {
-	default:
-		if p.IsModerationEnabled() &&
-			p.profileProto.ModeratorInfo.Fee != nil &&
-			p.profileProto.ModeratorInfo.Fee.FixedFee != nil {
+	if p.IsModerationEnabled() &&
+		p.profileProto.ModeratorInfo.Fee != nil &&
+		p.profileProto.ModeratorInfo.Fee.FixedFee != nil {
+		switch p.GetVersion() {
+		case 5:
 			var (
 				amt  = p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount
 				code = p.profileProto.ModeratorInfo.Fee.FixedFee.AmountCurrency
 			)
 			return NewCurrencyValueFromProtobuf(amt, code)
+		default: // v4 and earlier
+			var (
+				amt  = strconv.Itoa(int(p.profileProto.ModeratorInfo.Fee.FixedFee.Amount))
+				code = p.profileProto.ModeratorInfo.Fee.FixedFee.CurrencyCode
+			)
+			return NewCurrencyValueWithLookup(amt, code)
+
 		}
 	}
 	return nil, fmt.Errorf("fixed fee not found")

@@ -493,6 +493,43 @@ func TestProfileInvalidAsModeratorWithoutInfo(t *testing.T) {
 	}
 }
 
+func TestProfileGetModeratedFixedFee(t *testing.T) {
+	var examples = []string{
+		"v0-profile-moderator-fixed-fee",
+		"v4-profile-moderator-fixed-fee",
+		"v5-profile-moderator-fixed-fee",
+	}
+
+	for _, e := range examples {
+		var (
+			fixtureBytes       = factory.MustLoadProfileFixture(e)
+			actualProfile, err = repo.UnmarshalJSONProfile(fixtureBytes)
+		)
+		if err != nil {
+			t.Errorf("unmarshal (%s): %s", e, err)
+			continue
+		}
+
+		fee, err := actualProfile.GetModeratedFixedFee()
+		if err != nil {
+			t.Errorf("fixed fee (%s): %s", e, err)
+			continue
+		}
+
+		// all profile fixtures have equivalent data
+		// validate they are intepreted from their resepctive schemas
+		if fee.Amount.String() != "100" {
+			t.Errorf("amount (%s): expected (%s), got (%s)", e, "100", fee.Amount.String())
+		}
+		if fee.Currency.Code.String() != "USD" {
+			t.Errorf("currency code (%s): expected (%s), got (%s)", e, "USD", fee.Currency.Code.String())
+		}
+		if fee.Currency.Divisibility != 2 {
+			t.Errorf("currency code (%s): expected (%d), got (%d)", e, 2, fee.Currency.Divisibility)
+		}
+	}
+}
+
 func TestProfileSetModeratorFixedFee(t *testing.T) {
 	var (
 		p  = factory.MustNewProfile()
