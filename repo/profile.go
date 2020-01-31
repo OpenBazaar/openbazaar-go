@@ -57,14 +57,9 @@ func NewProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 	return &Profile{profileProto: clonedProfile}, nil
 }
 
-func NormalizeProfileProtobuf(p *pb.Profile) (*Profile, error) {
-	repoProfile, err := NewProfileFromProtobuf(p)
-	if err != nil {
-		return nil, err
-	}
-
-	repoProfile.normalizeFees()
-	return repoProfile, nil
+func (p *Profile) NormalizeSchema() *Profile {
+	p.normalizeFees()
+	return p
 }
 
 func (p *Profile) GetProtobuf() *pb.Profile {

@@ -19,7 +19,7 @@ func TestProfileFromProtobufMissingModInfo(t *testing.T) {
 	}
 }
 
-func TestNormalizeProfileProtobuf(t *testing.T) {
+func TestProfileNormalizeSchema(t *testing.T) {
 	var (
 		exampleFee = &pb.Moderator_Price{
 			BigAmount: "10",
@@ -108,12 +108,13 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 	for i, e := range examples {
 		var (
 			subject = e.example()
-			p, err  = repo.NormalizeProfileProtobuf(subject)
+			p, err  = repo.NewProfileFromProtobuf(subject)
 		)
 		if err != nil {
 			t.Errorf("failed normalization on example (%d): %s", i, err)
 			continue
 		}
+		p.NormalizeSchema()
 		e.validate(p.GetProtobuf())
 	}
 }
