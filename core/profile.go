@@ -187,24 +187,16 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	repoProfile, err := repo.ProfileFromProtobuf(p)
+	normalProfile, err := repo.NormalizeProfileProtobuf(p)
 	if err != nil {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
 	}
 
-	if repoProfile.IsModerationEnabled() {
-		validatedFees, err := repoProfile.ToValidModeratorFee()
-		if err != nil {
-			return err
-		}
-		p.ModeratorInfo.Fee = validatedFees
-	}
-
-	if err := repoProfile.Valid(); err != nil {
+	if err := normalProfile.Valid(); err != nil {
 		return fmt.Errorf("invalid profile: %s", err.Error())
 	}
 
-	return n.UpdateProfile(p)
+	return n.UpdateProfile(normalProfile.GetProtobuf())
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool) {

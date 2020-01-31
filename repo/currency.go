@@ -269,3 +269,19 @@ func (v *CurrencyValue) Cmp(other *CurrencyValue) (int, error) {
 	}
 	return selfAdj.Amount.Cmp(other.Amount), nil
 }
+
+// IsZero returns true if Amount is valid and equal to zero
+func (v *CurrencyValue) IsZero() bool {
+	if v.Amount == nil {
+		return false
+	}
+	return v.Amount.Cmp(big.NewInt(0)) == 0
+}
+
+// IsNegative returns true if Amount is valid and less-than zero
+func (v *CurrencyValue) IsNegative() bool {
+	if v.Amount == nil {
+		return false
+	}
+	return v.Amount.Cmp(big.NewInt(0)) == -1
+}
