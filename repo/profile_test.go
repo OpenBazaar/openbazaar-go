@@ -20,16 +20,18 @@ func TestProfileFromProtobufMissingModInfo(t *testing.T) {
 }
 
 func TestNormalizeProfileProtobuf(t *testing.T) {
-	var exampleFee = &pb.Moderator_Price{
-		BigAmount: "10",
-		AmountCurrency: &pb.CurrencyDefinition{
-			Code:         "BTC",
-			Divisibility: 8,
-		},
-	}
+	var (
+		exampleFee = &pb.Moderator_Price{
+			BigAmount: "10",
+			AmountCurrency: &pb.CurrencyDefinition{
+				Code:         "BTC",
+				Divisibility: 8,
+			},
+		}
+	)
 	var examples = []struct {
 		example  func() *pb.Profile
-		validate func(*pb.Profile, *testing.T)
+		validate func(*pb.Profile)
 	}{
 		{ // profile with percent fee should remove non-percent fee values
 			example: func() *pb.Profile {
@@ -39,7 +41,7 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 				p.ModeratorInfo.Fee.Percentage = 1.1
 				return p
 			},
-			validate: func(p *pb.Profile, t *testing.T) {
+			validate: func(p *pb.Profile) {
 				if p.ModeratorInfo.Fee.FixedFee != nil {
 					t.Errorf("expected fixed fee to be removed, but was not")
 				}
@@ -53,7 +55,7 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 				p.ModeratorInfo.Fee.Percentage = 1.1
 				return p
 			},
-			validate: func(p *pb.Profile, t *testing.T) {
+			validate: func(p *pb.Profile) {
 				if p.ModeratorInfo.Fee.Percentage != 0 {
 					t.Errorf("expected percentage to be zero, but was not")
 				}
@@ -66,7 +68,7 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 				p.ModeratorInfo.Fee.FixedFee = exampleFee
 				return p
 			},
-			validate: func(p *pb.Profile, t *testing.T) {
+			validate: func(p *pb.Profile) {
 				if actual := p.ModeratorInfo.Fee.FixedFee.CurrencyCode; actual != exampleFee.AmountCurrency.Code {
 					t.Errorf("expected legacy code to be (%s), but was (%s)", exampleFee.AmountCurrency.Code, actual)
 				}
@@ -77,6 +79,27 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 				}
 				if actualAmt := p.ModeratorInfo.Fee.FixedFee.Amount; actualAmt != uint64(expectedAmt) {
 					t.Errorf("expected legacy amount to be (%d), but was (%d)", expectedAmt, actualAmt)
+				}
+			},
+		},
+		{ // legacy v4 profile with fixed fee should populate current schema
+			example: func() *pb.Profile {
+				pb := factory.MustLoadProfileFixture("v4-profile-moderator-fixed-fee")
+				rp, err := repo.UnmarshalJSONProfile(pb)
+				if err != nil {
+					t.Fatal(err)
+				}
+				p := rp.GetProtobuf()
+				p.ModeratorInfo.Fee.FixedFee.CurrencyCode = "BTC"
+				p.ModeratorInfo.Fee.FixedFee.Amount = 10
+				return p
+			},
+			validate: func(p *pb.Profile) {
+				if actual := p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code; actual != "BTC" {
+					t.Errorf("expected fee amount currency code to be (%s), but was (%s)", "BTC", actual)
+				}
+				if actualAmt := p.ModeratorInfo.Fee.FixedFee.BigAmount; actualAmt != "10" {
+					t.Errorf("expected fee amount to be (%s), but was (%s)", "10", actualAmt)
 				}
 			},
 		},
@@ -91,7 +114,7 @@ func TestNormalizeProfileProtobuf(t *testing.T) {
 			t.Errorf("failed normalization on example (%d): %s", i, err)
 			continue
 		}
-		e.validate(p.GetProtobuf(), t)
+		e.validate(p.GetProtobuf())
 	}
 }
 

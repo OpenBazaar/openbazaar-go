@@ -211,12 +211,21 @@ func (p *Profile) normalizeFees() {
 		}
 
 		if ff, err := p.GetModeratedFixedFee(); err == nil {
-			var amtInt uint64
-			if ai, err := strconv.Atoi(p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount); err == nil {
-				amtInt = uint64(ai)
+			switch p.GetVersion() {
+			case 5:
+				var amtInt uint64
+				if ai, err := strconv.Atoi(p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount); err == nil {
+					amtInt = uint64(ai)
+				}
+				p.profileProto.ModeratorInfo.Fee.FixedFee.CurrencyCode = ff.Currency.Code.String()
+				p.profileProto.ModeratorInfo.Fee.FixedFee.Amount = amtInt
+			default: // v4 and earlier
+				p.profileProto.ModeratorInfo.Fee.FixedFee.AmountCurrency = &pb.CurrencyDefinition{
+					Code:         ff.Currency.Code.String(),
+					Divisibility: uint32(ff.Currency.Divisibility),
+				}
+				p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount = ff.Amount.String()
 			}
-			p.profileProto.ModeratorInfo.Fee.FixedFee.CurrencyCode = ff.Currency.Code.String()
-			p.profileProto.ModeratorInfo.Fee.FixedFee.Amount = amtInt
 		}
 	}
 }
