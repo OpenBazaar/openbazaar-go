@@ -114,7 +114,7 @@ func TestProfileNormalizeSchema(t *testing.T) {
 			t.Errorf("failed normalization on example (%d): %s", i, err)
 			continue
 		}
-		p.NormalizeSchema()
+		p.NormalizeDataForAllSchemas()
 		e.validate(p.GetProtobuf())
 	}
 }

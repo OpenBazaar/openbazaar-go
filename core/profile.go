@@ -54,7 +54,7 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 	if err != nil {
 		return pro, err
 	}
-	p.NormalizeSchema()
+	p.NormalizeDataForAllSchemas()
 	return *p.GetProtobuf(), nil
 }
 
@@ -193,7 +193,7 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
 	}
 
-	repoProfile.NormalizeSchema()
+	repoProfile.NormalizeDataForAllSchemas()
 
 	if err := repoProfile.Valid(); err != nil {
 		return fmt.Errorf("invalid profile: %s", err.Error())

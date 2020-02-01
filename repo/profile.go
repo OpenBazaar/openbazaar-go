@@ -36,11 +36,16 @@ var (
 	ErrModeratorFixedFeeIsNegative = errors.New("fixed moderator fee is negative or not a parsable number")
 )
 
-// Profile presents the user's metadata
+// Profile presents the user's metadata. The profile state is maintained within
+// a *pb.Profile internally which captures all state changes suitable to be persisted
+// via marshaling to JSON. This struct should ensure the integrity of *pb.Profile to
+// its data as indicated by the set schema version.
 type Profile struct {
 	profileProto *pb.Profile
 }
 
+// UnmarshalJSONProfile consumes a JSON byte slice and returns a Profile-wrapped
+// unmarshaled protobuf
 func UnmarshalJSONProfile(data []byte) (*Profile, error) {
 	var (
 		p   = new(pb.Profile)
@@ -52,16 +57,27 @@ func UnmarshalJSONProfile(data []byte) (*Profile, error) {
 	return NewProfileFromProtobuf(p)
 }
 
+// NewProfileFromProtobuf returns a Profile wrapped around a profile protobuf
 func NewProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
 	clonedProfile := proto.Clone(p).(*pb.Profile)
 	return &Profile{profileProto: clonedProfile}, nil
 }
 
-func (p *Profile) NormalizeSchema() *Profile {
+// NormalizeDataForAllSchemas converts existing data from its current schema
+// into legacy schema. This does not guarantee success as legacy schema that
+// was abandoned due to unacceptable constraints will not be able to fulfill
+// the full capability of the newer schema. (Ex: FixedFee.BigAmount can support
+// full precision, whereas FixedFee.Amount is limited to math.MaxInt64
+func (p *Profile) NormalizeDataForAllSchemas() *Profile {
 	p.normalizeFees()
 	return p
 }
 
+// GetProtobuf returns the underlying protobuf which represents the persistable
+// state of the profile. (Note: This method is a shim to access data which isn't
+// represented in this package's Profile methods. Consider adding missing getters
+// and setters which repsect the schema version instead of using the protobuf
+// directly for manipulation.)
 func (p *Profile) GetProtobuf() *pb.Profile {
 	return p.profileProto
 }
