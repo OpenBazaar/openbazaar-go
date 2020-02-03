@@ -16,7 +16,7 @@ func PaymentCoinForContract(contract *pb.RicardianContract) (string, error) {
 	if len(contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
 		return contract.VendorListings[0].Metadata.AcceptedCurrencies[0], nil
 	}
-	return "", errors.New("payment coin not foun")
+	return "", errors.New("payment coin not found")
 }
 
 func CoinTypeForContract(contract *pb.RicardianContract) string {

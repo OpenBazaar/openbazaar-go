@@ -198,11 +198,7 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			coinType = ""
 		}
 
-		cur, err := repo.AllCurrencies().Lookup(paymentCoin)
-		if err != nil {
-			return nil, 0, err
-		}
-		cv, err := repo.NewCurrencyValue(totalStr, cur)
+		cv, err := repo.NewCurrencyValueWithLookup(totalStr, paymentCoin)
 		if err != nil {
 			return nil, 0, err
 		}

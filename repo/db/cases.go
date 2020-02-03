@@ -287,11 +287,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			}
 		}
 
-		cur, err := repo.AllCurrencies().Lookup(paymentCoin)
-		if err != nil {
-			return nil, 0, err
-		}
-		cv, err := repo.NewCurrencyValue(total.String(), cur)
+		cv, err := repo.NewCurrencyValueWithLookup(total.String(), paymentCoin)
 		if err != nil {
 			return nil, 0, err
 		}
