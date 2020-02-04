@@ -162,7 +162,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	}
 
 	if wal.IsDust(*total) {
-		return "", "", retCurrency, false, ErrSpendAmountIsDust
+		return "", "", retCurrency, false,  ErrSpendAmountIsDust
 	}
 
 	payment.BigAmount = total.String()
@@ -590,7 +590,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
-		ser, err := listing.MarshalJSON()
+		ser, err := listing.MarshalProtobuf()
 		if err != nil {
 			return nil, err
 		}

@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +10,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"

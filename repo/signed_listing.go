@@ -1,11 +1,8 @@
 package repo
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"runtime/debug"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 
