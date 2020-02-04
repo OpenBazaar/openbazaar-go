@@ -569,18 +569,26 @@ func (i *BlockBookClient) TransactionNotify() <-chan model.Transaction {
 	return i.txNotifyChan
 }
 
-func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
+func (i *BlockBookClient) ListenAddresses(addrs ...btcutil.Address) {
+	if len(addrs) == 0 {
+		return
+	}
+
 	i.listenLock.Lock()
 	defer i.listenLock.Unlock()
-	var args []interface{}
-	args = append(args, "bitcoind/addresstxid")
-	args = append(args, []string{maybeConvertCashAddress(addr)})
+
 	i.socketMutex.RLock()
 	defer i.socketMutex.RUnlock()
+
+	var convertedAddrs []string
+	for _, addr := range addrs {
+		convertedAddrs = append(convertedAddrs, maybeConvertCashAddress(addr))
+	}
+
 	if i.SocketClient != nil {
-		i.SocketClient.Emit("subscribe", args)
+		i.SocketClient.Emit("subscribe", []interface{}{"bitcoind/addresstxid", convertedAddrs})
 	} else {
-		i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
+		i.listenQueue = append(i.listenQueue, convertedAddrs...)
 	}
 }
 
@@ -610,12 +618,12 @@ func connectSocket(u *url.URL, proxyDialer proxy.Dialer) (model.SocketClient, er
 }
 
 func (i *BlockBookClient) setupListeners() error {
+	i.listenLock.Lock()
+	defer i.listenLock.Unlock()
+
 	if i.SocketClient != nil {
 		return nil
 	}
-
-	i.listenLock.Lock()
-	defer i.listenLock.Unlock()
 
 	client, err := connectSocket(i.apiUrl, i.proxyDialer)
 	if err != nil {
@@ -683,13 +691,12 @@ func (i *BlockBookClient) setupListeners() error {
 			}
 		}
 	})
-	for _, addr := range i.listenQueue {
-		var args []interface{}
-		args = append(args, "bitcoind/addresstxid")
-		args = append(args, []string{addr})
-		i.SocketClient.Emit("subscribe", args)
+	// Subscribe to queued addresses
+	if len(i.listenQueue) != 0 {
+		i.SocketClient.Emit("subscribe", []interface{}{"bitcoind/addresstxid", i.listenQueue})
+		i.listenQueue = []string{}
 	}
-	i.listenQueue = []string{}
+
 	Log.Infof("websocket connected (%s)", i.String())
 	return nil
 }
