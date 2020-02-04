@@ -85,9 +85,3 @@ func (c *CurrencyConverter) GetFinalPrice(originCurrency CurrencyDefinition, des
 
 	return finalPrice, nil
 }
-
-func getDivisibilityConversionFactor(div1 uint, div2 uint) *big.Int {
-	deltaExponent := int64(div1) - int64(div2)
-	deltaExponent64 := new(big.Int).SetInt64(deltaExponent)
-	return new(big.Int).Exp(new(big.Int).SetInt64(10), deltaExponent64, nil)
-}
