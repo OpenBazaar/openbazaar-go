@@ -154,6 +154,24 @@ func TestProfileValidWithoutModeratorInfo(t *testing.T) {
 	}
 }
 
+func TestProfileValidWithModeratorInfoAndModerationDisabled(t *testing.T) {
+	var (
+		p  = factory.MustNewProfile()
+		pp = p.GetProtobuf()
+	)
+	pp.Moderator = false
+	pp.ModeratorInfo = &pb.Moderator{
+		Fee: &pb.Moderator_Fee{
+			FeeType:    pb.Moderator_Fee_PERCENTAGE,
+			Percentage: 0,
+		},
+	}
+
+	if err := p.Valid(); err != nil {
+		t.Errorf("expected profile to be valid with moderator info and moderation disabled, but errored (%s)", err)
+	}
+}
+
 func TestProfileInvalidWithoutModeratorFee(t *testing.T) {
 	var (
 		p  = factory.MustNewProfile()
