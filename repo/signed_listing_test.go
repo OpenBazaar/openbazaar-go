@@ -2,6 +2,9 @@ package repo_test
 
 import (
 	"bytes"
+	"crypto/rand"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"math/big"
 	"testing"
 
@@ -200,6 +203,20 @@ func TestSignAndVerifyListing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create test node: %v", err)
 	}
+
+	priv, pub, err := crypto.GenerateEd25519Key(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pid, err := peer.IDFromPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testnode.IpfsNode.Identity = pid
+	testnode.IpfsNode.PrivateKey = priv
+
 	lpb := factory.NewListing("test")
 	l, err := repo.NewListingFromProtobuf(lpb)
 	if err != nil {

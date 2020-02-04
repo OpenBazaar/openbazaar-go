@@ -162,7 +162,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	}
 
 	if wal.IsDust(*total) {
-		return "", "", retCurrency, false,  ErrSpendAmountIsDust
+		return "", "", retCurrency, false, ErrSpendAmountIsDust
 	}
 
 	payment.BigAmount = total.String()
