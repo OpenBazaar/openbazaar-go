@@ -20,7 +20,7 @@ type CurrencyConverter struct {
 
 func NewCurrencyConverter(reserveWallet wallet.Wallet) CurrencyConverter {
 	return CurrencyConverter{
-		reserveWallet,
+		ReserveWallet: reserveWallet,
 	}
 }
 
