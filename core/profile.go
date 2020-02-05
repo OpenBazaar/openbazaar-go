@@ -50,11 +50,12 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 	if err != nil || len(b) == 0 {
 		return pro, err
 	}
-	err = jsonpb.UnmarshalString(string(b), &pro)
+	p, err := repo.UnmarshalJSONProfile(b)
 	if err != nil {
 		return pro, err
 	}
-	return pro, nil
+	p.NormalizeDataForAllSchemas()
+	return *p.GetProtobuf(), nil
 }
 
 // UpdateProfile - update user profile
@@ -187,24 +188,18 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	repoProfile, err := repo.ProfileFromProtobuf(p)
+	repoProfile, err := repo.UnmarshalJSONProfile(newProfile)
 	if err != nil {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
 	}
 
-	if repoProfile.IsModerationEnabled() {
-		validatedFees, err := repoProfile.ToValidModeratorFee()
-		if err != nil {
-			return err
-		}
-		p.ModeratorInfo.Fee = validatedFees
-	}
+	repoProfile.NormalizeDataForAllSchemas()
 
 	if err := repoProfile.Valid(); err != nil {
 		return fmt.Errorf("invalid profile: %s", err.Error())
 	}
 
-	return n.UpdateProfile(p)
+	return n.UpdateProfile(repoProfile.GetProtobuf())
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool) {

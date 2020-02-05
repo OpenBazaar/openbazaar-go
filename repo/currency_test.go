@@ -531,3 +531,45 @@ func TestCurrencyValueCmp(t *testing.T) {
 		}
 	}
 }
+
+func TestCurrencyValueIsZero(t *testing.T) {
+	subject := factory.MustNewCurrencyValue("0", "BTC")
+
+	subject.Amount = nil
+	if subject.IsZero() {
+		t.Errorf("expected IsZero to be false for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(0)
+	if !subject.IsZero() {
+		t.Errorf("expected IsZero to be true for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(-1)
+	if subject.IsZero() {
+		t.Errorf("expected IsZero to be false for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(1)
+	if subject.IsZero() {
+		t.Errorf("expected IsZero to be false for (%s), but was not", subject)
+	}
+}
+
+func TestCurrencyValueIsNegative(t *testing.T) {
+	subject := factory.MustNewCurrencyValue("0", "BTC")
+
+	subject.Amount = nil
+	if subject.IsNegative() {
+		t.Errorf("expected IsNegative to be false for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(0)
+	if subject.IsNegative() {
+		t.Errorf("expected IsNegative to be false for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(-1)
+	if !subject.IsNegative() {
+		t.Errorf("expected IsNegative to be true for (%s), but was not", subject)
+	}
+	subject.Amount = big.NewInt(1)
+	if subject.IsNegative() {
+		t.Errorf("expected IsNegative to be false for (%s), but was not", subject)
+	}
+}

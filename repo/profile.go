@@ -6,16 +6,15 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 var (
 	// ErrModeratorInfoMissing indicates when the moderator information is
 	// missing while also indicating they are a moderator
 	ErrModeratorInfoMissing = errors.New("moderator is enabled but information is missing")
-	// ErrNonModeratorShouldNotHaveInfo indicates when the moderator information
-	// is present, but not indicating moderator is enabled
-	ErrNonModeratorShouldNotHaveInfo = errors.New("moderator information is provided but moderator is not enabled")
 	// ErrMissingModeratorFee indicates the fee schedule is missing
 	ErrMissingModeratorFee = errors.New("moderator info is missing fee schedule")
 	// ErrUnknownModeratorFeeType indicates the feeType is unknown
@@ -28,177 +27,86 @@ var (
 	ErrPercentageFeeHasFixedFee = fmt.Errorf("percentage moderator fee should not include a fixed fee or should use (%s) feeType", pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String())
 	// ErrModeratorFixedFeeIsMissing indicates when the fixed fee is missing
 	ErrModeratorFixedFeeIsMissing = fmt.Errorf("fixed moderator fee is missing or should use (%s) feeType", pb.Moderator_Fee_PERCENTAGE.String())
-	// ErrModeratorFixedFeeIsNegativeOrNotSet indicates that the fixed fee is non-positive
-	ErrModeratorFixedFeeIsNegativeOrNotSet = errors.New("fixed moderator fee is negative or not a parsable number")
+	// ErrModeratorFixedFeeAmountIsEmpty indicates the fee is defined with an empty amount
+	ErrModeratorFixedFeeAmountIsEmpty = errors.New("fixed moderator fee amount is missing or not a parseable number")
+	// ErrModeratorFixedFeeIsNegative indicates that the fixed fee is non-positive
+	ErrModeratorFixedFeeIsNegative = errors.New("fixed moderator fee is negative or not a parsable number")
 )
 
-// ModeratorFixedFee represents the value of a fixed moderation fee
-type ModeratorFixedFee struct {
-	Amount         string              `json:"bigAmount,omitempty"`
-	AmountCurrency *CurrencyDefinition `json:"amountCurrency,omitempty"`
-}
-
-// ModeratorFee represents the moderator's fee schedule
-type ModeratorFee struct {
-	FixedFee   *ModeratorFixedFee `json:"fixedFee,omitempty"`
-	Percentage float32            `json:"percentage,omitempty"`
-	FeeType    string             `json:"feeType,omitempty"`
-}
-
-// ModeratorInfo represents the terms for the moderator's services
-type ModeratorInfo struct {
-	Fee *ModeratorFee `json:"fee,omitempty"`
-}
-
-// Profile presents the user's metadata
+// Profile presents the user's metadata. The profile state is maintained within
+// a *pb.Profile internally which captures all state changes suitable to be persisted
+// via marshaling to JSON. This struct should ensure the integrity of *pb.Profile to
+// its data as indicated by the set schema version.
 type Profile struct {
-	Moderator     bool           `json:"moderator"`
-	ModeratorInfo *ModeratorInfo `json:"moderatorInfo,omitempty"`
+	profileProto *pb.Profile
 }
 
-func ProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
+// UnmarshalJSONProfile consumes a JSON byte slice and returns a Profile-wrapped
+// unmarshaled protobuf
+func UnmarshalJSONProfile(data []byte) (*Profile, error) {
 	var (
-		modInfo     *ModeratorInfo
-		modFixedFee *ModeratorFixedFee
+		p   = new(pb.Profile)
+		err = jsonpb.UnmarshalString(string(data), p)
 	)
-
-	// build ModeratorInfo
-	if p.ModeratorInfo != nil && p.ModeratorInfo.Fee != nil {
-
-		var fees = p.ModeratorInfo.Fee
-
-		// build FixedFee
-		if fees.FixedFee != nil {
-			var (
-				amtStr      string
-				amtCurrency *CurrencyDefinition
-			)
-
-			// Check both amount currency definitions
-			if fees.FixedFee.AmountCurrency != nil {
-				ac, err := AllCurrencies().Lookup(fees.FixedFee.AmountCurrency.Code)
-				if err != nil {
-					ac, err = AllCurrencies().Lookup(fees.FixedFee.CurrencyCode)
-					if err != nil {
-						log.Warningf("unable to find currency defined for fixed fee")
-					}
-				}
-				if err == nil {
-					amtCurrency = &ac
-					amtCurrency.Divisibility = uint(fees.FixedFee.AmountCurrency.Divisibility)
-				}
-			}
-
-			// Check both amount values
-			amt, ok := new(big.Int).SetString(fees.FixedFee.BigAmount, 10)
-			if !ok || amt.Cmp(big.NewInt(0)) == 0 {
-				amtStr = fmt.Sprintf("%d", fees.FixedFee.Amount)
-			} else {
-				amtStr = fees.FixedFee.BigAmount
-			}
-			modFixedFee = &ModeratorFixedFee{
-				Amount:         amtStr,
-				AmountCurrency: amtCurrency,
-			}
-		}
-
-		modInfo = &ModeratorInfo{
-			Fee: &ModeratorFee{
-				FeeType:    fees.FeeType.String(),
-				FixedFee:   modFixedFee,
-				Percentage: fees.Percentage,
-			},
-		}
+	if err != nil {
+		return nil, err
 	}
+	return NewProfileFromProtobuf(p)
+}
 
-	return &Profile{
-		Moderator:     p.Moderator,
-		ModeratorInfo: modInfo,
-	}, nil
+// NewProfileFromProtobuf returns a Profile wrapped around a profile protobuf
+func NewProfileFromProtobuf(p *pb.Profile) (*Profile, error) {
+	clonedProfile := proto.Clone(p).(*pb.Profile)
+	return &Profile{profileProto: clonedProfile}, nil
+}
+
+// NormalizeDataForAllSchemas converts existing data from its current schema
+// into legacy schema. This does not guarantee success as legacy schema that
+// was abandoned due to unacceptable constraints will not be able to fulfill
+// the full capability of the newer schema. (Ex: FixedFee.BigAmount can support
+// full precision, whereas FixedFee.Amount is limited to math.MaxInt64
+func (p *Profile) NormalizeDataForAllSchemas() *Profile {
+	p.normalizeFees()
+	return p
+}
+
+// GetProtobuf returns the underlying protobuf which represents the persistable
+// state of the profile. (Note: This method is a shim to access data which isn't
+// represented in this package's Profile methods. Consider adding missing getters
+// and setters which repsect the schema version instead of using the protobuf
+// directly for manipulation.)
+func (p *Profile) GetProtobuf() *pb.Profile {
+	return p.profileProto
+}
+
+// GetVersion returns the schema version for the profile protobuf
+func (p *Profile) GetVersion() uint32 {
+	return p.profileProto.GetVersion()
 }
 
 // GetModeratedFixedFee returns the fixed CurrencyValue for moderator services
 // currently set on the Profile
 func (p *Profile) GetModeratedFixedFee() (*CurrencyValue, error) {
 	if p.IsModerationEnabled() &&
-		p.ModeratorInfo.Fee != nil &&
-		p.ModeratorInfo.Fee.FixedFee != nil {
-		amt, ok := new(big.Int).SetString(p.ModeratorInfo.Fee.FixedFee.Amount, 10)
-		if ok && amt.Cmp(big.NewInt(0)) != 0 {
-			return &CurrencyValue{
-				Amount:   amt,
-				Currency: *p.ModeratorInfo.Fee.FixedFee.AmountCurrency,
-			}, nil
+		p.profileProto.ModeratorInfo.Fee != nil &&
+		p.profileProto.ModeratorInfo.Fee.FixedFee != nil {
+		switch p.GetVersion() {
+		case 5:
+			var (
+				amt  = p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount
+				code = p.profileProto.ModeratorInfo.Fee.FixedFee.AmountCurrency
+			)
+			return NewCurrencyValueFromProtobuf(amt, code)
+		default: // v4 and earlier
+			var (
+				amt  = strconv.Itoa(int(p.profileProto.ModeratorInfo.Fee.FixedFee.Amount))
+				code = p.profileProto.ModeratorInfo.Fee.FixedFee.CurrencyCode
+			)
+			return NewCurrencyValueWithLookup(amt, code)
+
 		}
 	}
 	return nil, fmt.Errorf("fixed fee not found")
-}
-
-// ToValidModeratorFee returns a protobuf which has data coersed into
-// their valid fields to be applied in an UpdateProfile call
-func (p *Profile) ToValidModeratorFee() (*pb.Moderator_Fee, error) {
-	if !p.IsModerationEnabled() ||
-		p.ModeratorInfo.Fee == nil {
-		return nil, ErrModeratorInfoMissing
-	}
-
-	// Setters will normalize the fee schedule
-	var feeType pb.Moderator_Fee_FeeType
-	switch p.ModeratorInfo.Fee.FeeType {
-	case pb.Moderator_Fee_FIXED.String():
-		modFee, err := p.GetModeratedFixedFee()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.SetModeratorFixedFee(modFee); err != nil {
-			return nil, err
-		}
-		feeType = pb.Moderator_Fee_FIXED
-	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String():
-		percentFee := p.ModeratorInfo.Fee.Percentage
-		modFee, err := p.GetModeratedFixedFee()
-		if err != nil {
-			return nil, err
-		}
-		err = p.SetModeratorFixedPlusPercentageFee(modFee, percentFee)
-		if err != nil {
-			return nil, err
-		}
-		feeType = pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE
-	case pb.Moderator_Fee_PERCENTAGE.String():
-		err := p.SetModeratorPercentageFee(p.ModeratorInfo.Fee.Percentage)
-		if err != nil {
-			return nil, err
-		}
-		feeType = pb.Moderator_Fee_PERCENTAGE
-	}
-
-	if err := p.Valid(); err != nil {
-		return nil, fmt.Errorf("invalid profile: %s", err.Error())
-	}
-
-	var normalizedFixedFee *pb.Moderator_Price
-	if ff, err := p.GetModeratedFixedFee(); err == nil {
-		var amtInt uint64
-		if ai, err := strconv.Atoi(p.ModeratorInfo.Fee.FixedFee.Amount); err == nil {
-			amtInt = uint64(ai)
-		}
-		normalizedFixedFee = &pb.Moderator_Price{
-			CurrencyCode: ff.Currency.Code.String(),
-			AmountCurrency: &pb.CurrencyDefinition{
-				Code:         ff.Currency.Code.String(),
-				Divisibility: uint32(ff.Currency.Divisibility),
-			},
-			BigAmount: ff.Amount.String(),
-			Amount:    amtInt,
-		}
-	}
-
-	return &pb.Moderator_Fee{
-		FixedFee:   normalizedFixedFee,
-		Percentage: p.ModeratorInfo.Fee.Percentage,
-		FeeType:    feeType,
-	}, nil
 }
 
 // Valid indicates whether the Profile is valid by returning an error when
@@ -212,14 +120,14 @@ func (p *Profile) Valid() error {
 
 // IsModerationEnabled checks if the Moderator flag and info are present
 func (p *Profile) IsModerationEnabled() bool {
-	return p != nil && p.Moderator && p.ModeratorInfo != nil
+	return p != nil &&
+		p.profileProto != nil &&
+		p.profileProto.Moderator &&
+		p.profileProto.ModeratorInfo != nil
 }
 
 func (p *Profile) validateModeratorFees() error {
-	if !p.Moderator && p.ModeratorInfo != nil {
-		return ErrNonModeratorShouldNotHaveInfo
-	}
-	if p.Moderator && p.ModeratorInfo == nil {
+	if p.profileProto.Moderator && p.profileProto.ModeratorInfo == nil {
 		return ErrModeratorInfoMissing
 	}
 	if !p.IsModerationEnabled() {
@@ -227,43 +135,54 @@ func (p *Profile) validateModeratorFees() error {
 	}
 
 	// Moderator is true, Info is present
-	if p.ModeratorInfo.Fee == nil {
+	if p.profileProto.ModeratorInfo.Fee == nil {
 		return ErrMissingModeratorFee
 	}
 
 	var validateFixedFee = func() error {
-		if p.ModeratorInfo.Fee.FixedFee == nil {
+		if p.profileProto.ModeratorInfo.Fee.FixedFee == nil {
 			return ErrModeratorFixedFeeIsMissing
 		}
-		if err := p.ModeratorInfo.Fee.FixedFee.AmountCurrency.Valid(); err != nil {
+		if p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount == "" {
+			return ErrModeratorFixedFeeAmountIsEmpty
+		}
+
+		feeCurrency, err := NewCurrencyValueFromProtobuf(
+			p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount,
+			p.profileProto.ModeratorInfo.Fee.FixedFee.AmountCurrency,
+		)
+		if err != nil {
+			return err
+		}
+		if err := feeCurrency.Valid(); err != nil {
 			return fmt.Errorf("invalid fixed fee currency: %s", err.Error())
 		}
-		if amt, ok := new(big.Int).SetString(p.ModeratorInfo.Fee.FixedFee.Amount, 10); !ok || amt.Cmp(big.NewInt(0)) < 0 {
-			return ErrModeratorFixedFeeIsNegativeOrNotSet
+		if feeCurrency.IsNegative() {
+			return ErrModeratorFixedFeeIsNegative
 		}
 		return nil
 	}
 
-	switch p.ModeratorInfo.Fee.FeeType {
-	case pb.Moderator_Fee_FIXED.String():
-		if p.ModeratorInfo.Fee.Percentage != 0 {
+	switch p.profileProto.ModeratorInfo.Fee.FeeType {
+	case pb.Moderator_Fee_FIXED:
+		if p.profileProto.ModeratorInfo.Fee.Percentage != 0 {
 			return ErrFixedFeeHasNonZeroPercentage
 		}
 		if err := validateFixedFee(); err != nil {
 			return err
 		}
-	case pb.Moderator_Fee_PERCENTAGE.String():
-		if p.ModeratorInfo.Fee.Percentage < 0 {
+	case pb.Moderator_Fee_PERCENTAGE:
+		if p.profileProto.ModeratorInfo.Fee.Percentage < 0 {
 			return ErrModeratorFeeHasNegativePercentage
 		}
-		if p.ModeratorInfo.Fee.FixedFee != nil {
-			amt, ok := new(big.Int).SetString(p.ModeratorInfo.Fee.FixedFee.Amount, 10)
+		if p.profileProto.ModeratorInfo.Fee.FixedFee != nil {
+			amt, ok := new(big.Int).SetString(p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
 			if ok && amt.Cmp(big.NewInt(0)) != 0 {
 				return ErrPercentageFeeHasFixedFee
 			}
 		}
-	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String():
-		if p.ModeratorInfo.Fee.Percentage < 0 {
+	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
+		if p.profileProto.ModeratorInfo.Fee.Percentage < 0 {
 			return ErrModeratorFeeHasNegativePercentage
 		}
 		if err := validateFixedFee(); err != nil {
@@ -279,52 +198,92 @@ func (p *Profile) validateModeratorFees() error {
 // DisableModeration sets the profile so moderationr is disabled and
 // all fee schedules are removed
 func (p *Profile) DisableModeration() error {
-	p.Moderator = false
-	p.ModeratorInfo = nil
+	p.profileProto.Moderator = false
+	p.profileProto.ModeratorInfo = nil
 	return nil
+}
+
+// normalizeFees ensures the fee schedule is readable for as
+// many other nodes as possible by populating prior version schema
+func (p *Profile) normalizeFees() {
+	if p.profileProto.ModeratorInfo != nil && p.profileProto.ModeratorInfo.Fee != nil {
+		var fees = p.profileProto.ModeratorInfo.Fee
+		switch fees.FeeType {
+		case pb.Moderator_Fee_FIXED:
+			fees.Percentage = 0
+		case pb.Moderator_Fee_PERCENTAGE:
+			fees.FixedFee = nil
+		}
+
+		if ff, err := p.GetModeratedFixedFee(); err == nil {
+			switch p.GetVersion() {
+			case 5:
+				var amtInt uint64
+				if ai, err := strconv.Atoi(p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount); err == nil {
+					amtInt = uint64(ai)
+				}
+				p.profileProto.ModeratorInfo.Fee.FixedFee.CurrencyCode = ff.Currency.Code.String()
+				p.profileProto.ModeratorInfo.Fee.FixedFee.Amount = amtInt
+			default: // v4 and earlier
+				p.profileProto.ModeratorInfo.Fee.FixedFee.AmountCurrency = &pb.CurrencyDefinition{
+					Code:         ff.Currency.Code.String(),
+					Divisibility: uint32(ff.Currency.Divisibility),
+				}
+				p.profileProto.ModeratorInfo.Fee.FixedFee.BigAmount = ff.Amount.String()
+			}
+		}
+	}
 }
 
 // SetModeratorFixedFee sets the profile to be a moderator with a
 // fixed fee schedule
 func (p *Profile) SetModeratorFixedFee(fee *CurrencyValue) error {
-	p.Moderator = true
-	p.ModeratorInfo = &ModeratorInfo{
-		Fee: &ModeratorFee{
-			FeeType: pb.Moderator_Fee_FIXED.String(),
-			FixedFee: &ModeratorFixedFee{
-				Amount:         fee.Amount.String(),
-				AmountCurrency: &fee.Currency,
+	p.profileProto.Moderator = true
+	p.profileProto.ModeratorInfo = &pb.Moderator{
+		Fee: &pb.Moderator_Fee{
+			FeeType: pb.Moderator_Fee_FIXED,
+			FixedFee: &pb.Moderator_Price{
+				BigAmount: fee.Amount.String(),
+				AmountCurrency: &pb.CurrencyDefinition{
+					Code:         fee.Currency.Code.String(),
+					Divisibility: uint32(fee.Currency.Divisibility),
+				},
 			},
 			Percentage: 0,
 		},
 	}
+	p.normalizeFees()
 	return nil
 }
 
 // SetModeratorFixedPlusPercentageFee sets the profile to be a moderator
 // with a fixed fee plus percentage schedule
 func (p *Profile) SetModeratorFixedPlusPercentageFee(fee *CurrencyValue, percentage float32) error {
-	p.Moderator = true
-	p.ModeratorInfo = &ModeratorInfo{
-		Fee: &ModeratorFee{
-			FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
-			FixedFee: &ModeratorFixedFee{
-				Amount:         fee.Amount.String(),
-				AmountCurrency: &fee.Currency,
+	p.profileProto.Moderator = true
+	p.profileProto.ModeratorInfo = &pb.Moderator{
+		Fee: &pb.Moderator_Fee{
+			FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE,
+			FixedFee: &pb.Moderator_Price{
+				BigAmount: fee.Amount.String(),
+				AmountCurrency: &pb.CurrencyDefinition{
+					Code:         fee.Currency.Code.String(),
+					Divisibility: uint32(fee.Currency.Divisibility),
+				},
 			},
 			Percentage: percentage,
 		},
 	}
+	p.normalizeFees()
 	return nil
 }
 
 // SetModeratorPercentageFee sets the profile to be a moderator with a
 // percentage fee schedule
 func (p *Profile) SetModeratorPercentageFee(percentage float32) error {
-	p.Moderator = true
-	p.ModeratorInfo = &ModeratorInfo{
-		Fee: &ModeratorFee{
-			FeeType:    pb.Moderator_Fee_PERCENTAGE.String(),
+	p.profileProto.Moderator = true
+	p.profileProto.ModeratorInfo = &pb.Moderator{
+		Fee: &pb.Moderator_Fee{
+			FeeType:    pb.Moderator_Fee_PERCENTAGE,
 			FixedFee:   nil,
 			Percentage: percentage,
 		},

@@ -1,42 +1,41 @@
 package factory
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-func NewProfile() *repo.Profile {
-	var amtCurr = NewCurrencyDefinition("BTC")
-	return &repo.Profile{
-		Moderator: true,
-		ModeratorInfo: &repo.ModeratorInfo{
-			Fee: &repo.ModeratorFee{
-				FeeType: pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE.String(),
-				FixedFee: &repo.ModeratorFixedFee{
-					Amount:         "1234",
-					AmountCurrency: &amtCurr,
-				},
-				Percentage: 1.1, // represents 0.011%
-			},
-		},
+const defaultProfileFixture = "v5-profile-moderator-fixed-fee"
+
+func MustLoadProfileFixture(fixtureName string) []byte {
+	filename := filepath.Join(fixtureLoadPath(), "profiles", fmt.Sprintf("%s.json", fixtureName))
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(fmt.Sprintf("cannot find fixture (%s): %s", filename, err))
 	}
+	return b
 }
 
-func NewProfileProtobuf() *pb.Profile {
-	return &pb.Profile{
-		Moderator: true,
-		ModeratorInfo: &pb.Moderator{
-			Fee: &pb.Moderator_Fee{
-				FixedFee: &pb.Moderator_Price{
-					BigAmount: "1234",
-					AmountCurrency: &pb.CurrencyDefinition{
-						Code:         "BTC",
-						Divisibility: 8,
-					},
-				},
-				Percentage: 1.1,
-				FeeType:    pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE,
-			},
-		},
+func MustNewProfile() *repo.Profile {
+	p, err := repo.NewProfileFromProtobuf(MustNewProfileProtobuf())
+	if err != nil {
+		panic(err.Error())
 	}
+	return p
+}
+
+func MustNewProfileProtobuf() *pb.Profile {
+	var (
+		p   = new(pb.Profile)
+		err = jsonpb.UnmarshalString(string(MustLoadProfileFixture(defaultProfileFixture)), p)
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
 }
