@@ -2,9 +2,11 @@ package repo_test
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
@@ -209,5 +211,104 @@ func TestListingFromProtobuf(t *testing.T) {
 	if !bytes.Equal(subject.VendorID.BitcoinSig, actual.GetVendorID().BitcoinSignature()) {
 		t.Errorf("expected refund policy to be (%s), but was (%s)", subject.VendorID.BitcoinSig, actual.GetVendorID().BitcoinSignature())
 	}
+}
 
+func TestV4PhysicalGoodDataNormalizesToLatestSchema(t *testing.T) {
+	var (
+		expectedPrice          uint64 = 100000
+		expectedPriceCurrency         = "EUR"
+		expectedSkuSurcharge   int64  = 200
+		expectedSkuQuantity    int64  = 12
+		expectedShippingPrice  uint64 = 30
+		expectedCouponDiscount uint64 = 50
+		v4Proto                       = &pb.Listing{
+			Metadata: &pb.Listing_Metadata{
+				Version:         4,
+				ContractType:    pb.Listing_Metadata_PHYSICAL_GOOD,
+				PricingCurrency: expectedPriceCurrency,
+			},
+			Item: &pb.Listing_Item{
+				Price: expectedPrice,
+				Skus: []*pb.Listing_Item_Sku{
+					{
+						Surcharge: expectedSkuSurcharge,
+						Quantity:  expectedSkuQuantity,
+					},
+				},
+			},
+			ShippingOptions: []*pb.Listing_ShippingOption{
+				{
+					Services: []*pb.Listing_ShippingOption_Service{
+						{
+							Price:               expectedShippingPrice,
+							AdditionalItemPrice: expectedShippingPrice + 1,
+						},
+					},
+				},
+			},
+			Coupons: []*pb.Listing_Coupon{
+				{
+					PriceDiscount: expectedCouponDiscount,
+				},
+			},
+		}
+	)
+
+	l, err := repo.NewListingFromProtobuf(v4Proto)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nl, err := l.Normalize()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nlp := nl.GetProtobuf()
+	if v := nlp.Metadata.GetVersion(); v != repo.ListingVersion {
+		t.Errorf("expected version to be (%d), but was (%d)", repo.ListingVersion, v)
+	}
+
+	if p := nlp.Item.BigPrice; p != fmt.Sprintf("%d", expectedPrice) {
+		t.Errorf("expected price to be (%d), but was (%s)", expectedPrice, p)
+	}
+
+	if pc := nlp.Item.PriceCurrency; pc == nil {
+		t.Error("expected to have pricing currency set, but was nil")
+	} else {
+		if pcc := pc.Code; pcc != expectedPriceCurrency {
+			t.Errorf("expected price currency to be (%s), but was (%s)", expectedPriceCurrency, pcc)
+		}
+	}
+
+	if s := nlp.Item.Skus[0]; s == nil {
+		t.Error("expected sku to be present, but was nil")
+	} else {
+		if ss := s.BigSurcharge; ss != fmt.Sprintf("%d", expectedSkuSurcharge) {
+			t.Errorf("expected surcharge to be (%d), but was (%s)", expectedSkuSurcharge, ss)
+		}
+		if sq := s.BigQuantity; sq != fmt.Sprintf("%d", expectedSkuQuantity) {
+			t.Errorf("expected quantity to be (%d), but was (%s)", expectedSkuQuantity, sq)
+		}
+	}
+
+	if s := nlp.ShippingOptions[0]; s == nil {
+		t.Error("expected shipping options to be present, but was nil")
+	} else {
+		if ss := s.Services[0]; ss == nil {
+			t.Error("expected shipping option services to be present, but was nil")
+		} else {
+			if ssp := ss.BigPrice; ssp != fmt.Sprintf("%d", expectedShippingPrice) {
+				t.Errorf("expected shipping option price to be (%d), but was (%s)", expectedShippingPrice, ssp)
+			}
+		}
+	}
+
+	if c := nlp.Coupons[0]; c == nil {
+		t.Error("expected coupon to be present, but was nil")
+	} else {
+		if cd := c.BigPriceDiscount; cd != fmt.Sprintf("%d", expectedCouponDiscount) {
+			t.Errorf("expected coupon discount to be (%d), but was (%s)", expectedCouponDiscount, cd)
+		}
+	}
 }

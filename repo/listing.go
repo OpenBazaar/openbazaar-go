@@ -138,14 +138,16 @@ func (*Listing) ProtoMessage()    {}
 
 // NewListingFromProtobuf - return Listing from pb.Listing
 func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
-	if l.Metadata.Version == 0 {
-		l.Metadata.Version = ListingVersion
+	clonedListing := proto.Clone(l).(*pb.Listing)
+
+	if clonedListing.Metadata.Version == 0 {
+		clonedListing.Metadata.Version = ListingVersion
 	}
-	if l.Metadata.EscrowTimeoutHours == 0 {
-		l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
+	if clonedListing.Metadata.EscrowTimeoutHours == 0 {
+		clonedListing.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 	}
 	return &Listing{
-		listingProto: l,
+		listingProto: clonedListing,
 	}, nil
 }
 
@@ -374,6 +376,59 @@ func ExtractIDFromListing(data []byte) (*pb.ID, error) {
 	}
 
 	return vendorPlay, nil
+}
+
+// Normalize converts legacy schema listing data from other users on the network
+// to fit the latest schema for consumption via the API for local use. NOTE: Legacy
+// nodes do not understand the latest schema. As such, normalized listings must not
+// be used as part of the RicardianContract and must be serialized and used as they
+// were provided by the originating node.
+func (l *Listing) Normalize() (*Listing, error) {
+	if l == nil {
+		return nil, errors.New("nil listing cannot be normalized")
+	}
+
+	if l.GetVersion() == ListingVersion {
+		return l, nil
+	}
+
+	nl, err := NewListingFromProtobuf(l.listingProto)
+	if err != nil {
+		return nil, fmt.Errorf("creating listing clone: %s", err.Error())
+	}
+
+	nlp := nl.GetProtobuf()
+	nlp.Metadata.Version = ListingVersion
+
+	if p, err := l.GetPrice(); err != nil {
+		return nil, fmt.Errorf("get price: %s", err.Error())
+	} else {
+		nlp.Item.BigPrice = p.Amount.String()
+		nlp.Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         p.Currency.Code.String(),
+			Divisibility: uint32(p.Currency.Divisibility),
+		}
+	}
+
+	if ss, err := l.GetSkus(); err != nil {
+		return nil, fmt.Errorf("get skus: %s", err.Error())
+	} else {
+		nlp.Item.Skus = ss
+	}
+
+	if sos, err := l.GetShippingOptions(); err != nil {
+		return nil, fmt.Errorf("get shipping options: %s", err.Error())
+	} else {
+		nlp.ShippingOptions = sos
+	}
+
+	if cs, err := l.GetCoupons(); err != nil {
+		return nil, fmt.Errorf("get coupons: %s", err.Error())
+	} else {
+		nlp.Coupons = cs.GetProtobuf()
+	}
+
+	return nl, nil
 }
 
 // GetProtobuf returns the current state of pb.Listing managed by Listing
@@ -695,18 +750,18 @@ func (l *Listing) GetImages() []*ListingImage {
 
 // GetSkus returns the listing SKUs
 func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
+	var ss = make([]*pb.Listing_Item_Sku, len(l.listingProto.Item.Skus))
+	for i, s := range l.listingProto.Item.Skus {
+		ss[i] = proto.Clone(s).(*pb.Listing_Item_Sku)
+	}
 	switch l.GetVersion() {
 	case 3, 4:
-		for _, sku := range l.listingProto.Item.Skus {
-			surcharge := new(big.Int).SetInt64(sku.Surcharge)
-			quantity := new(big.Int).SetInt64(sku.Quantity)
-			sku.BigSurcharge = surcharge.String()
-			sku.BigQuantity = quantity.String()
-			sku.Quantity = 0
-			sku.Surcharge = 0
+		for _, sku := range ss {
+			sku.BigSurcharge = big.NewInt(sku.Surcharge).String()
+			sku.BigQuantity = big.NewInt(sku.Quantity).String()
 		}
 	}
-	return l.listingProto.Item.Skus, nil
+	return ss, nil
 }
 
 //GetLanguage return listing's language
@@ -858,6 +913,24 @@ func (l *Listing) GetCoupons() (ListingCoupons, error) {
 // ListingCoupons is a set of listing coupons
 type ListingCoupons []*ListingCoupon
 
+// GetProtobuf converts ListingCoupons into its protobuf representation
+func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
+	var cspb = make([]*pb.Listing_Coupon, len(cs))
+	for i, c := range cs {
+		cspb[i] = &pb.Listing_Coupon{
+			Title:            c.GetTitle(),
+			PercentDiscount:  c.GetPercentOff(),
+			BigPriceDiscount: c.GetAmountOff().Amount.String(),
+		}
+		if hash, err := c.GetRedemptionHash(); err == nil {
+			cspb[i].Code = &pb.Listing_Coupon_Hash{Hash: hash}
+		} else if code, err := c.GetRedemptionCode(); err == nil {
+			cspb[i].Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
+		}
+	}
+	return cspb
+}
+
 // ListingCoupon represents an coupon which can be applied to a listing for a discount
 type ListingCoupon struct {
 	listing *Listing
@@ -930,6 +1003,25 @@ func (c *ListingCoupon) updateProtoHash(hash string) error {
 		}
 	}
 	return errors.New("unable to update missing coupon proto")
+}
+
+// GetShippingOptions returns all shipping options
+func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
+	var so = make([]*pb.Listing_ShippingOption, len(l.listingProto.ShippingOptions))
+	for i, s := range l.listingProto.ShippingOptions {
+		so[i] = proto.Clone(s).(*pb.Listing_ShippingOption)
+	}
+	switch l.GetVersion() {
+	case 3, 4:
+		for _, o := range so {
+			for _, s := range o.Services {
+				s.BigPrice = big.NewInt(int64(s.Price)).String()
+				s.BigAdditionalItemPrice = big.NewInt(int64(s.AdditionalItemPrice)).String()
+			}
+		}
+	}
+	return so, nil
+
 }
 
 // GetShippingRegions returns all region strings for the defined shipping
