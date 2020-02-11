@@ -61,6 +61,21 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 		}
 		isSale = true
 	}
+
+	for i, l := range contract.VendorListings {
+		repoListing, err := repo.NewListingFromProtobuf(l)
+		if err != nil {
+			log.Errorf("failed getting contract listing: %s", err.Error())
+			return nil, err
+		}
+		normalizedListing, err := repoListing.Normalize()
+		if err != nil {
+			log.Errorf("failed converting contract listing to v5 schema: %s", err.Error())
+			return nil, err
+		}
+		contract.VendorListings[i] = normalizedListing.GetProtobuf()
+	}
+
 	resp := new(pb.OrderRespApi)
 	resp.Contract = contract
 	resp.Funded = funded
