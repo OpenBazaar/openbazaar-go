@@ -43,6 +43,19 @@ func (l *SignedListing) Reset()         { *l = SignedListing{} }
 func (l *SignedListing) String() string { return proto.CompactTextString(l) }
 func (*SignedListing) ProtoMessage()    {}
 
+// Normalize is a helper method which will mutate the listing protobuf
+// in-place but maintain the original signature for external verification
+// purposes.
+func (l *SignedListing) Normalize() error {
+	nl, err := l.GetListing().Normalize()
+	if err != nil {
+		return err
+	}
+
+	l.signedListingProto.Listing = nl.listingProto
+	return nil
+}
+
 // GetListing returns the underlying repo.Listing object
 func (l SignedListing) GetListing() *Listing {
 	return &Listing{
