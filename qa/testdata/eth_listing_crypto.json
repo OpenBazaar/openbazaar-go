@@ -25,7 +25,7 @@
         }],
         "grams": 0,
         "options": [],
-        "skus": [{"bigQuantity":"350000000"}]
+        "skus": [{"bigQuantity":"350000000000000000"}]
     },
     "moderators": [],
     "termsAndConditions": "NA",

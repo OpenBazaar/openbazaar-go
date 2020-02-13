@@ -26,7 +26,7 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ltcsuite/ltcutil"
 	"github.com/ltcsuite/ltcwallet/wallet/txrules"
-	logging "github.com/op/go-logging"
+	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 )
@@ -125,6 +125,9 @@ func (w *LitecoinWallet) CurrencyCode() string {
 }
 
 func (w *LitecoinWallet) IsDust(amount big.Int) bool {
+	if !amount.IsInt64() || amount.Cmp(big.NewInt(0)) <= 0 {
+		return false
+	}
 	return txrules.IsDustAmount(ltcutil.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 

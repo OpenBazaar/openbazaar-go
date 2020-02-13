@@ -1,15 +1,18 @@
 language: go
 go:
  - 1.11
-sudo: required
 services:
   - docker
 env:
-  - "PATH=/home/travis/gopath/bin:$PATH"
+  - DEP_VERSION=0.5.4 PATH=/home/travis/gopath/bin:${PATH}
 before_install:
+  - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
   - go get github.com/tcnksm/ghr
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
+install:
+  - dep ensure
 script:
   - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./cmd/spvwallet/vendor/*" -not -path "./gui/resources.go" -not -path "./vendor/*"))
   - cd $TRAVIS_BUILD_DIR && chmod a+x test_compile.sh && ./test_compile.sh

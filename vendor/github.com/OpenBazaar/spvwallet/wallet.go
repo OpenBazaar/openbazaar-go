@@ -197,7 +197,14 @@ func (w *SPVWallet) CurrencyCode() string {
 }
 
 func (w *SPVWallet) IsDust(amount big.Int) bool {
-	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
+	return isTxSizeDust(amount, 25)
+}
+
+func isTxSizeDust(amount big.Int, size int) bool {
+	if !amount.IsInt64() || amount.Cmp(big.NewInt(0)) <= 0 {
+		return false
+	}
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), size, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
