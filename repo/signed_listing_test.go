@@ -266,3 +266,61 @@ func TestSignAndVerifyListing(t *testing.T) {
 		t.Errorf("verify signed listing: %v", err)
 	}
 }
+
+func TestNormalize(t *testing.T) {
+	testnode, err := test.NewNode()
+	if err != nil {
+		t.Fatalf("create test node: %v", err)
+	}
+
+	priv, pub, err := crypto.GenerateEd25519Key(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pid, err := peer.IDFromPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testnode.IpfsNode.Identity = pid
+	testnode.IpfsNode.PrivateKey = priv
+
+	// v4 listing is guaranteed to mutate when normalized
+	lb := factory.MustLoadListingFixture("v4-cryptocurrency")
+	l, err := repo.UnmarshalJSONSignedListing(lb)
+	if err != nil {
+		t.Fatalf("unmarshal fixtured listing: %v", err)
+	}
+
+	// sign replaces listing vendor ID with the one from the testnode
+	sl, err := l.GetListing().Sign(testnode)
+	if err != nil {
+		t.Fatalf("sign listing: %v", err)
+	}
+
+	origSig := sl.GetSignature()
+	origListingJSON, err := sl.MarshalJSON()
+	if err != nil {
+		t.Fatalf("marshal listing: %v", err)
+	}
+
+	if err := sl.Normalize(); err != nil {
+		t.Fatalf("normalize listing: %v", err)
+	}
+
+	if sig := sl.GetSignature(); !bytes.Equal(origSig, sig) {
+		t.Errorf("expected normalized signature to not change, but did")
+	}
+
+	if listingJSON, err := sl.MarshalJSON(); err != nil {
+		t.Errorf("marshal normalized listing: %v", err)
+	} else {
+		// when normalizing a signed listing, the listing data mutates in place, but
+		// the signature should remain matched to the original (unchanged)
+		if bytes.Equal(origListingJSON, listingJSON) {
+			t.Errorf("expected listing JSON to change from normalization, but did not")
+			t.Logf("orig: %s\nactual: %s\n", string(origListingJSON), string(listingJSON))
+		}
+	}
+}

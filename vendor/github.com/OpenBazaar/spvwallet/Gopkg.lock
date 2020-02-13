@@ -18,12 +18,12 @@
   revision = "cbbb40466dcfe7d299f685fd0aa9a4fe9ea49147"
 
 [[projects]]
-  digest = "1:821be8d48c6dff0e0296ee33849fc9a9fb828490b916f042fa927c9ae54a966b"
+  digest = "1:35a426de67d2340cece030713f231c923045550993f3d8aff5d772b02e7b0417"
   name = "github.com/asticode/go-astikit"
   packages = ["."]
   pruneopts = "UT"
-  revision = "263d1a88891504c08f536516a7617d5091245eb1"
-  version = "v0.2.0"
+  revision = "3833bbfde29cca140757cb1e9ea1df6b0b6ea323"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:bfe69faae1f375f77c7a9816ac852d09a65f04eff65ae26add69d2e53cc73dca"
@@ -94,7 +94,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0faf30bd4ac78188ebeb913680b3dec83dccc62050f92fb2da3940d55e6a7977"
+  digest = "1:4a13c7cdb269ba1ceadf68312e363b442df7cca8ba5c9d5d069a18b9e6caa1d5"
   name = "github.com/btcsuite/btcutil"
   packages = [
     ".",
@@ -106,7 +106,7 @@
     "txsort",
   ]
   pruneopts = "UT"
-  revision = "e17c9730c422e7c745002430f2782b948b59c1c2"
+  revision = "02a4fd9de1d52e877491996349a92d54c653ccbf"
 
 [[projects]]
   digest = "1:7ffc24d91a12c173c18fe9ada86a05fc476f8943f4acffeddc6ec87a4f32bdef"
@@ -165,7 +165,7 @@
   version = "v1.9.0"
 
 [[projects]]
-  digest = "1:7ade0e7351787347d3dd3456abb365fd71ea75c19a859505e6a427064e1f9e42"
+  digest = "1:228f39dbc93e88d95a024f45d5beea0a64cd33e89bdfb841a1669abb74f8b1e9"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -176,8 +176,8 @@
     "ptypes/timestamp",
   ]
   pruneopts = "UT"
-  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
-  version = "v1.3.2"
+  revision = "d23c5127dc24889085f8ccea5c9d560a57a879d8"
+  version = "v1.3.3"
 
 [[projects]]
   digest = "1:a2cff208d4759f6ba1b1cd228587b0a1869f95f22542ec9cd17fff64430113c7"
@@ -204,20 +204,20 @@
   version = "v0.1.4"
 
 [[projects]]
-  digest = "1:29895093e370d9da5fd1c9ab12a5855ccb568f28766e0c3ff159c4b0f09aa127"
+  digest = "1:0c58d31abe2a2ccb429c559b6292e7df89dcda675456fecc282fa90aa08273eb"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
   pruneopts = "UT"
-  revision = "31745d66dd679ac0ac4f8d3ecff168fce6170c6a"
-  version = "v0.0.11"
+  revision = "7b513a986450394f7bbf1476909911b3aa3a55ce"
+  version = "v0.0.12"
 
 [[projects]]
-  digest = "1:a21bc477fa894d56ee83e6cb04eba08d183366ad5a717e36c51867c04f2a5ad9"
+  digest = "1:e2ac6e4ee843b2001b6c3a7801180ea3f7fa6d61fb917ca7dde15e26ef02a082"
   name = "github.com/mattn/go-sqlite3"
   packages = ["."]
   pruneopts = "UT"
-  revision = "53cff3fcebd1e177d04129dc131523635bc45d3d"
-  version = "v2.0.2"
+  revision = "9bdaffc12bf8be15afceb51bb60851edd4afdff5"
+  version = "v2.0.3"
 
 [[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
@@ -253,11 +253,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:519621a373ae7d96a16415a6356d7b97722ed3a292f73409b361b7c0322971e3"
+  digest = "1:eb960fd3ea2dab0ee0b216c962c54b439006efec889b079a23d6d0b24547bb7a"
   name = "github.com/skratchdot/open-golang"
   packages = ["open"]
   pruneopts = "UT"
-  revision = "79abb63cd66e41cb1473e26d11ebdcd68b04c8e5"
+  revision = "eef8423979666925a58eb77f9db583e54320d5a4"
 
 [[projects]]
   digest = "1:91b40a2adb6b4ccd51b1dfb306edfa76139e1599b01666346085472b386f5447"
@@ -291,7 +291,7 @@
     "ripemd160",
   ]
   pruneopts = "UT"
-  revision = "6d4e4cb37c7d6416dfea8472e751c7b6615267a6"
+  revision = "86ce3cb696783b739e41e834e2eead3e1b4aa3fb"
 
 [[projects]]
   branch = "master"
@@ -309,15 +309,15 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "6afb5195e5aab057fda82e27171243402346b0ad"
+  revision = "16171245cfb220d5317888b716d69c1fb4e7992b"
 
 [[projects]]
   branch = "master"
-  digest = "1:e13350b7207ecc34977340d53522e0335dd36ed86ca7c346a36d2e88eb0fadfc"
+  digest = "1:72b7c210f8cfe1431d2f300fbf37f25e52aa77324b05ab6b698483054033803e"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "86b910548bc16777f40503131aa424ae0a092199"
+  revision = "d101bd2416d505c0448a6ce8a282482678040a89"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -346,14 +346,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:583a0c80f5e3a9343d33aea4aead1e1afcc0043db66fdf961ddd1fe8cd3a4faf"
+  digest = "1:0c679e19d1865dd65e7ec400bf9562d8f161cf59c4f74c0bb50f365fc9fb19eb"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "ca5a22157cba8746e7aa978de1b1ac4085150840"
+  revision = "2dc5924e38981f069b4982c6eb2b72365efd00a7"
 
 [[projects]]
-  digest = "1:3abb0cc9fcc8c2a4bbe49b6d2c5894d7ba782b17a3463fdbfc5820b764633643"
+  digest = "1:6112fd005e06e37449ca883f2f8e5b4060285e62b6877c16e5565c072d43d422"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -396,8 +396,8 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "f5b0812e6fe574d90da76b205e9eb51f6ddb1919"
-  version = "v1.26.0"
+  revision = "f495f5b15ae7ccda3b38c53a1bfcde4c1a58a2bc"
+  version = "v1.27.1"
 
 [solve-meta]
   analyzer-name = "dep"

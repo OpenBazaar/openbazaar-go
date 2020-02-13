@@ -315,9 +315,11 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	err = json.Unmarshal(serializedTransactions, &records)
-	if err != nil {
-		log.Error(err)
+	if len(serializedTransactions) > 0 {
+		err = json.Unmarshal(serializedTransactions, &records)
+		if err != nil {
+			return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("unmarshal purchase transactions: %s", err.Error())
+		}
 	}
 	cc := def.CurrencyCode()
 	return rc, pb.OrderState(stateInt), funded, records, read, &cc, nil

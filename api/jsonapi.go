@@ -1496,6 +1496,11 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			log.Warningf("updating coupons for listing (%s): %s", rsl.GetSlug(), err.Error())
 		}
 
+		if err := rsl.Normalize(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("normalizing listing: %s", err.Error()))
+			return
+		}
+
 		out, err := rsl.MarshalJSON()
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1537,7 +1542,14 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	}
 	sl.Hash = hash
 
-	out, err := repo.NewSignedListingFromProtobuf(sl).MarshalJSON()
+	rsl := repo.NewSignedListingFromProtobuf(sl)
+
+	if err := rsl.Normalize(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("normalizing listing: %s", err.Error()))
+		return
+	}
+
+	out, err := rsl.MarshalJSON()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

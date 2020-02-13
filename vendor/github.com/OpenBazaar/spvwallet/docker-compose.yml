@@ -1,0 +1,10 @@
+version: '3'
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/go/src/github.com/OpenBazaar/spvwallet
+    security_opt:
+      - seccomp:unconfined #req: delve for golang
