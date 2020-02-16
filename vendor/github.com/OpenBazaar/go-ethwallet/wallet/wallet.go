@@ -360,6 +360,21 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 	}
 }
 
+func (wallet *EthereumWallet) invokeTxnCB(txnID string, value *big.Int) {
+	txncb := wi.TransactionCallback{
+		Txid:      util.EnsureCorrectPrefix(txnID),
+		Outputs:   []wi.TransactionOutput{},
+		Inputs:    []wi.TransactionInput{},
+		Height:    0,
+		Timestamp: time.Now(),
+		Value:     *value,
+		WatchOnly: false,
+	}
+	for _, l := range wallet.listeners {
+		go l(txncb)
+	}
+}
+
 // CurrencyCode returns ETH
 func (wallet *EthereumWallet) CurrencyCode() string {
 	if wallet.params == nil {
@@ -508,7 +523,7 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 // TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
 func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
-		1, 0, true)
+		1, 0, false)
 	if err != nil {
 		log.Error("err fetching transactions : ", err)
 		return []wi.Txn{}, nil
@@ -720,6 +735,9 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 
 	if err == nil {
 		h, err = util.CreateChainHash(hash.Hex())
+		if err == nil {
+			wallet.invokeTxnCB(h.String(), &amount)
+		}
 	}
 	return h, err
 }

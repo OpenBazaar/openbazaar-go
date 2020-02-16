@@ -156,7 +156,8 @@
 			{
 				"name": "Standard",
         		"bigPrice": "800000000",
-				"estimatedDelivery": "6-8 days"
+				"estimatedDelivery": "6-8 days",
+				"bigAdditionalItemPrice": "100000000"
 			},
 			{
 				"name": "Express",
