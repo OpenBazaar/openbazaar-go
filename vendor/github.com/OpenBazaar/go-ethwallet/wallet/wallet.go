@@ -143,17 +143,15 @@ func DeserializePendingTxn(b []byte) (PendingTxn, error) {
 // GenScriptHash - used to generate script hash for eth as per
 // escrow smart contract
 func GenScriptHash(script EthRedeemScript) ([32]byte, string, error) {
-	//ahash := sha3.NewKeccak256()
 	a := make([]byte, 4)
 	binary.BigEndian.PutUint32(a, script.Timeout)
 	arr := append(script.TxnID.Bytes(), append([]byte{script.Threshold},
 		append(a[:], append(script.Buyer.Bytes(),
 			append(script.Seller.Bytes(), append(script.Moderator.Bytes(),
 				append(script.MultisigAddress.Bytes())...)...)...)...)...)...)
-	//ahash.Write(arr)
 	var retHash [32]byte
 
-	copy(retHash[:], crypto.Keccak256(arr)[:]) // ahash.Sum(nil)[:])
+	copy(retHash[:], crypto.Keccak256(arr)[:])
 	ahashStr := hexutil.Encode(retHash[:])
 
 	return retHash, ahashStr, nil
@@ -340,13 +338,6 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 	value := new(big.Int).Sub(currentBalance, previousBalance)
 	for count < 30 {
 		txns, err := wallet.TransactionsFromBlock(&cTip)
-		//if err != nil {
-		//	log.Error("err fetching latest transactions : ", err)
-		//	return
-		//}
-		//if len(txns) == 0 {
-		//	return
-		//}
 		if err == nil && len(txns) > 0 {
 			count = 30
 			txncb := wi.TransactionCallback{
@@ -469,9 +460,6 @@ func (wallet *EthereumWallet) DecodeAddress(addr string) (btcutil.Address, error
 		ethAddr = common.HexToAddress(addr)
 	}
 
-	//if wallet.HasKey(EthAddress{&ethAddr}) {
-	//		return *wallet.address, nil
-	//	}
 	return EthAddress{&ethAddr}, err
 }
 
@@ -1060,13 +1048,10 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]wi.Signature, error) {
 
 	payouts := []wi.TransactionOutput{}
-	//delta1 := int64(0)
-	//delta2 := int64(0)
 	difference := new(big.Int)
 
 	if len(ins) > 0 {
 		totalVal := ins[0].Value
-		//num := len(outs)
 		outVal := new(big.Int)
 		for _, out := range outs {
 			outVal = new(big.Int).Add(outVal, &out.Value)
@@ -1076,9 +1061,7 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 				return nil, errors.New("payout greater than initial amount")
 			}
 			difference = new(big.Int).Sub(&totalVal, outVal)
-			//delta1 = difference / int64(num)
 		}
-		//delta2 = totalVal - (outVal + (int64(num) * delta1))
 	}
 
 	rScript, err := DeserializeEthScript(redeemScript)
@@ -1122,23 +1105,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	})
 
 	var sigs []wi.Signature
-
-	/*
-		payables := make(map[string]*big.Int)
-		for _, out := range payouts {
-			if out.Value <= 0 {
-				continue
-			}
-			val := big.NewInt(out.Value)
-			if p, ok := payables[out.Address.String()]; ok {
-				sum := big.NewInt(0)
-				sum.Add(val, p)
-				payables[out.Address.String()] = sum
-			} else {
-				payables[out.Address.String()] = val
-			}
-		}
-	*/
 
 	payables := make(map[string]big.Int)
 	addresses := []string{}
@@ -1216,7 +1182,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	txData := []byte{byte(0x19)}
 	txData = append(txData, []byte("Ethereum Signed Message:\n32")...)
-	//txData = append(txData, byte(32))
 	txData = append(txData, payloadHash[:]...)
 	txnHash := crypto.Keccak256(txData)
 	log.Debugf("txnHash        : %s", hexutil.Encode(txnHash))
@@ -1240,7 +1205,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 
 	if len(ins) > 0 {
 		totalVal := &ins[0].Value
-		//num := len(outs)
 		outVal := new(big.Int)
 		for _, out := range outs {
 			outVal.Add(outVal, &out.Value)
@@ -1250,9 +1214,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 				return nil, errors.New("payout greater than initial amount")
 			}
 			difference.Sub(totalVal, outVal)
-			//delta1 = difference / int64(num)
 		}
-		//delta2 = totalVal - (outVal + (int64(num) * delta1))
 	}
 
 	rScript, err := DeserializeEthScript(redeemScript)
@@ -1311,9 +1273,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 	}
 
-	rSlice := [][32]byte{} //, 2)
-	sSlice := [][32]byte{} //, 2)
-	vSlice := []uint8{}    //, 2)
+	rSlice := [][32]byte{}
+	sSlice := [][32]byte{}
+	vSlice := []uint8{}
 
 	var r [32]byte
 	var s [32]byte
@@ -1332,10 +1294,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		sSlice = append(sSlice, s)
 		vSlice = append(vSlice, v)
 	}
-
-	//r = [32]byte{}
-	//s = [32]byte{}
-	//v = uint8(0)
 
 	shash, _, err := GenScriptHash(rScript)
 	if err != nil {
@@ -1387,8 +1345,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// the wallet does not have the required balance
 		return nil, wi.ErrInsufficientFunds
 	}
-
-	//var tx *types.Transaction
 
 	tx, txnErr := smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
 
@@ -1528,18 +1484,6 @@ func (wallet *EthereumWallet) PrintKeys() {
 
 // GenWallet creates a wallet
 func GenWallet() {
-	//privateKey, err := crypto.GenerateKey()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//privateKeyBytes := crypto.FromECDSA(privateKey)
-	//publicKey := privateKey.Public()
-	//publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	//if !ok {
-	//	log.Fatal("error casting public key to ECDSA")
-	//}
-	//publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
-	//address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 }
 
 // GenDefaultKeyStore will generate a default keystore
