@@ -22,7 +22,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/util",
-			"Rev": "5c1bb634ebaa76969b11b46d31d0e9c0bd3b3e38"
+			"Rev": "b773787ffb747d3b44c56f34ffe9041789095d4e"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/wallet",
