@@ -352,6 +352,7 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 			for _, l := range wallet.listeners {
 				go l(txncb)
 			}
+			continue
 		}
 
 		time.Sleep(2 * time.Second)
