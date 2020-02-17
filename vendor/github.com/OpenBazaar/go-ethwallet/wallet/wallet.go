@@ -47,7 +47,9 @@ var done, doneBalanceTicker chan bool
 const (
 	// InfuraAPIKey is the hard coded Infura API key
 	InfuraAPIKey = "v3/91c82af0169c4115940c76d331410749"
-	maxGasLimit  = 400000
+	// EtherScanAPIKey is needed for all Eherscan requests
+	EtherScanAPIKey = "KA15D8FCHGBFZ4CQ25Y4NZM24417AXWF7M"
+	maxGasLimit     = 400000
 )
 
 var (
@@ -338,6 +340,13 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 	value := new(big.Int).Sub(currentBalance, previousBalance)
 	for count < 30 {
 		txns, err := wallet.TransactionsFromBlock(&cTip)
+		//if err != nil {
+		//	log.Error("err fetching latest transactions : ", err)
+		//	return
+		//}
+		//if len(txns) == 0 {
+		//	return
+		//}
 		if err == nil && len(txns) > 0 {
 			count = 30
 			txncb := wi.TransactionCallback{
@@ -352,10 +361,9 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 			for _, l := range wallet.listeners {
 				go l(txncb)
 			}
-			continue
 		}
-		log.Error("err fetching latest transactions : ", err)
-		time.Sleep(1 * time.Second)
+
+		time.Sleep(2 * time.Second)
 		count++
 	}
 }
@@ -1447,7 +1455,8 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 	if strings.Contains(wallet.client.url, "mainnet") {
 		network = etherscan.Mainnet
 	}
-	urlStr := fmt.Sprintf("https://%s.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", network, hash.String())
+	urlStr := fmt.Sprintf("https://%s.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s&apikey=%s",
+		network, hash.String(), EtherScanAPIKey)
 	res, err := http.Get(urlStr)
 	if err != nil {
 		return 0, 0, err
