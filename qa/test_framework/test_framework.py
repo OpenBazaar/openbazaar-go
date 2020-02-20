@@ -113,7 +113,7 @@ class OpenBazaarTestFramework(object):
 
     def start_node(self, node):
         if self.useTor:
-            args = [self.binary, "start", "tor", "-v", "-d", node["data_dir"], *self.options]
+            args = [self.binary, "start", "--tor", "-v", "-d", node["data_dir"], *self.options]
         else:
             args = [self.binary, "start", "-v", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
@@ -192,18 +192,14 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
         parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
-        parser.add_argument('-T', '--Tor', help="use tor", default="no")
+        parser.add_argument('-T', '--tor', help="use tor in QA testing", action='store_true')
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
         self.cointype = args.cointype
-        self.useTor = args.Tor
+        self.useTor = args.tor
         self.options = options
-        if args.Tor == "yes":
-            self.useTor = True
-        else:
-            self.useTor = False
 
         try:
             shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
