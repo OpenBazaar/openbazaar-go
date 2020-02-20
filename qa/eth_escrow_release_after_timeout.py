@@ -204,9 +204,6 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         if resp["state"] != "FULFILLED":
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Alice failed to order fulfillment")
 
-        for i in range(6):
-            time.sleep(600)
-
         # Alice attempt to release funds before timeout hit
         release = {
             "OrderID": orderId,
@@ -216,11 +213,11 @@ class EthEscrowTimeoutRelease(OpenBazaarTestFramework):
         if r.status_code == 500:
             resp = json.loads(r.text)
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
-        elif r.status_code != 400:
+        elif r.status_code != 401:
             raise TestFailure("EthEscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):
-            time.sleep(600)
+            time.sleep(900)
 
         # Alice attempt to release funds again
         release = {
