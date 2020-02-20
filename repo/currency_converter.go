@@ -26,13 +26,19 @@ func NewEquivalentConverter() *CurrencyConverter {
 	return &CurrencyConverter{reserveCode: "EQL", reserveRater: equivRater{}}
 }
 
+// CurrencyConverter is suitable for converting a currency from one CurrencyDefinition
+// to another, accounting for their differing divisibility as well as their differing
+// exchange rate as provided by the rater. The rater can represent all rates for the
+// reserve currency code provided.
 type CurrencyConverter struct {
 	reserveCode  string
 	reserveRater rater
 }
 
-func NewCurrencyConverter(code string, rater rater) (*CurrencyConverter, error) {
-	var cc = &CurrencyConverter{reserveCode: code, reserveRater: rater}
+// NewCurrencyConverter returns a valid CurrencyConverter. The rater is verified by
+// ensuring the rate of its reserveCode is 1.0 (ensuring it is equivalent to itself).
+func NewCurrencyConverter(reserveCode string, rater rater) (*CurrencyConverter, error) {
+	var cc = &CurrencyConverter{reserveCode: reserveCode, reserveRater: rater}
 	if rate, err := cc.getExchangeRate(cc.reserveCode); err != nil {
 		return nil, fmt.Errorf("unable to get reserve rate (%s): %s", cc.reserveCode, err.Error())
 	} else if rate != 1.0 {

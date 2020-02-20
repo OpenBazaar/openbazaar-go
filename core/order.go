@@ -906,7 +906,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 	var (
 		total         = big.NewInt(0)
 		physicalGoods = make(map[string]*pb.Listing)
-		toHundreths   = func(f float32) *big.Float {
+		toHundredths  = func(f float32) *big.Float {
 			return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
 		}
 	)
@@ -935,9 +935,9 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(l, item), originDef)
 
 			if l.Metadata.PriceModifier != 0 {
-				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundreths(l.Metadata.PriceModifier))
+				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(l.Metadata.PriceModifier))
 			} else if l.Item.PriceModifier != 0 {
-				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundreths(l.Item.PriceModifier))
+				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(l.Item.PriceModifier))
 			}
 		} else {
 			oAmt, err := repo.NewCurrencyValueFromProtobuf(l.Item.BigPrice, l.Item.PriceCurrency)
@@ -980,7 +980,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 						itemOriginAmt = itemOriginAmt.SubBigInt(disc)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
 						// apply percentage discount
-						itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundreths(-discountF))
+						itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(-discountF))
 					}
 				}
 			}
@@ -990,7 +990,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		for _, tax := range l.Taxes {
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
-					itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundreths(tax.Percentage))
+					itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(tax.Percentage))
 					break
 				}
 			}
@@ -1711,7 +1711,9 @@ func (n *OpenBazaarNode) ReserveCurrencyConverter() (*repo.CurrencyConverter, er
 	}
 
 	// priming the exchange rate cache
-	wal.ExchangeRates().GetAllRates(false)
+	if _, err := wal.ExchangeRates().GetAllRates(false); err != nil {
+		log.Warningf("priming exchange rate cache: %s", err.Error())
+	}
 
 	cc, err := repo.NewCurrencyConverter(reserveCode, wal.ExchangeRates())
 	if err != nil {
