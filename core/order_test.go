@@ -82,7 +82,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 125000 {
-		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total.Int64())
+		t.Errorf("Calculated wrong order total. Wanted 125000, got %d", total.Int64())
 	}
 
 	// Test higher quantity
@@ -92,7 +92,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 235000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 235000, got %d", total.Int64())
 	}
 
 	// Test with options
@@ -133,7 +133,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 175000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 175000, got %d", total.Int64())
 	}
 
 	// Test negative surcharge
@@ -157,7 +157,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 75000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 75000, got %d", total.Int64())
 	}
 
 	// Test with coupon percent discount
@@ -219,7 +219,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 69000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 69000, got %d", total.Int64())
 	}
 
 	// Test with tax no tax shipping
@@ -245,7 +245,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 71200 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 71200, got %d", total.Int64())
 	}
 
 	// Test with tax with tax shipping
@@ -271,8 +271,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 72450 {
-		t.Error("Calculated wrong order total")
-		return
+		t.Fatalf("Calculated wrong order total. Wanted 72450, got %d", total.Int64())
 	}
 
 	// Test local pickup
@@ -292,7 +291,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 46200 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 46200, got %d", total.Int64())
 	}
 
 	contract2 := &pb.RicardianContract{
@@ -358,7 +357,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total.Int64() != 1115000 {
-		t.Error("Calculated wrong order total")
+		t.Errorf("Calculated wrong order total. Wanted 1115000, got %d", total.Int64())
 	}
 }
 

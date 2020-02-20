@@ -586,6 +586,12 @@ func (x *Start) Execute(args []string) error {
 	}
 	core.Node.PublishLock.Lock()
 
+	// assert reserve wallet is available on startup for later usage
+	_, err = core.Node.ReserveCurrencyConverter()
+	if err != nil {
+		return fmt.Errorf("verifying reserve currency converter: %s", err.Error())
+	}
+
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
