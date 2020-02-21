@@ -59,13 +59,13 @@ func NewEthClient(url string) (*EthClient, error) {
 	var econn *etherscan.Client
 	var wsURL string
 	if strings.Contains(url, "rinkeby") {
-		econn = etherscan.New(etherscan.Rinkby, "your API key")
+		econn = etherscan.New(etherscan.Rinkby, EtherScanAPIKey)
 		wsURL = fmt.Sprintf(wsURLTemplate, "rinkeby", InfuraAPIKey)
 	} else if strings.Contains(url, "ropsten") {
-		econn = etherscan.New(etherscan.Ropsten, "your API key")
+		econn = etherscan.New(etherscan.Ropsten, EtherScanAPIKey)
 		wsURL = fmt.Sprintf(wsURLTemplate, "ropsten", InfuraAPIKey)
 	} else {
-		econn = etherscan.New(etherscan.Mainnet, "your API key")
+		econn = etherscan.New(etherscan.Mainnet, EtherScanAPIKey)
 		wsURL = fmt.Sprintf(wsURLTemplate, "mainnet", InfuraAPIKey)
 	}
 	var err error
