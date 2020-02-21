@@ -161,72 +161,56 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("lookup dispute transaction currency (%s): %s", txCurrencyCode, err)
 	}
-	t := new(big.Float).SetInt(transactionTotal)
 	switch profile.ModeratorInfo.Fee.FeeType {
 	case pb.Moderator_Fee_PERCENTAGE:
-		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
-		f.Mul(f, big.NewFloat(0.01))
-		t.Mul(t, f)
-		total, _ := t.Int(nil)
-		return total, nil
+		feePercent := new(big.Float).Mul(big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage)), big.NewFloat(0.01))
+		feePercentAmt, _ := repo.NewCurrencyValueFromBigInt(transactionTotal, txCurrency).MulBigFloat(feePercent)
+		return feePercentAmt.AmountBigInt(), nil
+
 	case pb.Moderator_Fee_FIXED:
-		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
+		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
 		if err != nil {
-			return big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, err)
+			return big.NewInt(0), fmt.Errorf("parse moderator fee currency: %s", err)
 		}
-		fixedFee, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
-		if !ok {
-			return big.NewInt(0), errors.New("invalid fixed fee amount")
-		}
-		if modFeeCurrency.Equal(txCurrency) {
-			if fixedFee.Cmp(transactionTotal) > 0 {
-				return big.NewInt(0), errors.New("fixed moderator fee exceeds transaction amount")
-			}
-			return fixedFee, nil
-		}
-		amt, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
-		if !ok {
-			return big.NewInt(0), errors.New("invalid fixed fee amount")
-		}
-		fee, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, amt)
+
+		cc, err := n.ReserveCurrencyConverter()
 		if err != nil {
-			return big.NewInt(0), err
-		} else if fee.Cmp(transactionTotal) > 0 {
+			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
+		}
+
+		convertedModFee, _, err := modFeeValue.ConvertTo(txCurrency, cc)
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("convert moderator fee into transaction currency (%s): %s", txCurrency.String(), err)
+		}
+		if convertedModFee.AmountBigInt().Cmp(transactionTotal) > 0 {
 			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
-		return fee, err
+		return convertedModFee.AmountBigInt(), nil
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
-		var fixed *big.Int
-		var ok bool
-		modFeeCurrency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
+		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
 		if err != nil {
-			return big.NewInt(0), fmt.Errorf("lookup moderator fee currency (%s): %s", profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, err)
+			return big.NewInt(0), fmt.Errorf("parse moderator fee currency: %s", err)
 		}
-		if modFeeCurrency.Equal(txCurrency) {
-			fixed, ok = new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
-			if !ok {
-				return big.NewInt(0), errors.New("invalid fixed fee amount")
-			}
-		} else {
-			f, ok := new(big.Int).SetString(profile.ModeratorInfo.Fee.FixedFee.BigAmount, 10)
-			if !ok {
-				return big.NewInt(0), errors.New("invalid fixed fee amount")
-			}
-			f0, err := n.getPriceInSatoshi(txCurrency.CurrencyCode().String(), profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code, f)
-			if err != nil {
-				return big.NewInt(0), err
-			}
-			fixed = f0
+
+		cc, err := n.ReserveCurrencyConverter()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
 		}
-		f := big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage))
-		f.Mul(f, big.NewFloat(0.01))
-		percentAmt, _ := new(big.Float).Mul(t, f).Int(nil)
-		feeTotal := new(big.Int).Add(fixed, percentAmt)
-		if feeTotal.Cmp(transactionTotal) > 0 {
+
+		convertedModFee, _, err := modFeeValue.ConvertTo(txCurrency, cc)
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("convert moderator fee into transaction currency (%s): %s", txCurrency.String(), err)
+		}
+
+		feePercent := new(big.Float).Mul(big.NewFloat(float64(profile.ModeratorInfo.Fee.Percentage)), big.NewFloat(0.01))
+		feePercentAmt, _ := repo.NewCurrencyValueFromBigInt(transactionTotal, txCurrency).MulBigFloat(feePercent)
+		feeTotal := feePercentAmt.AddBigInt(convertedModFee.AmountBigInt())
+		if feeTotal.AmountBigInt().Cmp(transactionTotal) > 0 {
 			return big.NewInt(0), errors.New("Fixed moderator fee exceeds transaction amount")
 		}
-		return feeTotal, nil
+		return feeTotal.AmountBigInt(), nil
+
 	default:
 		return big.NewInt(0), errors.New("Unrecognized fee type")
 	}

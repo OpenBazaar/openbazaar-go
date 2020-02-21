@@ -113,14 +113,6 @@ func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefin
 	return repo.AllCurrencies().Lookup(currencyCode)
 }
 
-// exchangeRateCode strips the T off the currency code if we are on testnet or regtest.
-func (n *OpenBazaarNode) exchangeRateCode(currencyCode string) string {
-	if n.TestnetEnable || n.RegressionTestEnable {
-		return strings.TrimPrefix(currencyCode, "T")
-	}
-	return currencyCode
-}
-
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {
 	if data.PreferredCurrencies == nil {
 		return nil

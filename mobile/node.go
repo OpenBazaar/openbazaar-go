@@ -300,6 +300,12 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	node.PublishLock.Lock()
 
+	// assert reserve wallet is available on startup for later usage
+	_, err = node.ReserveCurrencyConverter()
+	if err != nil {
+		return nil, fmt.Errorf("verifying reserve currency converter: %s", err.Error())
+	}
+
 	return &Node{OpenBazaarNode: node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig, startMtx: sync.Mutex{}}, nil
 }
 

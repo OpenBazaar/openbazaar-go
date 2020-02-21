@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strconv"
 
@@ -104,6 +103,15 @@ func NewCurrencyValueFromUint(amount uint64, currency CurrencyDefinition) (*Curr
 	return NewCurrencyValue(strconv.FormatUint(amount, 10), currency)
 }
 
+// NewCurrencyValueFromBigInt is a convenience function which converts a big.Int
+// and CurrencyDefinition into a new CurrencyValue
+func NewCurrencyValueFromBigInt(amt *big.Int, def CurrencyDefinition) *CurrencyValue {
+	return &CurrencyValue{
+		Amount:   new(big.Int).Set(amt),
+		Currency: def,
+	}
+}
+
 // NewCurrencyValue accepts string amounts and currency codes, and creates
 // a valid CurrencyValue
 func NewCurrencyValue(amount string, currency CurrencyDefinition) (*CurrencyValue, error) {
@@ -136,6 +144,11 @@ func (c *CurrencyValue) AmountString() string {
 		return "0"
 	}
 	return c.Amount.String()
+}
+
+// AmountBigInt returns the big.Int representation of the amount
+func (c *CurrencyValue) AmountBigInt() *big.Int {
+	return new(big.Int).Set(c.Amount)
 }
 
 // String returns a string representation of a CurrencyValue
@@ -202,49 +215,36 @@ func (c *CurrencyValue) AdjustDivisibility(div uint) (*CurrencyValue, big.Accura
 	}
 	defWithNewDivisibility := c.Currency
 	defWithNewDivisibility.Divisibility = div
-	return c.ConvertTo(defWithNewDivisibility, 1.0)
+	return c.ConvertTo(defWithNewDivisibility, NewEquivalentConverter())
 }
 
-// ConvertTo will perform the following math given its arguments are valid:
-// c.Amount * exchangeRatio * (final.Currency.Divisibility/c.Currency.Divisibility)
-// where c is the receiver, exchangeRatio is the ratio of (1 final.Currency/c.Currency)
-// c and final must both be Valid() and exchangeRatio must not be zero. The accuracy
+// ConvertTo will convert c.Amount into the final CurrencyDefinition through the
+// reserve CurrencyConverter. As long as the provided reserveConverter has rates
+// between the reserve currency and the current and final CurrencyDefintions, it
+// will provide the result. Errors are raised if any rate is unavailable. The accuracy
 // indicates if decimal values were trimmed when converting the value back to integer.
-func (c *CurrencyValue) ConvertTo(final CurrencyDefinition, exchangeRatio float64) (*CurrencyValue, big.Accuracy, error) {
+func (c *CurrencyValue) ConvertTo(final CurrencyDefinition, reserveConverter *CurrencyConverter) (*CurrencyValue, big.Accuracy, error) {
 	if err := c.Valid(); err != nil {
 		return nil, 0, fmt.Errorf("cannot convert invalid value: %s", err.Error())
 	}
 	if err := final.Valid(); err != nil {
 		return nil, 0, fmt.Errorf("cannot convert to invalid currency: %s", err.Error())
 	}
-	if exchangeRatio <= 0 {
-		return nil, 0, ErrCurrencyValueNegativeRate
-	}
 
-	amt := new(big.Float).SetInt(c.Amount)
-	exRatio := new(big.Float).SetFloat64(exchangeRatio)
-	if exRatio == nil {
-		return nil, 0, fmt.Errorf("exchange ratio (%f) is invalid", exchangeRatio)
+	convertedAmt, acc, err := reserveConverter.GetFinalPrice(c, final)
+	if err != nil {
+		return nil, 0, fmt.Errorf("converting currency: %s", err.Error())
 	}
-	newAmount := new(big.Float).SetPrec(53).Mul(amt, exRatio)
+	return convertedAmt, acc, nil
+}
 
-	if c.Currency.Divisibility != final.Divisibility {
-		initMagnitude := math.Pow10(int(c.Currency.Divisibility))
-		finalMagnitude := math.Pow10(int(final.Divisibility))
-		divisibilityRatio := new(big.Float).SetFloat64(finalMagnitude / initMagnitude)
-		newAmount.Mul(newAmount, divisibilityRatio)
-	}
-
-	var roundedAmount *big.Float
-	newFloat, _ := newAmount.Float64()
-	if newFloat >= 0 {
-		roundedAmount = big.NewFloat(math.Ceil(newFloat))
-	} else {
-		roundedAmount = big.NewFloat(math.Floor(newFloat))
-	}
-	roundedInt, _ := roundedAmount.Int(nil)
-	roundedAcc := big.Accuracy(roundedAmount.Cmp(newAmount))
-	return &CurrencyValue{Amount: roundedInt, Currency: final}, roundedAcc, nil
+// ConvertUsingProtobufDef will use the currency code provided in pb.CurrencyDefinition
+// to find the locally defined currency and exchange rate and will convert the amount into
+// target currency. If the divisibility provided by the pb.CurrencyDefinition is different
+// than the one provided for the exchange rate, the converted amount will be adjusted to
+// match the provided divisibility.
+func (c *CurrencyValue) ConvertUsingProtobufDef(convertTo *pb.CurrencyDefinition, reserve *CurrencyConverter) (*CurrencyValue, error) {
+	return c, nil
 }
 
 // Cmp exposes the (*big.Int).Cmp behavior after verifying currency and adjusting
@@ -284,4 +284,47 @@ func (c *CurrencyValue) IsNegative() bool {
 		return false
 	}
 	return c.Amount.Cmp(big.NewInt(0)) == -1
+}
+
+// IsPositive returns true if Amount is valid and greater-than zero
+func (c *CurrencyValue) IsPositive() bool {
+	if c.Amount == nil {
+		return false
+	}
+	return c.Amount.Cmp(big.NewInt(0)) == 1
+}
+
+// AddBigFloatProduct will add to itself the product of itself and the float argument
+// and return the result
+func (c *CurrencyValue) AddBigFloatProduct(factor *big.Float) *CurrencyValue {
+	var (
+		result, _ = new(big.Float).Mul(new(big.Float).SetInt(c.Amount), factor).Int(nil)
+		returnVal = NewCurrencyValueFromBigInt(c.Amount, c.Currency)
+	)
+	returnVal.Amount = returnVal.Amount.Add(returnVal.Amount, result)
+	return returnVal
+}
+
+// AddBigInt will add the addend to the amount and return the value sum
+func (c *CurrencyValue) AddBigInt(addend *big.Int) *CurrencyValue {
+	var result = new(big.Int).Add(c.Amount, addend)
+	return NewCurrencyValueFromBigInt(result, c.Currency)
+}
+
+// SubBigInt will subtract the subtrahend from the amount and return the value difference
+func (c *CurrencyValue) SubBigInt(subtrahend *big.Int) *CurrencyValue {
+	return c.AddBigInt(new(big.Int).Neg(subtrahend))
+}
+
+// MulBigInt will multiply the amount and the factor and return the product result
+func (c *CurrencyValue) MulBigInt(factor *big.Int) *CurrencyValue {
+	var result = new(big.Int).Mul(c.Amount, factor)
+	return NewCurrencyValueFromBigInt(result, c.Currency)
+}
+
+// MulBigFloat will multiple the amount and the factor and return the product result
+// cast to a big.Int along with the big.Accuracy of the cast
+func (c *CurrencyValue) MulBigFloat(factor *big.Float) (*CurrencyValue, big.Accuracy) {
+	var result, acc = new(big.Float).Mul(new(big.Float).SetInt(c.Amount), factor).Int(nil)
+	return NewCurrencyValueFromBigInt(result, c.Currency), acc
 }
