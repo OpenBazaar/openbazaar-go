@@ -1019,7 +1019,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
 		}
 
-		finalItemAmount, err := itemOriginAmt.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+		finalItemAmount, _, err := itemOriginAmt.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 		if err != nil {
 			return big.NewInt(0), err
 		}
@@ -1104,7 +1104,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parsing service price (%v): %s", service.Name, err.Error())
 		}
-		convertedShippingPrice, err := servicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+		convertedShippingPrice, _, err := servicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("converting service price (%s): %s", service.Name, err.Error())
 		}
@@ -1115,7 +1115,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 		var convertedAuxPrice = repo.NewCurrencyValueFromBigInt(big.NewInt(0), convertedShippingPrice.Currency)
 		if auxServicePrice.IsPositive() {
-			finalAux, err := auxServicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+			finalAux, _, err := auxServicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 			if err != nil {
 				return big.NewInt(0), fmt.Errorf("converting aux service price (%s): %s", service.Name, err.Error())
 			}

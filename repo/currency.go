@@ -243,8 +243,14 @@ func (c *CurrencyValue) ConvertTo(final CurrencyDefinition, reserveConverter *Cu
 // target currency. If the divisibility provided by the pb.CurrencyDefinition is different
 // than the one provided for the exchange rate, the converted amount will be adjusted to
 // match the provided divisibility.
-func (c *CurrencyValue) ConvertUsingProtobufDef(convertTo *pb.CurrencyDefinition, reserve *CurrencyConverter) (*CurrencyValue, error) {
-	return c, nil
+func (c *CurrencyValue) ConvertUsingProtobufDef(convertTo *pb.CurrencyDefinition, reserve *CurrencyConverter) (*CurrencyValue, big.Accuracy, error) {
+	var repoCurrencyDef CurrencyDefinition
+	if c, err := AllCurrencies().Lookup(convertTo.Code); err != nil {
+		repoCurrencyDef = c
+	} else {
+		repoCurrencyDef = NewUnknownCryptoDefinition(convertTo.Code, uint(convertTo.Divisibility))
+	}
+	return c.ConvertTo(repoCurrencyDef, reserve)
 }
 
 // Cmp exposes the (*big.Int).Cmp behavior after verifying currency and adjusting
