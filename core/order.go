@@ -905,22 +905,21 @@ func (n *OpenBazaarNode) CalcOrderID(order *pb.Order) (string, error) {
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*big.Int, error) {
 	var (
 		total         = big.NewInt(0)
-		physicalGoods = make(map[string]*pb.Listing)
+		physicalGoods = make(map[string]*repo.Listing)
 		toHundredths  = func(f float32) *big.Float {
 			return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
 		}
+		v5Order, err = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	)
+	if err != nil {
+		return big.NewInt(0), fmt.Errorf("normalizing buyer order: %s", err.Error())
+	}
 
-	for _, item := range contract.BuyerOrder.Items {
+	for _, item := range v5Order.Items {
 		var itemOriginAmt *repo.CurrencyValue
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
-		}
-
-		// keep track of physical listings for shipping caluclation
-		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
-			physicalGoods[item.ListingHash] = l
 		}
 
 		rl, err := repo.NewListingFromProtobuf(l)
@@ -928,19 +927,27 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			return big.NewInt(0), err
 		}
 
-		// calculate base amount
-		if l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
-			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
-			var originDef = repo.NewUnknownCryptoDefinition(l.Metadata.CryptoCurrencyCode, 0)
-			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(l, item), originDef)
+		nrl, err := rl.Normalize()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("normalize legacy listing: %s", err.Error())
+		}
 
-			if l.Metadata.PriceModifier != 0 {
-				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(l.Metadata.PriceModifier))
-			} else if l.Item.PriceModifier != 0 {
-				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(l.Item.PriceModifier))
+		// keep track of physical listings for shipping caluclation
+		if nrl.GetContractType() == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+			physicalGoods[item.ListingHash] = nrl
+		}
+
+		// calculate base amount
+		if nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String() {
+			var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), 0)
+			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(nrl.GetProtobuf(), item), originDef)
+
+			if priceModifier := nrl.GetPriceModifier(); priceModifier != 0 {
+				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(priceModifier))
 			}
 		} else {
-			oAmt, err := repo.NewCurrencyValueFromProtobuf(l.Item.BigPrice, l.Item.PriceCurrency)
+			oAmt, err := nrl.GetPrice()
 			if err != nil {
 				return big.NewInt(0), err
 			}
@@ -948,11 +955,11 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		}
 
 		// apply surcharges
-		selectedSku, err := GetSelectedSku(l, item.Options)
+		selectedSku, err := GetSelectedSku(nrl.GetProtobuf(), item.Options)
 		if err != nil {
 			return big.NewInt(0), err
 		}
-		skus, err := rl.GetSkus()
+		skus, err := nrl.GetSkus()
 		if err != nil {
 			return big.NewInt(0), err
 		}
@@ -973,7 +980,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			if err != nil {
 				return big.NewInt(0), err
 			}
-			for _, vendorCoupon := range l.Coupons {
+			for _, vendorCoupon := range nrl.GetProtobuf().Coupons {
 				if id.B58String() == vendorCoupon.GetHash() {
 					if disc, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
 						// apply fixed discount
@@ -987,7 +994,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		}
 
 		// apply taxes
-		for _, tax := range l.Taxes {
+		for _, tax := range nrl.GetProtobuf().Taxes {
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
 					itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(tax.Percentage))
@@ -997,9 +1004,9 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		}
 
 		// apply requested quantity
-		if !(l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
-			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE) {
-			if itemQuantity := GetOrderQuantity(l, item); itemQuantity.Cmp(big.NewInt(0)) > 0 {
+		if !(nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String()) {
+			if itemQuantity := GetOrderQuantity(nrl.GetProtobuf(), item); itemQuantity.Cmp(big.NewInt(0)) > 0 {
 				itemOriginAmt = itemOriginAmt.MulBigInt(itemQuantity)
 			} else {
 				log.Debugf("missing quantity for order, assuming quantity 1")
@@ -1012,7 +1019,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
 		}
 
-		finalItemAmount, err := itemOriginAmt.ConvertUsingProtobufDef(contract.BuyerOrder.Payment.AmountCurrency, cc)
+		finalItemAmount, _, err := itemOriginAmt.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 		if err != nil {
 			return big.NewInt(0), err
 		}
@@ -1030,7 +1037,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 	return total, nil
 }
 
-func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (*big.Int, error) {
+func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*repo.Listing) (*big.Int, error) {
 	type itemShipping struct {
 		primary               *big.Int
 		secondary             *big.Int
@@ -1039,20 +1046,24 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		version               uint32
 	}
 	var (
+		v5Order, err  = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 		is            []itemShipping
 		shippingTotal *big.Int
 	)
+	if err != nil {
+		return big.NewInt(0), fmt.Errorf("normalizing buyer order: %s", err.Error())
+	}
 
 	// First loop through to validate and filter out non-physical items
-	for _, item := range contract.BuyerOrder.Items {
-		listing, ok := listings[item.ListingHash]
+	for _, item := range v5Order.Items {
+		rl, ok := listings[item.ListingHash]
 		if !ok {
 			continue
 		}
 
 		// Check selected option exists
 		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
-		for _, so := range listing.ShippingOptions {
+		for _, so := range rl.GetProtobuf().ShippingOptions {
 			shippingOptions[strings.ToLower(so.Name)] = so
 		}
 		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
@@ -1069,7 +1080,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		for _, country := range option.Regions {
 			regions[country] = true
 		}
-		_, shipsToMe := regions[contract.BuyerOrder.Shipping.Country]
+		_, shipsToMe := regions[v5Order.Shipping.Country]
 		_, shipsToAll := regions[pb.CountryCode_ALL]
 		if !shipsToMe && !shipsToAll {
 			return big.NewInt(0), errors.New("listing does ship to selected country")
@@ -1089,22 +1100,22 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if !ok {
 			return big.NewInt(0), errors.New("shipping service not found in listing")
 		}
-		servicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigPrice, listing.Item.PriceCurrency)
+		servicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigPrice, rl.GetProtobuf().Item.PriceCurrency)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parsing service price (%v): %s", service.Name, err.Error())
 		}
-		convertedShippingPrice, err := servicePrice.ConvertUsingProtobufDef(contract.BuyerOrder.Payment.AmountCurrency, cc)
+		convertedShippingPrice, _, err := servicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("converting service price (%s): %s", service.Name, err.Error())
 		}
 
-		auxServicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigAdditionalItemPrice, listing.Item.PriceCurrency)
+		auxServicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigAdditionalItemPrice, rl.GetProtobuf().Item.PriceCurrency)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parsing aux service price (%v): %s", service.Name, err.Error())
 		}
 		var convertedAuxPrice = repo.NewCurrencyValueFromBigInt(big.NewInt(0), convertedShippingPrice.Currency)
 		if auxServicePrice.IsPositive() {
-			finalAux, err := auxServicePrice.ConvertUsingProtobufDef(contract.BuyerOrder.Payment.AmountCurrency, cc)
+			finalAux, _, err := auxServicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 			if err != nil {
 				return big.NewInt(0), fmt.Errorf("converting aux service price (%s): %s", service.Name, err.Error())
 			}
@@ -1113,19 +1124,19 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 
 		// Calculate tax percentage
 		var shippingTaxPercentage float32
-		for _, tax := range listing.Taxes {
+		for _, tax := range rl.GetProtobuf().Taxes {
 			regions := make(map[pb.CountryCode]bool)
 			for _, taxRegion := range tax.TaxRegions {
 				regions[taxRegion] = true
 			}
-			_, ok := regions[contract.BuyerOrder.Shipping.Country]
+			_, ok := regions[v5Order.Shipping.Country]
 			if ok && tax.TaxShipping {
 				shippingTaxPercentage = tax.Percentage / 100
 			}
 		}
 
 		var qty uint64
-		if q := quantityForItem(listing.Metadata.Version, item); q.IsUint64() {
+		if q := quantityForItem(rl.GetVersion(), item); q.IsUint64() {
 			qty = q.Uint64()
 		} else {
 			orderID, _ := n.CalcOrderID(contract.BuyerOrder)
@@ -1136,7 +1147,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			secondary:             convertedAuxPrice.AmountBigInt(),
 			quantity:              qty,
 			shippingTaxPercentage: shippingTaxPercentage,
-			version:               listing.Metadata.Version,
+			version:               rl.GetVersion(),
 		})
 	}
 

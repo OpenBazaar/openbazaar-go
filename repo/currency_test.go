@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
@@ -453,6 +454,43 @@ func TestCurrencyValuesConvertCorrectly(t *testing.T) {
 			t.Errorf("expected converted accuracy to be %s, but was %s", expectedAcc.String(), actualAcc.String())
 			t.Logf("\texample: (%d) for value: (%s) convertTo: (%s) rates: (%v)", i, e.value, e.convertTo, e.exchangeRates)
 		}
+	}
+}
+
+func TestConvertUsingProtobufDef(t *testing.T) {
+	subject := factory.MustNewCurrencyValue("10", "USD")
+	subject.Currency.Divisibility = 2
+	conv, err := factory.NewCurrencyConverter("BTC", map[string]float64{
+		"USD": 2,
+		"BCH": 0.5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	convertTo := &pb.CurrencyDefinition{
+		Code:         "TBCH",
+		Divisibility: 8,
+	}
+	expected := &repo.CurrencyValue{
+		Amount: big.NewInt(2500000), // 10 * (1/2 BTC/USD) * (1/2 BCH/BTC) * 1000000 (divisibility)
+		Currency: repo.CurrencyDefinition{
+			Code:         "TBCH",
+			CurrencyType: repo.Crypto,
+			Divisibility: 8,
+		},
+	}
+
+	cv, acc, err := subject.ConvertUsingProtobufDef(convertTo, conv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if acc != big.Exact {
+		t.Errorf("expected result to be exact, but was (%s)", acc.String())
+	}
+
+	if !cv.Equal(expected) {
+		t.Errorf("expected result amount to be (%v), but was (%v)", expected, cv)
 	}
 }
 
