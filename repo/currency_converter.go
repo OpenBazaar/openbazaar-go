@@ -42,7 +42,7 @@ func NewCurrencyConverter(reserveCode string, rater rater) (*CurrencyConverter, 
 	if rate, err := cc.getExchangeRate(cc.reserveCode); err != nil {
 		return nil, fmt.Errorf("unable to get reserve rate (%s): %s", cc.reserveCode, err.Error())
 	} else if rate != 1.0 {
-		return nil, fmt.Errorf("research exchange rate was not 1.0 (%f)", rate)
+		return nil, fmt.Errorf("reserve exchange rate was not 1.0 (%f)", rate)
 	}
 	return cc, nil
 }
