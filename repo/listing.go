@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,11 +22,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/util"
-	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/gosimple/slug"
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -78,23 +74,36 @@ type option struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
+type options []option
+
+func (os options) ToOrderOptionSetProtobuf() []*pb.Order_Item_Option {
+	var optionProtos = make([]*pb.Order_Item_Option, len(os))
+	for i, o := range os {
+		optionProtos[i] = &pb.Order_Item_Option{
+			Name:  o.Name,
+			Value: o.Value,
+		}
+	}
+	return optionProtos
+}
 
 type shippingOption struct {
 	Name    string `json:"name"`
 	Service string `json:"service"`
 }
 
+// Item represents a purchased item
 type Item struct {
 	ListingHash    string         `json:"listingHash"`
 	Quantity       string         `json:"bigQuantity"`
-	Options        []option       `json:"options"`
+	Options        options        `json:"options"`
 	Shipping       shippingOption `json:"shipping"`
 	Memo           string         `json:"memo"`
 	Coupons        []string       `json:"coupons"`
 	PaymentAddress string         `json:"paymentAddress"`
 }
 
-// PurchaseData - record purchase data
+// PurchaseData represents purchase request metadata
 type PurchaseData struct {
 	ShipTo               string  `json:"shipTo"`
 	Address              string  `json:"address"`
@@ -110,47 +119,36 @@ type PurchaseData struct {
 	PaymentCoin          string  `json:"paymentCoin"`
 }
 
+// IndividualListingContainer is a wrapper for a single listing
+type IndividualListingContainer struct {
+	Listing `json:"listing"`
+}
+
+// Listing represents a trade offer which can be accepted by another
+// party on the OpenBazaar network
+type Listing struct {
+	listingProto *pb.Listing
+
+	proto.Message
+}
+
+func (l *Listing) Reset()         { *l = Listing{} }
+func (l *Listing) String() string { return proto.CompactTextString(l) }
+func (*Listing) ProtoMessage()    {}
+
 // NewListingFromProtobuf - return Listing from pb.Listing
 func NewListingFromProtobuf(l *pb.Listing) (*Listing, error) {
-	var vendorInfo *PeerInfo
-	var err error
-	if l.VendorID != nil {
-		vendorInfo, err = NewPeerInfoFromProtobuf(l.VendorID)
-		if err != nil {
-			return nil, fmt.Errorf("new peer info: %s", err)
-		}
-	}
+	clonedListing := proto.Clone(l).(*pb.Listing)
 
-	if l.Metadata.Version == 0 {
-		l.Metadata.Version = ListingVersion
+	if clonedListing.Metadata.Version == 0 {
+		clonedListing.Metadata.Version = ListingVersion
 	}
-	if l.Metadata.EscrowTimeoutHours == 0 {
-		l.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
+	if clonedListing.Metadata.EscrowTimeoutHours == 0 {
+		clonedListing.Metadata.EscrowTimeoutHours = DefaultEscrowTimeout
 	}
-
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-
-	var b bytes.Buffer
-	err = m.Marshal(&b, l)
-	if err != nil {
-		return nil, err
-	}
-
-	listing0 := Listing{
-		Slug:               l.Slug,
-		TermsAndConditions: l.TermsAndConditions,
-		RefundPolicy:       l.RefundPolicy,
-		Vendor:             vendorInfo,
-		ListingBytes:       b.Bytes(), //out1, //[]byte(out),
-		ListingVersion:     l.Metadata.Version,
-		ProtoListing:       l,
-	}
-	return &listing0, nil
+	return &Listing{
+		listingProto: clonedListing,
+	}, nil
 }
 
 // CreateListing will create a pb Listing
@@ -197,6 +195,27 @@ func UpdateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 	}
 	retListing, err := NewListingFromProtobuf(ld)
 	return *retListing, err
+}
+
+func listingExists(slug, repoPath string, isTestnet bool) (bool, error) {
+	if slug == "" {
+		return false, nil
+	}
+	fPath, err := GetPathForListingSlug(slug, repoPath, isTestnet)
+	if err != nil {
+		return false, err
+	}
+	_, ferr := os.Stat(fPath)
+	if slug == "" {
+		return false, nil
+	}
+	if os.IsNotExist(ferr) {
+		return false, nil
+	}
+	if ferr != nil {
+		return false, ferr
+	}
+	return true, nil
 }
 
 // GenerateSlug - slugify the title of the listing
@@ -255,27 +274,6 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 	return sl, nil
 }
 
-func listingExists(slug, repoPath string, isTestnet bool) (bool, error) {
-	if slug == "" {
-		return false, nil
-	}
-	fPath, err := GetPathForListingSlug(slug, repoPath, isTestnet)
-	if err != nil {
-		return false, err
-	}
-	_, ferr := os.Stat(fPath)
-	if slug == "" {
-		return false, nil
-	}
-	if os.IsNotExist(ferr) {
-		return false, nil
-	}
-	if ferr != nil {
-		return false, ferr
-	}
-	return true, nil
-}
-
 func GetPathForListingSlug(slug, repoPath string, isTestnet bool) (string, error) {
 	repoPath, err := GetRepoPath(isTestnet, repoPath)
 	if err != nil {
@@ -306,195 +304,9 @@ func CreateSlugFor(slugName string) string {
 	return slug[:l]
 }
 
-// IndividualListingContainer -
-type IndividualListingContainer struct {
-	Listing `json:"listing"`
-}
-
-// Listing represents a trade offer which can be accepted by another
-// party on the OpenBazaar network
-type Listing struct {
-	Slug               string //`json:"slug"`
-	TermsAndConditions string //`json:"termsAndConditions"`
-	RefundPolicy       string //`json:"refundPolicy"`
-
-	Vendor   *PeerInfo       //`json:"vendorID"`
-	Metadata ListingMetadata //`json:"metadata"`
-
-	ListingBytes     []byte `json:"-"`
-	OrigListingBytes []byte `json:"-"`
-	ListingVersion   uint32 `json:"-"`
-
-	ProtoListing *pb.Listing `json:"-"`
-
-	proto.Message
-}
-
-func (l *Listing) Reset()         { *l = Listing{} }
-func (l *Listing) String() string { return proto.CompactTextString(l) }
-func (*Listing) ProtoMessage()    {}
-
-func (r Listing) eof() bool {
-	return len(r.ListingBytes) == 0
-}
-
-func (r *Listing) readByte(n int) byte {
-	// this function assumes that eof() check was done before
-	return r.ListingBytes[n]
-}
-
-func (r *Listing) Read(p []byte) (n int, err error) {
-	if n == len(r.ListingBytes)-1 {
-		return
-	}
-
-	if c := len(r.ListingBytes); c > 0 {
-		for n < c {
-			p[n] = r.readByte(n)
-			n++
-			if r.eof() {
-				break
-			}
-		}
-	}
-	return n, nil
-}
-
-type SignedListing struct {
-	Hash         string      `json:"hash"`
-	Signature    []byte      `json:"signature"`
-	RListing     Listing     `json:"listing"`
-	ProtoListing *pb.Listing `json:"-"`
-
-	ProtoSignedListing *pb.SignedListing `json:"-"`
-
-	proto.Message
-}
-
-func (l *SignedListing) Reset()         { *l = SignedListing{} }
-func (l *SignedListing) String() string { return proto.CompactTextString(l) }
-func (*SignedListing) ProtoMessage()    {}
-
 // ListingMetadata -
 type ListingMetadata struct {
 	Version uint `json:"version"`
-}
-
-// UnmarshalJSONSignedListing - unmarshal signed listing
-func UnmarshalJSONSignedListing(data []byte) (SignedListing, error) {
-
-	var err error
-
-	var objmap map[string]*json.RawMessage
-
-	err = json.Unmarshal(data, &objmap)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	lbytes, ok := objmap["listing"]
-	if !ok {
-		fmt.Println("expected to find listing, but was not present")
-	}
-
-	m1 := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-
-	vendorID, err := ExtractIDFromSignedListing(data)
-	if err != nil {
-		return SignedListing{}, err
-	}
-
-	peerInfo, err := NewPeerInfoFromProtobuf(vendorID)
-	if err != nil {
-		return SignedListing{}, err
-	}
-
-	version, err := ExtractVersionFromSignedListing(data)
-	if err != nil {
-		return SignedListing{}, err
-	}
-
-	if version == 5 {
-		sl := new(pb.SignedListing)
-		err = jsonpb.UnmarshalString(string(data), sl)
-		if err != nil {
-			return SignedListing{}, err
-		}
-		b0, err := m1.MarshalToString(sl.Listing)
-		if err != nil {
-			return SignedListing{}, err
-		}
-		return SignedListing{
-			Hash:         sl.Hash,
-			ProtoListing: sl.Listing,
-			RListing: Listing{
-				Slug: sl.Listing.Slug,
-				Metadata: ListingMetadata{
-					Version: 5,
-				},
-				ListingVersion: 5,
-				ListingBytes:   []byte(b0),
-				ProtoListing:   sl.Listing,
-				Vendor:         peerInfo,
-			},
-			Signature:          sl.Signature,
-			ProtoSignedListing: sl,
-		}, nil
-	}
-
-	listing0 := Listing{
-		ListingBytes: *lbytes,
-		Metadata: ListingMetadata{
-			Version: version,
-		},
-		ListingVersion: uint32(version),
-		Vendor:         peerInfo,
-	}
-
-	var s1 struct {
-		Hash      string          `json:"hash"`
-		Signature []byte          `json:"signature"`
-		Listing   json.RawMessage `json:"listing"`
-	}
-	err = json.Unmarshal(data, &s1)
-	if err != nil {
-		return SignedListing{}, err
-	}
-
-	// GetProtoListing generates listing0.ProtoListing (mutation is evil)
-	if _, err = listing0.GetProtoListing(); err != nil {
-		return SignedListing{}, err
-	}
-	listing0.ProtoListing.VendorID = vendorID
-
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	outSL, err := m.MarshalToString(listing0.ProtoListing)
-	if err != nil {
-		return SignedListing{}, err
-	}
-	listing0.ListingBytes = []byte(outSL)
-
-	return SignedListing{
-		Signature:    s1.Signature,
-		Hash:         s1.Hash,
-		RListing:     listing0,
-		ProtoListing: listing0.ProtoListing,
-		ProtoSignedListing: &pb.SignedListing{
-			Listing:   listing0.ProtoListing,
-			Hash:      s1.Hash,
-			Signature: s1.Signature,
-		},
-	}, nil
 }
 
 // UnmarshalJSONListing - unmarshal listing
@@ -503,7 +315,7 @@ func UnmarshalJSONListing(data []byte) (*Listing, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &l.RListing, nil
+	return l.GetListing(), nil
 }
 
 // ExtractVersion returns the version of the listing
@@ -546,25 +358,6 @@ func ExtractVersionFromSignedListing(data []byte) (uint, error) {
 	return uint(ver), nil
 }
 
-// ExtractIDFromSignedListing returns pb.ID of the listing
-func ExtractIDFromSignedListing(data []byte) (*pb.ID, error) {
-	var objmap map[string]*json.RawMessage
-	vendorPlay := new(pb.ID)
-
-	err := json.Unmarshal(data, &objmap)
-	if err != nil {
-		log.Error(err)
-		return vendorPlay, err
-	}
-
-	lbytes, ok := objmap["listing"]
-	if !ok {
-		fmt.Println("expected to find listing, but was not present")
-		return nil, errors.New("listing json not found")
-	}
-	return ExtractIDFromListing(*lbytes)
-}
-
 // ExtractIDFromListing returns pb.ID of the listing
 func ExtractIDFromListing(data []byte) (*pb.ID, error) {
 	var lmap map[string]*json.RawMessage
@@ -585,1089 +378,823 @@ func ExtractIDFromListing(data []byte) (*pb.ID, error) {
 	return vendorPlay, nil
 }
 
-// GetCryptoDivisibility returns the listing crypto divisibility
-func (l *Listing) GetCryptoDivisibility() uint32 {
-	ct, err := l.GetContractType()
-	if err == nil && ct != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
-		return 0
+// Normalize converts legacy schema listing data from other users on the network
+// to fit the latest schema for consumption via the API for local use. NOTE: Legacy
+// nodes do not understand the latest schema. As such, normalized listings must not
+// be used as part of the RicardianContract and must be serialized and used as they
+// were provided by the originating node.
+func (l *Listing) Normalize() (*Listing, error) {
+	if l == nil {
+		return nil, errors.New("nil listing cannot be normalized")
 	}
-	div := parseProtoCryptoDivisibility(l.ListingBytes)
-	switch l.ListingVersion {
-	case 5:
-		return div
-	default: // version <4
-		if div != 0 {
-			return uint32(math.Log10(float64(div)))
+
+	if l.GetVersion() == ListingVersion {
+		return l, nil
+	}
+
+	nl, err := NewListingFromProtobuf(l.listingProto)
+	if err != nil {
+		return nil, fmt.Errorf("creating listing clone: %s", err.Error())
+	}
+
+	nlp := nl.GetProtobuf()
+	nlp.Metadata.Version = ListingVersion
+
+	if p, err := l.GetPrice(); err != nil {
+		return nil, fmt.Errorf("get price: %s", err.Error())
+	} else {
+		nlp.Item.BigPrice = p.Amount.String()
+		nlp.Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         p.Currency.Code.String(),
+			Divisibility: uint32(p.Currency.Divisibility),
 		}
 	}
-	return 0
+
+	if ss, err := l.GetSkus(); err != nil {
+		return nil, fmt.Errorf("get skus: %s", err.Error())
+	} else {
+		nlp.Item.Skus = ss
+	}
+
+	if sos, err := l.GetShippingOptions(); err != nil {
+		return nil, fmt.Errorf("get shipping options: %s", err.Error())
+	} else {
+		nlp.ShippingOptions = sos
+	}
+
+	if cs, err := l.GetCoupons(); err != nil {
+		return nil, fmt.Errorf("get coupons: %s", err.Error())
+	} else {
+		nlp.Coupons = cs.GetProtobuf()
+	}
+
+	return nl, nil
 }
 
-func parseProtoCryptoDivisibility(listing []byte) uint32 {
-	var listingT struct {
-		Metadata struct {
-			CryptoDivisibility uint32 `json:"coinDivisibility"`
-		} `json:"metadata"`
-	}
-	err := json.Unmarshal(listing, &listingT)
-	if err != nil {
+// GetProtobuf returns the current state of pb.Listing managed by Listing
+func (l *Listing) GetProtobuf() *pb.Listing {
+	return l.listingProto
+}
+
+// GetVersion returns the schema version of the Listing
+func (l *Listing) GetVersion() uint32 {
+	return l.listingProto.Metadata.Version
+}
+
+// GetCryptoDivisibility returns the listing crypto divisibility
+func (l *Listing) GetCryptoDivisibility() uint32 {
+	if l.GetContractType() != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 		return 0
 	}
-	return listingT.Metadata.CryptoDivisibility
+
+	switch l.GetVersion() {
+	case 5:
+		return l.listingProto.Metadata.CryptoDivisibility
+	default: // version < 4
+		div := l.listingProto.Metadata.CryptoDivisibility
+		if div != 0 {
+			div = uint32(math.Log10(float64(div)))
+		}
+		return div
+	}
 }
 
 // GetCryptoCurrencyCode returns the listing crypto currency code
 func (l *Listing) GetCryptoCurrencyCode() string {
-	var listingT struct {
-		Metadata struct {
-			CryptoCurrencyCode string `json:"coinType"`
-		} `json:"metadata"`
-	}
-	err := json.Unmarshal(l.ListingBytes, &listingT)
-	if err != nil {
+	if l.GetContractType() != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 		return ""
 	}
-	return listingT.Metadata.CryptoCurrencyCode
+
+	return l.listingProto.Metadata.CryptoCurrencyCode
 }
 
-// GetTitle - return listing title
-func (l *Listing) GetTitle() (string, error) {
-	type title struct {
-		Item struct {
-			Title string `json:"title"`
-		} `json:"item"`
-	}
-	var t title
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return "", err
-	}
-	return t.Item.Title, nil
+// GetTitle returns the listing item title
+func (l *Listing) GetTitle() string {
+	return l.listingProto.Item.Title
 }
 
-// GetSlug - return listing slug
-func (l *Listing) GetSlug() (string, error) {
-	type slug struct {
-		Slug string `json:"slug"`
-	}
-	var s slug
-	err := json.Unmarshal(l.ListingBytes, &s)
-	if err != nil {
-		return "", err
-	}
-	return s.Slug, nil
+// GetSlug returns the listing slug
+func (l *Listing) GetSlug() string {
+	return l.listingProto.Slug
 }
 
-// GetAcceptedCurrencies - return list of accepted currencies
-func (l *Listing) GetAcceptedCurrencies() ([]string, error) {
-	type acceptedCurrencies struct {
-		Metadata struct {
-			AcceptedCurrencies []string `json:"acceptedCurrencies"`
-		} `json:"metadata"`
-	}
-	var a acceptedCurrencies
-	err := json.Unmarshal(l.ListingBytes, &a)
-	if err != nil {
-		return []string{}, err
-	}
-	return a.Metadata.AcceptedCurrencies, nil
+// GetAcceptedCurrencies returns the listing's list of accepted currency codes
+func (l *Listing) GetAcceptedCurrencies() []string {
+	return l.listingProto.Metadata.AcceptedCurrencies
 }
 
-// GetContractType - return listing's contract type
-func (l *Listing) GetContractType() (string, error) {
-	retVal := ""
-	type contractType struct {
-		Metadata struct {
-			ContractType string `json:"contractType"`
-		} `json:"metadata"`
+// SetAcceptedCurrencies the listing's accepted currency codes. Assumes the node
+// serving the listing has already validated the wallet supports the currencies.
+func (l *Listing) SetAcceptedCurrencies(codes ...string) error {
+	if len(codes) < 1 {
+		return errors.New("no accepted currencies provided")
 	}
-	var ct contractType
-	err := json.Unmarshal(l.ListingBytes, &ct)
-	if err != nil {
-		return retVal, err
-	}
-	return ct.Metadata.ContractType, nil
-}
-
-// GetFormat - return listing's format
-func (l *Listing) GetFormat() (string, error) {
-	retVal := ""
-	type format struct {
-		Metadata struct {
-			Format string `json:"format"`
-		} `json:"metadata"`
-	}
-	var ct format
-	err := json.Unmarshal(l.ListingBytes, &ct)
-	if err != nil {
-		return retVal, err
-	}
-	return ct.Metadata.Format, nil
-}
-
-// GetPrice - return listing price
-func (l *Listing) GetPrice() (*CurrencyValue, error) {
-	if l.ProtoListing != nil {
-		return NewCurrencyValueFromProtobuf(l.ProtoListing.Item.BigPrice, l.ProtoListing.Item.PriceCurrency)
-	}
-
-	switch l.ListingVersion {
-	case 3, 4:
-		contractType, err := l.GetContractType()
+	var accCurrencies = make([]string, 0)
+	for _, c := range codes {
+		def, err := AllCurrencies().Lookup(c)
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("unknown accepted currency (%s)", c)
 		}
-		if contractType == "CRYPTOCURRENCY" {
-			var c struct {
-				Metadata struct {
-					CoinType string `json:"coinType"`
-				} `json:"metadata"`
-			}
-			err = json.Unmarshal(l.ListingBytes, &c)
-			if err != nil {
-				return nil, err
-			}
-			// TODO: Import all cryptos so they are supported for
-			// new CYRPTOCURRENCY listings (#1710)
-			curr, err := AllCurrencies().Lookup(c.Metadata.CoinType)
-			if err != nil {
-				curr = CurrencyDefinition{
-					Code:         CurrencyCode(c.Metadata.CoinType),
-					Divisibility: 8,
-					Name:         c.Metadata.CoinType,
-					CurrencyType: "crypto",
-				}
-			}
-			return &CurrencyValue{
-				Amount:   big.NewInt(0),
-				Currency: curr,
-			}, nil
-		} else {
-			var p struct {
-				Item struct {
-					Price int64 `json:"price"`
-				} `json:"item"`
-			}
-			if err = json.Unmarshal(l.ListingBytes, &p); err != nil {
-				return nil, err
-			}
-			var pc struct {
-				Metadata struct {
-					PricingCurrency string `json:"pricingCurrency"`
-				} `json:"metadata"`
-			}
-			if err = json.Unmarshal(l.ListingBytes, &pc); err != nil {
-				return nil, err
-			}
-
-			curr, err := AllCurrencies().Lookup(pc.Metadata.PricingCurrency)
-			if err != nil {
-				return nil, fmt.Errorf("lookup metadata pricing currency: %s", err)
-			}
-			return &CurrencyValue{
-				Amount:   big.NewInt(p.Item.Price),
-				Currency: curr,
-			}, nil
-		}
-	case 5:
-		var p struct {
-			Item struct {
-				Price struct {
-					Currency struct {
-						Code         string `json:"code"`
-						Divisibility uint   `json:"divisibility"`
-						Name         string `json:"name"`
-						CurrencyType string `json:"currencyType"`
-					} `json:"currency"`
-					Amount string `json:"amount"`
-				} `json:"price"`
-			} `json:"item"`
-		}
-		if err := json.Unmarshal(l.ListingBytes, &p); err != nil {
-			return nil, err
-		}
-		amt, _ := new(big.Int).SetString(p.Item.Price.Amount, 10)
-		return &CurrencyValue{
-			Amount: amt,
-			Currency: CurrencyDefinition{
-				Code:         CurrencyCode(p.Item.Price.Currency.Code),
-				Divisibility: p.Item.Price.Currency.Divisibility,
-				Name:         p.Item.Price.Currency.Name,
-				CurrencyType: p.Item.Price.Currency.CurrencyType,
-			},
-		}, nil
+		accCurrencies = append(accCurrencies, def.CurrencyCode().String())
 	}
-	return nil, fmt.Errorf("failed to get price: unknown schema")
-}
-
-// GetModerators - return listing moderators
-func (l *Listing) GetModerators() ([]string, error) {
-	type mods struct {
-		Moderators []string `json:"moderators"`
-	}
-	var s mods
-	err := json.Unmarshal(l.ListingBytes, &s)
-	if err != nil {
-		return []string{}, err
-	}
-	return s.Moderators, nil
-}
-
-// SetModerators - set listing moderators
-func (l *Listing) SetModerators(mods []string) error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
-	}
-	listing.Moderators = mods
-	// TODO: set the bytes here
+	l.listingProto.Metadata.AcceptedCurrencies = accCurrencies
 	return nil
 }
 
-// GetTermsAndConditions - return listing termsAndConditions
-func (l *Listing) GetTermsAndConditions() (string, error) {
-	type tnc struct {
-		TermsAndConditions string `json:"termsAndConditions"`
-	}
-	var s tnc
-	err := json.Unmarshal(l.ListingBytes, &s)
-	if err != nil {
-		return "", err
-	}
-	return s.TermsAndConditions, nil
+// GetContractType returns listing's contract type
+func (l *Listing) GetContractType() string {
+	return l.listingProto.Metadata.ContractType.String()
 }
 
-// GetRefundPolicy - return listing refundPolicy
-func (l *Listing) GetRefundPolicy() (string, error) {
-	type rp struct {
-		RefundPolicy string `json:"refundPolicy"`
-	}
-	var s rp
-	err := json.Unmarshal(l.ListingBytes, &s)
-	if err != nil {
-		return "", err
-	}
-	return s.RefundPolicy, nil
+// GetFormat returns the listing's pricing format
+func (l *Listing) GetFormat() string {
+	return l.listingProto.Metadata.Format.String()
 }
 
-// GetVendorID - return vendorID
-func (l *Listing) GetVendorID() (*pb.ID, error) {
-	if l.Vendor == nil {
-		pid, err := ExtractIDFromListing(l.ListingBytes)
-		if err != nil {
-			return nil, err
-		}
-		l.Vendor, err = NewPeerInfoFromProtobuf(pid)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return l.Vendor.Protobuf(), nil
-}
-
-// GetDescription - return item description
-func (l *Listing) GetDescription() (string, error) {
-	type desc struct {
-		Item struct {
-			Description string `json:"description"`
-		} `json:"item"`
-	}
-	var t desc
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return "", err
-	}
-	return t.Item.Description, nil
-}
-
-// GetProcessingTime - return item processing time
-func (l *Listing) GetProcessingTime() (string, error) {
-	type ptime struct {
-		Item struct {
-			ProcessingTime string `json:"processingTime"`
-		} `json:"item"`
-	}
-	var t ptime
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return "", err
-	}
-	return t.Item.ProcessingTime, nil
-}
-
-// GetNsfw - return item nstw
-func (l *Listing) GetNsfw() (bool, error) {
-	type nsfw struct {
-		Item struct {
-			Nsfw bool `json:"nsfw"`
-		} `json:"item"`
-	}
-	var t nsfw
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return false, err
-	}
-	return t.Item.Nsfw, nil
-}
-
-// GetTags - return item tags
-func (l *Listing) GetTags() ([]string, error) {
-	type tags struct {
-		Item struct {
-			Tags []string `json:"tags"`
-		} `json:"item"`
-	}
-	var t tags
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return nil, err
-	}
-	return t.Item.Tags, nil
-}
-
-// GetCategories - return item categories
-func (l *Listing) GetCategories() ([]string, error) {
-	type categories struct {
-		Item struct {
-			Categories []string `json:"categories"`
-		} `json:"item"`
-	}
-	var t categories
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return nil, err
-	}
-	return t.Item.Categories, nil
-}
-
-// GetGrams - return item wt in grams
-func (l *Listing) GetGrams() (float32, error) {
-	type grams struct {
-		Item struct {
-			Grams float32 `json:"grams"`
-		} `json:"item"`
-	}
-	var t grams
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return 0, err
-	}
-	return t.Item.Grams, nil
-}
-
-// GetCondition - return item condition
-func (l *Listing) GetCondition() (string, error) {
-	type condition struct {
-		Item struct {
-			Condition string `json:"condition"`
-		} `json:"item"`
-	}
-	var t condition
-	err := json.Unmarshal(l.ListingBytes, &t)
-	if err != nil {
-		return "", err
-	}
-	return t.Item.Condition, nil
-}
-
-// GetImages - return item images
-func (l *Listing) GetImages() ([]*pb.Listing_Item_Image, error) {
-	type images struct {
-		Item struct {
-			Images []struct {
-				Filename string `json:"filename"`
-				Original string `json:"original"`
-				Large    string `json:"large"`
-				Medium   string `json:"medium"`
-				Small    string `json:"small"`
-				Tiny     string `json:"tiny"`
-			} `json:"images"`
-		} `json:"item"`
-	}
-	var i images
-	err := json.Unmarshal(l.ListingBytes, &i)
-	if err != nil {
-		return nil, err
-	}
-	img := []*pb.Listing_Item_Image{}
-	for _, elem := range i.Item.Images {
-		img0 := pb.Listing_Item_Image{
-			Filename: elem.Filename,
-			Original: elem.Original,
-			Large:    elem.Large,
-			Medium:   elem.Medium,
-			Small:    elem.Small,
-			Tiny:     elem.Tiny,
-		}
-		img = append(img, &img0)
-	}
-	return img, nil
-}
-
-// GetOptions - return item options
-func (l *Listing) GetOptions() ([]*pb.Listing_Item_Option, error) {
-	type options struct {
-		Item struct {
-			Options []struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
-				Variants    []struct {
-					Name  string `json:"name"`
-					Image struct {
-						Filename string `json:"filename"`
-						Original string `json:"original"`
-						Large    string `json:"large"`
-						Medium   string `json:"medium"`
-						Small    string `json:"small"`
-						Tiny     string `json:"tiny"`
-					} `json:"image"`
-				} `json:"variants"`
-			} `json:"options"`
-		} `json:"item"`
-	}
-	var o options
-	err := json.Unmarshal(l.ListingBytes, &o)
-	if err != nil {
-		return nil, err
-	}
-	opts := []*pb.Listing_Item_Option{}
-	for _, elem := range o.Item.Options {
-		opt := pb.Listing_Item_Option{
-			Name:        elem.Name,
-			Description: elem.Description,
-		}
-		variants := []*pb.Listing_Item_Option_Variant{}
-		for _, v := range elem.Variants {
-			var0 := pb.Listing_Item_Option_Variant{
-				Name: v.Name,
-				Image: &pb.Listing_Item_Image{
-					Filename: v.Image.Filename,
-					Original: v.Image.Original,
-					Large:    v.Image.Large,
-					Medium:   v.Image.Medium,
-					Small:    v.Image.Small,
-					Tiny:     v.Image.Tiny,
-				},
+// GetPrice returns the listing price. For CRYPTOCURRENCY listings, this
+// value would be zero in the denomination of the cryptocurrency being
+// traded and the item value in all other cases. In the event that the
+// shema version or contract type are unrecognizable, an error is returned.
+func (l *Listing) GetPrice() (*CurrencyValue, error) {
+	switch l.GetContractType() {
+	case pb.Listing_Metadata_CRYPTOCURRENCY.String():
+		return &CurrencyValue{
+			Amount:   big.NewInt(0),
+			Currency: NewUnknownCryptoDefinition(l.GetCryptoCurrencyCode(), 0),
+		}, nil
+	case pb.Listing_Metadata_DIGITAL_GOOD.String(), pb.Listing_Metadata_PHYSICAL_GOOD.String(), pb.Listing_Metadata_SERVICE.String():
+		switch l.GetVersion() {
+		case 5:
+			return NewCurrencyValueFromProtobuf(l.listingProto.Item.BigPrice, l.listingProto.Item.PriceCurrency)
+		case 4, 3, 2:
+			priceCurrency, err := AllCurrencies().Lookup(l.listingProto.Metadata.PricingCurrency)
+			if err != nil {
+				return nil, fmt.Errorf("lookup metadata pricing currency: %s", err)
 			}
-			variants = append(variants, &var0)
+			return NewCurrencyValueFromUint(l.listingProto.Item.Price, priceCurrency)
+		default:
+			return nil, fmt.Errorf("unknown schema version")
 		}
-		opt.Variants = variants
-		opts = append(opts, &opt)
 	}
-	return opts, nil
+	return nil, fmt.Errorf("unknown contract type")
 }
 
-// GetSkus - return item skus
-func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
+// GetModerators returns accepted moderators for the listing
+func (l *Listing) GetModerators() []string {
+	return l.listingProto.Moderators
+}
+
+// SetModerators updates the listing's accepted moderators
+func (l *Listing) SetModerators(mods []string) error {
+	l.listingProto.Moderators = mods
+	// mutations should return an error, even if no error is possible today
+	return nil
+}
+
+// GetTermsAndConditions return the terms for the listings purchase contract
+func (l *Listing) GetTermsAndConditions() string {
+	return l.listingProto.TermsAndConditions
+}
+
+// GetRefundPolicy return the refund policy for the listing
+func (l *Listing) GetRefundPolicy() string {
+	return l.listingProto.RefundPolicy
+}
+
+// GetVendorID returns the vendor peer ID
+func (l *Listing) GetVendorID() *PeerInfo {
+	return NewPeerInfoFromProtobuf(l.listingProto.VendorID)
+}
+
+// GetShortDescription returns the item description truncated down to the
+// ShortDescriptionLength maximum
+func (l *Listing) GetShortDescription() string {
+	dl := len(l.GetDescription())
+	if dl > ShortDescriptionLength {
+		return l.GetDescription()[:ShortDescriptionLength]
+	}
+	return l.GetDescription()
+}
+
+// GetDescription returns item description
+func (l *Listing) GetDescription() string {
+	return l.listingProto.Item.Description
+}
+
+// GetProcessingTime returns the expected time for vendor to process listing fulfillment
+func (l *Listing) GetProcessingTime() string {
+	return l.listingProto.Item.ProcessingTime
+}
+
+// GetNSFW returns whether the listing is marked as inappropriate for general viewing
+// or otherwise "Not Safe For Work"
+func (l *Listing) GetNsfw() bool {
+	return l.listingProto.Item.Nsfw
+}
+
+// GetTags returns a list of tags for the listing
+func (l *Listing) GetTags() []string {
+	return l.listingProto.Item.Tags
+}
+
+// GetCategories returns a list of categories for the listing
+func (l *Listing) GetCategories() []string {
+	return l.listingProto.Item.Categories
+}
+
+// GetGrams returns listing item weight in grams
+func (l *Listing) GetWeightGrams() float32 {
+	return l.listingProto.Item.Grams
+}
+
+// GetCondition returns listing item condition
+func (l *Listing) GetCondition() string {
+	return l.listingProto.Item.Condition
+}
+
+// ListingImage represents the underlying protobuf image
+type ListingImage struct {
+	listing    *Listing
+	protoIndex int
+
+	filename string
+	original string
+	large    string
+	medium   string
+	small    string
+	tiny     string
+}
+
+// GetFilename returns the image filename
+func (i *ListingImage) GetFilename() string { return i.filename }
+
+// GetOriginal returns the image's original size
+func (i *ListingImage) GetOriginal() string { return i.original }
+
+// GetLarge returns the image's large size
+func (i *ListingImage) GetLarge() string { return i.large }
+
+// GetMedium returns the image's medium size
+func (i *ListingImage) GetMedium() string { return i.medium }
+
+// GetSmall returns the image's small size
+func (i *ListingImage) GetSmall() string { return i.small }
+
+// GetTiny returns the image's tiny size
+func (i *ListingImage) GetTiny() string { return i.tiny }
+
+// String satisfies Stringer and returns the image filename
+func (i *ListingImage) String() string { return i.GetFilename() }
+
+func (i *ListingImage) imageProtobuf() (*pb.Listing_Item_Image, error) {
+	if i == nil ||
+		i.listing == nil ||
+		i.listing.listingProto == nil ||
+		i.listing.listingProto.Item == nil ||
+		i.listing.listingProto.Item.Images == nil {
+		return nil, fmt.Errorf("listing item image incomplete")
+	}
+	pbImg := i.listing.listingProto.Item.Images[i.protoIndex]
+	if i.filename != pbImg.GetFilename() ||
+		i.original != pbImg.GetOriginal() ||
+		i.large != pbImg.GetLarge() ||
+		i.medium != pbImg.GetMedium() ||
+		i.small != pbImg.GetSmall() ||
+		i.tiny != pbImg.GetTiny() {
+		return nil, fmt.Errorf("underlying protobuf has changed from expected state")
+	}
+	return pbImg, nil
+}
+
+// SetOriginal updates CID for the original image
+func (i *ListingImage) SetOriginal(cid string) error {
+	var pbi, err = i.imageProtobuf()
+	if err != nil {
+		return fmt.Errorf("set original image hash: %s", err.Error())
+	}
+	pbi.Original = cid
+	i.original = cid
+	return nil
+}
+
+// SetLarge updates CID for the large image
+func (i *ListingImage) SetLarge(cid string) error {
+	var pbi, err = i.imageProtobuf()
+	if err != nil {
+		return fmt.Errorf("set large image hash: %s", err.Error())
+	}
+	pbi.Large = cid
+	i.large = cid
+	return nil
+}
+
+// SetMedium updates CID for the medium image
+func (i *ListingImage) SetMedium(cid string) error {
+	var pbi, err = i.imageProtobuf()
+	if err != nil {
+		return fmt.Errorf("set medium image hash: %s", err.Error())
+	}
+	pbi.Medium = cid
+	i.medium = cid
+	return nil
+}
+
+// SetSmall updates CID for the small image
+func (i *ListingImage) SetSmall(cid string) error {
+	var pbi, err = i.imageProtobuf()
+	if err != nil {
+		return fmt.Errorf("set small image hash: %s", err.Error())
+	}
+	pbi.Small = cid
+	i.small = cid
+	return nil
+}
+
+// SetTiny updates CID for the tiny image
+func (i *ListingImage) SetTiny(cid string) error {
+	var pbi, err = i.imageProtobuf()
+	if err != nil {
+		return fmt.Errorf("set tiny image hash: %s", err.Error())
+	}
+	pbi.Tiny = cid
+	i.tiny = cid
+	return nil
+}
+
+// GetImages return set of listing item images
+func (l *Listing) GetImages() []*ListingImage {
+	if l == nil ||
+		l.listingProto == nil ||
+		l.listingProto.Item == nil ||
+		l.listingProto.Item.Images == nil {
+		return make([]*ListingImage, 0)
+	}
 	var (
-		pbl = &pb.Listing{}
-		err = jsonpb.UnmarshalString(string(l.ListingBytes), pbl)
+		protoImgs = l.listingProto.Item.Images
+		imgs      = make([]*ListingImage, len(protoImgs))
 	)
-	if err != nil {
-		return nil, err
-	}
-	if pbl == nil || pbl.Item == nil {
-		return nil, nil
-	}
-	switch l.ListingVersion {
-	case 3, 4:
-		for i, sku := range pbl.Item.Skus {
-			surcharge := new(big.Int).SetInt64(sku.Surcharge)
-			quantity := new(big.Int).SetInt64(sku.Quantity)
-			pbl.Item.Skus[i].BigSurcharge = surcharge.String()
-			pbl.Item.Skus[i].BigQuantity = quantity.String()
-			pbl.Item.Skus[i].Quantity = 0
-			pbl.Item.Skus[i].Surcharge = 0
+	for i, img := range protoImgs {
+		imgs[i] = &ListingImage{
+			listing:    l,
+			protoIndex: i,
+			filename:   img.GetFilename(),
+			original:   img.GetOriginal(),
+			large:      img.GetLarge(),
+			medium:     img.GetMedium(),
+			small:      img.GetSmall(),
+			tiny:       img.GetTiny(),
 		}
 	}
-	return pbl.Item.Skus, nil
+	return imgs
 }
 
-// GetItem - return item
-func (l *Listing) GetItem() (*pb.Listing_Item, error) {
-	title, err := l.GetTitle()
-	if err != nil {
-		return nil, err
+// GetSkus returns the listing SKUs
+func (l *Listing) GetSkus() ([]*pb.Listing_Item_Sku, error) {
+	var ss = make([]*pb.Listing_Item_Sku, len(l.listingProto.Item.Skus))
+	for i, s := range l.listingProto.Item.Skus {
+		ss[i] = proto.Clone(s).(*pb.Listing_Item_Sku)
 	}
-	description, err := l.GetDescription()
-	if err != nil {
-		return nil, err
+	switch l.GetVersion() {
+	case 3, 4:
+		for _, sku := range ss {
+			sku.BigSurcharge = big.NewInt(sku.Surcharge).String()
+			sku.BigQuantity = big.NewInt(sku.Quantity).String()
+		}
 	}
-	processingtime, err := l.GetProcessingTime()
-	if err != nil {
-		return nil, err
-	}
-	nsfw, err := l.GetNsfw()
-	if err != nil {
-		return nil, err
-	}
-	tags, err := l.GetTags()
-	if err != nil {
-		return nil, err
-	}
-	images, err := l.GetImages()
-	if err != nil {
-		return nil, err
-	}
-	categories, err := l.GetCategories()
-	if err != nil {
-		return nil, err
-	}
-	grams, err := l.GetGrams()
-	if err != nil {
-		return nil, err
-	}
-	condition, err := l.GetCondition()
-	if err != nil {
-		return nil, err
-	}
-	options, err := l.GetOptions()
-	if err != nil {
-		return nil, err
-	}
-	skus, err := l.GetSkus()
-	if err != nil {
-		return nil, err
-	}
-	price, err := l.GetPrice()
-	if err != nil {
-		return nil, err
-	}
-	i := pb.Listing_Item{
-		Title:          title,
-		Description:    description,
-		ProcessingTime: processingtime,
-		Nsfw:           nsfw,
-		Tags:           tags,
-		Images:         images,
-		Categories:     categories,
-		Grams:          grams,
-		Condition:      condition,
-		Options:        options,
-		Skus:           skus,
-		BigPrice:       price.Amount.String(),
-		PriceCurrency: &pb.CurrencyDefinition{
-			Code:         price.Currency.Code.String(),
-			Divisibility: uint32(price.Currency.Divisibility),
-		},
-	}
-	return &i, nil
+	return ss, nil
 }
 
-// GetExpiry return listing expiry
-func (l *Listing) GetExpiry() (*timestamp.Timestamp, error) {
-	type expiry struct {
-		Metadata struct {
-			Expiry string `json:"expiry"`
-		} `json:"metadata"`
-	}
-	var exp expiry
-	err := json.Unmarshal(l.ListingBytes, &exp)
-	if err != nil {
-		return nil, err
-	}
-	t := new(timestamp.Timestamp)
-
-	t0, err := time.Parse(time.RFC3339Nano, exp.Metadata.Expiry)
-	if err != nil {
-		return nil, err
-	}
-
-	t.Seconds = t0.Unix()
-	t.Nanos = int32(t0.Nanosecond())
-
-	return t, nil
-}
-
-// GetLanguage return listing's language
-func (l *Listing) GetLanguage() (string, error) {
-	retVal := ""
-	type lang struct {
-		Metadata struct {
-			Language string `json:"language"`
-		} `json:"metadata"`
-	}
-	var ll lang
-	err := json.Unmarshal(l.ListingBytes, &ll)
-	if err != nil {
-		return retVal, err
-	}
-	return ll.Metadata.Language, nil
+//GetLanguage return listing's language
+func (l *Listing) GetLanguage() string {
+	return l.listingProto.Metadata.Language
 }
 
 // GetEscrowTimeout return listing's escrow timeout in hours
-func (l *Listing) GetEscrowTimeout() uint32 {
-	type escrow struct {
-		Metadata struct {
-			EscrowTimeout uint32 `json:"escrowTimeoutHours"`
-		} `json:"metadata"`
-	}
-	var e escrow
-	err := json.Unmarshal(l.ListingBytes, &e)
-	if err != nil {
-		return DefaultEscrowTimeout
-	}
-	return e.Metadata.EscrowTimeout
+func (l *Listing) GetEscrowTimeoutHours() uint32 {
+	return l.listingProto.Metadata.EscrowTimeoutHours
 }
 
 // GetPriceModifier return listing's price modifier
-func (l *Listing) GetPriceModifier() (float32, error) {
-	var p float32
-	switch l.ListingVersion {
+func (l *Listing) GetPriceModifier() float32 {
+	switch l.GetVersion() {
 	case 5:
-		var v5Struct struct {
-			Item struct {
-				PriceModifier float32 `json:"priceModifier"`
-			} `json:"item"`
-		}
-		if err := json.Unmarshal(l.ListingBytes, &v5Struct); err != nil {
-			return 0, fmt.Errorf("parsing listing price modifier: %s", err)
-		}
-		p = v5Struct.Item.PriceModifier
-	default:
-		var defaultStruct struct {
-			Metadata struct {
-				PriceModifier float32 `json:"priceModifier"`
-			} `json:"metadata"`
-		}
-		if err := json.Unmarshal(l.ListingBytes, &defaultStruct); err != nil {
-			return 0, fmt.Errorf("parsing listing price modifier: %s", err)
-		}
-		p = defaultStruct.Metadata.PriceModifier
+		return l.listingProto.Item.PriceModifier
+	case 4, 3, 2:
+		return l.listingProto.Metadata.PriceModifier
 	}
-	return p, nil
+	log.Errorf("missing price modifier for listing (%s)", l.GetSlug())
+	return 0
 }
 
-// GetPricingCurrencyDefn return the listing currency definition
-func (l *Listing) GetPricingCurrencyDefn() (*pb.CurrencyDefinition, error) {
-	retVal := &pb.CurrencyDefinition{}
-	contractType, err := l.GetContractType()
-	if err != nil {
-		return nil, err
+// ListingTaxes is a set of taxes
+type ListingTaxes []ListingTax
+
+// ListingTax describes how a listing is taxed in each region
+type ListingTax struct {
+	taxType         string
+	regions         []string
+	rate            float32
+	taxableShipping bool
+}
+
+// GetType returns the tax type
+func (t ListingTax) GetType() string { return t.taxType }
+
+// GetApplicableRegions returns the regions affected by the tax
+func (t ListingTax) GetApplicableRegions() []string { return t.regions }
+
+// GetRate returns the tax rate
+func (t ListingTax) GetRate() float32 { return t.rate }
+
+// GetTaxableShipping indicates whether the shipping is subject to the tax
+func (t ListingTax) GetTaxableShipping() bool { return t.taxableShipping }
+
+// GetTaxes returns listing tax information
+func (l *Listing) GetTaxes() ListingTaxes {
+	var ts = make([]ListingTax, len(l.listingProto.Taxes))
+	for ti, tax := range l.listingProto.Taxes {
+		var rs = make([]string, len(tax.TaxRegions))
+		for ri, region := range tax.TaxRegions {
+			rs[ri] = region.String()
+		}
+
+		ts[ti] = ListingTax{
+			taxType:         tax.GetTaxType(),
+			rate:            tax.GetPercentage(),
+			taxableShipping: tax.GetTaxShipping(),
+			regions:         rs,
+		}
 	}
-	switch l.ListingVersion {
-	case 3, 4:
-		{
-			if contractType == "CRYPTOCURRENCY" {
-				type coinType struct {
-					Metadata struct {
-						CoinType string `json:"coinType"`
-					} `json:"metadata"`
-				}
-				var c coinType
-				err := json.Unmarshal(l.ListingBytes, &c)
+	return ts
+}
+
+type couponGetter interface {
+	Get(string) ([]Coupon, error)
+}
+
+// UpdateCouponsFromDatastore will get all coupons from the datastore and update
+// the internal protobuf with the codes that match the coupon's hash, if any.
+func (l *Listing) UpdateCouponsFromDatastore(cdb couponGetter) error {
+	var coupons, err = l.GetCoupons()
+	if err != nil {
+		return fmt.Errorf("getting coupons: %s", err.Error())
+	}
+	dbCoupons, err := cdb.Get(l.GetSlug())
+	if err != nil {
+		return fmt.Errorf("loading datastore coupon: %s", err.Error())
+	}
+	for _, c := range coupons {
+		for _, dbc := range dbCoupons {
+			if c.redemptionHash == dbc.Hash {
+				// make sure applying code does not shift already-matched hash
+				expectedHash, err := ipfs.EncodeMultihash([]byte(dbc.Code))
 				if err != nil {
-					return nil, err
+					return fmt.Errorf("hashing persisted redemption code (%s): %s", dbc.Code, err.Error())
 				}
-				curr, err := AllCurrencies().Lookup(c.Metadata.CoinType)
-				if err != nil {
-					curr = CurrencyDefinition{
-						Code:         CurrencyCode(c.Metadata.CoinType),
-						Divisibility: 8,
-					}
+				if c.redemptionHash != expectedHash.B58String() {
+					return fmt.Errorf("update coupon code (%s) results in mismatched published hash", dbc.Code)
 				}
-				retVal = &pb.CurrencyDefinition{
-					Code:         curr.Code.String(),
-					Divisibility: uint32(curr.Divisibility),
-				}
-			} else {
-				type pricingCurrency struct {
-					Metadata struct {
-						PricingCurrency string `json:"pricingCurrency"`
-					} `json:"metadata"`
-				}
-				var pc pricingCurrency
-				err := json.Unmarshal(l.ListingBytes, &pc)
-				if err != nil {
-					return nil, err
-				}
-				curr, err := AllCurrencies().Lookup(pc.Metadata.PricingCurrency)
-				if err != nil {
-					curr = CurrencyDefinition{
-						Code:         CurrencyCode(pc.Metadata.PricingCurrency),
-						Divisibility: 8,
-						Name:         "A",
-						CurrencyType: "A",
-					}
-				}
-				retVal = &pb.CurrencyDefinition{
-					Code:         curr.Code.String(),
-					Divisibility: uint32(curr.Divisibility),
+				if err := c.SetRedemptionCode(dbc.Code); err != nil {
+					return fmt.Errorf("setting redemption code: %s", err.Error())
 				}
 			}
 		}
-	case 5:
-		{
-			type currdefn struct {
-				Metadata struct {
-					PricingCurrencyDefn struct {
-						Code         string `json:"code"`
-						Divisibility uint   `json:"divisibility"`
-						Name         string `json:"name"`
-						CurrencyType string `json:"currencyType"`
-					} `json:"pricingCurrency"`
-				} `json:"metadata"`
-			}
-			var p currdefn
-			err = json.Unmarshal(l.ListingBytes, &p)
-			if err != nil {
-				return nil, err
-			}
-			retVal = &pb.CurrencyDefinition{
-				Code:         p.Metadata.PricingCurrencyDefn.Code,
-				Divisibility: uint32(p.Metadata.PricingCurrencyDefn.Divisibility),
-			}
-		}
 	}
-	return retVal, nil
+	return nil
 }
 
-// GetMetadata return metadata
-func (l *Listing) GetMetadata() (*pb.Listing_Metadata, error) {
-	ct, err := l.GetContractType()
-	if err != nil {
-		return nil, err
-	}
-	ct0, exists := pb.Listing_Metadata_ContractType_value[ct]
-	if !exists {
-		return nil, errors.New("invalid metadata contractType")
-	}
-	frmt, err := l.GetFormat()
-	if err != nil {
-		return nil, err
-	}
-	frmt0, exists := pb.Listing_Metadata_Format_value[frmt]
-	if !exists {
-		return nil, errors.New("invalid metadata format")
-	}
-	expiry, err := l.GetExpiry()
-	if err != nil {
-		return nil, err
-	}
-	currs, err := l.GetAcceptedCurrencies()
-	if err != nil {
-		return nil, err
-	}
-	lang, err := l.GetLanguage()
-	if err != nil {
-		return nil, err
-	}
-	priceMod, err := l.GetPriceModifier()
-	if err != nil {
-		return nil, err
-	}
-	m := pb.Listing_Metadata{
-		Version:            l.ListingVersion,
-		ContractType:       pb.Listing_Metadata_ContractType(ct0),
-		Format:             pb.Listing_Metadata_Format(frmt0),
-		Expiry:             expiry,
-		AcceptedCurrencies: currs,
-		Language:           lang,
-		EscrowTimeoutHours: l.GetEscrowTimeout(),
-		PriceModifier:      priceMod,
-		CryptoDivisibility: parseProtoCryptoDivisibility(l.ListingBytes),
-		CryptoCurrencyCode: l.GetCryptoCurrencyCode(),
-	}
-	return &m, nil
-}
-
-// GetSOName returns shipping option name
-
-// GetShippingOptions - return shippingOptions
-func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
+// GetCoupons returns listing coupons with discount amount normalized as a
+// CurrencyValue
+func (l *Listing) GetCoupons() (ListingCoupons, error) {
 	var (
-		sl  = &pb.SignedListing{}
-		err = json.Unmarshal(l.ListingBytes, &sl)
+		protoCoupons   = l.listingProto.GetCoupons()
+		cs             = make([]*ListingCoupon, len(protoCoupons))
+		listingVersion = l.GetVersion()
+		discPrice, err = l.GetPrice()
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get listing price for coupon: %s", err.Error())
 	}
-	if sl == nil || sl.Listing == nil {
-		return nil, nil
+
+	for i, c := range protoCoupons {
+		var (
+			discAmt   string
+			discValue *CurrencyValue
+		)
+		switch listingVersion {
+		case 5:
+			discAmt = c.GetBigPriceDiscount()
+		default:
+			//nolint:staticcheck
+			discAmt = strconv.FormatUint(c.GetPriceDiscount(), 10)
+		}
+		if discAmt != "" {
+			dv, err := NewCurrencyValue(discAmt, discPrice.Currency)
+			if err != nil {
+				return nil, fmt.Errorf("unable to create coupon discount value for amount (%s %s): %s", discAmt, discPrice.Currency, err.Error())
+			}
+			discValue = dv
+		} else {
+			discValue = nil
+		}
+
+		cs[i] = &ListingCoupon{
+			listing:         l,
+			title:           c.GetTitle(),
+			redemptionCode:  c.GetDiscountCode(),
+			redemptionHash:  c.GetHash(),
+			discountPercent: c.GetPercentDiscount(),
+			discountAmount:  discValue,
+		}
 	}
-	return sl.Listing.ShippingOptions, nil
+	return cs, nil
 }
 
-// GetTaxes - return taxes
-func (l *Listing) GetTaxes() ([]*pb.Listing_Tax, error) {
-	ret := []*pb.Listing_Tax{}
-	type taxes struct {
-		Taxes []struct {
-			Type       string   `json:"taxtype"`
-			Regions    []string `json:"taxRegions"`
-			Shipping   bool     `json:"taxShipping"`
-			Percentage float32  `json:"Percentage"`
-		} `json:"taxes"`
+// ListingCoupons is a set of listing coupons
+type ListingCoupons []*ListingCoupon
+
+// GetProtobuf converts ListingCoupons into its protobuf representation
+func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
+	var cspb = make([]*pb.Listing_Coupon, len(cs))
+	for i, c := range cs {
+		cspb[i] = &pb.Listing_Coupon{
+			Title:            c.GetTitle(),
+			PercentDiscount:  c.GetPercentOff(),
+			BigPriceDiscount: c.GetAmountOff().Amount.String(),
+		}
+		if hash, err := c.GetRedemptionHash(); err == nil {
+			cspb[i].Code = &pb.Listing_Coupon_Hash{Hash: hash}
+		} else if code, err := c.GetRedemptionCode(); err == nil {
+			cspb[i].Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
+		}
 	}
-	var t taxes
-	err := json.Unmarshal(l.ListingBytes, &t)
+	return cspb
+}
+
+// ListingCoupon represents an coupon which can be applied to a listing for a discount
+type ListingCoupon struct {
+	listing *Listing
+
+	title          string
+	redemptionCode string
+	redemptionHash string
+
+	discountPercent float32
+	discountAmount  *CurrencyValue
+}
+
+// GetListingSlug returns the slug for the coupon's listing
+func (c *ListingCoupon) GetListingSlug() string { return c.listing.GetSlug() }
+
+// GetTitle returns the coupon's title
+func (c *ListingCoupon) GetTitle() string { return c.title }
+
+// GetRedemptionCode returns the coupon redemption code
+func (c *ListingCoupon) GetRedemptionCode() (string, error) {
+	if c.redemptionCode != "" {
+		return c.redemptionCode, nil
+	}
+	return "", errors.New("redemption code not set")
+}
+
+// GetRedemptionHash returns the hashed representation of the code
+func (c *ListingCoupon) GetRedemptionHash() (string, error) {
+	_, err := mh.FromB58String(c.redemptionHash)
 	if err != nil {
-		return nil, err
+		// if hash is invalid, let's try to produce a new one
+		if c.redemptionCode == "" {
+			return "", errors.New("hash invalid and code missing")
+		}
+		if err := c.SetRedemptionCode(c.redemptionCode); err != nil {
+			return "", err
+		}
 	}
-	for _, elem := range t.Taxes {
-		countryCodes := []pb.CountryCode{}
-		for _, c := range elem.Regions {
-			cCode, ok := pb.CountryCode_value[c]
-			if ok {
-				countryCodes = append(countryCodes, pb.CountryCode(cCode))
+	return c.redemptionHash, nil
+}
+
+// GetPercentOff returns the percentage amount to reduce listing by
+func (c *ListingCoupon) GetPercentOff() float32 { return c.discountPercent }
+
+// GetAmountOff returns the value to reduce listing by
+func (c *ListingCoupon) GetAmountOff() *CurrencyValue { return c.discountAmount }
+
+// SetRedemptionCode sets the coupon's redemption code
+func (c *ListingCoupon) SetRedemptionCode(code string) error {
+	newHash, err := ipfs.EncodeMultihash([]byte(code))
+	if err != nil {
+		return fmt.Errorf("hashing redemption code: %s", err.Error())
+	}
+	// update proto first, otherwise ListingCoupon hash/code can't
+	// be used to match against the correct proto to update
+	if err := c.updateProtoHash(newHash.B58String()); err != nil {
+		return err
+	}
+	c.redemptionCode = code
+	c.redemptionHash = newHash.B58String()
+	return nil
+}
+
+func (c *ListingCoupon) updateProtoHash(hash string) error {
+	for _, pc := range c.listing.listingProto.Coupons {
+		if pc.GetDiscountCode() == c.redemptionCode ||
+			pc.GetHash() == c.redemptionHash {
+			pc.Code = &pb.Listing_Coupon_Hash{Hash: hash}
+			return nil
+		}
+	}
+	return errors.New("unable to update missing coupon proto")
+}
+
+// GetShippingOptions returns all shipping options
+func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
+	var so = make([]*pb.Listing_ShippingOption, len(l.listingProto.ShippingOptions))
+	for i, s := range l.listingProto.ShippingOptions {
+		so[i] = proto.Clone(s).(*pb.Listing_ShippingOption)
+	}
+	switch l.GetVersion() {
+	case 3, 4:
+		for _, o := range so {
+			for _, s := range o.Services {
+				s.BigPrice = big.NewInt(int64(s.Price)).String()
+				s.BigAdditionalItemPrice = big.NewInt(int64(s.AdditionalItemPrice)).String()
 			}
 		}
-		tax := pb.Listing_Tax{
-			TaxType:     elem.Type,
-			TaxRegions:  countryCodes,
-			TaxShipping: elem.Shipping,
-			Percentage:  elem.Percentage,
-		}
-		ret = append(ret, &tax)
 	}
-	return ret, nil
+	return so, nil
+
 }
 
-// GetCoupons - return coupons
-func (l *Listing) GetCoupons() ([]*pb.Listing_Coupon, error) {
-	ret := []*pb.Listing_Coupon{}
-	type coupons struct {
-		Coupons []interface{} `json:"coupons"`
-	}
-	var c coupons
-	err := json.Unmarshal(l.ListingBytes, &c)
-	if err != nil {
-		return nil, err
-	}
-	for _, elem := range c.Coupons {
-		ret1 := new(pb.Listing_Coupon)
-		b, err := json.Marshal(elem)
-		if err != nil {
-			return nil, err
+// GetShippingRegions returns all region strings for the defined shipping
+// services
+func (l *Listing) GetShippingRegions() ([]string, []string) {
+	var (
+		shipsTo        = make(map[string]struct{})
+		freeShippingTo = make(map[string]struct{})
+	)
+	for _, shipOption := range l.listingProto.ShippingOptions {
+		for _, shipRegion := range shipOption.Regions {
+			shipsTo[shipRegion.String()] = struct{}{}
+			for _, shipService := range shipOption.Services {
+				servicePrice, ok := new(big.Int).SetString(shipService.BigPrice, 10)
+				if ok && servicePrice.Cmp(big.NewInt(0)) == 0 {
+					freeShippingTo[shipRegion.String()] = struct{}{}
+				}
+			}
 		}
-		err = jsonpb.UnmarshalString(string(b), ret1)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, ret1)
 	}
-	return ret, nil
+
+	var returnShipTo = make([]string, 0)
+	for s := range shipsTo {
+		returnShipTo = append(returnShipTo, s)
+	}
+	var returnFreeShipTo = make([]string, 0)
+	for s := range freeShippingTo {
+		returnFreeShipTo = append(returnFreeShipTo, s)
+	}
+	return returnShipTo, returnFreeShipTo
 }
 
-// GetProtoListing - return pb.Listing
-func (l *Listing) GetProtoListing() (*pb.Listing, error) {
-	if l.ProtoListing != nil {
-		return l.ProtoListing, nil
-	}
-
-	slug, err := l.GetSlug()
-	if err != nil {
-		return nil, err
-	}
-
-	vendor, err := l.GetVendorID()
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := l.GetMetadata()
-	if err != nil {
-		return nil, err
-	}
-
-	item, err := l.GetItem()
-	if err != nil {
-		return nil, err
-	}
-
-	shippingOptions, err := l.GetShippingOptions()
-	if err != nil {
-		return nil, err
-	}
-
-	taxes, err := l.GetTaxes()
-	if err != nil {
-		return nil, err
-	}
-
-	coupons, err := l.GetCoupons()
-	if err != nil {
-		return nil, err
-	}
-
-	mods, err := l.GetModerators()
-	if err != nil {
-		return nil, err
-	}
-
-	tnc, err := l.GetTermsAndConditions()
-	if err != nil {
-		return nil, err
-	}
-
-	rpol, err := l.GetRefundPolicy()
-	if err != nil {
-		return nil, err
-	}
-
-	pbl := pb.Listing{
-		Slug:               slug,
-		VendorID:           vendor,
-		Metadata:           metadata,
-		Item:               item,
-		ShippingOptions:    shippingOptions,
-		Taxes:              taxes,
-		Coupons:            coupons,
-		Moderators:         mods,
-		TermsAndConditions: tnc,
-		RefundPolicy:       rpol,
-	}
-	l.ProtoListing = &pbl
-	return &pbl, nil
+// MarshalProtobuf returns the byte serialization of the underlying protobuf
+func (l *Listing) MarshalProtobuf() ([]byte, error) {
+	return proto.Marshal(l.listingProto)
 }
 
-// Sign - return signedListing
-func (l *Listing) Sign(n *core.IpfsNode, timeout uint32,
-	handle string, isTestNet bool, key *hdkeychain.ExtendedKey, dStore *Datastore) (SignedListing, error) {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return SignedListing{}, err
+type listingSigner interface {
+	TestNetworkEnabled() bool
+	RegressionNetworkEnabled() bool
+	GetNodeID() (*pb.ID, error)
+	Sign([]byte) ([]byte, error)
+}
+
+// MarshalJSON returns the json serialization of the underlying protobuf
+func (l *Listing) MarshalJSON() ([]byte, error) {
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
 	}
+	lb, err := m.MarshalToString(l.listingProto)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(lb), nil
+}
+
+// Sign verifies the Listing and returns a SignedListing
+func (l *Listing) Sign(n listingSigner) (*SignedListing, error) {
+	var (
+		timeout   = l.GetEscrowTimeoutHours()
+		isTestnet = n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
+	)
+
+	// Temporary hack to work around test env shortcomings
+	if isTestnet {
+		timeout = 1
+	}
+	l.listingProto.Metadata.EscrowTimeoutHours = timeout
+
 	// Set inventory to the default as it's not part of the contract
-	for _, s := range listing.Item.Skus {
+	for _, s := range l.listingProto.Item.Skus {
 		s.Quantity = 0
 		s.BigQuantity = "0"
 	}
 
-	sl := new(pb.SignedListing)
-
-	rsl := SignedListing{
-		ProtoSignedListing: sl,
-	}
-
-	// Validate accepted currencies
-	if len(listing.Metadata.AcceptedCurrencies) == 0 {
-		return rsl, errors.New("accepted currencies must be set")
-	}
-	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY && len(listing.Metadata.AcceptedCurrencies) != 1 {
-		return rsl, errors.New("a cryptocurrency listing must only have one accepted currency")
+	// Check the listing data is correct for continuing
+	if err := l.ValidateListing(isTestnet); err != nil {
+		return nil, err
 	}
 
 	// Sanitize a few critical fields
-	if listing.Item == nil {
-		return rsl, errors.New("no item in listing")
-	}
 	sanitizer := bluemonday.UGCPolicy()
-	for _, opt := range listing.Item.Options {
+	for _, opt := range l.listingProto.Item.Options {
 		opt.Name = sanitizer.Sanitize(opt.Name)
 		for _, v := range opt.Variants {
 			v.Name = sanitizer.Sanitize(v.Name)
 		}
 	}
-	for _, so := range listing.ShippingOptions {
+	for _, so := range l.listingProto.ShippingOptions {
 		so.Name = sanitizer.Sanitize(so.Name)
 		for _, serv := range so.Services {
 			serv.Name = sanitizer.Sanitize(serv.Name)
 		}
 	}
 
-	// Check the listing data is correct for continuing
-	if err := ValidateListing(l, isTestNet); err != nil {
-		return rsl, err
-	}
-
 	// Add the vendor ID to the listing
-	id := new(pb.ID)
-	id.PeerID = n.Identity.Pretty()
-	pubkey, err := n.PrivateKey.GetPublic().Bytes()
+	id, err := n.GetNodeID()
 	if err != nil {
-		return rsl, err
+		return nil, fmt.Errorf("vendor id: %s", err.Error())
 	}
-
-	p := new(pb.ID_Pubkeys)
-	p.Identity = pubkey
-	ecPubKey, err := key.ECPubKey()
-	if err != nil {
-		return rsl, err
-	}
-	p.Bitcoin = ecPubKey.SerializeCompressed()
-	id.Pubkeys = p
-	listing.VendorID = id
-
-	// Sign the GUID with the Bitcoin key
-	ecPrivKey, err := key.ECPrivKey()
-	if err != nil {
-		return rsl, err
-	}
-	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
-	if err != nil {
-		return rsl, err
-	}
-	id.BitcoinSig = sig.Serialize()
-
-	// Update coupon db
-	err = (*dStore).Coupons().Delete(listing.Slug)
-	if err != nil {
-		log.Error(err)
-	}
-	var couponsToStore []Coupon
-	for i, coupon := range listing.Coupons {
-		hash := coupon.GetHash()
-		code := coupon.GetDiscountCode()
-		_, err := mh.FromB58String(hash)
-		if err != nil {
-			couponMH, err := ipfs.EncodeMultihash([]byte(code))
-			if err != nil {
-				return rsl, err
-			}
-
-			listing.Coupons[i].Code = &pb.Listing_Coupon_Hash{Hash: couponMH.B58String()}
-			hash = couponMH.B58String()
-		}
-		c := Coupon{Slug: listing.Slug, Code: code, Hash: hash}
-		couponsToStore = append(couponsToStore, c)
-	}
-	err = (*dStore).Coupons().Put(couponsToStore)
-	if err != nil {
-		return rsl, err
-	}
+	l.listingProto.VendorID = id
 
 	// Sign listing
-	serializedListing, err := proto.Marshal(listing)
+	serializedListing, err := l.MarshalProtobuf()
 	if err != nil {
-		return rsl, err
+		return nil, fmt.Errorf("serializing listing: %s", err.Error())
 	}
-	idSig, err := n.PrivateKey.Sign(serializedListing)
+	listingSig, err := n.Sign(serializedListing)
 	if err != nil {
-		return rsl, err
+		return nil, fmt.Errorf("signing listing: %s", err.Error())
 	}
 
-	sl.Listing = listing
-	sl.Signature = idSig
-	rsl.ProtoSignedListing = sl
-	rsl.RListing = *l
-	return rsl, nil
+	sl := new(pb.SignedListing)
+	sl.Listing = l.listingProto
+	sl.Signature = listingSig
+
+	return &SignedListing{
+		signedListingProto: sl,
+	}, nil
 }
 
-// ValidateCryptoListing - check cryptolisting
-func (l *Listing) ValidateCryptoListing() error {
-	return l.validateCryptocurrencyListing()
-}
-
-// ValidateSkus - check listing skus
+// ValidateSkus ensures valid SKU state
 func (l *Listing) ValidateSkus() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
+	if l.listingProto.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		return validateCryptocurrencyQuantity(l.listingProto)
 	}
-	return validateListingSkus(listing)
+	return nil
+}
+
+func validateCryptocurrencyQuantity(listing *pb.Listing) error {
+	var checkFn func(*pb.Listing_Item_Sku) error
+	switch listing.Metadata.Version {
+	case 5:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
+			}
+			if s.BigQuantity == "" {
+				return fmt.Errorf("sku quantity empty")
+			}
+			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) < 0 {
+				return fmt.Errorf("sku quantity cannot be negative")
+			}
+			return nil
+		}
+	default:
+		checkFn = func(s *pb.Listing_Item_Sku) error {
+			if s == nil {
+				return fmt.Errorf("cannot validate nil sku")
+			}
+			if s.Quantity <= 0 {
+				return fmt.Errorf("sku quantity zero or less")
+			}
+			return nil
+		}
+	}
+	for _, sku := range listing.Item.Skus {
+		if err := checkFn(sku); err != nil {
+			return ErrCryptocurrencySkuQuantityInvalid
+		}
+	}
+	return nil
 }
 
 // GetInventory - returns a map of skus and quantityies
 func (l *Listing) GetInventory() (map[int]*big.Int, error) {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return nil, err
-	}
 	inventory := make(map[int]*big.Int)
-	for i, s := range listing.Item.Skus {
+	for i, s := range l.listingProto.Item.Skus {
 		var amtStr string
-		switch l.ListingVersion {
+		switch l.GetVersion() {
 		case 5:
 			amtStr = s.BigQuantity
 		default:
@@ -1682,15 +1209,8 @@ func (l *Listing) GetInventory() (map[int]*big.Int, error) {
 	return inventory, nil
 }
 
-/* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
-   invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
-   or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func ValidateListing(l *Listing, testnet bool) (err error) {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
-	}
-
+// ValidateListing ensures all listing state is valid
+func (l *Listing) ValidateListing(testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -1705,74 +1225,77 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	}()
 
 	// Slug
-	if listing.Slug == "" {
+	if l.listingProto.Slug == "" {
 		return errors.New("slug must not be empty")
 	}
-	if len(listing.Slug) > SentenceMaxCharacters {
+	if len(l.listingProto.Slug) > SentenceMaxCharacters {
 		return fmt.Errorf("slug is longer than the max of %d", SentenceMaxCharacters)
 	}
-	if strings.Contains(listing.Slug, " ") {
+	if strings.Contains(l.listingProto.Slug, " ") {
 		return errors.New("slugs cannot contain spaces")
 	}
-	if strings.Contains(listing.Slug, "/") {
+	if strings.Contains(l.listingProto.Slug, "/") {
 		return errors.New("slugs cannot contain file separators")
 	}
 
 	// Metadata
-	if listing.Metadata == nil {
+	if l.listingProto.Metadata == nil {
 		return errors.New("missing required field: Metadata")
 	}
-	if listing.Metadata.ContractType > pb.Listing_Metadata_CRYPTOCURRENCY {
+	if l.listingProto.Metadata.ContractType > pb.Listing_Metadata_CRYPTOCURRENCY {
 		return errors.New("invalid contract type")
 	}
-	if listing.Metadata.Format > pb.Listing_Metadata_MARKET_PRICE {
+	if l.listingProto.Metadata.Format > pb.Listing_Metadata_MARKET_PRICE {
 		return errors.New("invalid listing format")
 	}
-	if listing.Metadata.Expiry == nil {
+	if l.listingProto.Metadata.Expiry == nil {
 		return errors.New("missing required field: Expiry")
 	}
-	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
+	if time.Unix(l.listingProto.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
 		return errors.New("listing expiration must be in the future")
 	}
-	if len(listing.Metadata.Language) > WordMaxCharacters {
+	if len(l.listingProto.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("language is longer than the max of %d characters", WordMaxCharacters)
 	}
 
-	if !testnet && listing.Metadata.EscrowTimeoutHours != DefaultEscrowTimeout {
+	if !testnet && l.listingProto.Metadata.EscrowTimeoutHours != DefaultEscrowTimeout {
 		return fmt.Errorf("escrow timeout must be %d hours", DefaultEscrowTimeout)
 	}
-	if len(listing.Metadata.AcceptedCurrencies) == 0 {
+	if len(l.listingProto.Metadata.AcceptedCurrencies) == 0 {
 		return errors.New("at least one accepted currency must be provided")
 	}
-	if len(listing.Metadata.AcceptedCurrencies) > MaxListItems {
+	if len(l.listingProto.Metadata.AcceptedCurrencies) > MaxListItems {
 		return fmt.Errorf("acceptedCurrencies is longer than the max of %d currencies", MaxListItems)
 	}
-	for _, c := range listing.Metadata.AcceptedCurrencies {
+	for _, c := range l.listingProto.Metadata.AcceptedCurrencies {
 		if len(c) > WordMaxCharacters {
 			return fmt.Errorf("accepted currency is longer than the max of %d characters", WordMaxCharacters)
 		}
 	}
 
 	// Item
-	if listing.Item.Title == "" {
+	if l.listingProto.Item == nil {
+		return errors.New("no item in listing")
+	}
+	if l.listingProto.Item.Title == "" {
 		return errors.New("listing must have a title")
 	}
-	if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && listing.Item.BigPrice == "0" {
+	if l.listingProto.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && l.listingProto.Item.BigPrice == "0" {
 		return errors.New("zero price listings are not allowed")
 	}
-	if len(listing.Item.Title) > TitleMaxCharacters {
+	if len(l.listingProto.Item.Title) > TitleMaxCharacters {
 		return fmt.Errorf("title is longer than the max of %d characters", TitleMaxCharacters)
 	}
-	if len(listing.Item.Description) > DescriptionMaxCharacters {
+	if len(l.listingProto.Item.Description) > DescriptionMaxCharacters {
 		return fmt.Errorf("description is longer than the max of %d characters", DescriptionMaxCharacters)
 	}
-	if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
+	if len(l.listingProto.Item.ProcessingTime) > SentenceMaxCharacters {
 		return fmt.Errorf("processing time length must be less than the max of %d", SentenceMaxCharacters)
 	}
-	if len(listing.Item.Tags) > MaxTags {
+	if len(l.listingProto.Item.Tags) > MaxTags {
 		return fmt.Errorf("number of tags exceeds the max of %d", MaxTags)
 	}
-	for _, tag := range listing.Item.Tags {
+	for _, tag := range l.listingProto.Item.Tags {
 		if tag == "" {
 			return errors.New("tags must not be empty")
 		}
@@ -1780,13 +1303,13 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 			return fmt.Errorf("tags must be less than max of %d", WordMaxCharacters)
 		}
 	}
-	if len(listing.Item.Images) == 0 {
+	if len(l.listingProto.Item.Images) == 0 {
 		return errors.New("listing must contain at least one image")
 	}
-	if len(listing.Item.Images) > MaxListItems {
+	if len(l.listingProto.Item.Images) > MaxListItems {
 		return fmt.Errorf("number of listing images is greater than the max of %d", MaxListItems)
 	}
-	for _, img := range listing.Item.Images {
+	for _, img := range l.listingProto.Item.Images {
 		_, err := cid.Decode(img.Tiny)
 		if err != nil {
 			return errors.New("tiny image hashes must be properly formatted CID")
@@ -1814,10 +1337,10 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 			return fmt.Errorf("image filename length must be less than the max of %d", FilenameMaxCharacters)
 		}
 	}
-	if len(listing.Item.Categories) > MaxCategories {
+	if len(l.listingProto.Item.Categories) > MaxCategories {
 		return fmt.Errorf("number of categories must be less than max of %d", MaxCategories)
 	}
-	for _, category := range listing.Item.Categories {
+	for _, category := range l.listingProto.Item.Categories {
 		if category == "" {
 			return errors.New("categories must not be nil")
 		}
@@ -1829,7 +1352,7 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	maxCombos := 1
 	variantSizeMap := make(map[int]int)
 	optionMap := make(map[string]struct{})
-	for i, option := range listing.Item.Options {
+	for i, option := range l.listingProto.Item.Options {
 		if _, ok := optionMap[option.Name]; ok {
 			return errors.New("option names must be unique")
 		}
@@ -1893,11 +1416,11 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		optionMap[option.Name] = struct{}{}
 	}
 
-	if len(listing.Item.Skus) > maxCombos {
+	if len(l.listingProto.Item.Skus) > maxCombos {
 		return errors.New("more skus than variant combinations")
 	}
 	comboMap := make(map[string]bool)
-	for _, sku := range listing.Item.Skus {
+	for _, sku := range l.listingProto.Item.Skus {
 		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
 			return errors.New("skus must specify a variant combo when options are used")
 		}
@@ -1914,7 +1437,7 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		} else {
 			return errors.New("duplicate sku")
 		}
-		if len(sku.VariantCombo) != len(listing.Item.Options) {
+		if len(sku.VariantCombo) != len(l.listingProto.Item.Options) {
 			return errors.New("incorrect number of variants in sku combination")
 		}
 		for i, combo := range sku.VariantCombo {
@@ -1926,10 +1449,10 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	}
 
 	// Taxes
-	if len(listing.Taxes) > MaxListItems {
+	if len(l.listingProto.Taxes) > MaxListItems {
 		return fmt.Errorf("number of taxes is greater than the max of %d", MaxListItems)
 	}
-	for _, tax := range listing.Taxes {
+	for _, tax := range l.listingProto.Taxes {
 		if tax.TaxType == "" {
 			return errors.New("tax type must be specified")
 		}
@@ -1948,10 +1471,10 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	}
 
 	// Coupons
-	if len(listing.Coupons) > MaxListItems {
+	if len(l.listingProto.Coupons) > MaxListItems {
 		return fmt.Errorf("number of coupons is greater than the max of %d", MaxListItems)
 	}
-	for _, coupon := range listing.Coupons {
+	for _, coupon := range l.listingProto.Coupons {
 		if len(coupon.Title) > CouponTitleMaxCharacters {
 			return fmt.Errorf("coupon title length must be less than the max of %d", SentenceMaxCharacters)
 		}
@@ -1961,7 +1484,7 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("percent discount cannot be over 100 percent")
 		}
-		n, ok := new(big.Int).SetString(listing.Item.BigPrice, 10)
+		n, ok := new(big.Int).SetString(l.listingProto.Item.BigPrice, 10)
 		if !ok {
 			return errors.New("price was invalid")
 		}
@@ -1983,10 +1506,10 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	}
 
 	// Moderators
-	if len(listing.Moderators) > MaxListItems {
+	if len(l.listingProto.Moderators) > MaxListItems {
 		return fmt.Errorf("number of moderators is greater than the max of %d", MaxListItems)
 	}
-	for _, moderator := range listing.Moderators {
+	for _, moderator := range l.listingProto.Moderators {
 		_, err := mh.FromB58String(moderator)
 		if err != nil {
 			return errors.New("moderator IDs must be multihashes")
@@ -1994,31 +1517,48 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 	}
 
 	// TermsAndConditions
-	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
+	if len(l.listingProto.TermsAndConditions) > PolicyMaxCharacters {
 		return fmt.Errorf("terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
 	}
 
 	// RefundPolicy
-	if len(listing.RefundPolicy) > PolicyMaxCharacters {
+	if len(l.listingProto.RefundPolicy) > PolicyMaxCharacters {
 		return fmt.Errorf("refund policy length must be less than the max of %d", PolicyMaxCharacters)
 	}
 
 	// Type-specific validations
-	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+	if l.listingProto.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 		err := l.validatePhysicalListing()
 		if err != nil {
 			return err
 		}
-	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := l.validateCryptocurrencyListing()
+	} else if l.listingProto.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		err := l.ValidateCryptoListing()
 		if err != nil {
 			return err
 		}
 	}
 
+	// Non-crypto validations
+	if l.listingProto.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+		if l.listingProto.Item.PriceCurrency == nil {
+			return errors.New("pricing currency is missing")
+		}
+		if priceCurrency, err := AllCurrencies().Lookup(l.listingProto.Item.PriceCurrency.Code); err != nil {
+			return errors.New("invalid pricing currency")
+		} else {
+			if uint(l.listingProto.Item.PriceCurrency.Divisibility) > priceCurrency.Divisibility {
+				return errors.New("pricing currency divisibility is too large")
+			}
+		}
+		if _, ok := new(big.Int).SetString(l.listingProto.Item.BigPrice, 10); !ok {
+			return errors.New("invalid item price amount")
+		}
+	}
+
 	// Format-specific validations
-	if listing.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
-		err := validateMarketPriceListing(listing)
+	if l.listingProto.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+		err := validateMarketPriceListing(l.listingProto)
 		if err != nil {
 			return err
 		}
@@ -2028,32 +1568,22 @@ func ValidateListing(l *Listing, testnet bool) (err error) {
 }
 
 func (l *Listing) validatePhysicalListing() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return fmt.Errorf("producing listing protobuf: %s", err)
-	}
-	if listing.Item.PriceCurrency.Code == "" {
-		return errors.New("listing pricing currency code must not be empty")
-	}
-	if len(listing.Item.PriceCurrency.Code) > WordMaxCharacters {
-		return fmt.Errorf("pricingCurrency is longer than the max of %d characters", WordMaxCharacters)
-	}
-	if len(listing.Item.Condition) > SentenceMaxCharacters {
+	if len(l.listingProto.Item.Condition) > SentenceMaxCharacters {
 		return fmt.Errorf("'Condition' length must be less than the max of %d", SentenceMaxCharacters)
 	}
-	if len(listing.Item.Options) > MaxListItems {
+	if len(l.listingProto.Item.Options) > MaxListItems {
 		return fmt.Errorf("number of options is greater than the max of %d", MaxListItems)
 	}
 
 	// ShippingOptions
-	if len(listing.ShippingOptions) == 0 {
+	if len(l.listingProto.ShippingOptions) == 0 {
 		return errors.New("must be at least one shipping option for a physical good")
 	}
-	if len(listing.ShippingOptions) > MaxListItems {
+	if len(l.listingProto.ShippingOptions) > MaxListItems {
 		return fmt.Errorf("number of shipping options is greater than the max of %d", MaxListItems)
 	}
 	var shippingTitles []string
-	for _, shippingOption := range listing.ShippingOptions {
+	for _, shippingOption := range l.listingProto.ShippingOptions {
 		if shippingOption.Name == "" {
 			return errors.New("shipping option title name must not be empty")
 		}
@@ -2072,7 +1602,7 @@ func (l *Listing) validatePhysicalListing() error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("shipping options must specify at least one region")
 		}
-		if err := ValidShippingRegion(shippingOption); err != nil {
+		if err := ValidateShippingRegion(shippingOption); err != nil {
 			return fmt.Errorf("invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
@@ -2098,11 +1628,15 @@ func (l *Listing) validatePhysicalListing() error {
 				}
 			}
 			serviceTitles = append(serviceTitles, option.Name)
+
 			if option.EstimatedDelivery == "" {
 				return errors.New("shipping option estimated delivery must not be empty")
 			}
 			if len(option.EstimatedDelivery) > SentenceMaxCharacters {
 				return fmt.Errorf("shipping option estimated delivery length must be less than the max of %d", SentenceMaxCharacters)
+			}
+			if _, ok := new(big.Int).SetString(option.BigPrice, 10); !ok {
+				return errors.New("invalid shipping service price amount")
 			}
 		}
 	}
@@ -2110,29 +1644,28 @@ func (l *Listing) validatePhysicalListing() error {
 	return nil
 }
 
-func (l *Listing) validateCryptocurrencyListing() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return fmt.Errorf("producing listing protobuf: %s", err)
+func (l *Listing) ValidateCryptoListing() error {
+	if len(l.listingProto.Metadata.AcceptedCurrencies) != 1 {
+		return errors.New("cryptocurrency listing must only have one accepted currency")
 	}
 
-	if len(listing.Coupons) > 0 {
+	if len(l.listingProto.Coupons) > 0 {
 		return ErrCryptocurrencyListingIllegalField("coupons")
 	}
-	if len(listing.Item.Options) > 0 {
+	if len(l.listingProto.Item.Options) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.options")
 	}
-	if len(listing.ShippingOptions) > 0 {
+	if len(l.listingProto.ShippingOptions) > 0 {
 		return ErrCryptocurrencyListingIllegalField("shippingOptions")
 	}
-	if len(listing.Item.Condition) > 0 {
+	if len(l.listingProto.Item.Condition) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.condition")
 	}
-	if listing.Item.PriceCurrency != nil &&
-		len(listing.Item.PriceCurrency.Code) > 0 {
+	if l.listingProto.Item.PriceCurrency != nil &&
+		len(l.listingProto.Item.PriceCurrency.Code) > 0 {
 		return ErrCryptocurrencyListingIllegalField("item.pricingCurrency")
 	}
-	if len(listing.Metadata.CryptoCurrencyCode) == 0 {
+	if len(l.listingProto.Metadata.CryptoCurrencyCode) == 0 {
 		return ErrListingCryptoCurrencyCodeInvalid
 	}
 
@@ -2140,23 +1673,19 @@ func (l *Listing) validateCryptocurrencyListing() error {
 	if cryptoDivisibility == 0 {
 		return ErrListingCryptoDivisibilityInvalid
 	}
-	def := NewUnknownCryptoDefinition(listing.Metadata.CryptoCurrencyCode, uint(cryptoDivisibility))
+	def := NewUnknownCryptoDefinition(l.listingProto.Metadata.CryptoCurrencyCode, uint(cryptoDivisibility))
 	if err := def.Valid(); err != nil {
 		return fmt.Errorf("cryptocurrency metadata invalid: %s", err)
 	}
 	return nil
 }
 
+// SetCryptocurrencyListingDefaults ensures appropriate defaults are set for Crypto listings
 func (l *Listing) SetCryptocurrencyListingDefaults() error {
-	listing, err := l.GetProtoListing()
-	if err != nil {
-		return err
-	}
-	listing.Coupons = []*pb.Listing_Coupon{}
-	listing.Item.Options = []*pb.Listing_Item_Option{}
-	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
-	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-	// TODO : set the bytes
+	l.listingProto.Coupons = []*pb.Listing_Coupon{}
+	l.listingProto.Item.Options = []*pb.Listing_Item_Option{}
+	l.listingProto.ShippingOptions = []*pb.Listing_ShippingOption{}
+	l.listingProto.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
 	return nil
 }
 
@@ -2190,49 +1719,8 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateListingSkus(listing *pb.Listing) error {
-	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		return validateCryptocurrencyQuantity(listing)
-	}
-	return nil
-}
-
-func validateCryptocurrencyQuantity(listing *pb.Listing) error {
-	var checkFn func(*pb.Listing_Item_Sku) error
-	switch listing.Metadata.Version {
-	case 5:
-		checkFn = func(s *pb.Listing_Item_Sku) error {
-			if s == nil {
-				return fmt.Errorf("cannot validate nil sku")
-			}
-			if s.BigQuantity == "" {
-				return fmt.Errorf("sku quantity empty")
-			}
-			if ba, ok := new(big.Int).SetString(s.BigQuantity, 10); ok && ba.Cmp(big.NewInt(0)) < 0 {
-				return fmt.Errorf("sku quantity cannot be negative")
-			}
-			return nil
-		}
-	default:
-		checkFn = func(s *pb.Listing_Item_Sku) error {
-			if s == nil {
-				return fmt.Errorf("cannot validate nil sku")
-			}
-			if s.Quantity <= 0 {
-				return fmt.Errorf("sku quantity zero or less")
-			}
-			return nil
-		}
-	}
-	for _, sku := range listing.Item.Skus {
-		if err := checkFn(sku); err != nil {
-			return ErrCryptocurrencySkuQuantityInvalid
-		}
-	}
-	return nil
-}
-
-func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
+// ValidateShippingRegion ensures shipping options are valid
+func ValidateShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 	for _, region := range shippingOption.Regions {
 		if int32(region) == 0 {
 			return ErrShippingRegionMustBeSet
@@ -2250,6 +1738,37 @@ func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 	return nil
 }
 
+// ValidatePurchaseItemOptions ensures item options are valid
+func (l *Listing) ValidatePurchaseItemOptions(itemOptions []option) error {
+	if l.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+		len(itemOptions) > 0 {
+		return fmt.Errorf("options on a %s listing were provided, but are not supported", pb.Listing_Metadata_CRYPTOCURRENCY.String())
+	}
+
+	var (
+		optSet     = make(map[string]struct{})
+		checkedOpt = make(map[string]struct{})
+	)
+	// create an option set
+	for _, lo := range l.listingProto.Item.Options {
+		optSet[lo.Name] = struct{}{}
+	}
+	// walk through purchase options and verify
+	for _, po := range itemOptions {
+		// that they are available on the listing
+		if _, ok := optSet[po.Name]; !ok {
+			return fmt.Errorf("unknown item option (%s)", po.Name)
+		}
+		// that they haven't already been applied
+		if _, ok := checkedOpt[po.Name]; ok {
+			return fmt.Errorf("item option (%s) applied more than once", po.Name)
+		}
+		checkedOpt[po.Name] = struct{}{}
+	}
+	return nil
+}
+
+// ValidateListingOptions is a helper to ensure item options are valid
 func ValidateListingOptions(listingItemOptions []*pb.Listing_Item_Option, itemOptions []option) ([]*pb.Order_Item_Option, error) {
 	var validatedListingOptions []*pb.Order_Item_Option
 	listingOptions := make(map[string]*pb.Listing_Item_Option)

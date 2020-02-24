@@ -26,6 +26,10 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	if dispute.PaymentCoin.String() == "" {
+		return errors.New("payment coin field is empty")
+	}
+
 	var readInt, buyerOpenedInt uint
 	if dispute.IsBuyerInitiated {
 		buyerOpenedInt = 1
@@ -283,13 +287,18 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			}
 		}
 
+		cv, err := repo.NewCurrencyValueWithLookup(total.String(), paymentCoin)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		ret = append(ret, repo.Case{
 			CaseId:       caseID,
 			Slug:         slug,
 			Timestamp:    time.Unix(int64(timestamp), 0),
 			Title:        title,
 			Thumbnail:    thumbnail,
-			Total:        total.String(),
+			Total:        *cv,
 			VendorId:     vendorId,
 			VendorHandle: vendorHandle,
 			BuyerId:      buyerId,

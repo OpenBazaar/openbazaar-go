@@ -16,8 +16,6 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
         bob = self.nodes[2]
         charlie = self.nodes[3]
 
-        # generate some coins and send them to bob
-        generated_coins = 10
         time.sleep(4)
         api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
@@ -28,7 +26,6 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: Unknown response")
-        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -141,7 +138,7 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
+        time.sleep(120)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -164,7 +161,7 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # Bob open dispute
         dispute = {
             "orderId": orderId,
@@ -220,7 +217,7 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: CloseDispute POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(40)
 
         # Alice check dispute closed correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
@@ -261,9 +258,7 @@ class EthDisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("EthDisputeCloseBuyerTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(20)
-
-        time.sleep(5)
+        time.sleep(120)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance/T" + self.cointype

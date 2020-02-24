@@ -90,32 +90,33 @@ func (scanner *inboundMessageScanner) PerformTask() {
 			// Get handler for this msg type
 			handler := scanner.getHandler(pb.Message_MessageType(m.MessageType))
 			if handler == nil {
-				log.Errorf("err fetching handler for msg: %v", pb.Message_MessageType(m.MessageType))
+				scanner.logger.Errorf("err fetching handler for msg: %v", pb.Message_MessageType(m.MessageType))
 				continue
 			}
 			i, err := scanner.extractID(m.PeerPubkey)
 			if err != nil {
-				log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+				scanner.logger.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
 				continue
+
 			}
 			msg := new(repo.Message)
 
 			if len(m.Message) > 0 {
 				err = msg.UnmarshalJSON(m.Message)
 				if err != nil {
-					log.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
+					scanner.logger.Errorf("Error processing message %s. Type %s: %s", m, m.MessageType, err.Error())
 					continue
 				}
 			}
 			// Dispatch handler
 			_, err = handler(*i, &msg.Msg, nil)
 			if err != nil {
-				log.Errorf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
+				scanner.logger.Errorf("%d handle message error from %s: %s", m.MessageType, m.PeerID, err)
 				continue
 			}
 			err = scanner.datastore.Messages().MarkAsResolved(m)
 			if err != nil {
-				log.Errorf("marking message resolved: %s", err)
+				scanner.logger.Errorf("marking message resolved: %s", err)
 			}
 		}
 	}

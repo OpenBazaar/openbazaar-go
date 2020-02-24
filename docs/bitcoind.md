@@ -1,7 +1,7 @@
 Using a Bitcoind Wallet
 ========================
-The default openbazaar-go wallet uses [simplified payment verification](https://bitcoin.org/en/developer-guide#simplified-payment-verification-spv) (SPV) to validate incoming bitcoin payments.
-The benefit of this operating mode is that it achieves a high level of security without much overhead (bandwidth, CPU, etc) and is suitable for the average user. However, there are some downsides
+The SPV openbazaar-go wallet uses [simplified payment verification](https://bitcoin.org/en/developer-guide#simplified-payment-verification-spv) to validate incoming bitcoin payments. (Note the
+SPV wallet is no longer the default wallet used by openbazaar-go and now uses an API-based wallet by default.) The benefit of this operating mode is that it achieves a high level of security without much overhead (bandwidth, CPU, etc) and is suitable for the average user. However, there are some downsides
 to SPV that might warrant switching to a different wallent:
 
 1. **Lack of full validation**
@@ -57,11 +57,33 @@ Next, edit the following fields in the openbazaar-go config file found in the op
 ```
 Obviously replacing the username and password with the username and password you set in the bitcoind config file.
 
+Finally, edit the openbazaar-go config file found within your openbazaar data directory to change the `type` of BTC wallet used from "API" to "SPV".
+
+For example, if your BTC configuration looks like:
+```
+      "BTC": {
+         "API": [
+            "https://btc.blockbook.api.openbazaar.org/api"
+         ],
+         "APITestnet": [
+            "https://tbtc.blockbook.api.openbazaar.org/api"
+         ],
+         "FeeAPI": "https://btc.fees.openbazaar.org",
+         "HighFeeDefault": 50,
+         "LowFeeDefault": 1,
+         "MaxFee": 200,
+         "MediumFeeDefault": 10,
+         "TrustedPeer": "",
+         "Type": "API",
+         "WalletOptions": null
+      },
+```
+
+You would update `"Type": "API",` to become `"Type": "SPV",`.
+
 That's it! Just start openbazaar-go.
 
 ### Things to consider
 - If bitcoind is running when you start openbazaar-go, it will shut it down and restart it. This is done because bitcoind needs to be run
-with a specific set of options so that openbazaar-go can detect incoming payments. 
-- It's highly recommended you do not run bitcoind independently of openbazaar-go. If you receive a transaction while openbazaar-go is not
-running, it will not be passed into openbazaar-go. Next time you start openbazaar-go it will not detect the payment. You can force it detect
-the payment by running the resync blockchain API call, but it's a very heavyweight operation. 
+with a specific set of options so that openbazaar-go can detect incoming payments.
+- The SPV wallet is slowly becoming deprecated on this project and may lag behind with updates. If any problems are found, please report them as a [new issue](https://github.com/OpenBazaar/openbazaar-go/issues/new).

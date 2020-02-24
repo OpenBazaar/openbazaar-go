@@ -55,9 +55,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        check_amt = "350000000"
+
+        check_amt = "350000000000000000"
         if self.vendor_version == 4:
-            check_amt = 350000000
+            check_amt = 350000000000000000
         if resp["ether"]["inventory"] != check_amt:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
@@ -203,9 +204,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        check_amt = "250000000"
+        
+        check_amt = "340000000000000000"
         if self.buyer_version == 4:
-            check_amt = 250000000
+            check_amt = 340000000000000000
         if resp["ether"]["inventory"] != check_amt:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 

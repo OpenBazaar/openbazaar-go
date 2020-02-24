@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -17,16 +18,34 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gorilla/websocket"
 	"github.com/hunterlong/tokenbalance"
 	"github.com/nanmu42/etherscan-api"
 
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
 
+/*
+	!! Important URL information from Infura
+	Mainnet	JSON-RPC over HTTPs	https://mainnet.infura.io/v3/YOUR-PROJECT-ID
+	Mainnet	JSON-RPC over websockets	wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID
+	Ropsten	JSON-RPC over HTTPS	https://ropsten.infura.io/v3/YOUR-PROJECT-ID
+	Ropsten	JSON-RPC over websockets	wss://ropsten.infura.io/ws/v3/YOUR-PROJECT-ID
+	Rinkeby	JSON-RPC over HTTPS	https://rinkeby.infura.io/v3/YOUR-PROJECT-ID
+	Rinkeby	JSON-RPC over websockets	wss://rinkeby.infura.io/ws/v3/YOUR-PROJECT-ID
+	Kovan	JSON-RPC over HTTPS	https://kovan.infura.io/v3/YOUR-PROJECT-ID
+	Kovan	JSON-RPC over websockets	wss://kovan.infura.io/ws/v3/YOUR-PROJECT-ID
+	Görli	JSON-RPC over HTTPS	https://goerli.infura.io/v3/YOUR-PROJECT-ID
+	Görli	JSON-RPC over websockets	wss://goerli.infura.io/ws/v3/YOUR-PROJECT-ID
+*/
+
+var wsURLTemplate = "wss://%s.infura.io/ws/%s"
+
 // EthClient represents the eth client
 type EthClient struct {
 	*ethclient.Client
 	eClient *etherscan.Client
+	ws      *websocket.Conn
 	url     string
 }
 
@@ -34,24 +53,35 @@ var txns []wi.Txn
 var txnsLock sync.RWMutex
 
 // NewEthClient returns a new eth client
+// wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID
 func NewEthClient(url string) (*EthClient, error) {
 	var conn *ethclient.Client
 	var econn *etherscan.Client
+	var wsURL string
 	if strings.Contains(url, "rinkeby") {
-		econn = etherscan.New(etherscan.Rinkby, "your API key")
+		econn = etherscan.New(etherscan.Rinkby, EtherScanAPIKey)
+		wsURL = fmt.Sprintf(wsURLTemplate, "rinkeby", InfuraAPIKey)
 	} else if strings.Contains(url, "ropsten") {
-		econn = etherscan.New(etherscan.Ropsten, "your API key")
+		econn = etherscan.New(etherscan.Ropsten, EtherScanAPIKey)
+		wsURL = fmt.Sprintf(wsURLTemplate, "ropsten", InfuraAPIKey)
 	} else {
-		econn = etherscan.New(etherscan.Mainnet, "your API key")
+		econn = etherscan.New(etherscan.Mainnet, EtherScanAPIKey)
+		wsURL = fmt.Sprintf(wsURLTemplate, "mainnet", InfuraAPIKey)
 	}
 	var err error
 	if conn, err = ethclient.Dial(url); err != nil {
 		return nil, err
 	}
+	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		log.Errorf("eth wallet unable to open ws conn: %v", err)
+		ws = nil
+	}
 	return &EthClient{
 		Client:  conn,
 		eClient: econn,
 		url:     url,
+		ws:      ws,
 	}, nil
 
 }
@@ -168,7 +198,9 @@ func (client *EthClient) GetTokenBalance(destAccount, tokenAddress common.Addres
 		GethLocation: client.url,
 		Logs:         true,
 	}
-	configs.Connect()
+	if err := configs.Connect(); err != nil {
+		return nil, err
+	}
 
 	// insert a Token Contract address and Wallet address
 	contract := tokenAddress.String()
@@ -235,6 +267,7 @@ func (client *EthClient) EstimateGasSpend(from common.Address, value *big.Int) (
 // GetTxnNonce - used to fetch nonce for a submitted txn
 func (client *EthClient) GetTxnNonce(txID string) (int32, error) {
 	txnsLock.Lock()
+	defer txnsLock.Unlock()
 	for _, txn := range txns {
 		if txn.Txid == txID {
 			return txn.Height, nil

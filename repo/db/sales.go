@@ -67,6 +67,11 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		address = contract.VendorOrderConfirmation.PaymentAddress
 	}
 
+	paymentCoin, err := PaymentCoinForContract(&contract)
+	if err != nil {
+		return err
+	}
+
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -81,7 +86,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		shippingName,
 		shippingAddress,
 		address,
-		PaymentCoinForContract(&contract),
+		paymentCoin,
 		CoinTypeForContract(&contract),
 	)
 	if err != nil {
@@ -193,13 +198,18 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			coinType = ""
 		}
 
+		cv, err := repo.NewCurrencyValueWithLookup(totalStr, paymentCoin)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		ret = append(ret, repo.Sale{
 			OrderId:         orderID,
 			Slug:            slug,
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           totalStr,
+			Total:           *cv,
 			BuyerId:         buyerID,
 			BuyerHandle:     buyerHandle,
 			ShippingName:    shippingName,
@@ -305,9 +315,11 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 		return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("validating payment coin: %s", err.Error())
 	}
 	var records []*wallet.TransactionRecord
-	err = json.Unmarshal(serializedTransactions, &records)
-	if err != nil {
-		log.Error(err)
+	if len(serializedTransactions) > 0 {
+		err = json.Unmarshal(serializedTransactions, &records)
+		if err != nil {
+			return nil, pb.OrderState(0), false, nil, false, nil, fmt.Errorf("unmarshal purchase transactions: %s", err.Error())
+		}
 	}
 	cc := def.CurrencyCode()
 	return rc, pb.OrderState(stateInt), funded, records, read, &cc, nil

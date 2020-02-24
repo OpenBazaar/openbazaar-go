@@ -1,10 +1,8 @@
 package factory
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -15,14 +13,8 @@ import (
 
 // MustLoadListingFixture - load listing json from fixtures
 func MustLoadListingFixture(fixtureName string) []byte {
-	gopath := os.Getenv("GOPATH")
-	repoPath := filepath.Join("src", "github.com", "OpenBazaar", "openbazaar-go")
-	fixturePath, err := filepath.Abs(filepath.Join(gopath, repoPath, "test", "factory", "fixtures", "listings"))
-	if err != nil {
-		panic(errors.New("cannot create absolute path"))
-	}
-	filename := fmt.Sprintf("%s.json", fixtureName)
-	b, err := ioutil.ReadFile(filepath.Join(fixturePath, filename))
+	filename := filepath.Join(fixtureLoadPath(), "listings", fmt.Sprintf("%s.json", fixtureName))
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(fmt.Errorf("cannot find fixture (%s): %s", fixtureName, err))
 	}

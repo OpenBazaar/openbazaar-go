@@ -933,7 +933,6 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
 			{[]string{"TBTC", "TBCH"}, "", "TBTC"},
 			{[]string{"TBCH", "TBTC"}, "", "TBCH"},
-			{[]string{}, "", ""},
 		}
 	)
 

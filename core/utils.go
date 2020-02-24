@@ -73,11 +73,15 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.BigValue = "-" + rec.BigValue
+					refundRecord.BigValue = rec.BigValue
 					refundRecord.Currency = rec.Currency
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
+
+					if !strings.HasPrefix(refundRecord.BigValue, "-") {
+						refundRecord.BigValue = "-" + refundRecord.BigValue
+					}
 					break
 				}
 			}
@@ -107,14 +111,6 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 // LookupCurrency looks up the CurrencyDefinition from available currencies
 func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefinition, error) {
 	return repo.AllCurrencies().Lookup(currencyCode)
-}
-
-// exchangeRateCode strips the T off the currency code if we are on testnet or regtest.
-func (n *OpenBazaarNode) exchangeRateCode(currencyCode string) string {
-	if n.TestnetEnable || n.RegressionTestEnable {
-		return strings.TrimPrefix(currencyCode, "T")
-	}
-	return currencyCode
 }
 
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {

@@ -37,7 +37,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
@@ -71,7 +70,7 @@ type Node struct {
 
 var (
 	fileLogFormat = logging.MustStringFormatter(
-		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+		`%{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
 	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
@@ -126,9 +125,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted)
 	logging.SetLevel(logging.INFO, "")
 
-	migrations.WalletCoinType = config.CoinType
-
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), wi.Bitcoin)
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -302,6 +299,12 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ncfg.Routing = constructMobileRouting
 
 	node.PublishLock.Lock()
+
+	// assert reserve wallet is available on startup for later usage
+	_, err = node.ReserveCurrencyConverter()
+	if err != nil {
+		return nil, fmt.Errorf("verifying reserve currency converter: %s", err.Error())
+	}
 
 	return &Node{OpenBazaarNode: node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig, startMtx: sync.Mutex{}}, nil
 }

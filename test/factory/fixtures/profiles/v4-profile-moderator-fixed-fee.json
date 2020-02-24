@@ -1,0 +1,62 @@
+{
+    "peerID": "QmQifVhzhnHRu9bGT9WNcbbuc5EF2bXRF6iJpSzNj7yRtQ",
+    "handle": "",
+    "name": "Moderator",
+    "location": "",
+    "about": "",
+    "shortDescription": "2.3 (0.13.0) Moderator",
+    "nsfw": false,
+    "vendor": true,
+    "moderator": true,
+    "moderatorInfo": {
+        "description": "I'm a test moderator. Please do not use me.",
+        "termsAndConditions": "Test moderation only. Will resolve all disputes 50/50.",
+        "languages": [
+            "en-US"
+        ],
+        "acceptedCurrencies": [
+            "ZEC",
+            "LTC",
+            "BTC",
+            "BCH"
+        ],
+        "fee": {
+            "fixedFee": {
+                "currencyCode": "USD",
+                "amount": 100
+            },
+            "percentage": 0,
+            "feeType": "FIXED"
+        }
+    },
+    "contactInfo": {
+        "website": "",
+        "email": "",
+        "phoneNumber": "",
+        "social": [
+        ]
+    },
+    "colors": {
+        "primary": "#FFFFFF",
+        "secondary": "#ECEEF2",
+        "text": "#252525",
+        "highlight": "#2BAD23",
+        "highlightText": "#252525"
+    },
+    "avatarHashes": {
+        "tiny": "zb2rhfLcAfDqyRudWcTxzZztdCNmRD2iEH2wt964QNQznZv8Y",
+        "small": "zb2rhXQbxyCzYD7aZ9PVfAx7D5hdRdjZU6MctGS5fbN76BDwc",
+        "medium": "zb2rhXowgKjLbEBEVGC9HPhxtuHKzjtzmEinmGWGm8nztnqjd",
+        "large": "zb2rhoZUSE7eWk8Tb1RQhFfrapgZ2Zt5Xp4XhLJwaa7oondCZ",
+        "original": "zb2rhmx8WX4nTL35kJGySgQuS1wzfsBbn9WvvArkxDTQW2Bqy"
+    },
+    "bitcoinPubkey": "02951689e5abda5d499607c15bb60d9c7a3b072dc7d4d1211f825334d20908b4f5",
+    "lastModified": "2019-03-15T14:50:58.913432876Z",
+    "currencies": [
+        "ZEC",
+        "LTC",
+        "BTC",
+        "BCH"
+    ],
+    "version": 4
+}

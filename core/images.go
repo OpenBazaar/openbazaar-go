@@ -3,13 +3,13 @@ package core
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"image"
 	_ "image/gif"
 	jpeg "image/jpeg"
 	_ "image/png"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	netUrl "net/url"
 	"os"
@@ -22,6 +22,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/disintegration/imaging"
 )
 
@@ -167,12 +168,14 @@ func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string
 
 // GetBase64Image - fetch the image and return it as base64 encoded string
 func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename string, err error) {
-	dial := net.Dial
+	var client *http.Client
 	if n.TorDialer != nil {
-		dial = n.TorDialer.Dial
+		tbTransport := &http.Transport{Dial: n.TorDialer.Dial}
+		client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+	} else {
+		client = &http.Client{Timeout: time.Second * 30}
 	}
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return "", "", err
@@ -192,49 +195,41 @@ func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename s
 
 // maybeMigrateImageHashes will iterate over the listing's images and migrate them
 // to a v0 cid if they are not already v0.
-func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *pb.Listing) error {
-	if listing.Item == nil || len(listing.Item.Images) == 0 {
-		return nil
-	}
-
-	maybeMigrateImage := func(imgHash, size, filename string) (string, error) {
-		id, err := cid.Decode(imgHash)
-		if err != nil {
-			return "", err
-		}
-		if id.Version() > 0 {
-			newHash, err := ipfs.AddFile(n.IpfsNode, path.Join(n.RepoPath, "root", "images", size, filename))
-			if err != nil {
-				return "", err
+func (n *OpenBazaarNode) maybeMigrateImageHashes(listing *repo.Listing) error {
+	for _, i := range listing.GetImages() {
+		var updateHash = func(size, currentHash string, update func(string) error) error {
+			var cidVer = uint64(1) // if version is unknown, always attempt to update hash
+			if id, err := cid.Decode(currentHash); err == nil {
+				cidVer = id.Version()
 			}
-			return newHash, nil
+			if cidVer > 0 {
+				var imgPath = path.Join(n.RepoPath, "root", "images", size, i.GetFilename())
+				iHash, err := ipfs.AddFile(n.IpfsNode, imgPath)
+				if err != nil {
+					return fmt.Errorf("ipfs add (%s): %s", imgPath, err.Error())
+				}
+				if err := update(iHash); err != nil {
+					return fmt.Errorf("set %s img hash: %s", size, err.Error())
+				}
+			}
+			return nil
 		}
-		return imgHash, nil
-	}
 
-	var err error
-	for i, img := range listing.Item.Images {
-		img.Large, err = maybeMigrateImage(img.Large, "large", img.Filename)
-		if err != nil {
+		if err := updateHash("tiny", i.GetTiny(), i.SetTiny); err != nil {
 			return err
 		}
-		img.Medium, err = maybeMigrateImage(img.Medium, "medium", img.Filename)
-		if err != nil {
+		if err := updateHash("small", i.GetSmall(), i.SetSmall); err != nil {
 			return err
 		}
-		img.Small, err = maybeMigrateImage(img.Small, "small", img.Filename)
-		if err != nil {
+		if err := updateHash("medium", i.GetMedium(), i.SetMedium); err != nil {
 			return err
 		}
-		img.Tiny, err = maybeMigrateImage(img.Tiny, "tiny", img.Filename)
-		if err != nil {
+		if err := updateHash("large", i.GetLarge(), i.SetLarge); err != nil {
 			return err
 		}
-		img.Original, err = maybeMigrateImage(img.Original, "original", img.Filename)
-		if err != nil {
+		if err := updateHash("original", i.GetOriginal(), i.SetOriginal); err != nil {
 			return err
 		}
-		listing.Item.Images[i] = img
 	}
 	return nil
 }

@@ -27,6 +27,6 @@ type Network string
 
 // SubDomain returns the subdomain of  etherscan API
 // via n provided.
-func (n Network) SubDomain() (sub string) {
+func (n Network) SubDomain() (sub string)  {
 	return string(n)
 }

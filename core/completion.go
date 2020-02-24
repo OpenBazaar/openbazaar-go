@@ -362,6 +362,10 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		}
 	}
 
+	if len(txInputs) == 0 {
+		return errors.New("there are no inputs available for this transaction")
+	}
+
 	chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 	if err != nil {
 		return err

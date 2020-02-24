@@ -61,19 +61,33 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 		}
 		isSale = true
 	}
+
+	for i, l := range contract.VendorListings {
+		repoListing, err := repo.NewListingFromProtobuf(l)
+		if err != nil {
+			log.Errorf("failed getting contract listing: %s", err.Error())
+			return nil, err
+		}
+		normalizedListing, err := repoListing.Normalize()
+		if err != nil {
+			log.Errorf("failed converting contract listing to v5 schema: %s", err.Error())
+			return nil, err
+		}
+		contract.VendorListings[i] = normalizedListing.GetProtobuf()
+	}
+
 	resp := new(pb.OrderRespApi)
 	resp.Contract = contract
 	resp.Funded = funded
 	resp.Read = read
 	resp.State = state
 
-	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
-	_, err = n.LookupCurrency(lookupCoin)
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
-		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, orderID)
-		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+		return nil, err
 	}
+	resp.Contract.BuyerOrder = v5Order
 
 	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
 	if err != nil {
@@ -278,7 +292,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	fee := wal.GetFeePerByte(wallet.NORMAL)
 	contract.BuyerOrder.BigRefundFee = fee.String()
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +329,7 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
@@ -374,7 +388,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 
-	err = wal.AddWatchedAddress(addr)
+	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}
@@ -546,11 +560,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 		order.RefundAddress = wal.NewAddress(wallet.INTERNAL).EncodeAddress()
 	}
 
-	contractIdentity, err := getContractIdentity(n)
+	nodeID, err := n.GetNodeID()
 	if err != nil {
 		return nil, err
 	}
-	order.BuyerID = &contractIdentity
+	order.BuyerID = nodeID
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
@@ -577,7 +591,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		var listing *repo.Listing
 		if !exists {
-			sl, err := getSignedListing(n, contract, item)
+			sl, err := getListing(n, contract, item)
 			if err != nil {
 				return nil, err
 			}
@@ -587,12 +601,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 			listing = addedListings[item.ListingHash]
 		}
 
-		acceptedCurrencies, err := listing.GetAcceptedCurrencies()
-		if err != nil || !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, acceptedCurrencies) {
+		if err != nil || !n.currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.GetAcceptedCurrencies()) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
-		ser, err := proto.Marshal(listing.ProtoListing)
+		ser, err := listing.MarshalProtobuf()
 		if err != nil {
 			return nil, err
 		}
@@ -604,7 +617,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		// set quantity according to schema version
 		// TODO: extract to repo package model
-		switch listing.ProtoListing.Metadata.Version {
+		switch listing.GetVersion() {
 		case 5:
 			i.BigQuantity = item.Quantity
 		case 4, 3:
@@ -623,36 +636,28 @@ func (n *OpenBazaarNode) createContractWithOrder(data *repo.PurchaseData) (*pb.R
 
 		i.Memo = item.Memo
 
-		contractType, err := listing.GetContractType()
-		if err != nil {
-			return nil, err
-		}
-
-		if contractType != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		if listing.GetContractType() != pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 			// Remove any duplicate coupons
 			i.CouponCodes = dedupeCoupons(item.Coupons)
-
-			// Validate the selected options
-			validatedOptions, err := repo.ValidateListingOptions(listing.ProtoListing.Item.Options, item.Options)
-			if err != nil {
-				return nil, err
-			}
-			i.Options = validatedOptions
 		}
+
+		// Validate the selected options
+		if err := listing.ValidatePurchaseItemOptions(item.Options); err != nil {
+			return nil, fmt.Errorf("validating purchase options: %s", err.Error())
+		}
+		i.Options = item.Options.ToOrderOptionSetProtobuf()
 
 		// Add shipping to physical listings, and include it for digital and service
 		// listings for legacy compatibility
-		if contractType == pb.Listing_Metadata_PHYSICAL_GOOD.String() ||
-			contractType == pb.Listing_Metadata_DIGITAL_GOOD.String() ||
-			contractType == pb.Listing_Metadata_SERVICE.String() {
+		if ct := listing.GetContractType(); ct == pb.Listing_Metadata_PHYSICAL_GOOD.String() ||
+			ct == pb.Listing_Metadata_DIGITAL_GOOD.String() ||
+			ct == pb.Listing_Metadata_SERVICE.String() {
 
 			i.ShippingOption = &pb.Order_Item_ShippingOption{
 				Name:    item.Shipping.Name,
 				Service: item.Shipping.Service,
 			}
-		}
-
-		if contractType == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
+		} else if ct == pb.Listing_Metadata_CRYPTOCURRENCY.String() {
 			i.PaymentAddress = item.PaymentAddress
 			err = validateCryptocurrencyOrderItem(i)
 			if err != nil {
@@ -685,7 +690,7 @@ func dedupeCoupons(itemCoupons []string) []string {
 	return coupons
 }
 
-func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item) (*repo.Listing, error) {
+func getListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Item) (*repo.Listing, error) {
 	// Let's fetch the listing, should be cached
 	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 	if err != nil {
@@ -697,24 +702,22 @@ func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item re
 	if err != nil {
 		return nil, err
 	}
-	if err := validateVersionNumber(&sl.RListing); err != nil {
+	if sl.GetVersion() > repo.ListingVersion {
+		return nil, errors.New("unknown listing version, must upgrade to purchase this listing")
+	}
+	if err := sl.GetListing().GetVendorID().Valid(); err != nil {
+		return nil, fmt.Errorf("invalid vendor info: %s", err.Error())
+	}
+
+	if err := sl.ValidateListing(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
+		return nil, fmt.Errorf("validating listing (%s): %s", sl.GetSlug(), err.Error())
+	}
+	if err := sl.VerifySignature(); err != nil {
 		return nil, err
 	}
-	if err := validateVendorID(&sl.RListing); err != nil {
-		return nil, err
-	}
-	if err := repo.ValidateListing(&sl.RListing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
-		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
-	}
-	if err := verifySignaturesOnListing(sl); err != nil {
-		return nil, err
-	}
-	contract.VendorListings = append(contract.VendorListings, sl.RListing.ProtoListing)
-	s := new(pb.Signature)
-	s.Section = pb.Signature_LISTING
-	s.SignatureBytes = sl.Signature
-	contract.Signatures = append(contract.Signatures, s)
-	return &sl.RListing, nil
+	contract.VendorListings = append(contract.VendorListings, sl.GetListing().GetProtobuf())
+	contract.Signatures = append(contract.Signatures, sl.GetListingSigProtobuf())
+	return sl.GetListing(), nil
 }
 
 func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
@@ -739,39 +742,6 @@ func getRatingKeysForOrder(data *repo.PurchaseData, n *OpenBazaarNode, ts *times
 	return ratingKeys, nil
 }
 
-func getContractIdentity(n *OpenBazaarNode) (pb.ID, error) {
-	id := pb.ID{}
-	profile, err := n.GetProfile()
-	if err == nil {
-		id.Handle = profile.Handle
-	}
-
-	id.PeerID = n.IpfsNode.Identity.Pretty()
-	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
-	if err != nil {
-		return id, err
-	}
-	keys := new(pb.ID_Pubkeys)
-	keys.Identity = pubkey
-	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
-	if err != nil {
-		return id, err
-	}
-	keys.Bitcoin = ecPubKey.SerializeCompressed()
-	id.Pubkeys = keys
-	// Sign the PeerID with the Bitcoin key
-	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
-	if err != nil {
-		return id, err
-	}
-	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
-	if err != nil {
-		return id, err
-	}
-	id.BitcoinSig = sig.Serialize()
-	return id, nil
-}
-
 func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(checkCode string, acceptedCurrencies []string) bool {
 	checkDef, err := n.LookupCurrency(checkCode)
 	if err != nil {
@@ -791,11 +761,7 @@ func (n *OpenBazaarNode) currencyInAcceptedCurrenciesList(checkCode string, acce
 
 func containsPhysicalGood(addedListings map[string]*repo.Listing) bool {
 	for _, listing := range addedListings {
-		contractType, err := listing.GetContractType()
-		if err != nil {
-			return false
-		}
-		if contractType == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+		if listing.GetContractType() == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
 			return true
 		}
 	}
@@ -936,162 +902,142 @@ func (n *OpenBazaarNode) CalcOrderID(order *pb.Order) (string, error) {
 	return id.B58String(), nil
 }
 
-// CalculateOrderTotal - calculate the total in satoshi/wei
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*big.Int, error) {
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	if wal.ExchangeRates() != nil {
-		_, err = wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
-		if err != nil {
-			log.Error(err)
+	var (
+		total         = big.NewInt(0)
+		physicalGoods = make(map[string]*repo.Listing)
+		toHundredths  = func(f float32) *big.Float {
+			return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
 		}
+		v5Order, err = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	)
+	if err != nil {
+		return big.NewInt(0), fmt.Errorf("normalizing buyer order: %s", err.Error())
 	}
 
-	var total *big.Int
-	physicalGoods := make(map[string]*pb.Listing)
-
-	// Calculate the price of each item
-	for _, item := range contract.BuyerOrder.Items {
-		var (
-			satoshis  *big.Int
-			itemTotal *big.Int
-		)
-
+	for _, item := range v5Order.Items {
+		var itemOriginAmt *repo.CurrencyValue
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
 		}
+
 		rl, err := repo.NewListingFromProtobuf(l)
 		if err != nil {
 			return big.NewInt(0), err
 		}
 
-		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
-			physicalGoods[item.ListingHash] = l
+		nrl, err := rl.Normalize()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("normalize legacy listing: %s", err.Error())
 		}
 
-		if l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
-			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
-			var priceModifier float64
-			if l.Metadata.PriceModifier != 0 {
-				priceModifier = float64(l.Metadata.PriceModifier)
-			} else if l.Item.PriceModifier != 0 {
-				priceModifier = float64(l.Item.PriceModifier)
-			}
-			satoshis, err = n.getMarketPriceInSatoshis(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Metadata.CryptoCurrencyCode, GetOrderQuantity(l, item))
-			if err != nil {
-				return big.NewInt(0), err
-			}
-			t0 := new(big.Float).Mul(big.NewFloat(priceModifier), new(big.Float).SetInt(satoshis))
-			t1, _ := new(big.Float).Mul(t0, big.NewFloat(0.01)).Int(nil)
-			satoshis = new(big.Int).Add(satoshis, t1)
-		} else {
-			p, ok := new(big.Int).SetString(l.Item.BigPrice, 10)
-			if !ok {
-				return big.NewInt(0), errors.New("invalid price value")
-			}
-			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code, l.Item.PriceCurrency.Code, p)
-			if err != nil {
-				return big.NewInt(0), err
-			}
+		// keep track of physical listings for shipping caluclation
+		if nrl.GetContractType() == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+			physicalGoods[item.ListingHash] = nrl
 		}
-		itemTotal = new(big.Int).Set(satoshis)
-		selectedSku, err := GetSelectedSku(l, item.Options)
+
+		// calculate base amount
+		if nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String() {
+			var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), 0)
+			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(nrl.GetProtobuf(), item), originDef)
+
+			if priceModifier := nrl.GetPriceModifier(); priceModifier != 0 {
+				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(priceModifier))
+			}
+		} else {
+			oAmt, err := nrl.GetPrice()
+			if err != nil {
+				return big.NewInt(0), err
+			}
+			itemOriginAmt = oAmt
+		}
+
+		// apply surcharges
+		selectedSku, err := GetSelectedSku(nrl.GetProtobuf(), item.Options)
 		if err != nil {
 			return big.NewInt(0), err
 		}
-		var skuExists bool
-		skus, err := rl.GetSkus()
+		skus, err := nrl.GetSkus()
 		if err != nil {
 			return big.NewInt(0), err
 		}
 		for i, sku := range skus {
 			if selectedSku == i {
-				skuExists = true
-				surcharge := big.NewInt(0)
-				surcharge0, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
-				if ok {
-					surcharge = new(big.Int).Abs(surcharge0)
-				}
-				if surcharge.Cmp(big.NewInt(0)) != 0 {
-					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-						l.Item.PriceCurrency.Code, surcharge)
-					if err != nil {
-						return big.NewInt(0), err
-					}
-					if surcharge0.Cmp(big.NewInt(0)) < 0 {
-						itemTotal = new(big.Int).Sub(itemTotal, satoshis)
-					} else {
-						itemTotal = new(big.Int).Add(itemTotal, satoshis)
-					}
-				}
-				if !skuExists {
-					return big.NewInt(0), errors.New("selected variant not found in listing")
+				// surcharge may be positive or negative
+				surcharge, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
+				if ok && surcharge.Cmp(big.NewInt(0)) != 0 {
+					itemOriginAmt = itemOriginAmt.AddBigInt(surcharge)
 				}
 				break
 			}
 		}
-		// Subtract any coupons
+
+		// apply coupon discounts
 		for _, couponCode := range item.CouponCodes {
-			for _, vendorCoupon := range l.Coupons {
-				id, err := ipfs.EncodeMultihash([]byte(couponCode))
-				if err != nil {
-					return big.NewInt(0), err
-				}
+			id, err := ipfs.EncodeMultihash([]byte(couponCode))
+			if err != nil {
+				return big.NewInt(0), err
+			}
+			for _, vendorCoupon := range nrl.GetProtobuf().Coupons {
 				if id.B58String() == vendorCoupon.GetHash() {
-					if d, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && d.Cmp(big.NewInt(0)) > 0 {
-						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-							l.Item.PriceCurrency.Code, d)
-						if err != nil {
-							log.Errorf("failed to convert currency for coupon (%s): %s", couponCode, err)
-							continue
-						}
-						itemTotal = new(big.Int).Sub(itemTotal, satoshis)
+					if disc, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
+						// apply fixed discount
+						itemOriginAmt = itemOriginAmt.SubBigInt(disc)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
-						d := new(big.Float).Mul(big.NewFloat(float64(discountF)), big.NewFloat(0.01))
-						totalDiscount, _ := new(big.Float).Mul(d, new(big.Float).SetInt(itemTotal)).Int(nil)
-						itemTotal = new(big.Int).Sub(itemTotal, totalDiscount)
+						// apply percentage discount
+						itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(-discountF))
 					}
 				}
 			}
 		}
-		// Apply tax
-		for _, tax := range l.Taxes {
+
+		// apply taxes
+		for _, tax := range nrl.GetProtobuf().Taxes {
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
-					t := new(big.Float).Mul(big.NewFloat(float64(tax.Percentage)), big.NewFloat(0.01))
-					totalTax, _ := new(big.Float).Mul(t, new(big.Float).SetInt(itemTotal)).Int(nil)
-					itemTotal = new(big.Int).Add(itemTotal, totalTax)
+					itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(tax.Percentage))
 					break
 				}
 			}
 		}
 
-		if !(l.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY &&
-			l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE) {
-			itemQuantity := GetOrderQuantity(l, item)
-			if itemQuantity.Cmp(big.NewInt(0)) <= 0 {
-				itemQuantity = big.NewInt(1)
+		// apply requested quantity
+		if !(nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String()) {
+			if itemQuantity := GetOrderQuantity(nrl.GetProtobuf(), item); itemQuantity.Cmp(big.NewInt(0)) > 0 {
+				itemOriginAmt = itemOriginAmt.MulBigInt(itemQuantity)
+			} else {
 				log.Debugf("missing quantity for order, assuming quantity 1")
 			}
-			itemTotal = new(big.Int).Mul(itemTotal, itemQuantity)
 		}
 
-		total = new(big.Int).Set(itemTotal)
+		// convert subtotal to final currency
+		cc, err := n.ReserveCurrencyConverter()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
+		}
+
+		finalItemAmount, _, err := itemOriginAmt.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+		if err != nil {
+			return big.NewInt(0), err
+		}
+
+		// add to total
+		total.Add(total, finalItemAmount.AmountBigInt())
 	}
 
 	shippingTotal, err := n.calculateShippingTotalForListings(contract, physicalGoods)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	total = new(big.Int).Add(total, shippingTotal)
+	total.Add(total, shippingTotal)
 
 	return total, nil
 }
 
-func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (*big.Int, error) {
+func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*repo.Listing) (*big.Int, error) {
 	type itemShipping struct {
 		primary               *big.Int
 		secondary             *big.Int
@@ -1100,20 +1046,24 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		version               uint32
 	}
 	var (
+		v5Order, err  = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 		is            []itemShipping
 		shippingTotal *big.Int
 	)
+	if err != nil {
+		return big.NewInt(0), fmt.Errorf("normalizing buyer order: %s", err.Error())
+	}
 
 	// First loop through to validate and filter out non-physical items
-	for _, item := range contract.BuyerOrder.Items {
-		listing, ok := listings[item.ListingHash]
+	for _, item := range v5Order.Items {
+		rl, ok := listings[item.ListingHash]
 		if !ok {
 			continue
 		}
 
 		// Check selected option exists
 		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
-		for _, so := range listing.ShippingOptions {
+		for _, so := range rl.GetProtobuf().ShippingOptions {
 			shippingOptions[strings.ToLower(so.Name)] = so
 		}
 		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
@@ -1130,10 +1080,15 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		for _, country := range option.Regions {
 			regions[country] = true
 		}
-		_, shipsToMe := regions[contract.BuyerOrder.Shipping.Country]
+		_, shipsToMe := regions[v5Order.Shipping.Country]
 		_, shipsToAll := regions[pb.CountryCode_ALL]
 		if !shipsToMe && !shipsToAll {
 			return big.NewInt(0), errors.New("listing does ship to selected country")
+		}
+
+		cc, err := n.ReserveCurrencyConverter()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("preparing reserve currency converter: %s", err.Error())
 		}
 
 		// Check service exists
@@ -1145,55 +1100,54 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if !ok {
 			return big.NewInt(0), errors.New("shipping service not found in listing")
 		}
-		servicePrice, ok := new(big.Int).SetString(service.BigPrice, 10)
-		if !ok {
-			return big.NewInt(0), errors.New("invalid service price")
-		}
-		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-			listing.Item.PriceCurrency.Code, servicePrice)
+		servicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigPrice, rl.GetProtobuf().Item.PriceCurrency)
 		if err != nil {
-			return big.NewInt(0), err
+			return big.NewInt(0), fmt.Errorf("parsing service price (%v): %s", service.Name, err.Error())
+		}
+		convertedShippingPrice, _, err := servicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("converting service price (%s): %s", service.Name, err.Error())
 		}
 
-		secondarySatoshi := big.NewInt(0)
-		if service.BigAdditionalItemPrice != "" {
-			serviceAddlItemPrice, ok := new(big.Int).SetString(service.BigAdditionalItemPrice, 10)
-			if !ok {
-				return big.NewInt(0), errors.New("invalid service additional price")
+		auxServicePrice, err := repo.NewCurrencyValueFromProtobuf(service.BigAdditionalItemPrice, rl.GetProtobuf().Item.PriceCurrency)
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("parsing aux service price (%v): %s", service.Name, err.Error())
+		}
+		var convertedAuxPrice = repo.NewCurrencyValueFromBigInt(big.NewInt(0), convertedShippingPrice.Currency)
+		if auxServicePrice.IsPositive() {
+			finalAux, _, err := auxServicePrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+			if err != nil {
+				return big.NewInt(0), fmt.Errorf("converting aux service price (%s): %s", service.Name, err.Error())
 			}
-
-			if serviceAddlItemPrice.Cmp(big.NewInt(0)) > 0 {
-				secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.AmountCurrency.Code,
-					listing.Item.PriceCurrency.Code, serviceAddlItemPrice)
-				if err != nil {
-					return big.NewInt(0), err
-				}
-			}
+			convertedAuxPrice = finalAux
 		}
 
 		// Calculate tax percentage
 		var shippingTaxPercentage float32
-		for _, tax := range listing.Taxes {
+		for _, tax := range rl.GetProtobuf().Taxes {
 			regions := make(map[pb.CountryCode]bool)
 			for _, taxRegion := range tax.TaxRegions {
 				regions[taxRegion] = true
 			}
-			_, ok := regions[contract.BuyerOrder.Shipping.Country]
+			_, ok := regions[v5Order.Shipping.Country]
 			if ok && tax.TaxShipping {
 				shippingTaxPercentage = tax.Percentage / 100
 			}
 		}
 
 		var qty uint64
-		if q := quantityForItem(listing.Metadata.Version, item); q.IsUint64() {
+		if q := quantityForItem(rl.GetVersion(), item); q.IsUint64() {
 			qty = q.Uint64()
+		} else {
+			orderID, _ := n.CalcOrderID(contract.BuyerOrder)
+			log.Warningf("unable to detect quantity in contract (%s)", orderID)
 		}
 		is = append(is, itemShipping{
-			primary:               shippingSatoshi,
-			secondary:             secondarySatoshi,
+			primary:               convertedShippingPrice.AmountBigInt(),
+			secondary:             convertedAuxPrice.AmountBigInt(),
 			quantity:              qty,
 			shippingTaxPercentage: shippingTaxPercentage,
-			version:               listing.Metadata.Version,
+			version:               rl.GetVersion(),
 		})
 	}
 
@@ -1247,117 +1201,6 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	shippingTotal = new(big.Int).Add(shippingTotal, sts0)
 
 	return shippingTotal, nil
-}
-
-func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount *big.Int) (*big.Int, error) {
-	var reserveCurrency = n.reserveCurrency()
-	var (
-		originCurrencyDef, oErr  = n.LookupCurrency(currencyCode)
-		paymentCurrencyDef, pErr = n.LookupCurrency(paymentCoin)
-		reserveCurrencyDef, rErr = n.LookupCurrency(reserveCurrency)
-	)
-	if oErr != nil {
-		return big.NewInt(0), fmt.Errorf("invalid listing currency code: %s", oErr.Error())
-	}
-	if pErr != nil {
-		return big.NewInt(0), fmt.Errorf("invalid payment currency code: %s", pErr.Error())
-	}
-	if rErr != nil {
-		return big.NewInt(0), fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
-	}
-
-	if originCurrencyDef.Equal(paymentCurrencyDef) {
-		return amount, nil
-	}
-
-	originValue, err := repo.NewCurrencyValue(amount.String(), originCurrencyDef)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("parsing amount: %s", err.Error())
-	}
-
-	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCurrency)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
-	}
-
-	if wal.ExchangeRates() == nil {
-		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
-	}
-	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	originIntoReserveRate := 1 / reserveIntoOriginRate
-	reserveIntoResultRate, err := wal.ExchangeRates().GetExchangeRate(paymentCoin)
-	if err != nil {
-		// TODO: remove hack once ExchangeRates can be made aware of testnet currencies
-		if strings.HasPrefix(paymentCoin, "T") {
-			reserveIntoResultRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(paymentCoin, "T"))
-			if err != nil {
-				return big.NewInt(0), err
-			}
-		} else {
-			return big.NewInt(0), err
-		}
-	}
-
-	reserveValue, _, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("converting to reserve: %s", err.Error())
-	}
-	resultValue, _, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("converting from reserve: %s", err.Error())
-	}
-	return resultValue.Amount, nil
-}
-
-func (n *OpenBazaarNode) reserveCurrency() string {
-	if n.TestnetEnable || n.RegressionTestEnable {
-		return "TBTC"
-	}
-	return "BTC"
-}
-
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount *big.Int) (*big.Int, error) {
-	var (
-		currencyDef, cErr = n.LookupCurrency(currencyCode)
-		pricingDef, pErr  = n.LookupCurrency(pricingCurrency)
-	)
-	if cErr != nil {
-		// if the currency is unknown, it is likely a cryptocurrency and will
-		// assume the default divisibility
-		currencyDef = repo.NewUnknownCryptoDefinition(currencyCode, repo.DefaultCryptoDivisibility)
-	}
-	if pErr != nil {
-		return big.NewInt(0), fmt.Errorf("lookup currency (%s): %s", pricingCurrency, pErr)
-	}
-
-	if currencyDef.Equal(pricingDef) {
-		return amount, nil
-	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(pricingDef.CurrencyCode().String())
-	if err != nil {
-		return big.NewInt(0), fmt.Errorf("currency (%s) unsupported by wallet", pricingDef.CurrencyCode().String())
-	}
-	if wal.ExchangeRates() == nil {
-		return big.NewInt(0), ErrPriceCalculationRequiresExchangeRates
-	}
-
-	rate, err := wal.ExchangeRates().GetExchangeRate(n.exchangeRateCode(currencyDef.CurrencyCode().String()))
-	if err != nil {
-		return big.NewInt(0), err
-	}
-
-	cv, err := repo.NewCurrencyValue(amount.String(), currencyDef)
-	if err != nil {
-		return nil, err
-	}
-	newCV, _, err := cv.ConvertTo(pricingDef, 1/rate)
-	if err != nil {
-		return nil, err
-	}
-	return newCV.Amount, nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
@@ -1766,43 +1609,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	return contract, nil
 }
 
-func validateVendorID(l *repo.Listing) error {
-
-	listing := l.ProtoListing
-
-	if listing == nil {
-		return errors.New("listing is nil")
-	}
-	if listing.VendorID == nil {
-		return errors.New("vendorID is nil")
-	}
-	if listing.VendorID.Pubkeys == nil {
-		return errors.New("vendor pubkeys is nil")
-	}
-	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.VendorID.Pubkeys.Identity)
-	if err != nil {
-		return err
-	}
-	vendorID, err := peer.IDB58Decode(listing.VendorID.PeerID)
-	if err != nil {
-		return err
-	}
-	if !vendorID.MatchesPublicKey(vendorPubKey) {
-		return errors.New("invalid vendorID")
-	}
-	return nil
-}
-
-func validateVersionNumber(listing *repo.Listing) error {
-	if listing == nil {
-		return errors.New("listing is nil")
-	}
-	if listing.Metadata.Version > repo.ListingVersion {
-		return errors.New("unknown listing version, must upgrade to purchase this listing")
-	}
-	return nil
-}
-
 // ValidatePaymentAmount - validate amount requested
 func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount *big.Int) bool {
 	settings, _ := n.Datastore.Settings().Get()
@@ -1896,4 +1702,33 @@ func quantityForItem(version uint32, item *pb.Order_Item) *big.Int {
 		return new(big.Int).SetUint64(item.Quantity64)
 	}
 	return new(big.Int).SetUint64(uint64(item.Quantity))
+}
+
+// ReserveCurrencyConverter will attempt to build a CurrencyConverter based on
+// the reserve currency, or will panic if unsuccessful
+func (n *OpenBazaarNode) ReserveCurrencyConverter() (*repo.CurrencyConverter, error) {
+	var reserveCode = "BTC"
+	if n.RegressionTestEnable || n.TestnetEnable {
+		reserveCode = "TBTC"
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCode)
+	if err != nil {
+		return nil, fmt.Errorf("unable to find reserve (%s) wallet", reserveCode)
+	}
+
+	if wal.ExchangeRates() == nil {
+		return nil, fmt.Errorf("reserve wallet has exchange rates disabled or unavailable")
+	}
+
+	// priming the exchange rate cache
+	if _, err := wal.ExchangeRates().GetAllRates(false); err != nil {
+		log.Warningf("priming exchange rate cache: %s", err.Error())
+	}
+
+	cc, err := repo.NewCurrencyConverter(reserveCode, wal.ExchangeRates())
+	if err != nil {
+		return nil, fmt.Errorf("creating reserve currency converter: %s", err.Error())
+	}
+	return cc, nil
 }

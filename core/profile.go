@@ -50,11 +50,12 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 	if err != nil || len(b) == 0 {
 		return pro, err
 	}
-	err = jsonpb.UnmarshalString(string(b), &pro)
+	p, err := repo.UnmarshalJSONProfile(b)
 	if err != nil {
 		return pro, err
 	}
-	return pro, nil
+	p.NormalizeDataForAllSchemas()
+	return *p.GetProtobuf(), nil
 }
 
 // UpdateProfile - update user profile
@@ -64,6 +65,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return fmt.Errorf("getting public key: %s", err.Error())
 	}
 
+	profile.Version = repo.ListingVersion
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	var acceptedCurrencies = profile.GetCurrencies()
 	settingsData, err := n.Datastore.Settings().Get()
@@ -93,30 +95,6 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	profile.Currencies = acceptedCurrencies
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
-
-		// Update moderator info fixed fee details
-		if profile.ModeratorInfo.Fee != nil {
-			if profile.ModeratorInfo.Fee.FixedFee != nil {
-				if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency != nil {
-					fixedFee, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
-					if err != nil {
-						return fmt.Errorf("unable to parse fixed fee currency: %s", err.Error())
-					}
-					normalizedFee, err := fixedFee.Normalize()
-					if err != nil {
-						feeDivisibility := uint(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Divisibility)
-						return fmt.Errorf("converting divisibility for fixed fee (%s) from (%d) to (%d): %s", fixedFee.Currency.String(), fixedFee.Currency.Divisibility, feeDivisibility, err.Error())
-					}
-					profile.ModeratorInfo.Fee.FixedFee = &pb.Moderator_Price{
-						AmountCurrency: &pb.CurrencyDefinition{
-							Code:         normalizedFee.Currency.CurrencyCode().String(),
-							Divisibility: uint32(normalizedFee.Currency.Divisibility),
-						},
-						BigAmount: normalizedFee.Amount.String(),
-					}
-				}
-			}
-		}
 	}
 
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
@@ -210,16 +188,18 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	repoProfile, err := repo.ProfileFromProtobuf(p)
+	repoProfile, err := repo.UnmarshalJSONProfile(newProfile)
 	if err != nil {
 		return fmt.Errorf("building profile for validation: %s", err.Error())
 	}
+
+	repoProfile.NormalizeDataForAllSchemas()
 
 	if err := repoProfile.Valid(); err != nil {
 		return fmt.Errorf("invalid profile: %s", err.Error())
 	}
 
-	return n.UpdateProfile(p)
+	return n.UpdateProfile(repoProfile.GetProtobuf())
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool) {

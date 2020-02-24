@@ -67,6 +67,10 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if dispute != nil {
 		disputedAt = int(dispute.Timestamp.Seconds)
 	}
+	paymentCoin, err := PaymentCoinForContract(&contract)
+	if err != nil {
+		return err
+	}
 	_, err = stmt.Exec(
 		orderID,
 		out,
@@ -81,7 +85,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		shippingName,
 		shippingAddress,
 		paymentAddr,
-		PaymentCoinForContract(&contract),
+		paymentCoin,
 		CoinTypeForContract(&contract),
 		disputedAt,
 	)
@@ -193,13 +197,18 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 			coinType = ""
 		}
 
+		cv, err := repo.NewCurrencyValueWithLookup(totalStr, paymentCoin)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		ret = append(ret, repo.Purchase{
 			OrderId:         orderID,
 			Slug:            slug,
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           totalStr,
+			Total:           *cv,
 			VendorId:        vendorID,
 			VendorHandle:    vendorHandle,
 			ShippingName:    shippingName,
@@ -247,7 +256,17 @@ func (p *PurchasesDB) GetUnfunded() ([]repo.UnfundedOrder, error) {
 			if err != nil {
 				return ret, err
 			}
-			ret = append(ret, repo.UnfundedOrder{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.AmountCurrency.Code, PaymentAddress: paymentAddr})
+			v5Order, err := repo.ToV5Order(rc.BuyerOrder, repo.AllCurrencies().Lookup)
+			if err != nil {
+				log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+				return nil, err
+			}
+			ret = append(ret, repo.UnfundedOrder{
+				OrderId:        orderID,
+				Timestamp:      time.Unix(int64(timestamp), 0),
+				PaymentCoin:    v5Order.Payment.AmountCurrency.Code,
+				PaymentAddress: paymentAddr,
+			})
 		}
 	}
 	return ret, nil

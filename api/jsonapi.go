@@ -1466,12 +1466,6 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	urlPath, listingID := path.Split(r.URL.Path)
 	_, peerID := path.Split(urlPath[:len(urlPath)-1])
 	useCache, _ := strconv.ParseBool(r.URL.Query().Get("usecache"))
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
 	if peerID == "" || strings.ToLower(peerID) == "listing" || peerID == i.node.IPFSIdentityString() {
 		var sl *pb.SignedListing
 		_, err := cid.Decode(listingID)
@@ -1496,22 +1490,23 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			sl.Hash = hash
 		}
 
-		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
-		if err != nil {
-			return
+		rsl := repo.NewSignedListingFromProtobuf(sl)
+
+		if err := rsl.GetListing().UpdateCouponsFromDatastore(i.node.Datastore.Coupons()); err != nil {
+			log.Warningf("updating coupons for listing (%s): %s", rsl.GetSlug(), err.Error())
 		}
-		err = core.AssignMatchingCoupons(savedCoupons, sl)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Could not apply coupons to listing.")
+
+		if err := rsl.Normalize(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("normalizing listing: %s", err.Error()))
 			return
 		}
 
-		out, err := m.MarshalToString(sl)
+		out, err := rsl.MarshalJSON()
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, out, new(pb.SignedListing))
+		SanitizedResponseM(w, string(out), new(pb.SignedListing))
 		return
 	}
 
@@ -1546,12 +1541,20 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sl.Hash = hash
-	out, err := m.MarshalToString(sl)
+
+	rsl := repo.NewSignedListingFromProtobuf(sl)
+
+	if err := rsl.Normalize(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("normalizing listing: %s", err.Error()))
+		return
+	}
+
+	out, err := rsl.MarshalJSON()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponseM(w, out, new(pb.SignedListing))
+	SanitizedResponseM(w, string(out), new(pb.SignedListing))
 }
 
 func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {

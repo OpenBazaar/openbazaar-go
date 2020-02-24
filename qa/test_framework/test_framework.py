@@ -141,6 +141,8 @@ class OpenBazaarTestFramework(object):
             args = [self.v4moderator_binary, "start", "-v", "-d", node["data_dir"], *self.options]
         else:
             args = [self.binary, "start", "-v", "-d", node["data_dir"], *self.options]
+        if self.useTor:
+            args.append("--tor")
 
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process, node)
@@ -221,6 +223,7 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
         parser.add_argument('-c', '--cointype', help="cointype to test", default="BTC")
+        parser.add_argument('-T', '--tor', help="use tor in QA testing", action='store_true')
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.v4buyer_binary = args.v4buyer
@@ -229,6 +232,7 @@ class OpenBazaarTestFramework(object):
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
         self.cointype = args.cointype
+        self.useTor = args.tor
         self.options = options
 
         try:

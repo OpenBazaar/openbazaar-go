@@ -57,16 +57,20 @@ func (c *Coin) PkScript() []byte      { return c.ScriptPubKey }
 func (c *Coin) NumConfs() int64       { return c.TxNumConfs }
 func (c *Coin) ValueAge() int64       { return int64(c.TxValue) * c.TxNumConfs }
 
-func NewCoin(txid []byte, index uint32, value btc.Amount, numConfs int64, scriptPubKey []byte) coinset.Coin {
+func newCoin(txid []byte, index uint32, value string, numConfs int64, scriptPubKey []byte) (coinset.Coin, error) {
+	iVal, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("coin value (%s) is invalid", value)
+	}
 	shaTxid, _ := chainhash.NewHash(txid)
 	c := &Coin{
 		TxHash:       shaTxid,
 		TxIndex:      index,
-		TxValue:      value,
+		TxValue:      btc.Amount(iVal),
 		TxNumConfs:   numConfs,
 		ScriptPubKey: scriptPubKey,
 	}
-	return coinset.Coin(c)
+	return coinset.Coin(c), nil
 }
 
 func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
@@ -81,8 +85,10 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 		if u.AtHeight > 0 {
 			confirmations = int32(height) - u.AtHeight
 		}
-		val, _ := strconv.ParseInt(u.Value, 10, 64)
-		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(val), int64(confirmations), u.ScriptPubkey)
+		c, err := newCoin(u.Op.Hash.CloneBytes(), u.Op.Index, u.Value, int64(confirmations), u.ScriptPubkey)
+		if err != nil {
+			continue
+		}
 		addr, err := w.ScriptToAddress(u.ScriptPubkey)
 		if err != nil {
 			continue
@@ -203,13 +209,12 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
-			n := new(big.Int)
-			n, _ = n.SetString(u.Value, 10)
+			val0, _ := new(big.Int).SetString(u.Value, 10)
 			in := wallet.TransactionInput{
 				LinkedAddress: addr,
 				OutpointIndex: u.Op.Index,
 				OutpointHash:  h,
-				Value:         *n,
+				Value:         *val0,
 			}
 			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, key, nil, wallet.FEE_BUMP)
 			if err != nil {
@@ -256,8 +261,8 @@ func (w *SPVWallet) EstimateSpendFee(amount big.Int, feeLevel wallet.FeeLevel) (
 	for _, input := range tx.TxIn {
 		for _, utxo := range utxos {
 			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index {
-				val, _ := strconv.ParseInt(utxo.Value, 10, 64)
-				inval += val
+				val0, _ := new(big.Int).SetString(utxo.Value, 10)
+				inval += val0.Int64()
 				break
 			}
 		}
@@ -607,7 +612,7 @@ func (w *SPVWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.Add
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)
-	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
+	if isTxSizeDust(*big.NewInt(amount), len(script)) {
 		return nil, wallet.ErrorDustAmount
 	}
 
@@ -745,7 +750,7 @@ func (w *SPVWallet) buildSpendAllTx(addr btc.Address, feeLevel wallet.FeeLevel) 
 	fee := int64(estimatedSize) * feePerByte.Int64()
 
 	// Check for dust output
-	if txrules.IsDustAmount(btc.Amount(totalIn-fee), len(script), txrules.DefaultRelayFeePerKb) {
+	if isTxSizeDust(*big.NewInt(totalIn - fee), len(script)) {
 		return nil, wallet.ErrorDustAmount
 	}
 
@@ -817,8 +822,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 		}
 		changeIndex := -1
 		changeAmount := inputAmount - targetAmount - maxRequiredFee
-		if changeAmount != 0 && !txrules.IsDustAmount(changeAmount,
-			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
+		if changeAmount != 0 && !isTxSizeDust(*big.NewInt(int64(changeAmount)), P2PKHOutputSize) {
 			changeScript, err := fetchChange()
 			if err != nil {
 				return nil, err
