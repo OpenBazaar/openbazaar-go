@@ -1707,28 +1707,39 @@ func quantityForItem(version uint32, item *pb.Order_Item) *big.Int {
 // ReserveCurrencyConverter will attempt to build a CurrencyConverter based on
 // the reserve currency, or will panic if unsuccessful
 func (n *OpenBazaarNode) ReserveCurrencyConverter() (*repo.CurrencyConverter, error) {
-	var reserveCode = "BTC"
-	if n.RegressionTestEnable || n.TestnetEnable {
-		reserveCode = "TBTC"
-	}
+	// reserve currency whitelist
+	// TODO: later when the wallet can express whether it can
+	// provide reliable reserve currency rates, they can be
+	// reflected upon instead of using an explicit whitelist
+	var preferredReserveWalletCodes = []string{"BTC"}
+	for _, code := range preferredReserveWalletCodes {
+		var reserveCode = code
+		if n.RegressionTestEnable || n.TestnetEnable {
+			reserveCode = "T" + code
+		}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCode)
-	if err != nil {
-		return nil, fmt.Errorf("unable to find reserve (%s) wallet", reserveCode)
-	}
+		wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCode)
+		if err != nil {
+			continue
+		}
 
-	if wal.ExchangeRates() == nil {
-		return nil, fmt.Errorf("reserve wallet has exchange rates disabled or unavailable")
-	}
+		if wal.ExchangeRates() == nil {
+			log.Warningf("%s reserve wallet has exchange rates disabled or unavailable", reserveCode)
+			continue
+		}
 
-	// priming the exchange rate cache
-	if _, err := wal.ExchangeRates().GetAllRates(false); err != nil {
-		log.Warningf("priming exchange rate cache: %s", err.Error())
-	}
+		if _, err := wal.ExchangeRates().GetAllRates(false); err != nil {
+			log.Warningf("%s reserve wallet priming exchange rate cache: %s", reserveCode, err.Error())
+			continue
+		}
 
-	cc, err := repo.NewCurrencyConverter(reserveCode, wal.ExchangeRates())
-	if err != nil {
-		return nil, fmt.Errorf("creating reserve currency converter: %s", err.Error())
+		cc, err := repo.NewCurrencyConverter(reserveCode, wal.ExchangeRates())
+		if err != nil {
+			log.Warningf("creating %s reserve currency converter: %s", reserveCode, err.Error())
+			continue
+		}
+		log.Infof("reserve exchange rates provided by %s wallet", reserveCode)
+		return cc, nil
 	}
-	return cc, nil
+	return nil, errors.New("unable to find reserve wallet with exchange rates")
 }
