@@ -71,13 +71,14 @@ class OpenBazaarTestFramework(object):
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
         args = []
-        if n == 1 and self.v4vendor_binary is not None:
+
+        if n == 1 and self.v4vendor_binary:
             self.vendor_version = "v4"
             args = [self.v4vendor_binary, "init", "-d", dir_path, "--testnet"]
-        elif n == 2 and self.v4buyer_binary is not None:
+        elif n == 2 and self.v4buyer_binary:
             self.buyer_version = "v4"
             args = [self.v4buyer_binary, "init", "-d", dir_path, "--testnet"]
-        elif n == 3 and self.v4moderator_binary is not None:
+        elif n == 3 and self.v4moderator_binary:
             self.moderator_version = "v4"
             args = [self.v4moderator_binary, "init", "-d", dir_path, "--testnet"]
         else:
