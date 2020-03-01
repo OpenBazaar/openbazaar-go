@@ -1309,11 +1309,13 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 		log.Errorf("failed calc orderID")
 	}
 
-	err = service.node.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_OPEN)),
-		orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_OPEN), err)
+	if orderID != "" {
+		err = service.node.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_OPEN)),
+			orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_OPEN), err)
+		}
 	}
 
 	// Verify signature
