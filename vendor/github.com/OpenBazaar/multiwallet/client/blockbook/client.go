@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	gosocketio "github.com/OpenBazaar/golang-socketio"
 	"github.com/OpenBazaar/golang-socketio/protocol"
 	clientErr "github.com/OpenBazaar/multiwallet/client/errors"
@@ -586,21 +587,26 @@ func (i *BlockBookClient) setupListeners() error {
 	client, err := connectSocket(i.apiUrl, i.proxyDialer)
 	if err != nil {
 		Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
-		var (
-			setupTimeoutAt = time.Now().Add(10 * time.Second)
-			t              = time.NewTicker(2 * time.Second)
-		)
-		defer t.Stop()
-		for range t.C {
-			if time.Now().After(setupTimeoutAt) {
-				return fmt.Errorf("websocket reconnection timeout (%s)", i.String())
-			}
-			client, err = connectSocket(i.apiUrl, i.proxyDialer)
-			if err != nil {
-				Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
-				continue
-			}
-			break
+		var setupTimeoutAt = time.Now().Add(10 * time.Second)
+
+		b := backoff.NewExponentialBackOff()
+		b.MaxElapsedTime = 7 * 24 * time.Hour
+
+		err = backoff.Retry(
+			func() error {
+				if time.Now().After(setupTimeoutAt) {
+					return fmt.Errorf("websocket reconnection timeout (%s)", i.String())
+				}
+				client, err = connectSocket(i.apiUrl, i.proxyDialer)
+				if err != nil {
+					Log.Errorf("reconnect websocket (%s): %s", i.String(), err.Error())
+					Log.Warningf("reconnecting in: %s", b.NextBackOff())
+					return err
+				}
+				return nil
+			}, b)
+		if err != nil{
+			Log.Fatalf("error after retrying: %v", err)
 		}
 	}
 	i.SocketClient = client
