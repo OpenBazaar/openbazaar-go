@@ -1450,7 +1450,7 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 
 	conf := n.Number.Int64() - d
 
-	return uint32(conf), uint32(n.Number.Int64()), nil
+	return uint32(conf), uint32(d), nil
 }
 
 // Close will stop the wallet daemon
