@@ -542,11 +542,11 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disput
 	if orderID0 == "" {
 		log.Errorf("failed fetching orderID")
 	} else {
-			err = n.Datastore.Messages().Put(
-				fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_OPEN)),
-				orderID0, pb.Message_DISPUTE_OPEN, peerID, repo.Message{Msg: m},
-				"", 0, []byte{})
-			if err != nil {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_OPEN)),
+			orderID0, pb.Message_DISPUTE_OPEN, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_OPEN), err)
 		}
 	}
@@ -586,7 +586,7 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerID string, updateMessage *pb.Disp
 }
 
 // SendDisputeClose - send dispute closed msg to peer
-func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract, orderID string) error {
 	a, err := ptypes.MarshalAny(resolutionMessage)
 	if err != nil {
 		log.Errorf("failed to marshal the contract: %v", err)
@@ -600,19 +600,16 @@ func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resol
 	}
 
 	// Save DISPUTE_CLOSE message to the database for this order for resending if necessary
-	var orderID0 string
-	if resolutionMessage.VendorOrderConfirmation != nil {
-		orderID0 = resolutionMessage.VendorOrderConfirmation.OrderID
-		if orderID0 == "" {
-			log.Errorf("failed fetching orderID")
-		} else {
-			err = n.Datastore.Messages().Put(
-				fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_CLOSE)),
-				orderID0, pb.Message_DISPUTE_CLOSE, peerID, repo.Message{Msg: m},
-				"", 0, []byte{})
-			if err != nil {
-				log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_CLOSE), err)
-			}
+	orderID0 := orderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_CLOSE)),
+			orderID0, pb.Message_DISPUTE_CLOSE, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_CLOSE), err)
 		}
 	}
 

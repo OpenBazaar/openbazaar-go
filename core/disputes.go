@@ -764,11 +764,11 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		return err
 	}
 
-	err = n.SendDisputeClose(buyerID, &buyerKey, rc)
+	err = n.SendDisputeClose(buyerID, &buyerKey, rc, orderID)
 	if err != nil {
 		return err
 	}
-	err = n.SendDisputeClose(vendorID, &vendorKey, rc)
+	err = n.SendDisputeClose(vendorID, &vendorKey, rc, orderID)
 	if err != nil {
 		return err
 	}
