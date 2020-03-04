@@ -524,7 +524,7 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 }
 
 // SendDisputeOpen - send open dispute msg to peer
-func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract, orderID string) error {
 	a, err := ptypes.MarshalAny(disputeMessage)
 	if err != nil {
 		log.Errorf("failed to marshal the contract: %v", err)
@@ -538,19 +538,16 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disput
 	}
 
 	// Save DISPUTE_OPEN message to the database for this order for resending if necessary
-	var orderID0 string
-	if disputeMessage.VendorOrderConfirmation != nil {
-		orderID0 = disputeMessage.VendorOrderConfirmation.OrderID
-		if orderID0 == "" {
-			log.Errorf("failed fetching orderID")
-		} else {
+	orderID0 := orderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
 			err = n.Datastore.Messages().Put(
 				fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_OPEN)),
 				orderID0, pb.Message_DISPUTE_OPEN, peerID, repo.Message{Msg: m},
 				"", 0, []byte{})
 			if err != nil {
-				log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_OPEN), err)
-			}
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_OPEN), err)
 		}
 	}
 
