@@ -1435,6 +1435,10 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 		return 0, 0, errors.New("invalid txn hash")
 	}
 
+	if s["message"] != nil {
+		return 0, 0, nil
+	}
+
 	result := s["result"].(map[string]interface{})
 
 	d, _ := strconv.ParseInt(result["blockNumber"].(string), 0, 64)
