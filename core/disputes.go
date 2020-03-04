@@ -585,7 +585,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	if modValue.Cmp(big.NewInt(0)) > 0 {
+	if modValue.Cmp(big.NewInt(0)) >= 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
 			Value:   *modValue,

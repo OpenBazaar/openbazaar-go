@@ -1074,10 +1074,12 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() == rScript.Moderator.Hex() {
+		if out.Value.Cmp(new(big.Int)) > 0 {
 			indx = append(indx, i)
+		}
+		if out.Address.String() == rScript.Moderator.Hex() {
 			mbvAddresses[0] = out.Address.String()
-		} else if out.Address.String() == rScript.Buyer.Hex() {
+		} else if out.Address.String() == rScript.Buyer.Hex() && (out.Value.Cmp(new(big.Int)) > 0) {
 			mbvAddresses[1] = out.Address.String()
 		} else {
 			mbvAddresses[2] = out.Address.String()
@@ -1228,6 +1230,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
+		if out.Value.Cmp(new(big.Int)) > 0 {
+			indx = append(indx, i)
+		}
 		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
 			mbvAddresses[0] = out.Address.String()
