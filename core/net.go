@@ -877,6 +877,8 @@ func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
 	if err != nil {
 		return err
 	}
+
+	// Create the ORDER_PAYMENT message
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_PAYMENT,
 		Payload:     a,
@@ -887,6 +889,7 @@ func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
 		return err
 	}
 
+	// Save ORDER_PAYMENT message to the database for this order for resending if necessary
 	orderID0 := msg.OrderID
 	if orderID0 == "" {
 		log.Errorf("failed fetching orderID")
@@ -896,7 +899,7 @@ func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
 			orderID0, pb.Message_ORDER_PAYMENT, spend.PeerID, repo.Message{Msg: m},
 			"", 0, []byte{})
 		if err != nil {
-			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_PAYMENT), err)
 		}
 	}
 
