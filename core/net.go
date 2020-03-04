@@ -813,6 +813,20 @@ func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
 	if err != nil {
 		return err
 	}
+
+	orderID0 := msg.OrderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_PAYMENT)),
+			orderID0, pb.Message_ORDER_PAYMENT, spend.PeerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
 	cancel()
