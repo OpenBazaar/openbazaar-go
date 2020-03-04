@@ -443,10 +443,26 @@ func (n *OpenBazaarNode) SendRefund(peerID string, refundMessage *pb.RicardianCo
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+	// Create the REFUND message
 	m := pb.Message{
 		MessageType: pb.Message_REFUND,
 		Payload:     a,
 	}
+
+	// Save REFUND message to the database for this order for resending if necessary
+	orderID0 := refundMessage.Refund.OrderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_REFUND)),
+			orderID0, pb.Message_REFUND, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_REFUND), err)
+		}
+	}
+
 	k, err := libp2p.UnmarshalPublicKey(refundMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 	if err != nil {
 		log.Errorf("failed to unmarshal publicKey: %v", err)
