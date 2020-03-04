@@ -110,7 +110,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	contract.Signatures = append(contract.Signatures, rc.Signatures[0])
 
 	// Send to moderator
-	err = n.SendDisputeOpen(order.Payment.Moderator, nil, rc)
+	err = n.SendDisputeOpen(order.Payment.Moderator, nil, rc, orderID)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 			return nil
 		}
 	}
-	err = n.SendDisputeOpen(counterparty, &counterkey, rc)
+	err = n.SendDisputeOpen(counterparty, &counterkey, rc, orderID)
 	if err != nil {
 		return err
 	}
@@ -768,11 +768,11 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		return err
 	}
 
-	err = n.SendDisputeClose(buyerID, &buyerKey, rc)
+	err = n.SendDisputeClose(buyerID, &buyerKey, rc, orderID)
 	if err != nil {
 		return err
 	}
-	err = n.SendDisputeClose(vendorID, &vendorKey, rc)
+	err = n.SendDisputeClose(vendorID, &vendorKey, rc, orderID)
 	if err != nil {
 		return err
 	}
