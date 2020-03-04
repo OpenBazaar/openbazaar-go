@@ -595,10 +595,30 @@ func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resol
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+
+	// Create the DISPUTE_CLOSE message
 	m := pb.Message{
 		MessageType: pb.Message_DISPUTE_CLOSE,
 		Payload:     a,
 	}
+
+	// Save DISPUTE_CLOSE message to the database for this order for resending if necessary
+	var orderID0 string
+	if resolutionMessage.VendorOrderConfirmation != nil {
+		orderID0 = resolutionMessage.VendorOrderConfirmation.OrderID
+		if orderID0 == "" {
+			log.Errorf("failed fetching orderID")
+		} else {
+			err = n.Datastore.Messages().Put(
+				fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_CLOSE)),
+				orderID0, pb.Message_DISPUTE_CLOSE, peerID, repo.Message{Msg: m},
+				"", 0, []byte{})
+			if err != nil {
+				log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_CLOSE), err)
+			}
+		}
+	}
+
 	return n.sendMessage(peerID, k, m)
 }
 
