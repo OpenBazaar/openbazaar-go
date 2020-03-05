@@ -344,7 +344,7 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 				Txid:      util.EnsureCorrectPrefix(txns[0].Txid),
 				Outputs:   []wi.TransactionOutput{},
 				Inputs:    []wi.TransactionInput{},
-				Height:    1,
+				Height:    txns[0].Height,
 				Timestamp: time.Now(),
 				Value:     *value,
 				WatchOnly: false,
