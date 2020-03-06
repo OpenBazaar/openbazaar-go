@@ -195,6 +195,12 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 
 	repoProfile.NormalizeDataForAllSchemas()
 
+	if repoProfile.GetProtobuf().ModeratorInfo != nil && repoProfile.GetProtobuf().ModeratorInfo.Fee != nil {
+		if repoProfile.GetProtobuf().ModeratorInfo.Fee.FeeType == pb.Moderator_Fee_PERCENTAGE {
+			repoProfile.GetProtobuf().ModeratorInfo.Fee.FixedFee = nil
+		}
+	}
+
 	if err := repoProfile.Valid(); err != nil {
 		return fmt.Errorf("invalid profile: %s", err.Error())
 	}
