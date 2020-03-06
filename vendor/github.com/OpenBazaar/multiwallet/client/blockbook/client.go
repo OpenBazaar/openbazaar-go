@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	gosocketio "github.com/OpenBazaar/golang-socketio"
 	"github.com/OpenBazaar/golang-socketio/protocol"
 	clientErr "github.com/OpenBazaar/multiwallet/client/errors"
@@ -24,6 +23,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
+	"github.com/cenkalti/backoff"
 	"github.com/cpacia/bchutil"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
@@ -605,7 +605,7 @@ func (i *BlockBookClient) setupListeners() error {
 				}
 				return nil
 			}, b)
-		if err != nil{
+		if err != nil {
 			Log.Fatalf("error after retrying: %v", err)
 		}
 	}
