@@ -225,19 +225,6 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			return
 		}
 
-		// update divisibility from contract listing
-		if contract.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
-			customDivisibility := currencyDivisibilityFromContract(l.multiwallet, contract)
-			if customDivisibility != currencyValue.Currency.Divisibility {
-				currencyValue.Currency.Divisibility = customDivisibility
-				if err := currencyValue.Valid(); err != nil {
-					log.Errorf("Invalid currency divisibility (%d) found in contract (%s): %s", customDivisibility, orderId, err.Error())
-					return
-				}
-			}
-		}
-
-		// TODO: this comparison needs to consider the possibility of different divisibilities
 		if funding.Cmp(currencyValue.Amount) >= 0 {
 			log.Debugf("Received payment for order %s", orderId)
 			funded = true

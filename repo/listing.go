@@ -919,8 +919,8 @@ func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
 	var cspb = make([]*pb.Listing_Coupon, len(cs))
 	for i, c := range cs {
 		cspb[i] = &pb.Listing_Coupon{
-			Title:            c.GetTitle(),
-			PercentDiscount:  c.GetPercentOff(),
+			Title:           c.GetTitle(),
+			PercentDiscount: c.GetPercentOff(),
 		}
 		if c.GetAmountOff() != nil {
 			cspb[i].BigPriceDiscount = c.GetAmountOff().Amount.String()
