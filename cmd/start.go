@@ -35,7 +35,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
@@ -88,8 +87,6 @@ type Start struct {
 	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
-	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
-	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
 
 	ForceKeyCachePurge bool `long:"forcekeypurge" description:"repair test for issue OpenBazaar/openbazaar-go#1593; use as instructed only"`
 }
@@ -110,19 +107,11 @@ func (x *Start) Execute(args []string) error {
 	if x.Testnet || x.Regtest {
 		isTestnet = true
 	}
-	if x.BitcoinCash && x.ZCash != "" {
-		return errors.New("bitcoin cash and zcash cannot be used at the same time")
-	}
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(isTestnet)
+	repoPath, err := repo.GetRepoPath(isTestnet, x.DataDir)
 	if err != nil {
 		return err
-	}
-	if x.BitcoinCash {
-		repoPath += "-bitcoincash"
-	} else if x.ZCash != "" {
-		repoPath += "-zcash"
 	}
 	if x.DataDir != "" {
 		repoPath = x.DataDir
@@ -187,15 +176,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	ct := wi.Bitcoin
-	if x.BitcoinCash || strings.Contains(repoPath, "-bitcoincash") {
-		ct = wi.BitcoinCash
-	} else if x.ZCash != "" || strings.Contains(repoPath, "-zcash") {
-		ct = wi.Zcash
-	}
-
-	migrations.WalletCoinType = ct
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
+	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), wi.Bitcoin)
 	if err != nil && err != repo.ErrRepoExists {
 		log.Error("repo init:", err)
 		return err
@@ -605,6 +586,12 @@ func (x *Start) Execute(args []string) error {
 	}
 	core.Node.PublishLock.Lock()
 
+	// assert reserve wallet is available on startup for later usage
+	_, err = core.Node.ReserveCurrencyConverter()
+	if err != nil {
+		return fmt.Errorf("verifying reserve currency converter: %s", err.Error())
+	}
+
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
@@ -683,6 +670,7 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
 		core.Node.StartRecordAgingNotifier()
+		core.Node.StartInboundMsgScanner()
 
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()

@@ -35,7 +35,8 @@ class ListingsTest(OpenBazaarTestFramework):
         # POST listing
         with open('testdata/listing.json') as listing_file:
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
-        ljson["metadata"]["pricingCurrency"] = "T" + self.cointype
+        ljson["item"]["priceCurrency"]["code"] = "T" + self.cointype
+        ljson["metadata"]["acceptedCurrencies"] = ["t" + self.cointype.lower()]
         currency = "T" + self.cointype
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(ljson, indent=4))
@@ -109,4 +110,4 @@ class ListingsTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running ListingTest")
-    ListingsTest().main()
+    ListingsTest().main(["--regtest", "--disableexchangerates"])

@@ -9,13 +9,13 @@ import (
 	"math/big"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/cevaris/ordered_map"
-	"strings"
 )
 
 const (
@@ -116,7 +116,7 @@ func (h *HeaderDB) Put(sh StoredHeader, newBestHeader bool) error {
 	go func() {
 		err := h.putToDB(sh, newBestHeader)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 	}()
 	return nil
@@ -131,7 +131,7 @@ func (h *HeaderDB) put(sh StoredHeader, newBestHeader bool) error {
 	h.lock.Unlock()
 	err := h.putToDB(sh, newBestHeader)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	return nil
 }

@@ -2,6 +2,8 @@ package util
 
 import (
 	"bytes"
+	"strconv"
+
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -13,14 +15,15 @@ func CalcBalance(utxos []wi.Utxo, txns []wi.Txn) (confirmed, unconfirmed int64) 
 	}
 
 	for _, utxo := range utxos {
+		val, _ := strconv.ParseInt(utxo.Value, 10, 64)
 		if !utxo.WatchOnly {
 			if utxo.AtHeight > 0 {
-				confirmed += utxo.Value
+				confirmed += val
 			} else {
 				if checkIfStxoIsConfirmed(utxo.Op.Hash.String(), txmap) {
-					confirmed += utxo.Value
+					confirmed += val
 				} else {
-					unconfirmed += utxo.Value
+					unconfirmed += val
 				}
 			}
 		}

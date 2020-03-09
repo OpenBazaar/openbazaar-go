@@ -1,16 +1,12 @@
 package core
 
 import (
-	"crypto/sha256"
-	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	util "gx/ipfs/QmNohiVssaPw3KVLZik59DBVGTSm2dGvYT9eoXt5DQ36Yz/go-ipfs-util"
-	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
-	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
-	ps "gx/ipfs/QmaCTz9RkrU13bm9kMB54f7atgqM4qkjDZpRwRoJiWXEqs/go-libp2p-peerstore"
-	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -19,47 +15,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 )
-
-// EncodeCID - Hash with SHA-256 and encode as a multihash
-func EncodeCID(b []byte) (*cid.Cid, error) {
-	multihash, err := EncodeMultihash(b)
-	if err != nil {
-		return nil, err
-	}
-	id := cid.NewCidV1(cid.Raw, *multihash)
-	return &id, err
-}
-
-// EncodeMultihash - sha256 encode
-func EncodeMultihash(b []byte) (*mh.Multihash, error) {
-	h := sha256.Sum256(b)
-	encoded, err := mh.Encode(h[:], mh.SHA2_256)
-	if err != nil {
-		return nil, err
-	}
-	multihash, err := mh.Cast(encoded)
-	if err != nil {
-		return nil, err
-	}
-	return &multihash, err
-}
-
-// ExtractIDFromPointer Certain pointers, such as moderators, contain a peerID. This function
-// will extract the ID from the underlying PeerInfo object.
-func ExtractIDFromPointer(pi ps.PeerInfo) (string, error) {
-	if len(pi.Addrs) == 0 {
-		return "", errors.New("PeerInfo object has no addresses")
-	}
-	addr := pi.Addrs[0]
-	if addr.Protocols()[0].Code != ma.P_IPFS {
-		return "", errors.New("IPFS protocol not found in address")
-	}
-	val, err := addr.ValueForProtocol(ma.P_IPFS)
-	if err != nil {
-		return "", err
-	}
-	return val, nil
-}
 
 // FormatRFC3339PB returns the given `google_protobuf.Timestamp` as a RFC3339
 // formatted string
@@ -71,27 +26,29 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return nil, nil, err
+	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return paymentRecords, nil, err
 	}
 
-	// Consolidate any transactions with multiple outputs into a single record
 	for _, r := range records {
-		record, ok := payments[r.Txid]
-		if ok {
-			record.Value += r.Value
-			payments[r.Txid] = record
-		} else {
+		_, ok := payments[r.Txid]
+		if !ok {
 			tx := new(pb.TransactionRecord)
 			tx.Txid = r.Txid
-			tx.Value = r.Value
+			tx.BigValue = r.Value.String()
+			tx.Currency = order.Payment.AmountCurrency
+
 			ts, err := ptypes.TimestampProto(r.Timestamp)
 			if err != nil {
 				return paymentRecords, nil, err
 			}
 			tx.Timestamp = ts
-			ch, err := chainhash.NewHashFromStr(tx.Txid)
+			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(tx.Txid, "0x"))
 			if err != nil {
 				return paymentRecords, nil, err
 			}
@@ -108,24 +65,31 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		paymentRecords = append(paymentRecords, rec)
 	}
 	var refundRecord *pb.TransactionRecord
-	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && contract.BuyerOrder != nil && contract.BuyerOrder.Payment != nil {
+	if contract != nil && (state == pb.OrderState_REFUNDED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED) && order.Payment != nil {
 		// For multisig we can use the outgoing from the payment address
-		if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
+		if order.Payment.Method == pb.Order_Payment_MODERATED || state == pb.OrderState_DECLINED || state == pb.OrderState_CANCELED {
 			for _, rec := range payments {
-				if rec.Value < 0 {
+				val, _ := new(big.Int).SetString(rec.BigValue, 10)
+				if val.Cmp(big.NewInt(0)) < 0 {
 					refundRecord = new(pb.TransactionRecord)
 					refundRecord.Txid = rec.Txid
-					refundRecord.Value = -rec.Value
+					refundRecord.BigValue = rec.BigValue
+					refundRecord.Currency = rec.Currency
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
+
+					if !strings.HasPrefix(refundRecord.BigValue, "-") {
+						refundRecord.BigValue = "-" + refundRecord.BigValue
+					}
 					break
 				}
 			}
 		} else if contract.Refund != nil && contract.Refund.RefundTransaction != nil && contract.Refund.Timestamp != nil {
+			refund := repo.ToV5Refund(contract.Refund)
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
-			ch, err := chainhash.NewHashFromStr(contract.Refund.RefundTransaction.Txid)
+			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
 			if err != nil {
 				return paymentRecords, refundRecord, err
 			}
@@ -133,9 +97,10 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
-			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
-			refundRecord.Value = int64(contract.Refund.RefundTransaction.Value)
-			refundRecord.Timestamp = contract.Refund.Timestamp
+			refundRecord.Txid = refund.RefundTransaction.Txid
+			refundRecord.BigValue = refund.RefundTransaction.BigValue
+			refundRecord.Currency = refund.RefundTransaction.ValueCurrency
+			refundRecord.Timestamp = refund.Timestamp
 			refundRecord.Confirmations = confirmations
 			refundRecord.Height = height
 		}
@@ -143,14 +108,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 	return paymentRecords, refundRecord, nil
 }
 
-// NormalizeCurrencyCode standardizes the format for the given currency code
-func NormalizeCurrencyCode(currencyCode string) string {
-	var c, err = repo.LoadCurrencyDefinitions().Lookup(currencyCode)
-	if err != nil {
-		log.Errorf("invalid currency code (%s): %s", currencyCode, err.Error())
-		return ""
-	}
-	return c.String()
+// LookupCurrency looks up the CurrencyDefinition from available currencies
+func (n *OpenBazaarNode) LookupCurrency(currencyCode string) (repo.CurrencyDefinition, error) {
+	return repo.AllCurrencies().Lookup(currencyCode)
 }
 
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {

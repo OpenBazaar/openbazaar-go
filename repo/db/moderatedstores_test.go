@@ -61,7 +61,10 @@ func TestModeratedDB_Put_Duplicate(t *testing.T) {
 	}
 	defer teardown()
 
-	modDB.Put("abc")
+	err = modDB.Put("abc")
+	if err != nil {
+		t.Log(err)
+	}
 	err = modDB.Put("abc")
 	if err == nil {
 		t.Error("Expected unquire constriant error to be thrown")
@@ -75,7 +78,10 @@ func TestModeratedDB_Delete(t *testing.T) {
 	}
 	defer teardown()
 
-	modDB.Put("abc")
+	err = modDB.Put("abc")
+	if err != nil {
+		t.Log(err)
+	}
 	err = modDB.Delete("abc")
 	if err != nil {
 		t.Error(err)
@@ -83,7 +89,10 @@ func TestModeratedDB_Delete(t *testing.T) {
 	stmt, _ := modDB.PrepareQuery("select peerID from moderatedstores where peerID=?")
 	defer stmt.Close()
 	var peerId string
-	stmt.QueryRow("abc").Scan(&peerId)
+	err = stmt.QueryRow("abc").Scan(&peerId)
+	if err != nil {
+		t.Log(err)
+	}
 	if peerId != "" {
 		t.Error("Failed to delete moderated store")
 	}
@@ -97,7 +106,10 @@ func TestModeratedDB_Get(t *testing.T) {
 	defer teardown()
 
 	for i := 0; i < 100; i++ {
-		modDB.Put(strconv.Itoa(i))
+		err = modDB.Put(strconv.Itoa(i))
+		if err != nil {
+			t.Log(err)
+		}
 	}
 	stores, err := modDB.Get("", 100)
 	if err != nil {

@@ -88,7 +88,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	if cfg.ConfigFile.LTC != nil && cfg.ConfigFile.LTC.Type == "API" {
 		enableAPIWallet[wallet.Litecoin] = cfg.ConfigFile.LTC
 	}
-	enableAPIWallet[wallet.Ethereum] = nil
+	enableAPIWallet[wallet.Ethereum] = cfg.ConfigFile.ETH
 
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
@@ -167,8 +167,13 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		}
 		return actualCoin, w, nil
 	case wallet.Ethereum:
-		actualCoin = wallet.Ethereum
-		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Mnemonic, cfg.Proxy)
+		if testnet {
+			actualCoin = wallet.TestnetEthereum
+		} else {
+			actualCoin = wallet.Ethereum
+		}
+		//actualCoin = wallet.Ethereum
+		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Params, cfg.Mnemonic, cfg.Proxy)
 		if err != nil {
 			return InvalidCoinType, nil, err
 		}

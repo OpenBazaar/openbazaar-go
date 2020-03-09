@@ -53,19 +53,16 @@ func (w *WatchedScriptsDB) PutAll(scriptPubKeys [][]byte) error {
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
-	tx, _ := w.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into watchedscripts(coin, scriptPubKey) values(?,?)")
+	stmt, err := w.PrepareQuery("insert or replace into watchedscripts(coin, scriptPubKey) values(?,?)")
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("prepare watch script sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	_, err = stmt.Exec(w.coinType.CurrencyCode(), hex.EncodeToString(scriptPubKey))
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit watch script: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 
@@ -76,16 +73,18 @@ func (w *WatchedScriptsDB) GetAll() ([][]byte, error) {
 	stm := "select scriptPubKey from watchedscripts where coin=?"
 	rows, err := w.db.Query(stm, w.coinType.CurrencyCode())
 	if err != nil {
-		return ret, err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var scriptHex string
 		if err := rows.Scan(&scriptHex); err != nil {
+			log.Errorf("scan watch script key: %s", err.Error())
 			continue
 		}
 		scriptPubKey, err := hex.DecodeString(scriptHex)
 		if err != nil {
+			log.Errorf("decode watch script key: %s", err.Error())
 			continue
 		}
 		ret = append(ret, scriptPubKey)
@@ -98,7 +97,7 @@ func (w *WatchedScriptsDB) Delete(scriptPubKey []byte) error {
 	defer w.lock.Unlock()
 	_, err := w.db.Exec("delete from watchedscripts where scriptPubKey=? and coin=?", hex.EncodeToString(scriptPubKey), w.coinType.CurrencyCode())
 	if err != nil {
-		return err
+		return fmt.Errorf("delete watch script key: %s", err.Error())
 	}
 	return nil
 }

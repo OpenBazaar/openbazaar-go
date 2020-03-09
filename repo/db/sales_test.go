@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -26,14 +27,14 @@ func buildNewSaleStore() (repo.SaleStore, func(), error) {
 		TestModeEnabled: true,
 	})
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("build schema at path (%s): %s", appSchema.DataPath(), err)
 	}
 	if err := appSchema.InitializeDatabase(); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("init db at path (%s): %s", appSchema.DataPath(), err)
 	}
 	database, err := appSchema.OpenDatabase()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("open db at path (%s): %s", appSchema.DataPath(), err)
 	}
 	return db.NewSaleStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
@@ -64,7 +65,8 @@ func TestPutSale(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	contract.BuyerOrder.Payment.Coin = "BTC"
+	//contract.BuyerOrder.Payment.Coin = "BTC"
+	contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8}
 
 	err = saldb.Put("orderID", *contract, 0, false)
 	if err != nil {
@@ -78,7 +80,7 @@ func TestPutSale(t *testing.T) {
 	var state int
 	var read int
 	var date int
-	var total int
+	var total string
 	var thumbnail string
 	var buyerID string
 	var buyerHandle string
@@ -103,8 +105,8 @@ func TestPutSale(t *testing.T) {
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
 	}
-	if total != int(contract.BuyerOrder.Payment.Amount) {
-		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Payment.Amount), total)
+	if total != contract.BuyerOrder.Payment.BigAmount {
+		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.BigAmount, total)
 	}
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
 		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
@@ -124,8 +126,8 @@ func TestPutSale(t *testing.T) {
 	if shippingAddress != contract.BuyerOrder.Shipping.Address {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.Address), shippingAddress)
 	}
-	if paymentCoin != contract.BuyerOrder.Payment.Coin {
-		t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.Coin, paymentCoin)
+	if paymentCoin != contract.BuyerOrder.Payment.AmountCurrency.Code {
+		t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.AmountCurrency.Code, paymentCoin)
 	}
 	if coinType != "" {
 		t.Errorf(`Expected empty string got %s`, coinType)
@@ -140,7 +142,10 @@ func TestDeleteSale(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
+	err = saldb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = saldb.Delete("orderID")
 	if err != nil {
 		t.Error("Sale delete failed")
@@ -166,7 +171,10 @@ func TestMarkSaleAsRead(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
+	err = saldb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = saldb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -192,7 +200,10 @@ func TestMarkSaleAsUnread(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
+	err = saldb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = saldb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -311,7 +322,10 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	saldb.Put("orderID", *contract, 0, false)
+	err = saldb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Error(err)
@@ -346,7 +360,7 @@ func TestSalesGetByOrderId(t *testing.T) {
 	}
 
 	contract := factory.NewContract()
-	contract.BuyerOrder.Payment.Coin = expectedCoin
+	//contract.BuyerOrder.Payment.Coin = expectedCoin
 	if err := saldb.Put("orderID", *contract, 0, false); err != nil {
 		t.Fatal(err)
 	}
@@ -370,15 +384,24 @@ func TestSalesDB_GetAll(t *testing.T) {
 	c0 := factory.NewContract()
 	ts, _ := ptypes.TimestampProto(time.Now())
 	c0.BuyerOrder.Timestamp = ts
-	saldb.Put("orderID", *c0, 0, false)
+	err = saldb.Put("orderID", *c0, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c1 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Minute))
 	c1.BuyerOrder.Timestamp = ts
-	saldb.Put("orderID2", *c1, 1, false)
+	err = saldb.Put("orderID2", *c1, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c2 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Hour))
 	c2.BuyerOrder.Timestamp = ts
-	saldb.Put("orderID3", *c2, 1, false)
+	err = saldb.Put("orderID3", *c2, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	// Test no offset no limit
 	sales, ct, err := saldb.GetAll([]pb.OrderState{}, "", false, false, -1, []string{})
 	if err != nil {
@@ -714,18 +737,18 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
 			{[]string{"TBTC", "TBCH"}, "", "TBTC"},
 			{[]string{"TBCH", "TBTC"}, "", "TBCH"},
-			{[]string{}, "", ""},
 		}
 	)
 
 	for _, test := range tests {
+		//t.Logf("testing acc: %+v paymentCoin: %s expected: %s", test.acceptedCurrencies, test.paymentCoin, test.expected)
 		saldb, teardown, err := buildNewSaleStore()
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
-		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -747,15 +770,47 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 }
 
 func TestSalesDB_Put_CoinType(t *testing.T) {
-	var contract = factory.NewContract()
+	var (
+		contract  = factory.NewContract()
+		testCoins = []struct {
+			coinType      string
+			cryptoListing bool
+		}{
+			{
+				"",
+				true,
+			},
+			{
+				"TBTC",
+				true,
+			},
+			{
+				"TETH",
+				true,
+			},
+			{
+				"TBCH",
+				false,
+			},
+		}
+	)
 
-	for _, testCoin := range []string{"", "TBTC", "TETH"} {
+	for _, test := range testCoins {
 		var saldb, teardown, err = buildNewSaleStore()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         test.coinType,
+			Divisibility: 8,
+		}
+		if test.cryptoListing {
+			contract.VendorListings[0].Metadata.CryptoCurrencyCode = test.coinType
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+		} else {
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_PHYSICAL_GOOD
+		}
 
 		err = saldb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -769,8 +824,10 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 		if count != 1 {
 			t.Errorf(`Expected %d record got %d`, 1, count)
 		}
-		if sales[0].CoinType != testCoin {
-			t.Errorf(`Expected %s got %s`, testCoin, sales[0].CoinType)
+		if test.cryptoListing && sales[0].CoinType != test.coinType {
+			t.Errorf(`Expected %s got %s`, test.coinType, sales[0].CoinType)
+		} else if !test.cryptoListing && sales[0].CoinType != "" {
+			t.Errorf(`Expected "" got %s`, sales[0].CoinType)
 		}
 		teardown()
 	}

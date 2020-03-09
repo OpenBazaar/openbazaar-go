@@ -1,191 +1,198 @@
 package migrations
 
-import (
-	"database/sql"
-	"fmt"
-	"path"
-	"strings"
+import "errors"
 
-	"github.com/OpenBazaar/wallet-interface"
-)
-
-var WalletCoinType wallet.CoinType
-
+// Migration014 is deprecated to remove support for bitcoind and zcashd runtime
+// dependencies. The migration behavior is intact for historical purposes.
 type Migration014 struct{}
 
-func (Migration014) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	var (
-		databaseFilePath string
-	)
-	if testnetEnabled {
-		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
+func (Migration014) Up(_, _ string, _ bool) error {
+	//var (
+	//WalletCoinType = "BTC" // use single-coin currency code
+	//databaseFilePath string
+	//)
+	//if testnetEnabled {
+	//databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	//} else {
+	//databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
+	//}
 
-	const (
-		alterKeysSQL                 = "alter table keys add coin text;"
-		createKeysIndexSQL           = "create index index_keys on keys (coin);"
-		alterUTXOSQL                 = "alter table utxos add coin text;"
-		createUTXOIndexSQL           = "create index index_utxos on utxos (coin);"
-		alterSTXOSQL                 = "alter table stxos add coin text;"
-		createSTXOIndexSQL           = "create index index_stxos on stxos (coin);"
-		alterTXNSSQL                 = "alter table txns add coin text;"
-		createTXNSIndexSQL           = "create index index_txns on txns (coin);"
-		alterWatchedScriptsSQL       = "alter table watchedscripts add coin text;"
-		createWatchedScriptsIndexSQL = "create index index_watchedscripts on watchedscripts (coin);"
-	)
+	//const (
+	//alterKeysSQL                 = "alter table keys add coin text;"
+	//createKeysIndexSQL           = "create index index_keys on keys (coin);"
+	//alterUTXOSQL                 = "alter table utxos add coin text;"
+	//createUTXOIndexSQL           = "create index index_utxos on utxos (coin);"
+	//alterSTXOSQL                 = "alter table stxos add coin text;"
+	//createSTXOIndexSQL           = "create index index_stxos on stxos (coin);"
+	//alterTXNSSQL                 = "alter table txns add coin text;"
+	//createTXNSIndexSQL           = "create index index_txns on txns (coin);"
+	//alterWatchedScriptsSQL       = "alter table watchedscripts add coin text;"
+	//createWatchedScriptsIndexSQL = "create index index_watchedscripts on watchedscripts (coin);"
+	//)
 
-	db, err := sql.Open("sqlite3", databaseFilePath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	if databasePassword != "" {
-		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
-		_, err := db.Exec(p)
-		if err != nil {
-			return err
-		}
-	}
+	//db, err := sql.Open("sqlite3", databaseFilePath)
+	//if err != nil {
+	//return err
+	//}
+	//defer db.Close()
+	//if databasePassword != "" {
+	//p := fmt.Sprintf("pragma key = '%s';", databasePassword)
+	//_, err := db.Exec(p)
+	//if err != nil {
+	//return err
+	//}
+	//}
 
-	migration := strings.Join([]string{
-		alterKeysSQL,
-		alterUTXOSQL,
-		alterSTXOSQL,
-		alterTXNSSQL,
-		alterWatchedScriptsSQL,
-		createKeysIndexSQL,
-		createUTXOIndexSQL,
-		createSTXOIndexSQL,
-		createTXNSIndexSQL,
-		createWatchedScriptsIndexSQL,
-	}, " ")
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	if _, err = tx.Exec(migration); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
+	//migration := strings.Join([]string{
+	//alterKeysSQL,
+	//alterUTXOSQL,
+	//alterSTXOSQL,
+	//alterTXNSSQL,
+	//alterWatchedScriptsSQL,
+	//createKeysIndexSQL,
+	//createUTXOIndexSQL,
+	//createSTXOIndexSQL,
+	//createTXNSIndexSQL,
+	//createWatchedScriptsIndexSQL,
+	//}, " ")
+	//tx, err := db.Begin()
+	//if err != nil {
+	//return err
+	//}
+	//if _, err = tx.Exec(migration); err != nil {
+	//err0 := tx.Rollback()
+	//if err0 != nil {
+	//log.Error(err0)
+	//}
+	//return err
+	//}
+	//if err = tx.Commit(); err != nil {
+	//return err
+	//}
 
-	_, err = db.Exec("update keys set coin = ?", WalletCoinType.CurrencyCode())
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("update utxos set coin = ?", WalletCoinType.CurrencyCode())
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("update stxos set coin = ?", WalletCoinType.CurrencyCode())
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("update txns set coin = ?", WalletCoinType.CurrencyCode())
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("update watchedscripts set coin = ?", WalletCoinType.CurrencyCode())
-	if err != nil {
-		return err
-	}
+	//_, err = db.Exec("update keys set coin = ?", WalletCoinType.CurrencyCode())
+	//if err != nil {
+	//return err
+	//}
+	//_, err = db.Exec("update utxos set coin = ?", WalletCoinType.CurrencyCode())
+	//if err != nil {
+	//return err
+	//}
+	//_, err = db.Exec("update stxos set coin = ?", WalletCoinType.CurrencyCode())
+	//if err != nil {
+	//return err
+	//}
+	//_, err = db.Exec("update txns set coin = ?", WalletCoinType.CurrencyCode())
+	//if err != nil {
+	//return err
+	//}
+	//_, err = db.Exec("update watchedscripts set coin = ?", WalletCoinType.CurrencyCode())
+	//if err != nil {
+	//return err
+	//}
 
 	// Bump schema version
-	err = writeRepoVer(repoPath, 15)
-	if err != nil {
-		return err
-	}
-	return nil
+	//err = writeRepoVer(repoPath, 15)
+	//if err != nil {
+	//return err
+	//}
+	//return nil
+
+	log.Error("Migration014 has been deprecated and requires manual recovery")
+	return errors.New("Migration014 has been deprecated and cannot proceed")
+
 }
 
-func (Migration014) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	var (
-		databaseFilePath string
-	)
-	if testnetEnabled {
-		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
-	} else {
-		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
-	}
+func (Migration014) Down(_, _ string, _ bool) error {
+	//var (
+	//databaseFilePath string
+	//)
+	//if testnetEnabled {
+	//databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	//} else {
+	//databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
+	//}
 
-	db, err := sql.Open("sqlite3", databaseFilePath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	if databasePassword != "" {
-		p := fmt.Sprintf("pragma key = '%s';", databasePassword)
-		_, err := db.Exec(p)
-		if err != nil {
-			return err
-		}
-	}
+	//db, err := sql.Open("sqlite3", databaseFilePath)
+	//if err != nil {
+	//return err
+	//}
+	//defer db.Close()
+	//if databasePassword != "" {
+	//p := fmt.Sprintf("pragma key = '%s';", databasePassword)
+	//_, err := db.Exec(p)
+	//if err != nil {
+	//return err
+	//}
+	//}
 
-	const (
-		alterKeysSQL               = "alter table keys rename to keys_old;"
-		createKeysSQL              = "create table keys (scriptAddress text primary key not null, purpose integer, keyIndex integer, used integer, key text);"
-		insertKeysSQL              = "insert into keys select scriptAddress, purpose, keyIndex, used, key from keys_old;"
-		dropKeysTableSQL           = "drop table keys_old;"
-		alterUtxosSQL              = "alter table utxos rename to utxos_old;"
-		createUtxosSQL             = "create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);"
-		insertUtxosSQL             = "insert into utxos select outpoint, value, height, scriptPubKey, watchOnly from utxos_old;"
-		dropUtxosTableSQL          = "drop table utxos_old;"
-		alterStxosSQL              = "alter table stxos rename to stxos_old;"
-		createStxosSQL             = "create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text);"
-		insertStxosSQL             = "insert into stxos select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos_old;"
-		dropStxosTableSQL          = "drop table stxos_old;"
-		alterTxnsSQL               = "alter table txns rename to txns_old;"
-		createTxnsSQL              = "create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);"
-		insertTxnsSQL              = "insert into txns select txid, value, height, timestamp, watchOnly, tx from txns_old;"
-		dropTxnsTableSQL           = "drop table txns_old;"
-		alterWatchedScriptsSQL     = "alter table watchedscripts rename to watchedscripts_old;"
-		createWatchedScriptSQL     = "create table watchedscripts (scriptPubKey text primary key not null);"
-		insertWatchedScriptsSQL    = "insert into watchedscripts select scriptPubKey from watchedscripts_old;"
-		dropWatchedScriptsTableSQL = "drop table watchedscripts_old;"
-	)
+	//const (
+	//alterKeysSQL               = "alter table keys rename to keys_old;"
+	//createKeysSQL              = "create table keys (scriptAddress text primary key not null, purpose integer, keyIndex integer, used integer, key text);"
+	//insertKeysSQL              = "insert into keys select scriptAddress, purpose, keyIndex, used, key from keys_old;"
+	//dropKeysTableSQL           = "drop table keys_old;"
+	//alterUtxosSQL              = "alter table utxos rename to utxos_old;"
+	//createUtxosSQL             = "create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);"
+	//insertUtxosSQL             = "insert into utxos select outpoint, value, height, scriptPubKey, watchOnly from utxos_old;"
+	//dropUtxosTableSQL          = "drop table utxos_old;"
+	//alterStxosSQL              = "alter table stxos rename to stxos_old;"
+	//createStxosSQL             = "create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text);"
+	//insertStxosSQL             = "insert into stxos select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos_old;"
+	//dropStxosTableSQL          = "drop table stxos_old;"
+	//alterTxnsSQL               = "alter table txns rename to txns_old;"
+	//createTxnsSQL              = "create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);"
+	//insertTxnsSQL              = "insert into txns select txid, value, height, timestamp, watchOnly, tx from txns_old;"
+	//dropTxnsTableSQL           = "drop table txns_old;"
+	//alterWatchedScriptsSQL     = "alter table watchedscripts rename to watchedscripts_old;"
+	//createWatchedScriptSQL     = "create table watchedscripts (scriptPubKey text primary key not null);"
+	//insertWatchedScriptsSQL    = "insert into watchedscripts select scriptPubKey from watchedscripts_old;"
+	//dropWatchedScriptsTableSQL = "drop table watchedscripts_old;"
+	//)
 
-	migration := strings.Join([]string{
-		alterKeysSQL,
-		createKeysSQL,
-		insertKeysSQL,
-		dropKeysTableSQL,
-		alterUtxosSQL,
-		createUtxosSQL,
-		insertUtxosSQL,
-		dropUtxosTableSQL,
-		alterStxosSQL,
-		createStxosSQL,
-		insertStxosSQL,
-		dropStxosTableSQL,
-		alterTxnsSQL,
-		createTxnsSQL,
-		insertTxnsSQL,
-		dropTxnsTableSQL,
-		alterWatchedScriptsSQL,
-		createWatchedScriptSQL,
-		insertWatchedScriptsSQL,
-		dropWatchedScriptsTableSQL,
-	}, " ")
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	if _, err = tx.Exec(migration); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
+	//migration := strings.Join([]string{
+	//alterKeysSQL,
+	//createKeysSQL,
+	//insertKeysSQL,
+	//dropKeysTableSQL,
+	//alterUtxosSQL,
+	//createUtxosSQL,
+	//insertUtxosSQL,
+	//dropUtxosTableSQL,
+	//alterStxosSQL,
+	//createStxosSQL,
+	//insertStxosSQL,
+	//dropStxosTableSQL,
+	//alterTxnsSQL,
+	//createTxnsSQL,
+	//insertTxnsSQL,
+	//dropTxnsTableSQL,
+	//alterWatchedScriptsSQL,
+	//createWatchedScriptSQL,
+	//insertWatchedScriptsSQL,
+	//dropWatchedScriptsTableSQL,
+	//}, " ")
+	//tx, err := db.Begin()
+	//if err != nil {
+	//return err
+	//}
+	//if _, err = tx.Exec(migration); err != nil {
+	//err0 := tx.Rollback()
+	//if err0 != nil {
+	//log.Error(err0)
+	//}
+	//return err
+	//}
+	//if err = tx.Commit(); err != nil {
+	//return err
+	//}
 
 	// Revert schema version
-	err = writeRepoVer(repoPath, 14)
-	if err != nil {
-		return err
-	}
-	return nil
+	//err = writeRepoVer(repoPath, 14)
+	//if err != nil {
+	//return err
+	//}
+	//return nil
+
+	log.Error("Migration014 has been deprecated and requires manual recovery")
+	return errors.New("Migration014 has been deprecated and cannot proceed")
 }

@@ -250,6 +250,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, n *core.IpfsNode, addr ma.Mult
 			return
 		}
 		log.Debugf("Successfully downloaded offline message %s from: %s", addr.String(), pid.Pretty())
+
 		err = m.db.OfflineMessages().Put(addr.String())
 		if err != nil {
 			log.Error(err)
@@ -291,7 +292,10 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 			return
 		}
 		log.Debugf("Successfully downloaded offline message from %s", addr.String())
-		m.db.OfflineMessages().Put(addr.String())
+		err = m.db.OfflineMessages().Put(addr.String())
+		if err != nil {
+			log.Error(err)
+		}
 		m.attemptDecrypt(ciphertext, pid, addr)
 	case <-m.DoneChan:
 		return
@@ -358,11 +362,17 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
-		m.sendAck(id.Pretty(), pid)
+		err = m.sendAck(id.Pretty(), pid)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	// handle
-	m.handleMessage(env, addr.String(), nil)
+	err = m.handleMessage(env, addr.String(), nil)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 // handleMessage loads the handler for this message type and attempts to process the message. Some message types (such
@@ -406,7 +416,10 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 			}
 		} else if env.Message.MessageType == pb.Message_ORDER && resp != nil {
 			log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
-			m.sendError(id.Pretty(), nil, *resp)
+			err = m.sendError(id.Pretty(), nil, *resp)
+			if err != nil {
+				log.Error(err)
+			}
 			return err
 		} else {
 			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
@@ -478,6 +491,9 @@ func (m *MessageRetriever) processQueuedMessages() {
 	}
 	// Delete messages that we're successfully processed from the database
 	for _, url := range toDelete {
-		m.db.OfflineMessages().DeleteMessage(url)
+		err = m.db.OfflineMessages().DeleteMessage(url)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 }

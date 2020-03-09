@@ -5,14 +5,15 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 func TestEmojiToHTML(t *testing.T) {
 	var (
 		expected  string
 		container = make(map[string]string)
-		rx        = regexp.MustCompile(core.EmojiPattern)
+		rx        = regexp.MustCompile(util.EmojiPattern)
 		text      = "a #💩 #and #🍦 #😳"
 		i         = -1
 		replaced  = rx.ReplaceAllStringFunc(text, func(s string) string {
@@ -28,7 +29,7 @@ func TestEmojiToHTML(t *testing.T) {
 		t.Errorf("expected processed string to be %s, but was %s", expected, replaced)
 	}
 
-	htmlEnt := core.ToHtmlEntities(text)
+	htmlEnt := repo.ToHtmlEntities(text)
 
 	expected = "a #&#x1F4A9; #and #&#x1F366; #&#x1F633;"
 	if htmlEnt != expected {
@@ -59,7 +60,7 @@ func TestToHtmlEntities(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		transformed := core.ToHtmlEntities(test.slug)
+		transformed := repo.ToHtmlEntities(test.slug)
 		if transformed != test.expected {
 			t.Errorf("Test %d failed. Expected %s got %s", i, test.expected, transformed)
 		}

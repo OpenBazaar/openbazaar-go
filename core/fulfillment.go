@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"math/big"
+	"strings"
+	"time"
 
 	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 
-	"time"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -30,22 +33,23 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			return err
 		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
-		payout.PayoutAddress = currentAddress.EncodeAddress()
-		payout.PayoutFeePerByte = wal.GetFeePerByte(wallet.NORMAL)
+		payout.PayoutAddress = currentAddress.String()
+		f := wal.GetFeePerByte(wallet.NORMAL)
+		payout.BigPayoutFeePerByte = f.String()
 		var ins []wallet.TransactionInput
-		var outValue int64
+		outValue := big.NewInt(0)
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return err
 				}
-				outValue += r.Value
+				outValue.Add(outValue, &r.Value)
 				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
@@ -53,7 +57,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 
 		var output = wallet.TransactionOutput{
 			Address: currentAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -71,8 +75,11 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
+		fee, ok := new(big.Int).SetString(payout.BigPayoutFeePerByte, 10)
+		if !ok {
+			return errors.New("invalid payout fee value")
+		}
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return err
 		}
@@ -138,9 +145,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 
 	fulfillment.RatingSignature = rs
 
-	var fulfils []*pb.OrderFulfillment
-
-	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
+	rc.VendorOrderFulfillment = []*pb.OrderFulfillment{fulfillment}
 	rc, err = n.SignOrderFulfillment(rc)
 	if err != nil {
 		return err
@@ -160,9 +165,15 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		}
 	}
 	if n.IsFulfilled(rc) {
-		n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
+		err = n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
+		if err != nil {
+			log.Error(err)
+		}
 	} else {
-		n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
+		err = n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
@@ -232,8 +243,13 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return errors.New("failed to verify signature on rating keys")
 	}
 
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
+		wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 		if err != nil {
 			return err
 		}
@@ -263,7 +279,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		for _, fulfil := range contract.VendorOrderFulfillment {
 			vendorSignedKeys = append(vendorSignedKeys, fulfil.RatingSignature.Metadata.RatingKey)
 		}
-		for _, bk := range contract.BuyerOrder.RatingKeys {
+		for _, bk := range order.RatingKeys {
 			if !keyExists(bk, vendorSignedKeys) {
 				return errors.New("vendor failed to send rating signatures covering all ratingKeys")
 			}

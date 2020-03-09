@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -102,16 +103,20 @@ func (r *DisputeCaseRecord) Contract() *pb.RicardianContract {
 
 // ResolutionPaymentFeePerByte returns the preferred outpoints to be used when resolving
 // a pending DisputeCaseResolution based on the provided PayoutRatio
-func (r *DisputeCaseRecord) ResolutionPaymentFeePerByte(ratio PayoutRatio, defaultFee uint64) uint64 {
+func (r *DisputeCaseRecord) ResolutionPaymentFeePerByte(ratio PayoutRatio, defaultFee big.Int) *big.Int {
+	n := new(big.Int)
 	switch {
 	case ratio.BuyerMajority(), ratio.EvenMajority():
-		return r.BuyerContract.BuyerOrder.RefundFee
+		n, _ = n.SetString(r.BuyerContract.BuyerOrder.BigRefundFee, 10)
+		return n
 	case ratio.VendorMajority():
 		if len(r.VendorContract.VendorOrderFulfillment) > 0 && r.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			return r.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
+			fulfillment := ToV5OrderFulfillment(r.VendorContract.VendorOrderFulfillment[0])
+			n, _ = n.SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
+			return n
 		}
 	}
-	return defaultFee
+	return n
 }
 
 // ResolutionPaymentOutpoints returns the preferred outpoints to be used when resolving

@@ -318,7 +318,8 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER)),
-			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER), err)
 		}
@@ -358,7 +359,8 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_CONFIRMATION)),
-			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_CONFIRMATION, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_CONFIRMATION), err)
 		}
@@ -376,18 +378,22 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 	//try to get public key from order
 	order, _, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 	var kp *libp2p.PubKey
+	var pub []byte
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
+		pub = order.BuyerOrder.BuyerID.Pubkeys.Identity
 	} else {
 		k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Identity)
 		if err != nil {
 			return err
 		}
 		kp = &k
+		pub = order.VendorListings[0].VendorID.Pubkeys.Identity
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", orderID, int(pb.Message_ORDER_CANCEL)),
-		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m})
+		orderID, pb.Message_ORDER_CANCEL, peerID, repo.Message{Msg: m},
+		"", 0, pub)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_ORDER_CANCEL), err)
 	}
@@ -406,10 +412,12 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 		Payload:     a,
 	}
 	var kp *libp2p.PubKey
+	var pub []byte
 	//try to get public key from order
 	order, _, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
+		pub = order.BuyerOrder.BuyerID.Pubkeys.Identity
 	} else {
 		k, err := libp2p.UnmarshalPublicKey(order.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 		if err != nil {
@@ -417,10 +425,11 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 			return err
 		}
 		kp = &k
+		pub = order.VendorListings[0].VendorID.Pubkeys.Identity
 	}
 	err = n.Datastore.Messages().Put(
 		fmt.Sprintf("%s-%d", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT)),
-		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m})
+		rejectMessage.OrderID, pb.Message_ORDER_REJECT, peerID, repo.Message{Msg: m}, "", 0, pub)
 	if err != nil {
 		log.Errorf("failed putting message (%s-%d): %v", rejectMessage.OrderID, int(pb.Message_ORDER_REJECT), err)
 	}
@@ -434,10 +443,26 @@ func (n *OpenBazaarNode) SendRefund(peerID string, refundMessage *pb.RicardianCo
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+	// Create the REFUND message
 	m := pb.Message{
 		MessageType: pb.Message_REFUND,
 		Payload:     a,
 	}
+
+	// Save REFUND message to the database for this order for resending if necessary
+	orderID0 := refundMessage.Refund.OrderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_REFUND)),
+			orderID0, pb.Message_REFUND, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_REFUND), err)
+		}
+	}
+
 	k, err := libp2p.UnmarshalPublicKey(refundMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 	if err != nil {
 		log.Errorf("failed to unmarshal publicKey: %v", err)
@@ -458,12 +483,13 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, f
 		Payload:     a,
 	}
 	orderID0 := fulfillmentMessage.VendorOrderFulfillment[0].OrderId
-	if orderID0 != "" {
+	if orderID0 == "" {
 		log.Errorf("failed fetching orderID")
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_FULFILLMENT)),
-			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_FULFILLMENT, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_FULFILLMENT), err)
 		}
@@ -488,7 +514,8 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 	} else {
 		err = n.Datastore.Messages().Put(
 			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_COMPLETION)),
-			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m})
+			orderID0, pb.Message_ORDER_COMPLETION, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
 		if err != nil {
 			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_COMPLETION), err)
 		}
@@ -497,16 +524,33 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, co
 }
 
 // SendDisputeOpen - send open dispute msg to peer
-func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract, orderID string) error {
 	a, err := ptypes.MarshalAny(disputeMessage)
 	if err != nil {
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+
+	// Create the DISPUTE_OPEN message
 	m := pb.Message{
 		MessageType: pb.Message_DISPUTE_OPEN,
 		Payload:     a,
 	}
+
+	// Save DISPUTE_OPEN message to the database for this order for resending if necessary
+	orderID0 := orderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_OPEN)),
+			orderID0, pb.Message_DISPUTE_OPEN, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_OPEN), err)
+		}
+	}
+
 	return n.sendMessage(peerID, k, m)
 }
 
@@ -517,24 +561,58 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerID string, updateMessage *pb.Disp
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+
+	// Create the DISPUTE_UPDATE message
 	m := pb.Message{
 		MessageType: pb.Message_DISPUTE_UPDATE,
 		Payload:     a,
 	}
+
+	// Save DISPUTE_UPDATE message to the database for this order for resending if necessary
+	orderID0 := updateMessage.OrderId
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_UPDATE)),
+			orderID0, pb.Message_DISPUTE_UPDATE, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_UPDATE), err)
+		}
+	}
+
 	return n.sendMessage(peerID, nil, m)
 }
 
 // SendDisputeClose - send dispute closed msg to peer
-func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract, orderID string) error {
 	a, err := ptypes.MarshalAny(resolutionMessage)
 	if err != nil {
 		log.Errorf("failed to marshal the contract: %v", err)
 		return err
 	}
+
+	// Create the DISPUTE_CLOSE message
 	m := pb.Message{
 		MessageType: pb.Message_DISPUTE_CLOSE,
 		Payload:     a,
 	}
+
+	// Save DISPUTE_CLOSE message to the database for this order for resending if necessary
+	orderID0 := orderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_DISPUTE_CLOSE)),
+			orderID0, pb.Message_DISPUTE_CLOSE, peerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_DISPUTE_CLOSE), err)
+		}
+	}
+
 	return n.sendMessage(peerID, k, m)
 }
 
@@ -781,20 +859,44 @@ func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte
 }
 
 // SendOrderPayment - send order payment msg to seller from buyer
-func (n *OpenBazaarNode) SendOrderPayment(peerID string, paymentMessage *pb.OrderPaymentTxn) error {
-	a, err := ptypes.MarshalAny(paymentMessage)
+func (n *OpenBazaarNode) SendOrderPayment(spend *SpendResponse) error {
+	var msg = &pb.OrderPaymentTxn{
+		Coin:          spend.Currency.Code.String(),
+		OrderID:       spend.OrderID,
+		TransactionID: spend.Txid,
+		WithInput:     spend.ConsumedInput,
+	}
+
+	a, err := ptypes.MarshalAny(msg)
 	if err != nil {
 		return err
 	}
+
+	// Create the ORDER_PAYMENT message
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_PAYMENT,
 		Payload:     a,
 	}
 
-	p, err := peer.IDB58Decode(peerID)
+	p, err := peer.IDB58Decode(spend.PeerID)
 	if err != nil {
 		return err
 	}
+
+	// Save ORDER_PAYMENT message to the database for this order for resending if necessary
+	orderID0 := msg.OrderID
+	if orderID0 == "" {
+		log.Errorf("failed fetching orderID")
+	} else {
+		err = n.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID0, int(pb.Message_ORDER_PAYMENT)),
+			orderID0, pb.Message_ORDER_PAYMENT, spend.PeerID, repo.Message{Msg: m},
+			"", 0, []byte{})
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID0, int(pb.Message_ORDER_PAYMENT), err)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	err = n.Service.SendMessage(ctx, p, &m)
 	cancel()

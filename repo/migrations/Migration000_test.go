@@ -27,7 +27,10 @@ func TestMigration000(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	f.Write([]byte(testConfig))
+	_, err = f.Write([]byte(testConfig))
+	if err != nil {
+		t.Error(err)
+	}
 	f.Close()
 	var m Migration000
 

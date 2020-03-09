@@ -63,7 +63,10 @@ func RemoveAll(nd *core.IpfsNode, peerID string, quorum uint) error {
 		return err
 	}
 	for _, id := range graph {
-		nd.DAG.Remove(context.Background(), id)
+		err = nd.DAG.Remove(context.Background(), id)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }

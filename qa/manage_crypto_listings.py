@@ -30,7 +30,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
 
-        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+        listing_json["coinType"] = "TETH"
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code != 200:
@@ -45,8 +45,8 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ManageCryptoListingsTest - FAIL: Incorrect listing count: %d", len(resp))
         for listing in resp:
             if listing['contractType'] == 'CRYPTOCURRENCY':
-                if listing["coinType"] != "ETH":
-                    raise TestFailure("ManageCryptoListingsTest - FAIL: coinType incorrect: %s", listing["coinType"])
+                if listing["coinType"] != "TETH":
+                    raise TestFailure("ManageCryptoListingsTest - FAIL: cryptoCurrencyCode incorrect: %s", listing["cryptoCurrencyCode"])
 
         # delete listing
         api_url = vendor["gateway_url"] + "ob/listing/"+slug

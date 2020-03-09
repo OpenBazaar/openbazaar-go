@@ -35,14 +35,18 @@ func (service *OpenBazaarService) messageSenderForPeer(ctx context.Context, p pe
 	service.senderlk.Lock()
 	ms, ok := service.sender[p]
 	if ok {
+		log.Debugf("Found existing message sender for: %s", p.Pretty())
 		service.senderlk.Unlock()
 		return ms, nil
 	}
+
+	log.Debugf("Creating new message sender for: %s", p.Pretty())
 	ms = &messageSender{p: p, service: service, requests: make(map[int32]chan *pb.Message, 2)}
 	service.sender[p] = ms
 	service.senderlk.Unlock()
 
 	if err := ms.ctxPrepOrInvalidate(ctx); err != nil {
+		log.Debugf("Locking sender for: %s", p.Pretty())
 		service.senderlk.Lock()
 		defer service.senderlk.Unlock()
 
@@ -60,6 +64,8 @@ func (service *OpenBazaarService) messageSenderForPeer(ctx context.Context, p pe
 		return nil, err
 	}
 	// All ready to go.
+
+	log.Debugf("Stream opened for: %s", p.Pretty())
 	return ms, nil
 }
 
@@ -69,7 +75,10 @@ func (service *OpenBazaarService) messageSenderForPeer(ctx context.Context, p pe
 func (ms *messageSender) invalidate() {
 	ms.invalid = true
 	if ms.s != nil {
-		ms.s.Reset()
+		err := ms.s.Reset()
+		if err != nil {
+			log.Error(err)
+		}
 		ms.s = nil
 	}
 }
@@ -132,13 +141,19 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) erro
 		err := ms.ctxWriteMsg(ctx, pmes)
 		switch err {
 		case ErrWriteTimeout:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return err
 		case nil:
 			break
 		default:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 
 			if retry {
@@ -180,13 +195,19 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 		err := ms.ctxWriteMsg(ctx, pmes)
 		switch err {
 		case ErrWriteTimeout:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return nil, err
 		case nil:
 			break
 		default:
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 
 			if retry {
@@ -199,7 +220,10 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 
 		mes, err := ms.ctxReadMsg(ctx, returnChan)
 		if err != nil {
-			ms.s.Reset()
+			err = ms.s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			ms.s = nil
 			return nil, err
 		}

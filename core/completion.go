@@ -8,18 +8,21 @@ import (
 	"fmt"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 const (
@@ -162,26 +165,31 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		oc.Ratings = append(oc.Ratings, rating)
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
 
 	// Payout order if moderated and not disputed
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
+	if order.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
 		var ins []wallet.TransactionInput
-		var outValue int64
+		outValue := new(big.Int)
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return err
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
-				outValue += r.Value
+				outValue.Add(outValue, &r.Value)
 				in := wallet.TransactionInput{
 					LinkedAddress: addr,
 					OutpointIndex: r.Index,
@@ -198,10 +206,10 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		}
 		var output = wallet.TransactionOutput{
 			Address: payoutAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return err
 		}
@@ -213,12 +221,16 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return err
 		}
-
-		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		fulfillment := repo.ToV5OrderFulfillment(contract.VendorOrderFulfillment[0])
+		n, ok := new(big.Int).SetString(fulfillment.Payout.BigPayoutFeePerByte, 10)
+		if !ok {
+			return errors.New("invalid payout fee per byte value")
+		}
+		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n)
 		if err != nil {
 			return err
 		}
@@ -230,15 +242,6 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			pbSigs = append(pbSigs, sig)
 		}
 		oc.PayoutSigs = pbSigs
-		var vendorSignatures []wallet.Signature
-		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
-			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
-			vendorSignatures = append(vendorSignatures, sig)
-		}
-		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
-		if err != nil {
-			return err
-		}
 	}
 
 	rc := new(pb.RicardianContract)
@@ -307,16 +310,26 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	} else if active {
 		return ErrPrematureReleaseOfTimedoutEscrowFunds
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return err
+	}
+	defn, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		log.Errorf("Failed ReleaseFundsAfterTimeout(): %s", err.Error())
+		return err
+	}
 
-	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
+	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours *
+		defn.ConfirmationsPerHour()
 	var txInputs []wallet.TransactionInput
 	for _, r := range records {
-		if !r.Spent && r.Value > 0 {
-			hash, err := chainhash.NewHashFromStr(r.Txid)
+		if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
+			hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
 			if err != nil {
 				return err
 			}
@@ -335,7 +348,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			if err != nil {
 				return err
 			}
-			outpointHash, err := hex.DecodeString(r.Txid)
+			outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 			if err != nil {
 				return fmt.Errorf("decoding transaction hash: %s", err.Error())
 			}
@@ -353,7 +366,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		return errors.New("there are no inputs available for this transaction")
 	}
 
-	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 	if err != nil {
 		return err
 	}
@@ -365,7 +378,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 	if err != nil {
 		return err
 	}
@@ -456,7 +469,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 			continue
 		}
 
-		mh, err := EncodeMultihash([]byte(ratingJSON))
+		mh, err := ipfs.EncodeMultihash([]byte(ratingJSON))
 		if err != nil {
 			retErr = err
 			continue

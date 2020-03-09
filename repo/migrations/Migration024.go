@@ -68,19 +68,31 @@ func createMessages(repoPath, databasePassword, rVer string, testnetEnabled bool
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06MessagesCreateSQL); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLMessageID); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLOrderIDMType); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06CreateIndexMessagesSQLPeerIDMType); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -124,19 +136,31 @@ func deleteMessages(repoPath, databasePassword, rVer string, testnetEnabled bool
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLMessageID); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLOrderIDMType); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06DeleteIndexMessagesSQLPeerIDMType); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if _, err = tx.Exec(MigrationCreateMessagesAM06MessagesDeleteSQL); err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
 	if err = tx.Commit(); err != nil {

@@ -81,14 +81,17 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
 
+	log.Debugf("Received new message from: %s", mPeer.Pretty())
+
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
+		log.Debugf("Message from banned peer dropped: %s", mPeer.Pretty())
 		return
 	}
 
 	ms, err := service.messageSenderForPeer(service.ctx, mPeer)
 	if err != nil {
-		log.Error("Error getting message sender")
+		log.Error("Error getting message sender and opening stream to peer")
 		return
 	}
 
@@ -96,24 +99,31 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		select {
 		// end loop on context close
 		case <-service.ctx.Done():
+			log.Debugf("Service context closed for: %s", mPeer.Pretty())
 			return
 		default:
 		}
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			s.Reset()
-			if err == io.EOF {
-				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
+			err = s.Reset()
+			if err != nil {
+				if err == io.EOF {
+					log.Debugf("Disconnected from peer %s", mPeer.Pretty())
+				} else {
+					log.Errorf("Error when reading message from %s: %s", mPeer.Pretty(), err.Error())
+				}
 			}
 			return
 		}
 
 		if pmes.IsResponse {
+			log.Debugf("received response message from %s: %d", mPeer.Pretty(), pmes.RequestId)
 			ms.requestlk.Lock()
 			ch, ok := ms.requests[pmes.RequestId]
 			if ok {
 				// this is a request response
+				log.Debugf("found matching request for: %d", pmes.RequestId)
 				select {
 				case ch <- pmes:
 					// message returned to requester
@@ -127,14 +137,20 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 				log.Debug("received response message with unknown request id: requesting function may have timed out")
 			}
 			ms.requestlk.Unlock()
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			return
 		}
 
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			log.Debug("Got back nil handler from handlerForMsgType")
 			return
 		}
@@ -142,7 +158,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		// Dispatch handler
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
-			log.Debugf("%s handle message error: %s", pmes.MessageType.String(), err)
+			log.Debugf("%s handle message error from %s: %s", pmes.MessageType.String(), mPeer.Pretty(), err)
 		}
 
 		// If nil response, return it before serializing
@@ -155,8 +171,12 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		rpmes.IsResponse = true
 
 		// send out response msg
+		log.Debugf("sending response message to: %s", mPeer.Pretty())
 		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
-			s.Reset()
+			err = s.Reset()
+			if err != nil {
+				log.Error(err)
+			}
 			log.Debugf("send response error: %s", err)
 			return
 		}

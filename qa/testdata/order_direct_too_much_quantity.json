@@ -9,7 +9,7 @@
     "moderator": "",
     "items": [{
         "listingHash": "",
-        "quantity": 999999999999,
+        "bigQuantity": "500",
         "options": [{
                 "name": "Color",
                 "value": "Red"

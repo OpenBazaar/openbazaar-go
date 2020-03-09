@@ -75,7 +75,7 @@ func TestPutPurchase(t *testing.T) {
 	var state int
 	var read int
 	var date int
-	var total int
+	var total string
 	var thumbnail string
 	var vendorID string
 	var vendorHandle string
@@ -98,8 +98,8 @@ func TestPutPurchase(t *testing.T) {
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
 	}
-	if total != int(contract.BuyerOrder.Payment.Amount) {
-		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Payment.Amount), total)
+	if total != contract.BuyerOrder.Payment.BigAmount {
+		t.Errorf("Expected %s got %s", contract.BuyerOrder.Payment.BigAmount, total)
 	}
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
 		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
@@ -129,7 +129,10 @@ func TestDeletePurchase(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.Delete("orderID")
 	if err != nil {
 		t.Error("Purchase delete failed")
@@ -156,7 +159,10 @@ func TestMarkPurchaseAsRead(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -182,7 +188,10 @@ func TestMarkPurchaseAsUnread(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	err = purdb.MarkAsRead("orderID")
 	if err != nil {
 		t.Error(err)
@@ -301,7 +310,10 @@ func TestPurchasesGetByPaymentAddress(t *testing.T) {
 	defer teardown()
 
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
+	err = purdb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Error(err)
@@ -337,7 +349,7 @@ func TestPurchasesGetByOrderId(t *testing.T) {
 	}
 
 	contract := factory.NewContract()
-	contract.BuyerOrder.Payment.Coin = expectedCoin
+	//contract.BuyerOrder.Payment.Coin = expectedCoin
 	if err := purdb.Put("orderID", *contract, 0, false); err != nil {
 		t.Fatal(err)
 	}
@@ -361,15 +373,24 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	c0 := factory.NewContract()
 	ts, _ := ptypes.TimestampProto(time.Now())
 	c0.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID", *c0, 0, false)
+	err = purdb.Put("orderID", *c0, 0, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c1 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Minute))
 	c1.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID2", *c1, 1, false)
+	err = purdb.Put("orderID2", *c1, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	c2 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Hour))
 	c2.BuyerOrder.Timestamp = ts
-	purdb.Put("orderID3", *c2, 1, false)
+	err = purdb.Put("orderID3", *c2, 1, false)
+	if err != nil {
+		t.Log(err)
+	}
 	// Test no offset no limit
 	purchases, ct, err := purdb.GetAll([]pb.OrderState{}, "", false, false, -1, []string{})
 	if err != nil {
@@ -912,7 +933,6 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
 			{[]string{"TBTC", "TBCH"}, "", "TBTC"},
 			{[]string{"TBCH", "TBTC"}, "", "TBCH"},
-			{[]string{}, "", ""},
 		}
 	)
 
@@ -923,7 +943,8 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
-		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		//contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: test.paymentCoin, Divisibility: 8}
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
@@ -947,31 +968,62 @@ func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
 func TestPurchasesDB_Put_CoinType(t *testing.T) {
 	var (
 		contract   = factory.NewContract()
-		testsCoins = []string{"", "TBTC", "TETH"}
+		testsCoins = []struct {
+			coinType      string
+			cryptoListing bool
+		}{
+			{
+				"",
+				true,
+			},
+			{
+				"TBTC",
+				true,
+			},
+			{
+				"TETH",
+				true,
+			},
+			{
+				"TBCH",
+				false,
+			},
+		}
 	)
 
-	for _, testCoin := range testsCoins {
+	for _, test := range testsCoins {
 		var purdb, teardown, err = buildNewPurchaseStore()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		contract.VendorListings[0].Metadata.CoinType = testCoin
+		contract.VendorListings[0].Item.PriceCurrency = &pb.CurrencyDefinition{
+			Code:         test.coinType,
+			Divisibility: 8,
+		}
+		if test.cryptoListing {
+			contract.VendorListings[0].Metadata.CryptoCurrencyCode = test.coinType
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+		} else {
+			contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_PHYSICAL_GOOD
+		}
 
 		err = purdb.Put("orderID", *contract, 0, false)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		purchases, count, err := purdb.GetAll(nil, "", false, false, 1, nil)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		if count != 1 {
-			t.Errorf(`Expected %d record got %d`, 1, count)
+			t.Fatalf(`Expected %d record got %d`, 1, count)
 		}
-		if purchases[0].CoinType != testCoin {
-			t.Errorf(`Expected %s got %s`, testCoin, purchases[0].CoinType)
+		if test.cryptoListing && purchases[0].CoinType != test.coinType {
+			t.Errorf(`Expected %s got %s`, test.coinType, purchases[0].CoinType)
+		} else if !test.cryptoListing && purchases[0].CoinType != "" {
+			t.Errorf(`Expected "" got %s`, purchases[0].CoinType)
 		}
 		teardown()
 	}

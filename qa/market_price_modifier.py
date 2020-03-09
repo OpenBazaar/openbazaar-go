@@ -40,9 +40,11 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         # post listings to vendor
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+            listing_json["metadata"]["coinType"] = "TBCH"
+            listing_json["metadata"]["coinDivisibility"] = 8
+            listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
-            listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
+            listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -59,7 +61,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("MarketPriceModifierTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("MarketPriceModifierTest - FAIL: Listing POST 2 failed. Reason: %s", resp["reason"])
         slug_with_modifier = json.loads(r.text)["slug"]
 
         # check vendor's local listings and check for modifier
@@ -69,7 +71,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Couldn't get vendor local listings")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("MarketPriceModifierTest - FAIL: Vendor's local listings index doesn't include price modifier")
 
         # check vendor's listings from buyer and check for modifier
@@ -79,7 +81,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Couldn't get vendor listings from buyer")
         resp = json.loads(r.text)
         for listing in resp:
-            if "modifier" not in listing["price"]:
+            if "modifier" not in listing:
                 raise TestFailure("MarketPriceModifierTest - FAIL: Vendor's listings don't include price modifier from buyer")
 
         # get listing hashes
@@ -105,7 +107,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id
-        order_json["paymentCoin"] = "t" + self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -115,12 +117,12 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         payment_address = resp["paymentAddress"]
-        payment_amount = resp["amount"]
+        payment_amount = int(resp["amount"]["amount"])
 
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id_with_modifier
-        order_json["paymentCoin"] = "t" + self.cointype
+        order_json["paymentCoin"] = "T" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -130,7 +132,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         payment_address_with_modifier = resp["paymentAddress"]
-        payment_amount_with_modifier = resp["amount"]
+        payment_amount_with_modifier = int(resp["amount"]["amount"])
 
         # Check that modified price is different than regular price
         pct_change = round((payment_amount-payment_amount_with_modifier) / payment_amount * -100, 2)

@@ -1,19 +1,51 @@
 package factory
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
+
+	"github.com/OpenBazaar/jsonpb"
 )
 
+// MustLoadListingFixture - load listing json from fixtures
+func MustLoadListingFixture(fixtureName string) []byte {
+	filename := filepath.Join(fixtureLoadPath(), "listings", fmt.Sprintf("%s.json", fixtureName))
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(fmt.Errorf("cannot find fixture (%s): %s", fixtureName, err))
+	}
+	return b
+}
+
+// NewListing - return new pb.Listing
 func NewListing(slug string) *pb.Listing {
+	var (
+		idJSON = `{
+            "peerID": "QmVisrQ9apmvTLnq9FSNKbP8dYvBvkP4AeeysHZg89oB9q",
+            "pubkeys": {
+                "identity": "CAESIBHz9BLX+9JlUN7cfPdaoh1QFN/a4gjJBzmVOZfSFD5G",
+                "bitcoin": "Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"
+            },
+            "bitcoinSig": "MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="
+        }`
+		vendorID = new(pb.ID)
+	)
+	if err := jsonpb.UnmarshalString(idJSON, vendorID); err != nil {
+		panic(err)
+	}
+
 	return &pb.Listing{
 		Slug:               slug,
 		TermsAndConditions: "Sample Terms and Conditions",
 		RefundPolicy:       "Sample Refund policy",
+		VendorID:           vendorID,
 		Metadata: &pb.Listing_Metadata{
-			Version:            1,
+			Version:            5,
 			AcceptedCurrencies: []string{"TBTC"},
-			PricingCurrency:    "TBTC",
 			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
 			Format:             pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
@@ -21,14 +53,14 @@ func NewListing(slug string) *pb.Listing {
 		Item: &pb.Listing_Item{
 			Skus: []*pb.Listing_Item_Sku{
 				{
-					Surcharge:    0,
-					Quantity:     12,
+					BigSurcharge: "0",
+					BigQuantity:  "12",
 					ProductID:    "1",
 					VariantCombo: []uint32{0, 0},
 				},
 				{
-					Surcharge:    0,
-					Quantity:     44,
+					BigSurcharge: "0",
+					BigQuantity:  "44",
 					ProductID:    "2",
 					VariantCombo: []uint32{0, 1},
 				},
@@ -55,7 +87,8 @@ func NewListing(slug string) *pb.Listing {
 			},
 			Nsfw:           false,
 			Description:    "Example item",
-			Price:          100,
+			BigPrice:       "2000",
+			PriceCurrency:  &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			ProcessingTime: "3 days",
 			Categories:     []string{"tshirts"},
 			Grams:          14,
@@ -78,7 +111,7 @@ func NewListing(slug string) *pb.Listing {
 				Services: []*pb.Listing_ShippingOption_Service{
 					{
 						Name:              "standard",
-						Price:             20,
+						BigPrice:          "20",
 						EstimatedDelivery: "3 days",
 					},
 				},
@@ -86,29 +119,32 @@ func NewListing(slug string) *pb.Listing {
 		},
 		Coupons: []*pb.Listing_Coupon{
 			{
-				Title:    "Insider's Discount",
-				Code:     &pb.Listing_Coupon_DiscountCode{"insider"},
-				Discount: &pb.Listing_Coupon_PercentDiscount{5},
+				Title:            "Insider's Discount",
+				Code:             &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				BigPriceDiscount: "5",
 			},
 		},
 	}
 }
 
+// NewCryptoListing - return new crypto listing
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
-	listing.Metadata.CoinType = "TETH"
-	listing.Metadata.CoinDivisibility = 1e8
+	listing.Metadata.CryptoCurrencyCode = "TETH"
+	listing.Metadata.CryptoDivisibility = 18
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
-	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
+	listing.Item.Skus = []*pb.Listing_Item_Sku{{BigQuantity: "100000000"}}
 	listing.Metadata.PricingCurrency = ""
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil
-	listing.Item.Price = 0
+	listing.Item.BigPrice = "0"
+	listing.Item.PriceCurrency = nil
 	listing.Coupons = nil
 	return listing
 }
 
+// NewListingWithShippingRegions - return new listing with shipping region
 func NewListingWithShippingRegions(slug string) *pb.Listing {
 	listing := NewListing(slug)
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{
@@ -119,7 +155,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",
-					Price:             20,
+					BigPrice:          "20",
 					EstimatedDelivery: "3 days",
 				},
 			},

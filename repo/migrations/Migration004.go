@@ -23,7 +23,10 @@ func (Migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 	}
 	if dbPassword != "" {
 		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
+		_, err = db.Exec(p)
+		if err != nil {
+			return err
+		}
 	}
 
 	tx, err := db.Begin()
@@ -37,10 +40,16 @@ func (Migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 	defer stmt.Close()
 	_, err = stmt.Exec()
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err0)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	f1, err := os.Create(path.Join(repoPath, "repover"))
 	if err != nil {
 		return err
@@ -66,7 +75,10 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	}
 	if dbPassword != "" {
 		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
+		_, err = db.Exec(p)
+		if err != nil {
+			return err
+		}
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -79,7 +91,10 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	defer stmt1.Close()
 	_, err = stmt1.Exec()
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err)
+		}
 		return err
 	}
 	stmt2, err := tx.Prepare(`create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);`)
@@ -89,7 +104,10 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	defer stmt2.Close()
 	_, err = stmt2.Exec()
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err)
+		}
 		return err
 	}
 	stmt3, err := tx.Prepare(`INSERT INTO sales SELECT orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions FROM temp_sales;`)
@@ -99,7 +117,10 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	defer stmt3.Close()
 	_, err = stmt3.Exec()
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err)
+		}
 		return err
 	}
 	stmt4, err := tx.Prepare(`DROP TABLE temp_sales;`)
@@ -109,10 +130,16 @@ func (Migration004) Down(repoPath string, dbPassword string, testnet bool) error
 	defer stmt4.Close()
 	_, err = stmt4.Exec()
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			log.Error(err)
+		}
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	f1, err := os.Create(path.Join(repoPath, "repover"))
 	if err != nil {
 		return err

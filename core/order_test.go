@@ -1,14 +1,14 @@
 package core_test
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/core"
+	"fmt"
+	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
-
-	"fmt"
-	"testing"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -17,39 +17,42 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	contract := &pb.RicardianContract{
-		VendorListings: []*pb.Listing{{
-			Metadata: &pb.Listing_Metadata{
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
-				Version:            2,
-			},
-			Item: &pb.Listing_Item{
-				Price: 100000,
-			},
-			ShippingOptions: []*pb.Listing_ShippingOption{
-				{
-					Name:    "UPS",
-					Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
-					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
-					Services: []*pb.Listing_ShippingOption_Service{
-						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+		VendorListings: []*pb.Listing{
+			{
+				Metadata: &pb.Listing_Metadata{
+					ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+					Format:             pb.Listing_Metadata_FIXED_PRICE,
+					AcceptedCurrencies: []string{"TBTC"},
+					EscrowTimeoutHours: 1080,
+					Version:            5,
+				},
+				Item: &pb.Listing_Item{
+					BigPrice:      "100000",
+					PriceCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+				},
+				ShippingOptions: []*pb.Listing_ShippingOption{
+					{
+						Name:    "UPS",
+						Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
+						Type:    pb.Listing_ShippingOption_FIXED_PRICE,
+						Services: []*pb.Listing_ShippingOption_Service{
+							{
+								Name:                   "Standard shipping",
+								BigPrice:               "25000",
+								BigAdditionalItemPrice: "10000",
+							},
 						},
 					},
 				},
 			},
-		}},
+		},
 	}
 
 	ser, err := proto.Marshal(contract.VendorListings[0])
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err := core.EncodeCID(ser)
+	listingID, err := ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,7 +60,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		Items: []*pb.Order_Item{
 			{
 				ListingHash: listingID.String(),
-				Quantity:    1,
+				BigQuantity: "1",
 				ShippingOption: &pb.Order_Item_ShippingOption{
 					Name:    "UPS",
 					Service: "Standard shipping",
@@ -68,7 +71,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			AmountCurrency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 		},
 	}
 	contract.BuyerOrder = order
@@ -78,22 +81,22 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 125000 {
-		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total)
+	if total.Int64() != 125000 {
+		t.Errorf("Calculated wrong order total. Wanted 125000, got %d", total.Int64())
 	}
 
 	// Test higher quantity
-	contract.BuyerOrder.Items[0].Quantity = 2
+	contract.BuyerOrder.Items[0].BigQuantity = "2"
 	total, err = node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 235000 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 235000 {
+		t.Errorf("Calculated wrong order total. Wanted 235000, got %d", total.Int64())
 	}
 
 	// Test with options
-	contract.BuyerOrder.Items[0].Quantity = 1
+	contract.BuyerOrder.Items[0].BigQuantity = "1"
 	contract.VendorListings[0].Item.Options = []*pb.Listing_Item_Option{
 		{
 			Name: "color",
@@ -106,7 +109,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    50000,
+			BigSurcharge: "50000",
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -120,7 +123,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -129,14 +132,14 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 175000 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 175000 {
+		t.Errorf("Calculated wrong order total. Wanted 175000, got %d", total.Int64())
 	}
 
 	// Test negative surcharge
 	contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
 		{
-			Surcharge:    -50000,
+			BigSurcharge: "-50000",
 			VariantCombo: []uint32{0},
 		},
 	}
@@ -144,7 +147,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -153,20 +156,20 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 75000 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 75000 {
+		t.Errorf("Calculated wrong order total. Wanted 75000, got %d", total.Int64())
 	}
 
 	// Test with coupon percent discount
-	couponHash, err := core.EncodeMultihash([]byte("testcoupon"))
+	couponHash, err := ipfs.EncodeMultihash([]byte("testcoupon"))
 	if err != nil {
 		t.Error(err)
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
+			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:           "coup",
+			PercentDiscount: 10,
 		},
 	}
 
@@ -174,30 +177,30 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
 	contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon"}
 	contract.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract)
+	total1, err := node.CalculateOrderTotal(contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 70000 {
-		t.Error("Calculated wrong order total")
+	if total1.Int64() != 70000 {
+		t.Errorf("failed calculating correct total, expected (%d), got (%d)", 70000, total1.Int64())
 	}
 
 	// Test with coupon percent discount
-	couponHash, err = core.EncodeMultihash([]byte("testcoupon2"))
+	couponHash, err = ipfs.EncodeMultihash([]byte("testcoupon2"))
 	if err != nil {
 		t.Error(err)
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: 6000},
+			Code:             &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:            "coup",
+			BigPriceDiscount: "6000",
 		},
 	}
 
@@ -205,7 +208,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -215,8 +218,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 69000 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 69000 {
+		t.Errorf("Calculated wrong order total. Wanted 69000, got %d", total.Int64())
 	}
 
 	// Test with tax no tax shipping
@@ -232,7 +235,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -241,8 +244,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 71200 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 71200 {
+		t.Errorf("Calculated wrong order total. Wanted 71200, got %d", total.Int64())
 	}
 
 	// Test with tax with tax shipping
@@ -258,7 +261,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -267,9 +270,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 72450 {
-		t.Error("Calculated wrong order total")
-		return
+	if total.Int64() != 72450 {
+		t.Fatalf("Calculated wrong order total. Wanted 72450, got %d", total.Int64())
 	}
 
 	// Test local pickup
@@ -279,7 +281,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err = ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
@@ -288,52 +290,61 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 46200 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 46200 {
+		t.Errorf("Calculated wrong order total. Wanted 46200, got %d", total.Int64())
 	}
+}
 
-	contract2 := &pb.RicardianContract{
-		VendorListings: []*pb.Listing{{
-			Metadata: &pb.Listing_Metadata{
-				Version:            3,
-				ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-				Format:             pb.Listing_Metadata_FIXED_PRICE,
-				AcceptedCurrencies: []string{"BTC"},
-				PricingCurrency:    "BTC",
-			},
-			Item: &pb.Listing_Item{
-				Price: 100000,
-			},
-			ShippingOptions: []*pb.Listing_ShippingOption{
-				{
-					Name:    "UPS",
-					Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
-					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
-					Services: []*pb.Listing_ShippingOption_Service{
-						{
-							Name:                "Standard shipping",
-							Price:               25000,
-							AdditionalItemPrice: 10000,
+func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
+	node, err := test.NewNode()
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract := &pb.RicardianContract{
+		VendorListings: []*pb.Listing{
+			{
+				Metadata: &pb.Listing_Metadata{
+					ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+					Format:             pb.Listing_Metadata_FIXED_PRICE,
+					AcceptedCurrencies: []string{"TBTC"},
+					EscrowTimeoutHours: 1080,
+					PricingCurrency:    "TBTC",
+					Version:            4,
+				},
+				Item: &pb.Listing_Item{
+					Price: 100000,
+				},
+				ShippingOptions: []*pb.Listing_ShippingOption{
+					{
+						Name:    "UPS",
+						Regions: []pb.CountryCode{pb.CountryCode_UNITED_STATES},
+						Type:    pb.Listing_ShippingOption_FIXED_PRICE,
+						Services: []*pb.Listing_ShippingOption_Service{
+							{
+								Name:                "Standard shipping",
+								Price:               25000,
+								AdditionalItemPrice: 10000,
+							},
 						},
 					},
 				},
 			},
-		}},
+		},
 	}
 
-	ser, err = proto.Marshal(contract2.VendorListings[0])
+	ser, err := proto.Marshal(v4Contract.VendorListings[0])
 	if err != nil {
 		t.Error(err)
 	}
-	listingID, err = core.EncodeCID(ser)
+	listingID, err := ipfs.EncodeCID(ser)
 	if err != nil {
 		t.Error(err)
 	}
-	order2 := &pb.Order{
+	order := &pb.Order{
 		Items: []*pb.Order_Item{
 			{
 				ListingHash: listingID.String(),
-				Quantity64:  10,
+				Quantity64:  1,
 				ShippingOption: &pb.Order_Item_ShippingOption{
 					Name:    "UPS",
 					Service: "Standard shipping",
@@ -344,18 +355,228 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 			Country: pb.CountryCode_UNITED_STATES,
 		},
 		Payment: &pb.Order_Payment{
-			Coin: "BTC",
+			Amount: 125000,
+			Coin:   "TBTC",
 		},
 	}
-	contract2.BuyerOrder = order2
+	v4Contract.BuyerOrder = order
 
-	// Test quantity64
-	total, err = node.CalculateOrderTotal(contract2)
+	// Basic contract
+	total, err := node.CalculateOrderTotal(v4Contract)
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 1115000 {
-		t.Error("Calculated wrong order total")
+	if total.Int64() != 125000 {
+		t.Errorf("Calculated wrong order total. Wanted 125000, got %d", total.Int64())
+	}
+
+	// Test higher quantity
+	v4Contract.BuyerOrder.Items[0].Quantity64 = 2
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 235000 {
+		t.Errorf("Calculated wrong order total. Wanted 235000, got %d", total.Int64())
+	}
+
+	// Test with options
+	v4Contract.BuyerOrder.Items[0].Quantity64 = 1
+	v4Contract.VendorListings[0].Item.Options = []*pb.Listing_Item_Option{
+		{
+			Name: "color",
+			Variants: []*pb.Listing_Item_Option_Variant{
+				{
+					Name: "red",
+				},
+			},
+		},
+	}
+	v4Contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
+		{
+			Surcharge:    50000,
+			VariantCombo: []uint32{0},
+		},
+	}
+	v4Contract.BuyerOrder.Items[0].Options = []*pb.Order_Item_Option{
+		{
+			Name:  "color",
+			Value: "red",
+		},
+	}
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 175000 {
+		t.Errorf("Calculated wrong order total. Wanted 175000, got %d", total.Int64())
+	}
+
+	// Test negative surcharge
+	v4Contract.VendorListings[0].Item.Skus = []*pb.Listing_Item_Sku{
+		{
+			Surcharge:    -50000,
+			VariantCombo: []uint32{0},
+		},
+	}
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 75000 {
+		t.Errorf("Calculated wrong order total. Wanted 75000, got %d", total.Int64())
+	}
+
+	// Test with coupon percent discount
+	couponHash, err := ipfs.EncodeMultihash([]byte("testcoupon"))
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
+		{
+			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:           "coup",
+			PercentDiscount: 10,
+		},
+	}
+
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon"}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 70000 {
+		t.Errorf("Calculated wrong order total. Wanted 70000, got %d", total.Int64())
+	}
+
+	// Test with coupon percent discount
+	couponHash, err = ipfs.EncodeMultihash([]byte("testcoupon2"))
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
+		{
+			Code:          &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:         "coup",
+			PriceDiscount: 6000,
+		},
+	}
+
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].CouponCodes = []string{"testcoupon2"}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 69000 {
+		t.Errorf("Calculated wrong order total. Wanted 69000, got %d", total.Int64())
+	}
+
+	// Test with tax no tax shipping
+	v4Contract.VendorListings[0].Taxes = []*pb.Listing_Tax{
+		{
+			Percentage:  5,
+			TaxShipping: false,
+			TaxRegions:  []pb.CountryCode{pb.CountryCode_UNITED_STATES},
+		},
+	}
+
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 71200 {
+		t.Errorf("Calculated wrong order total. Wanted 71200, got %d", total.Int64())
+	}
+
+	// Test with tax with tax shipping
+	v4Contract.VendorListings[0].Taxes = []*pb.Listing_Tax{
+		{
+			Percentage:  5,
+			TaxShipping: true,
+			TaxRegions:  []pb.CountryCode{pb.CountryCode_UNITED_STATES},
+		},
+	}
+
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 72450 {
+		t.Fatalf("Calculated wrong order total. Wanted 72450, got %d", total.Int64())
+	}
+
+	// Test local pickup
+	v4Contract.VendorListings[0].ShippingOptions[0].Type = pb.Listing_ShippingOption_LOCAL_PICKUP
+
+	ser, err = proto.Marshal(v4Contract.VendorListings[0])
+	if err != nil {
+		t.Error(err)
+	}
+	listingID, err = ipfs.EncodeCID(ser)
+	if err != nil {
+		t.Error(err)
+	}
+	v4Contract.BuyerOrder.Items[0].ListingHash = listingID.String()
+	total, err = node.CalculateOrderTotal(v4Contract)
+	if err != nil {
+		t.Error(err)
+	}
+	if total.Int64() != 46200 {
+		t.Errorf("Calculated wrong order total. Wanted 46200, got %d", total.Int64())
 	}
 }
 

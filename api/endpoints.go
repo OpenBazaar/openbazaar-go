@@ -129,6 +129,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETPeers(w, r)
 	case strings.HasPrefix(path, "/ob/config"):
 		i.GETConfig(w, r)
+	case strings.HasPrefix(path, "/wallet/currencies"):
+		i.GETWalletCurrencyDictionary(w, r)
 	case strings.HasPrefix(path, "/wallet/address"):
 		i.GETAddress(w, r)
 	case strings.HasPrefix(path, "/wallet/mnemonic"):

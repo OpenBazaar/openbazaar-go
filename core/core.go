@@ -3,8 +3,9 @@ package core
 import (
 	"errors"
 	"fmt"
-	"regexp"
-	"unicode/utf8"
+	"path"
+	"sync"
+	"time"
 
 	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
@@ -13,19 +14,15 @@ import (
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	routing "gx/ipfs/QmYxUdYY9S6yg5tSPVin5GFTvtfsLauVcr7reHDD3dM8xf/go-libp2p-routing"
 
-	"path"
-	"sync"
-	"time"
-
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
 	logging "github.com/op/go-logging"
 	"golang.org/x/net/context"
@@ -40,65 +37,6 @@ const (
 )
 
 var log = logging.MustGetLogger("core")
-
-const EmojiPattern = "[\\x{2712}\\x{2714}\\x{2716}\\x{271d}\\x{2721}\\x{2728}\\x{2733}" +
-	"\\x{2734}\\x{2744}\\x{2747}\\x{274c}\\x{274e}\\x{2753}-\\x{2755}\\x{2757}" +
-	"\\x{2763}\\x{2764}\\x{2795}-\\x{2797}\\x{27a1}\\x{27b0}\\x{27bf}\\x{2934}" +
-	"\\x{2935}\\x{2b05}-\\x{2b07}\\x{2b1b}\\x{2b1c}\\x{2b50}\\x{2b55}\\x{3030}" +
-	"\\x{303d}\\x{1f004}\\x{1f0cf}\\x{1f170}\\x{1f171}\\x{1f17e}\\x{1f17f}" +
-	"\\x{1f18e}\\x{1f191}-\\x{1f19a}\\x{1f201}\\x{1f202}\\x{1f21a}\\x{1f22f}" +
-	"\\x{1f232}-\\x{1f23a}\\x{1f250}\\x{1f251}\\x{1f300}-\\x{1f321}\\x{1f324}-" +
-	"\\x{1f393}\\x{1f396}\\x{1f397}\\x{1f399}-\\x{1f39b}\\x{1f39e}-\\x{1f3f0}" +
-	"\\x{1f3f3}-\\x{1f3f5}\\x{1f3f7}-\\x{1f4fd}\\x{1f4ff}-\\x{1f53d}\\x{1f549}-" +
-	"\\x{1f54e}\\x{1f550}-\\x{1f567}\\x{1f56f}\\x{1f570}\\x{1f573}-\\x{1f579}" +
-	"\\x{1f587}\\x{1f58a}-\\x{1f58d}\\x{1f590}\\x{1f595}\\x{1f596}\\x{1f5a5}" +
-	"\\x{1f5a8}\\x{1f5b1}\\x{1f5b2}\\x{1f5bc}\\x{1f5c2}-\\x{1f5c4}\\x{1f5d1}-" +
-	"\\x{1f5d3}\\x{1f5dc}-\\x{1f5de}\\x{1f5e1}\\x{1f5e3}\\x{1f5ef}\\x{1f5f3}" +
-	"\\x{1f5fa}-\\x{1f64f}\\x{1f680}-\\x{1f6c5}\\x{1f6cb}-\\x{1f6d0}\\x{1f6e0}-" +
-	"\\x{1f6e5}\\x{1f6e9}\\x{1f6eb}\\x{1f6ec}\\x{1f6f0}\\x{1f6f3}\\x{1f910}-" +
-	"\\x{1f918}\\x{1f980}-\\x{1f984}\\x{1f9c0}\\x{3297}\\x{3299}\\x{a9}\\x{ae}" +
-	"\\x{203c}\\x{2049}\\x{2122}\\x{2139}\\x{2194}-\\x{2199}\\x{21a9}\\x{21aa}" +
-	"\\x{231a}\\x{231b}\\x{2328}\\x{2388}\\x{23cf}\\x{23e9}-\\x{23f3}\\x{23f8}-" +
-	"\\x{23fa}\\x{24c2}\\x{25aa}\\x{25ab}\\x{25b6}\\x{25c0}\\x{25fb}-\\x{25fe}" +
-	"\\x{2600}-\\x{2604}\\x{260e}\\x{2611}\\x{2614}\\x{2615}\\x{2618}\\x{261d}" +
-	"\\x{2620}\\x{2622}\\x{2623}\\x{2626}\\x{262a}\\x{262e}\\x{262f}\\x{2638}-" +
-	"\\x{263a}\\x{2648}-\\x{2653}\\x{2660}\\x{2663}\\x{2665}\\x{2666}\\x{2668}" +
-	"\\x{267b}\\x{267f}\\x{2692}-\\x{2694}\\x{2696}\\x{2697}\\x{2699}\\x{269b}" +
-	"\\x{269c}\\x{26a0}\\x{26a1}\\x{26aa}\\x{26ab}\\x{26b0}\\x{26b1}\\x{26bd}" +
-	"\\x{26be}\\x{26c4}\\x{26c5}\\x{26c8}\\x{26ce}\\x{26cf}\\x{26d1}\\x{26d3}" +
-	"\\x{26d4}\\x{26e9}\\x{26ea}\\x{26f0}-\\x{26f5}\\x{26f7}-\\x{26fa}\\x{26fd}" +
-	"\\x{2702}\\x{2705}\\x{2708}-\\x{270d}\\x{270f}]|\\x{23}\\x{20e3}|\\x{2a}" +
-	"\\x{20e3}|\\x{30}\\x{20e3}|\\x{31}\\x{20e3}|\\x{32}\\x{20e3}|\\x{33}\\x{20e3}|" +
-	"\\x{34}\\x{20e3}|\\x{35}\\x{20e3}|\\x{36}\\x{20e3}|\\x{37}\\x{20e3}|\\x{38}" +
-	"\\x{20e3}|\\x{39}\\x{20e3}|\\x{1f1e6}[\\x{1f1e8}-\\x{1f1ec}\\x{1f1ee}" +
-	"\\x{1f1f1}\\x{1f1f2}\\x{1f1f4}\\x{1f1f6}-\\x{1f1fa}\\x{1f1fc}\\x{1f1fd}" +
-	"\\x{1f1ff}]|\\x{1f1e7}[\\x{1f1e6}\\x{1f1e7}\\x{1f1e9}-\\x{1f1ef}\\x{1f1f1}-" +
-	"\\x{1f1f4}\\x{1f1f6}-\\x{1f1f9}\\x{1f1fb}\\x{1f1fc}\\x{1f1fe}\\x{1f1ff}]|" +
-	"\\x{1f1e8}[\\x{1f1e6}\\x{1f1e8}\\x{1f1e9}\\x{1f1eb}-\\x{1f1ee}\\x{1f1f0}-" +
-	"\\x{1f1f5}\\x{1f1f7}\\x{1f1fa}-\\x{1f1ff}]|\\x{1f1e9}[\\x{1f1ea}\\x{1f1ec}" +
-	"\\x{1f1ef}\\x{1f1f0}\\x{1f1f2}\\x{1f1f4}\\x{1f1ff}]|\\x{1f1ea}[\\x{1f1e6}" +
-	"\\x{1f1e8}\\x{1f1ea}\\x{1f1ec}\\x{1f1ed}\\x{1f1f7}-\\x{1f1fa}]|\\x{1f1eb}[" +
-	"\\x{1f1ee}-\\x{1f1f0}\\x{1f1f2}\\x{1f1f4}\\x{1f1f7}]|\\x{1f1ec}[\\x{1f1e6}" +
-	"\\x{1f1e7}\\x{1f1e9}-\\x{1f1ee}\\x{1f1f1}-\\x{1f1f3}\\x{1f1f5}-\\x{1f1fa}" +
-	"\\x{1f1fc}\\x{1f1fe}]|\\x{1f1ed}[\\x{1f1f0}\\x{1f1f2}\\x{1f1f3}\\x{1f1f7}" +
-	"\\x{1f1f9}\\x{1f1fa}]|\\x{1f1ee}[\\x{1f1e8}-\\x{1f1ea}\\x{1f1f1}-\\x{1f1f4}" +
-	"\\x{1f1f6}-\\x{1f1f9}]|\\x{1f1ef}[\\x{1f1ea}\\x{1f1f2}\\x{1f1f4}\\x{1f1f5}]" +
-	"|\\x{1f1f0}[\\x{1f1ea}\\x{1f1ec}-\\x{1f1ee}\\x{1f1f2}\\x{1f1f3}\\x{1f1f5}" +
-	"\\x{1f1f7}\\x{1f1fc}\\x{1f1fe}\\x{1f1ff}]|\\x{1f1f1}[\\x{1f1e6}-\\x{1f1e8}" +
-	"\\x{1f1ee}\\x{1f1f0}\\x{1f1f7}-\\x{1f1fb}\\x{1f1fe}]|\\x{1f1f2}[\\x{1f1e6}" +
-	"\\x{1f1e8}-\\x{1f1ed}\\x{1f1f0}-\\x{1f1ff}]|\\x{1f1f3}[\\x{1f1e6}\\x{1f1e8}" +
-	"\\x{1f1ea}-\\x{1f1ec}\\x{1f1ee}\\x{1f1f1}\\x{1f1f4}\\x{1f1f5}\\x{1f1f7}" +
-	"\\x{1f1fa}\\x{1f1ff}]|\\x{1f1f4}\\x{1f1f2}|\\x{1f1f5}[\\x{1f1e6}\\x{1f1ea}-" +
-	"\\x{1f1ed}\\x{1f1f0}-\\x{1f1f3}\\x{1f1f7}-\\x{1f1f9}\\x{1f1fc}\\x{1f1fe}]|" +
-	"\\x{1f1f6}\\x{1f1e6}|\\x{1f1f7}[\\x{1f1ea}\\x{1f1f4}\\x{1f1f8}\\x{1f1fa}" +
-	"\\x{1f1fc}]|\\x{1f1f8}[\\x{1f1e6}-\\x{1f1ea}\\x{1f1ec}-\\x{1f1f4}\\x{1f1f7}-" +
-	"\\x{1f1f9}\\x{1f1fb}\\x{1f1fd}-\\x{1f1ff}]|\\x{1f1f9}[\\x{1f1e6}\\x{1f1e8}" +
-	"\\x{1f1e9}\\x{1f1eb}-\\x{1f1ed}\\x{1f1ef}-\\x{1f1f4}\\x{1f1f7}\\x{1f1f9}" +
-	"\\x{1f1fb}\\x{1f1fc}\\x{1f1ff}]|\\x{1f1fa}[\\x{1f1e6}\\x{1f1ec}\\x{1f1f2}" +
-	"\\x{1f1f8}\\x{1f1fe}\\x{1f1ff}]|\\x{1f1fb}[\\x{1f1e6}\\x{1f1e8}\\x{1f1ea}" +
-	"\\x{1f1ec}\\x{1f1ee}\\x{1f1f3}\\x{1f1fa}]|\\x{1f1fc}[\\x{1f1eb}\\x{1f1f8}]|" +
-	"\\x{1f1fd}\\x{1f1f0}|\\x{1f1fe}[\\x{1f1ea}\\x{1f1f9}]|\\x{1f1ff}[\\x{1f1e6}" +
-	"\\x{1f1f2}\\x{1f1fc}]"
 
 // Node - ob node
 var Node *OpenBazaarNode
@@ -183,6 +121,10 @@ type OpenBazaarNode struct {
 	seedLock    sync.Mutex
 
 	InitalPublishComplete bool
+
+	// InboundMsgScanner is a worker that scans the messages
+	// table and tries to retry a failed order message
+	InboundMsgScanner *inboundMessageScanner
 }
 
 // TestNetworkEnabled indicates whether the node is operating with test parameters
@@ -194,7 +136,10 @@ func (n *OpenBazaarNode) RegressionNetworkEnabled() bool { return n.RegressionTe
 // SeedNode - publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
 	n.seedLock.Lock()
-	ipfs.UnPinDir(n.IpfsNode, n.RootHash)
+	err := ipfs.UnPinDir(n.IpfsNode, n.RootHash)
+	if err != nil {
+		log.Errorf("unpinning old root: %s", err.Error())
+	}
 	var aerr error
 	var rootHash string
 	// There's an IPFS bug on Windows that might be related to the Windows indexer that could cause this to fail
@@ -318,8 +263,14 @@ func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for range ticker.C {
-			n.UpdateFollow()
-			n.SeedNode()
+			err := n.UpdateFollow()
+			if err != nil {
+				log.Error(err)
+			}
+			err = n.SeedNode()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}()
 }
@@ -367,24 +318,43 @@ func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
 }
 
-func ToHtmlEntities(str string) string {
-	var rx = regexp.MustCompile(EmojiPattern)
-	return rx.ReplaceAllStringFunc(str, func(s string) string {
-		r, _ := utf8.DecodeRuneInString(s)
-		html := fmt.Sprintf(`&#x%X;`, r)
-		return html
-	})
+// GetNodeID returns the protobuf representing the node's identity and crypto
+// keys with the peer ID
+func (n *OpenBazaarNode) GetNodeID() (*pb.ID, error) {
+	var id = new(pb.ID)
+	id.PeerID = n.IpfsNode.Identity.Pretty()
+
+	if p, err := n.GetProfile(); err == nil {
+		id.Handle = p.Handle
+	}
+
+	p := new(pb.ID_Pubkeys)
+	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("ipfs pubkey bytes: %s", err.Error())
+	}
+	p.Identity = pubkey
+	coinPubkey, err := n.MasterPrivateKey.ECPubKey()
+	if err != nil {
+		return nil, fmt.Errorf("master pubkey: %s", err.Error())
+	}
+	p.Bitcoin = coinPubkey.SerializeCompressed()
+	id.Pubkeys = p
+
+	coinPrivKey, err := n.MasterPrivateKey.ECPrivKey()
+	if err != nil {
+		return nil, fmt.Errorf("master privkey: %s", err.Error())
+	}
+	coinSig, err := coinPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return nil, fmt.Errorf("sign id: %s", err.Error())
+	}
+	id.BitcoinSig = coinSig.Serialize()
+
+	return id, nil
 }
 
-// createSlugFor Create a slug from a multi-lang string
-func createSlugFor(slugName string) string {
-	l := SentenceMaxCharacters - SlugBuffer
-
-	slugName = ToHtmlEntities(slugName)
-
-	slug := slug.Make(slugName)
-	if len(slug) < SentenceMaxCharacters-SlugBuffer {
-		l = len(slug)
-	}
-	return slug[:l]
+// Sign returns a signature for the payload signed by the IPFS private key
+func (n *OpenBazaarNode) Sign(payload []byte) ([]byte, error) {
+	return n.IpfsNode.PrivateKey.Sign(payload)
 }

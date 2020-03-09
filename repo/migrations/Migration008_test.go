@@ -195,7 +195,7 @@ func TestMigration008(t *testing.T) {
 			t.Error("Unexpected case ID returned")
 		}
 		timeSinceMigration := time.Since(time.Unix(actualCase.LastDisputeExpiryNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(4) * time.Second) {
 			t.Errorf("Expected lastDisputeExpiryNotifiedAt on case to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 	}
@@ -252,12 +252,12 @@ func TestMigration008(t *testing.T) {
 			t.Error(err)
 		}
 		timeSinceMigration := time.Since(time.Unix(actualPurchase.LastDisputeTimeoutNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(4) * time.Second) {
 			t.Errorf("Expected lastDisputeTimeoutNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 		if actualPurchase.OrderState == migrations.Migration008_OrderState_DISPUTED {
 			timeSinceMigration := time.Since(time.Unix(actualPurchase.LastDisputeExpiryNotifiedAt, 0))
-			if timeSinceMigration > (time.Duration(2) * time.Second) {
+			if timeSinceMigration > (time.Duration(4) * time.Second) {
 				t.Errorf("Expected lastDisputeExpiryNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 			}
 			if actualPurchase.DisputedAt != disputedPurchaseContract.Dispute.Timestamp.Seconds {
@@ -311,7 +311,7 @@ func TestMigration008(t *testing.T) {
 			t.Error("Unexpected orderID returned")
 		}
 		timeSinceMigration := time.Since(time.Unix(actualSale.LastDisputeTimeoutNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(4) * time.Second) {
 			t.Errorf("Expected lastDisputeTimeoutNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 	}

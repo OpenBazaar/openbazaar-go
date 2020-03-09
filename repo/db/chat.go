@@ -28,15 +28,13 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		timestamp = time.Now()
 	}
 
-	tx, err := c.db.Begin()
-	if err != nil {
-		return err
-	}
 	stm := `insert into chat(messageID, peerID, subject, message, read, timestamp, outgoing) values(?,?,?,?,?,?,?)`
-	stmt, err := tx.Prepare(stm)
+	stmt, err := c.PrepareQuery(stm)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare chat sql: %s", err.Error())
 	}
+	defer stmt.Close()
+
 	readInt := 0
 	if read {
 		readInt = 1
@@ -47,7 +45,6 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		outgoingInt = 1
 	}
 
-	defer stmt.Close()
 	_, err = stmt.Exec(
 		messageId,
 		peerId,
@@ -58,10 +55,8 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 		outgoingInt,
 	)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit chat: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 
@@ -94,10 +89,16 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 			stm    = "select Count(*) from chat where peerID='" + peerId + "' and read=0 and subject='' and outgoing=0;"
 			row    = c.db.QueryRow(stm)
 		)
-		row.Scan(&count)
+		err = row.Scan(&count)
+		if err != nil {
+			log.Error(err)
+		}
 		stm = "select max(timestamp), message, outgoing from chat where peerID='" + peerId + "' and subject=''"
 		row = c.db.QueryRow(stm)
-		row.Scan(&ts, &m, &outInt)
+		err = row.Scan(&ts, &m, &outInt)
+		if err != nil {
+			log.Error(err)
+		}
 		outgoing := false
 		if outInt > 0 {
 			outgoing = true
@@ -193,15 +194,8 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		updateArgs = append(updateArgs, messageId)
 	}
 
-	tx, err := c.db.Begin()
+	result, err := c.db.Exec("update chat set read=1 where subject=? and outgoing=?"+peerStm+messageStm, updateArgs...)
 	if err != nil {
-		return "", false, fmt.Errorf("begin tx mark chat as read: %s", err)
-	}
-	result, err := tx.Exec("update chat set read=1 where subject=? and outgoing=?"+peerStm+messageStm, updateArgs...)
-	if err != nil {
-		if rErr := tx.Rollback(); rErr != nil {
-			return "", false, fmt.Errorf("mark chat as read: %s (rollback: %s)", err, rErr)
-		}
 		return "", false, fmt.Errorf("mark chat as read: %s", err)
 	}
 	if count, err := result.RowsAffected(); err != nil {
@@ -211,14 +205,11 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 			updated = true
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return "", false, fmt.Errorf("commit tx mark chat as read: %s", err)
-	}
 
 	// get last message ID
 	stmt2, err := c.db.Prepare("select max(timestamp), messageID from chat where subject=?" + peerStm + " and outgoing=?")
 	if err != nil {
-		return "", updated, err
+		return "", updated, fmt.Errorf("prepare get last message id sql: %s", err.Error())
 	}
 	defer stmt2.Close()
 	var (
@@ -231,7 +222,7 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		err = stmt2.QueryRow(subject, outgoingInt).Scan(&timestamp, &msgId)
 	}
 	if err != nil {
-		return "", updated, err
+		return "", updated, fmt.Errorf("query get last message id: %s", err.Error())
 	}
 	return msgId.String, updated, nil
 }
@@ -250,13 +241,17 @@ func (c *ChatDB) GetUnreadCount(subject string) (int, error) {
 func (c *ChatDB) DeleteMessage(msgID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.db.Exec("delete from chat where messageID=?", msgID)
+	_, err := c.db.Exec("delete from chat where messageID=?", msgID)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
 func (c *ChatDB) DeleteConversation(peerId string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.db.Exec("delete from chat where peerId=? and subject=''", peerId)
+	_, err := c.db.Exec("delete from chat where peerId=? and subject=''", peerId)
+	log.Error(err)
 	return nil
 }

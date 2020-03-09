@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 
@@ -60,12 +59,11 @@ func newTestGateway() (*Gateway, error) {
 
 // apiTest is a test case to be run against the api blackbox
 type apiTest struct {
-	method      string
-	path        string
-	requestBody string
+	method, path string
+	requestBody  interface{}
 
 	expectedResponseCode int
-	expectedResponseBody string
+	expectedResponseBody interface{}
 }
 
 // setupAction is used to change state before and after a set of []apiTest
@@ -118,12 +116,33 @@ func runAPITest(t *testing.T, subject apiTest) {
 
 // executeAPITest executes the given test against the blackbox
 func executeAPITest(t *testing.T, test apiTest) {
+	var reqBody, expectedResp string
+	if r, ok := test.requestBody.(string); ok {
+		reqBody = r
+	} else {
+		mr, err := json.MarshalIndent(test.requestBody, "", "    ")
+		if err != nil {
+			t.Fatalf("marshalling requestBody: %s", err)
+		}
+		reqBody = string(mr)
+	}
+	if r, ok := test.expectedResponseBody.(string); ok {
+		expectedResp = r
+	} else {
+		mr, err := json.MarshalIndent(test.expectedResponseBody, "", "    ")
+		if err != nil {
+			t.Fatalf("marshalling expectedResponseBody: %s", err)
+		}
+		expectedResp = string(mr)
+	}
+
+	t.Logf("request body:\n%s", reqBody)
 	// Make the request
-	req, err := buildRequest(test.method, test.path, test.requestBody)
+	testRequest, err := buildRequest(test.method, test.path, reqBody)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := testHTTPClient.Do(req)
+	resp, err := testHTTPClient.Do(testRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,17 +169,17 @@ func executeAPITest(t *testing.T, test apiTest) {
 	}
 
 	// Unless explicitly saying any JSON is expected check for equality
-	if test.expectedResponseBody != anyResponseJSON {
+	if expectedResp != anyResponseJSON {
 		var expectedJSON interface{}
-		err = json.Unmarshal([]byte(test.expectedResponseBody), &expectedJSON)
+		err = json.Unmarshal([]byte(expectedResp), &expectedJSON)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if !reflect.DeepEqual(responseJSON, expectedJSON) {
-			fmt.Println("expected:", test.expectedResponseBody)
-			fmt.Println("actual:", string(respBody))
-			t.Error("Incorrect response")
+			t.Error("Error: incorrect response")
+			t.Logf("expected:\n%s", expectedResp)
+			t.Logf("actual:\n%s", string(respBody))
 		}
 	}
 }

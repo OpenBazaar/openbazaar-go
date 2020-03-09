@@ -121,7 +121,7 @@ func (ws *WireService) Start() {
 	ws.quit = make(chan struct{})
 	best, err := ws.chain.BestBlock()
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	log.Infof("Starting wire service at height %d", int(best.height))
 out:
@@ -215,7 +215,7 @@ func (ws *WireService) startSync(syncPeer *peerpkg.Peer) {
 	ws.Rebroadcast()
 	bestBlock, err := ws.chain.BestBlock()
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return
 	}
 	var bestPeer *peerpkg.Peer
@@ -463,7 +463,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 		log.Warningf("Received unrequested block from peer %s", peer)
 		return
 	} else if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return
 	}
 	state.blockScore++
@@ -492,13 +492,13 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 		// Rollback the appropriate transactions in our database
 		err := ws.txStore.processReorg(reorg.height)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 		// Set the reorg block as current best block in the header db
 		// This will cause a new chain sync from the reorg point
 		err = ws.chain.db.Put(*reorg, true)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 
 		// Clear request state for new sync

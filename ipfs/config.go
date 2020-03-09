@@ -72,8 +72,8 @@ func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.B
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 		dhtopts.Protocols(
-			IPFSProtocolKademliaMainnetOne,
-			IPFSProtocolDHTMainnetLegacy,
+			IPFSProtocolKademliaTestnetOne,
+			IPFSProtocolAppTestnetOne,
 		),
 	)
 }
