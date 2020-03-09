@@ -950,6 +950,8 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 		script.Moderator, script.Threshold, script.Timeout, shash, script.TxnID)
 	if err == nil {
 		h = tx.Hash()
+	} else {
+		return h, 0, err
 	}
 
 	txns = append(txns, wi.Txn{
