@@ -1,7 +1,6 @@
 package bitcoin
 
 import (
-	"math"
 	"math/big"
 	"sync"
 	"time"
@@ -225,19 +224,6 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			return
 		}
 
-		// update divisibility from contract listing
-		if contract.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
-			customDivisibility := currencyDivisibilityFromContract(l.multiwallet, contract)
-			if customDivisibility != currencyValue.Currency.Divisibility {
-				currencyValue.Currency.Divisibility = customDivisibility
-				if err := currencyValue.Valid(); err != nil {
-					log.Errorf("Invalid currency divisibility (%d) found in contract (%s): %s", customDivisibility, orderId, err.Error())
-					return
-				}
-			}
-		}
-
-		// TODO: this comparison needs to consider the possibility of different divisibilities
 		if funding.Cmp(currencyValue.Amount) >= 0 {
 			log.Debugf("Received payment for order %s", orderId)
 			funded = true
@@ -309,18 +295,6 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	}); err != nil {
 		log.Errorf("failed updating tx metadata (%s): %s", txid, err.Error())
 	}
-}
-
-func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint {
-	var currencyDivisibility = contract.VendorListings[0].Item.PriceCurrency.Divisibility
-	if currencyDivisibility != 0 {
-		return uint(currencyDivisibility)
-	}
-	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
-	if err == nil {
-		return uint(math.Log10(float64(wallet.ExchangeRates().UnitsPerCoin())))
-	}
-	return core.DefaultCurrencyDivisibility
 }
 
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
