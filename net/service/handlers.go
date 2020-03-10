@@ -560,7 +560,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		}
 		return nil, net.OutOfOrderMessage
 	}
-	
+
 	// Validate the order confirmation
 	log.Debugf("validating order confirmation message")
 	err = service.node.ValidateOrderConfirmation(vendorContract, false)
