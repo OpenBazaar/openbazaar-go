@@ -553,6 +553,14 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, net.DuplicateMessage
 	}
 
+	if state != pb.OrderState_PENDING {
+		log.Debugf("order state (%s) is not what is expected", state.String())
+		if err := service.SendProcessingError(p.Pretty(), vendorContract.VendorOrderConfirmation.OrderID, pb.Message_ORDER_CONFIRMATION, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
+		return nil, net.OutOfOrderMessage
+	}
+
 	// Validate the order confirmation
 	log.Debugf("validating order confirmation message")
 	err = service.node.ValidateOrderConfirmation(vendorContract, false)
