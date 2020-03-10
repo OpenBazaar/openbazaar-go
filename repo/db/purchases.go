@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -195,6 +197,16 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 
 		if len(rc.VendorListings) > 0 && rc.VendorListings[0].Metadata != nil && rc.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			coinType = ""
+		}
+
+		if strings.Contains(totalStr, "e") {
+			flt, _, err := big.ParseFloat(totalStr, 10, 0, big.ToNearestEven)
+			if err != nil {
+				return nil, 0, err
+			}
+			var i = new(big.Int)
+			i, _ = flt.Int(i)
+			totalStr = i.String()
 		}
 
 		cv, err := repo.NewCurrencyValueWithLookup(totalStr, paymentCoin)
