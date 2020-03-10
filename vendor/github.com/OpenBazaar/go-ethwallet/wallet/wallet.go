@@ -1448,14 +1448,23 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 
 	result := s["result"].(map[string]interface{})
 
-	d, _ := strconv.ParseInt(result["blockNumber"].(string), 0, 64)
+	var d, conf int64
+	if result["blockNumber"] != nil {
+		d, _ = strconv.ParseInt(result["blockNumber"].(string), 0, 64)
+	} else {
+		d = 0
+	}
 
 	n, err := wallet.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	conf := n.Number.Int64() - d
+	if d != 0 {
+		conf = n.Number.Int64() - d + 1
+	} else {
+		conf = 0
+	}
 
 	return uint32(conf), uint32(d), nil
 }
