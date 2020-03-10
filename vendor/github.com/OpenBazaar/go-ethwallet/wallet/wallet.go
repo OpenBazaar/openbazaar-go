@@ -1461,7 +1461,7 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 	}
 
 	if d != 0 {
-		conf = n.Number.Int64() - d
+		conf = n.Number.Int64() - d + 1
 	} else {
 		conf = 0
 	}
