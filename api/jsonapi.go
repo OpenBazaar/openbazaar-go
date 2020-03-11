@@ -3696,7 +3696,10 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				return
+			}
 			id = base58.Encode(idBytes)
 		}
 

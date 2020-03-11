@@ -344,7 +344,7 @@ func (wallet *EthereumWallet) processBalanceChange(previousBalance, currentBalan
 				Txid:      util.EnsureCorrectPrefix(txns[0].Txid),
 				Outputs:   []wi.TransactionOutput{},
 				Inputs:    []wi.TransactionInput{},
-				Height:    1,
+				Height:    txns[0].Height,
 				Timestamp: time.Now(),
 				Value:     *value,
 				WatchOnly: false,
@@ -950,6 +950,8 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 		script.Moderator, script.Threshold, script.Timeout, shash, script.TxnID)
 	if err == nil {
 		h = tx.Hash()
+	} else {
+		return h, 0, err
 	}
 
 	txns = append(txns, wi.Txn{
@@ -1074,10 +1076,12 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
-		if out.Address.String() == rScript.Moderator.Hex() {
+		if out.Value.Cmp(new(big.Int)) > 0 {
 			indx = append(indx, i)
+		}
+		if out.Address.String() == rScript.Moderator.Hex() {
 			mbvAddresses[0] = out.Address.String()
-		} else if out.Address.String() == rScript.Buyer.Hex() {
+		} else if out.Address.String() == rScript.Buyer.Hex() && (out.Value.Cmp(new(big.Int)) > 0) {
 			mbvAddresses[1] = out.Address.String()
 		} else {
 			mbvAddresses[2] = out.Address.String()
@@ -1228,6 +1232,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	mbvAddresses := make([]string, 3)
 
 	for i, out := range outs {
+		if out.Value.Cmp(new(big.Int)) > 0 {
+			indx = append(indx, i)
+		}
 		if out.Address.String() == rScript.Moderator.Hex() {
 			indx = append(indx, i)
 			mbvAddresses[0] = out.Address.String()
@@ -1435,18 +1442,31 @@ func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, a
 		return 0, 0, errors.New("invalid txn hash")
 	}
 
+	if s["message"] != nil {
+		return 0, 0, nil
+	}
+
 	result := s["result"].(map[string]interface{})
 
-	d, _ := strconv.ParseInt(result["blockNumber"].(string), 0, 64)
+	var d, conf int64
+	if result["blockNumber"] != nil {
+		d, _ = strconv.ParseInt(result["blockNumber"].(string), 0, 64)
+	} else {
+		d = 0
+	}
 
 	n, err := wallet.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	conf := n.Number.Int64() - d
+	if d != 0 {
+		conf = n.Number.Int64() - d + 1
+	} else {
+		conf = 0
+	}
 
-	return uint32(conf), uint32(n.Number.Int64()), nil
+	return uint32(conf), uint32(d), nil
 }
 
 // Close will stop the wallet daemon

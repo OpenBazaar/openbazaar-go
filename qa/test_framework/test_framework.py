@@ -100,15 +100,17 @@ class OpenBazaarTestFramework(object):
         config["Swarm"]["DisableNatPortMap"] = True
 
         self.cointype = self.cointype.upper()
-
         coinConfig = config["Wallets"][self.cointype]
+
         del config["Wallets"]
         config["Wallets"] = {}
-        config["Wallets"][self.cointype] = coinConfig
+        config["Wallets"]["BTC"] = coinConfig
+        config["Wallets"]["BTC"]["Type"] = "SPV"
+        config["Wallets"]["BTC"]["TrustedPeer"] = "127.0.0.1:18444"
+        config["Wallets"]["BTC"]["FeeAPI"] = ""
 
-        config["Wallets"][self.cointype]["Type"] = "SPV"
-        config["Wallets"][self.cointype]["TrustedPeer"] = "127.0.0.1:18444"
-        config["Wallets"][self.cointype]["FeeAPI"] = ""
+        if self.cointype != "BTC":
+            config["Wallets"][self.cointype] = coinConfig
 
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))

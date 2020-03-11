@@ -553,6 +553,14 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, net.DuplicateMessage
 	}
 
+	if state != pb.OrderState_PENDING {
+		log.Debugf("order state (%s) is not what is expected", state.String())
+		if err := service.SendProcessingError(p.Pretty(), vendorContract.VendorOrderConfirmation.OrderID, pb.Message_ORDER_CONFIRMATION, contract); err != nil {
+			log.Errorf("failed sending ORDER_PROCESSING_FAILURE to peer (%s): %s", p.Pretty(), err)
+		}
+		return nil, net.OutOfOrderMessage
+	}
+
 	// Validate the order confirmation
 	log.Debugf("validating order confirmation message")
 	err = service.node.ValidateOrderConfirmation(vendorContract, false)
@@ -1309,11 +1317,13 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 		log.Errorf("failed calc orderID")
 	}
 
-	err = service.node.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_OPEN)),
-		orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_OPEN), err)
+	if orderID != "" {
+		err = service.node.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_OPEN)),
+			orderID, pb.Message_DISPUTE_OPEN, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_OPEN), err)
+		}
 	}
 
 	// Verify signature
@@ -1346,11 +1356,13 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 
 	orderID := update.OrderId
-	err = service.node.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_UPDATE)),
-		orderID, pb.Message_DISPUTE_UPDATE, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_UPDATE), err)
+	if orderID != "" {
+		err = service.node.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_UPDATE)),
+			orderID, pb.Message_DISPUTE_UPDATE, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_UPDATE), err)
+		}
 	}
 
 	dispute, err := service.node.Datastore.Cases().GetByCaseID(update.OrderId)
@@ -1448,11 +1460,13 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	orderID := rc.DisputeResolution.OrderId
-	err = service.node.Datastore.Messages().Put(
-		fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_CLOSE)),
-		orderID, pb.Message_DISPUTE_CLOSE, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
-	if err != nil {
-		log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_CLOSE), err)
+	if orderID != "" {
+		err = service.node.Datastore.Messages().Put(
+			fmt.Sprintf("%s-%d", orderID, int(pb.Message_DISPUTE_CLOSE)),
+			orderID, pb.Message_DISPUTE_CLOSE, p.Pretty(), repo.Message{Msg: *pmes}, "", time.Now().UnixNano(), []byte(p))
+		if err != nil {
+			log.Errorf("failed putting message (%s-%d): %v", orderID, int(pb.Message_DISPUTE_CLOSE), err)
+		}
 	}
 
 	// Load the order

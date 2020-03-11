@@ -843,7 +843,7 @@ func (l *Listing) UpdateCouponsFromDatastore(cdb couponGetter) error {
 	if err != nil {
 		return fmt.Errorf("loading datastore coupon: %s", err.Error())
 	}
-	for _, c := range coupons {
+	for i, c := range coupons {
 		for _, dbc := range dbCoupons {
 			if c.redemptionHash == dbc.Hash {
 				// make sure applying code does not shift already-matched hash
@@ -854,12 +854,13 @@ func (l *Listing) UpdateCouponsFromDatastore(cdb couponGetter) error {
 				if c.redemptionHash != expectedHash.B58String() {
 					return fmt.Errorf("update coupon code (%s) results in mismatched published hash", dbc.Code)
 				}
-				if err := c.SetRedemptionCode(dbc.Code); err != nil {
+				if err := coupons[i].SetRedemptionCode(dbc.Code); err != nil {
 					return fmt.Errorf("setting redemption code: %s", err.Error())
 				}
 			}
 		}
 	}
+	l.listingProto.Coupons = coupons.GetProtobuf()
 	return nil
 }
 
@@ -918,13 +919,16 @@ func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
 	var cspb = make([]*pb.Listing_Coupon, len(cs))
 	for i, c := range cs {
 		cspb[i] = &pb.Listing_Coupon{
-			Title:            c.GetTitle(),
-			PercentDiscount:  c.GetPercentOff(),
-			BigPriceDiscount: c.GetAmountOff().Amount.String(),
+			Title:           c.GetTitle(),
+			PercentDiscount: c.GetPercentOff(),
+		}
+		if c.GetAmountOff() != nil {
+			cspb[i].BigPriceDiscount = c.GetAmountOff().Amount.String()
 		}
 		if hash, err := c.GetRedemptionHash(); err == nil {
 			cspb[i].Code = &pb.Listing_Coupon_Hash{Hash: hash}
-		} else if code, err := c.GetRedemptionCode(); err == nil {
+		}
+		if code, err := c.GetRedemptionCode(); err == nil {
 			cspb[i].Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 		}
 	}
