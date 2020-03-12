@@ -1101,6 +1101,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
+	// Build, sign, and broadcast transaction
+	_, err = wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
+	if err != nil {
+		return err
+	}
+
 	// Update database
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DECIDED, true)
@@ -1109,12 +1115,6 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 	if err != nil {
 		log.Errorf("ReleaseFunds error updating database: %s", err.Error())
-	}
-
-	// Build, sign, and broadcast transaction
-	_, err = wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
-	if err != nil {
-		return err
 	}
 
 	return nil
