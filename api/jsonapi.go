@@ -4406,3 +4406,26 @@ func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.R
 	}
 	SanitizedResponse(w, `{}`)
 }
+
+func (i *jsonAPIHandler) POSTHashMessage(w http.ResponseWriter, r *http.Request) {
+	type hashRequest struct {
+		Content string `json:"content"`
+	}
+	var (
+		req hashRequest
+		err = json.NewDecoder(r.Body).Decode(&req)
+	)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	messageHash, err := ipfs.EncodeMultihash([]byte(req.Content))
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, fmt.Sprintf(`{"hash": "%s"}`,
+		messageHash.B58String()))
+}
