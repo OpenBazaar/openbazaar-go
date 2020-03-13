@@ -519,6 +519,15 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 
 // TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
 func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
+	ret := []wi.Txn{}
+	unconf, err := wallet.db.Txns().GetAll(false)
+	if err == nil {
+		for _, u := range unconf {
+			u.Status = wi.StatusUnconfirmed
+			ret = append(ret, u)
+		}
+	}
+
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
 		1, 0, false)
 	if err != nil {
@@ -526,7 +535,6 @@ func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, 
 		return []wi.Txn{}, nil
 	}
 
-	ret := []wi.Txn{}
 	for _, t := range txns {
 		status := wi.StatusConfirmed
 		prefix := ""
@@ -653,15 +661,20 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 
 // Spend - Send ether to an external wallet
 func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
-	var hash common.Hash
-	var h *chainhash.Hash
-	var err error
+	var (
+		hash common.Hash
+		h *chainhash.Hash
+		watchOnly bool
+		nonce int32
+		err error
+	)
 	actualRecipient := addr
 
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
 		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
 	} else {
+		watchOnly = true
 		// this is a spend which means it has to be linked to an order
 		// specified using the referenceID
 
@@ -710,33 +723,33 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 		}
 
 		// txn is pending
-		nonce, err := wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
-		if err == nil {
-			data, err := SerializePendingTxn(PendingTxn{
-				TxnID:     hash,
-				Amount:    amount.String(),
-				OrderID:   referenceID,
-				Nonce:     nonce,
-				From:      wallet.address.EncodeAddress(),
-				To:        actualRecipient.EncodeAddress(),
-				WithInput: false,
-			})
-			if err == nil {
-				err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), true)
-				if err0 != nil {
-					log.Error(err0.Error())
-				}
-			}
+		nonce, err = wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
+		if err != nil {
+			return nil, err
 		}
 	}
-
 	if err == nil {
 		h, err = util.CreateChainHash(hash.Hex())
 		if err == nil {
 			wallet.invokeTxnCB(h.String(), &amount)
 		}
 	}
-	return h, err
+	data, err := SerializePendingTxn(PendingTxn{
+		TxnID:     hash,
+		Amount:    amount.String(),
+		OrderID:   referenceID,
+		Nonce:     nonce,
+		From:      wallet.address.EncodeAddress(),
+		To:        actualRecipient.EncodeAddress(),
+		WithInput: false,
+	})
+	if err == nil {
+		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), watchOnly)
+		if err0 != nil {
+			log.Error(err0.Error())
+		}
+	}
+	return h, nil
 }
 
 func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value big.Int, bTime time.Time, withInput bool) wi.TransactionCallback {
