@@ -537,6 +537,9 @@ func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, 
 
 	for _, t := range txns {
 		status := wi.StatusConfirmed
+		if t.Confirmations > 1 && t.Confirmations <= 7 {
+			status = wi.StatusPending
+		}
 		prefix := ""
 		if t.IsError != 0 {
 			status = wi.StatusError
@@ -752,7 +755,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	return h, nil
 }
 
-func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value big.Int, bTime time.Time, withInput bool) wi.TransactionCallback {
+func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value big.Int, bTime time.Time, withInput bool, height int64) wi.TransactionCallback {
 	output := wi.TransactionOutput{
 		Address: toAddress,
 		Value:   value,
@@ -772,12 +775,11 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 		}
 
 	}
-
 	return wi.TransactionCallback{
 		Txid:      util.EnsureCorrectPrefix(txID),
 		Outputs:   []wi.TransactionOutput{output},
 		Inputs:    []wi.TransactionInput{input},
-		Height:    1,
+		Height:    int32(height),
 		Timestamp: time.Now(),
 		Value:     value,
 		WatchOnly: false,
@@ -825,9 +827,10 @@ func (wallet *EthereumWallet) checkTxnRcpt(hash *common.Hash, data []byte) (*com
 				toAddr = common.HexToAddress(util.EnsureCorrectPrefix(pTxn.To))
 				withInput = pTxn.WithInput
 			}
+			height := rcpt.BlockNumber.Int64()
 			go wallet.AssociateTransactionWithOrder(
 				wallet.createTxnCallback(util.EnsureCorrectPrefix(hash.Hex()), pTxn.OrderID, EthAddress{&toAddr},
-					*n, time.Now(), withInput))
+					*n, time.Now(), withInput, height))
 		}
 	}
 	return hash, nil
