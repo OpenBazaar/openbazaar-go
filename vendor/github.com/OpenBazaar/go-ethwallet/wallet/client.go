@@ -142,7 +142,7 @@ func (client *EthClient) Transfer(from *Account, destAccount common.Address, val
 }
 
 // TransferToken will transfer erc20 token from this user account to dest address
-func (client *EthClient) TransferToken(from *Account, toAddress common.Address, tokenAddress common.Address, value *big.Int) (common.Hash, error) {
+func (client *EthClient) TransferToken(from *Account, toAddress common.Address, tokenAddress common.Address, value *big.Int, spendAll bool, fee big.Int) (common.Hash, error) {
 	var err error
 	fromAddress := from.Address()
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)

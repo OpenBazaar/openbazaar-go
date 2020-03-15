@@ -382,10 +382,8 @@ func (wallet *EthereumWallet) CurrencyCode() string {
 	}
 	if wallet.params.Name == chaincfg.MainNetParams.Name {
 		return "ETH"
-	} else {
-		return "TETH"
 	}
-	//return "ETH"
+	return "TETH"
 }
 
 // IsDust Check if this amount is considered dust - 10000 wei
@@ -1411,9 +1409,6 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 
 // GetConfirmations - Return the number of confirmations and the height for a transaction
 func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
-	// TODO: etherscan api is being used
-	// when mainnet is activated we may need a way to set the
-	// url correctly - done 6 April 2019
 	hash := common.HexToHash(util.EnsureCorrectPrefix(txid.String()))
 	network := etherscan.Rinkby
 	if strings.Contains(wallet.client.url, "mainnet") {
