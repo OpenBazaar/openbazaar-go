@@ -47,13 +47,13 @@ const (
 	EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
 	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
 
-	// OB Tokens
+	// OBToken
 	OBTRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
 	OBTRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
 	OBTRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
-	OBTAddressMainnet         = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
-	OBTAddressRinkeby         = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
-	OBTAddressRopsten         = "0x403d907982474cdd51687b09a8968346159378f3"
+	OBTAddressMainnet         = "0xe46ea07736e68df951df7b987dda453962ba7d5a"
+	OBTAddressRinkeby         = "0xe46ea07736e68df951df7b987dda453962ba7d5a"
+	OBTAddressRopsten         = "0xe46ea07736e68df951df7b987dda453962ba7d5a"
 
 	DataPushNodeOne   = "QmbwN82MVyBukT7WTdaQDppaACo62oUfma8dUa5R9nBFHm"
 	DataPushNodeTwo   = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
