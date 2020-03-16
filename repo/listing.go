@@ -920,10 +920,15 @@ func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
 	for i, c := range cs {
 		cspb[i] = &pb.Listing_Coupon{
 			Title:           c.GetTitle(),
-			PercentDiscount: c.GetPercentOff(),
 		}
-		if c.GetAmountOff() != nil {
-			cspb[i].BigPriceDiscount = c.GetAmountOff().Amount.String()
+		if c.GetPercentOff() > 0 {
+			cspb[i].Discount = &pb.Listing_Coupon_PercentDiscount{
+				PercentDiscount: c.GetPercentOff(),
+			}
+		} else if c.GetAmountOff() != nil {
+			cspb[i].Discount = &pb.Listing_Coupon_BigPriceDiscount{
+				BigPriceDiscount: c.GetAmountOff().Amount.String(),
+			}
 		}
 		if hash, err := c.GetRedemptionHash(); err == nil {
 			cspb[i].Code = &pb.Listing_Coupon_Hash{Hash: hash}
@@ -1488,16 +1493,16 @@ func (l *Listing) ValidateListing(testnet bool) (err error) {
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("percent discount cannot be over 100 percent")
 		}
-		n, ok := new(big.Int).SetString(l.listingProto.Item.BigPrice, 10)
-		if !ok {
-			return errors.New("price was invalid")
+		price, err := l.GetPrice()
+		if err != nil {
+			return err
 		}
 		if coupon.GetBigPriceDiscount() != "" {
-			discount0, ok := new(big.Int).SetString(coupon.BigPriceDiscount, 10)
+			discount0, ok := new(big.Int).SetString(coupon.GetBigPriceDiscount(), 10)
 			if !ok {
 				return errors.New("coupon discount was invalid")
 			}
-			if n.Cmp(discount0) < 0 {
+			if price.Amount.Cmp(discount0) < 0 {
 				return errors.New("price discount cannot be greater than the item price")
 			}
 		}
@@ -1545,18 +1550,19 @@ func (l *Listing) ValidateListing(testnet bool) (err error) {
 
 	// Non-crypto validations
 	if l.listingProto.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
-		if l.listingProto.Item.PriceCurrency == nil {
+		price, err := l.GetPrice()
+		if err != nil {
+			return err
+		}
+		if price.Currency.Code == "" {
 			return errors.New("pricing currency is missing")
 		}
-		if priceCurrency, err := AllCurrencies().Lookup(l.listingProto.Item.PriceCurrency.Code); err != nil {
+		if priceCurrency, err := AllCurrencies().Lookup(price.Currency.Code.String()); err != nil {
 			return errors.New("invalid pricing currency")
 		} else {
-			if uint(l.listingProto.Item.PriceCurrency.Divisibility) > priceCurrency.Divisibility {
+			if uint(price.Currency.Divisibility) > priceCurrency.Divisibility {
 				return errors.New("pricing currency divisibility is too large")
 			}
-		}
-		if _, ok := new(big.Int).SetString(l.listingProto.Item.BigPrice, 10); !ok {
-			return errors.New("invalid item price amount")
 		}
 	}
 
@@ -1587,7 +1593,11 @@ func (l *Listing) validatePhysicalListing() error {
 		return fmt.Errorf("number of shipping options is greater than the max of %d", MaxListItems)
 	}
 	var shippingTitles []string
-	for _, shippingOption := range l.listingProto.ShippingOptions {
+	shippingOptions, err := l.GetShippingOptions()
+	if err != nil {
+		return err
+	}
+	for _, shippingOption := range shippingOptions {
 		if shippingOption.Name == "" {
 			return errors.New("shipping option title name must not be empty")
 		}
