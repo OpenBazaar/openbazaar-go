@@ -169,6 +169,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		Code:         defn.Code.String(),
 		Divisibility: uint32(defn.Divisibility),
 	}
+	payment.Coin = defn.Code.String()
 
 	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
@@ -181,6 +182,7 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	}
 
 	payment.BigAmount = total.String()
+	payment.Amount = total.Uint64()
 
 	contract, err = n.SignOrder(contract)
 	if err != nil {
@@ -238,11 +240,13 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 		Code:         defn.Code.String(),
 		Divisibility: uint32(defn.Divisibility),
 	}
+	payment.Coin = defn.Code.String()
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return nil, err
 	}
 	payment.BigAmount = total.String()
+	payment.Amount = total.Uint64()
 	contract.BuyerOrder.Payment = payment
 
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
@@ -708,7 +712,6 @@ func getListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Ite
 	if err := sl.GetListing().GetVendorID().Valid(); err != nil {
 		return nil, fmt.Errorf("invalid vendor info: %s", err.Error())
 	}
-
 	if err := sl.ValidateListing(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
 		return nil, fmt.Errorf("validating listing (%s): %s", sl.GetSlug(), err.Error())
 	}
@@ -982,7 +985,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			}
 			for _, vendorCoupon := range nrl.GetProtobuf().Coupons {
 				if id.B58String() == vendorCoupon.GetHash() {
-					if disc, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
+					if disc, ok := new(big.Int).SetString(vendorCoupon.GetBigPriceDiscount(), 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
 						// apply fixed discount
 						itemOriginAmt = itemOriginAmt.SubBigInt(disc)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
