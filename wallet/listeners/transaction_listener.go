@@ -142,7 +142,15 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
-				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+				if state == pb.OrderState_DECIDED {
+					if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+					}
+				} else {
+					if err := l.db.Sales().Put(orderId, *contract, state, false); err != nil {
+						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
+					}
+				}
 			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
@@ -172,7 +180,15 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					l.broadcast <- n
 					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+				if state == pb.OrderState_DECIDED {
+					if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+					}
+				} else {
+					if err := l.db.Purchases().Put(orderId, *contract, state, false); err != nil {
+						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
+					}
+				}
 			}
 		}
 	}
