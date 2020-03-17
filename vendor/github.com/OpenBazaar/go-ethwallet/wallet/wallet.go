@@ -521,7 +521,7 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
 	ret := []wi.Txn{}
 
-	unconf, uerr := wallet.db.Txns().GetAll(false)
+	unconf, _ := wallet.db.Txns().GetAll(false)
 
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
 		1, 0, false)
