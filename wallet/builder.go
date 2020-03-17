@@ -89,7 +89,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		enableAPIWallet[wallet.Litecoin] = cfg.ConfigFile.LTC
 	}
 	enableAPIWallet[wallet.Ethereum] = cfg.ConfigFile.ETH
-	enableAPIWallet[wallet.OBToken] = cfg.ConfigFile.OBT
+	enableAPIWallet[wallet.DAI] = cfg.ConfigFile.DAI
 
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
@@ -179,11 +179,11 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
-	case wallet.OBToken:
+	case wallet.DAI:
 		if testnet {
-			actualCoin = wallet.TestnetOBToken
+			actualCoin = wallet.TestnetDAI
 		} else {
-			actualCoin = wallet.OBToken
+			actualCoin = wallet.DAI
 		}
 		//actualCoin = wallet.Ethereum
 		w, err := eth.NewERC20Wallet(*coinConfig, cfg.Params, cfg.Mnemonic, cfg.Proxy)
@@ -312,9 +312,9 @@ func prepareAPICoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wal
 	case wallet.Ethereum:
 		defaultConfig = defaultConfigSet.ETH
 		defaultCoinOptions = schema.EthereumDefaultOptions()
-	case wallet.OBToken:
-		defaultConfig = defaultConfigSet.OBT
-		defaultCoinOptions = schema.OBTDefaultOptions()
+	case wallet.DAI:
+		defaultConfig = defaultConfigSet.DAI
+		defaultCoinOptions = schema.DAIDefaultOptions()
 	}
 
 	if testnet {

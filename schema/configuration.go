@@ -36,7 +36,7 @@ type WalletsConfig struct {
 	LTC *CoinConfig `json:"LTC"`
 	ZEC *CoinConfig `json:"ZEC"`
 	ETH *CoinConfig `json:"ETH"`
-	OBT *CoinConfig `json:"OBT"`
+	DAI *CoinConfig `json:"DAI"`
 }
 
 type CoinConfig struct {
@@ -130,16 +130,16 @@ func DefaultWalletsConfig() *WalletsConfig {
 			MaxFee:           200,
 			WalletOptions:    EthereumDefaultOptions(),
 		},
-		OBT: &CoinConfig{
+		DAI: &CoinConfig{
 			Type:             WalletTypeAPI,
-			APIPool:          CoinPoolOBT,
-			APITestnetPool:   CoinPoolTOBT,
+			APIPool:          CoinPoolDAI,
+			APITestnetPool:   CoinPoolTDAI,
 			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    7,
 			MediumFeeDefault: 15,
 			HighFeeDefault:   30,
 			MaxFee:           200,
-			WalletOptions:    OBTDefaultOptions(),
+			WalletOptions:    DAIDefaultOptions(),
 		},
 	}
 }

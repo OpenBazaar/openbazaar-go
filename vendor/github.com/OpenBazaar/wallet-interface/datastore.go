@@ -24,14 +24,14 @@ const (
 	Zcash                = 133
 	BitcoinCash          = 145
 	Ethereum             = 60
-	OBToken              = 61
+	DAI                  = 61
 
 	TestnetBitcoin     = 1000000
 	TestnetLitecoin    = 1000001
 	TestnetZcash       = 1000133
 	TestnetBitcoinCash = 1000145
 	TestnetEthereum    = 1000060
-	TestnetOBToken     = 1000061
+	TestnetDAI         = 1000061
 )
 
 func (c *CoinType) String() string {
@@ -46,8 +46,8 @@ func (c *CoinType) String() string {
 		return "Litecoin"
 	case Ethereum:
 		return "Ethereum"
-	case OBToken:
-		return "OBToken"
+	case DAI:
+		return "DAI"
 	case TestnetBitcoin:
 		return "Testnet Bitcoin"
 	case TestnetBitcoinCash:
@@ -58,8 +58,8 @@ func (c *CoinType) String() string {
 		return "Testnet Litecoin"
 	case TestnetEthereum:
 		return "Testnet Ethereum"
-	case TestnetOBToken:
-		return "Testnet OBToken"
+	case TestnetDAI:
+		return "Testnet DAI"
 	default:
 		return ""
 	}
@@ -77,8 +77,8 @@ func (c *CoinType) CurrencyCode() string {
 		return "LTC"
 	case Ethereum:
 		return "ETH"
-	case OBToken:
-		return "OBT"
+	case DAI:
+		return "DAI"
 	case TestnetBitcoin:
 		return "TBTC"
 	case TestnetBitcoinCash:
@@ -89,8 +89,8 @@ func (c *CoinType) CurrencyCode() string {
 		return "TLTC"
 	case TestnetEthereum:
 		return "TETH"
-	case TestnetOBToken:
-		return "TOBT"
+	case TestnetDAI:
+		return "TDAI"
 	default:
 		return ""
 	}
