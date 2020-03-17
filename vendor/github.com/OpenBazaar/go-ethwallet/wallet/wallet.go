@@ -747,7 +747,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 		WithInput: false,
 	})
 	if err == nil {
-		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), watchOnly)
+		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), amount.String(), 0, time.Now(), watchOnly)
 		if err0 != nil {
 			log.Error(err0.Error())
 		}
