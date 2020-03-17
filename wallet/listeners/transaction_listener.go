@@ -120,7 +120,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		if isForSale {
 			l.db.Sales().UpdateFunding(orderId, funded, records)
 			// This is a dispute payout. We should set the order state.
-			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+			if len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
@@ -153,8 +153,11 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 				}
 			}
 		} else {
-			l.db.Purchases().UpdateFunding(orderId, funded, records)
-			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+			err = l.db.Purchases().UpdateFunding(orderId, funded, records)
+			if err != nil {
+				log.Errorf("update funding for purchase (%s): %s", orderId, err)
+			}
+			if len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
