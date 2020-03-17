@@ -520,17 +520,12 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue
 // TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
 func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
 	ret := []wi.Txn{}
-	unconf, err := wallet.db.Txns().GetAll(false)
-	if err == nil {
-		for _, u := range unconf {
-			u.Status = wi.StatusUnconfirmed
-			ret = append(ret, u)
-		}
-	}
+
+	unconf, uerr := wallet.db.Txns().GetAll(false)
 
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
 		1, 0, false)
-	if err != nil {
+	if err != nil && len(unconf) == 0 {
 		log.Error("err fetching transactions : ", err)
 		return []wi.Txn{}, nil
 	}
@@ -558,6 +553,11 @@ func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, 
 			Bytes:         []byte(t.Input),
 		}
 		ret = append(ret, tnew)
+	}
+
+	for _, u := range unconf {
+		u.Status = wi.StatusUnconfirmed
+		ret = append(ret, u)
 	}
 
 	return ret, nil
