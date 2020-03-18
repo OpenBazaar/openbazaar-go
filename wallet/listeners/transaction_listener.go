@@ -129,7 +129,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 				log.Errorf("update funding for sale (%s): %s", orderId, err)
 			}
 			// This is a dispute payout. We should set the order state.
-			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+			if len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
@@ -154,8 +154,14 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
-				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
-					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+				if state == pb.OrderState_DECIDED {
+					if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+					}
+				} else {
+					if err := l.db.Sales().Put(orderId, *contract, state, false); err != nil {
+						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
+					}
 				}
 			}
 		} else {
@@ -163,7 +169,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			if err != nil {
 				log.Errorf("update funding for purchase (%s): %s", orderId, err)
 			}
-			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+			if len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
@@ -192,8 +198,14 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
-				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
-					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+				if state == pb.OrderState_DECIDED {
+					if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
+					}
+				} else {
+					if err := l.db.Purchases().Put(orderId, *contract, state, false); err != nil {
+						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
+					}
 				}
 			}
 		}

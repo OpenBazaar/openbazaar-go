@@ -1520,11 +1520,19 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 		return nil, err
 	}
 
+	// If DisputeAcceptance is already set then move the state directly to RESOLVED
 	if isPurchase {
-		// Set message state to complete
-		err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+		if contract.DisputeAcceptance != nil {
+			err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_RESOLVED, false)
+		} else {
+			err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+		}
 	} else {
-		err = service.datastore.Sales().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+		if contract.DisputeAcceptance != nil {
+			err = service.datastore.Sales().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_RESOLVED, false)
+		} else {
+			err = service.datastore.Sales().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+		}
 	}
 	if err != nil {
 		return nil, err
