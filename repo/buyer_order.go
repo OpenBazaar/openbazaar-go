@@ -8,6 +8,9 @@ import (
 
 // ToV5Order scans through the order looking for any deprecated fields and turns them into their v5 counterpart.
 func ToV5Order(order *pb.Order, lookupFunc func(currencyCode string) (CurrencyDefinition, error)) (*pb.Order, error) {
+	if lookupFunc == nil {
+		lookupFunc = AllCurrencies().Lookup
+	}
 	newOrder := proto.Clone(order).(*pb.Order)
 
 	if order.RefundFee != 0 && order.BigRefundFee == "" {

@@ -1675,9 +1675,14 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -2022,8 +2027,14 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
+
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)

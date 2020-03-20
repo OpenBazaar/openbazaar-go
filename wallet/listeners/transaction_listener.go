@@ -225,12 +225,17 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	if err != nil {
 		return
 	}
+	order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	if !funded {
-		currencyValue, err := repo.NewCurrencyValueWithLookup(contract.BuyerOrder.Payment.BigAmount, contract.BuyerOrder.Payment.AmountCurrency.Code)
+		currencyValue, err := repo.NewCurrencyValueWithLookup(order.Payment.BigAmount, order.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Failed parsing CurrencyValue for (%s, %s): %s",
-				contract.BuyerOrder.Payment.BigAmount,
-				contract.BuyerOrder.Payment.AmountCurrency.Code,
+				order.Payment.BigAmount,
+				order.Payment.AmountCurrency.Code,
 				err.Error(),
 			)
 			return
@@ -322,8 +327,13 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 	if err != nil {
 		return
 	}
+	order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+		requestedAmount, _ := new(big.Int).SetString(order.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
@@ -337,7 +347,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 				}
 			}
 		}
-		def, err := repo.AllCurrencies().Lookup(contract.BuyerOrder.Payment.AmountCurrency.Code)
+		def, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Error looking up currency: %s", err)
 			return
@@ -352,7 +362,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			Type:         "payment",
 			OrderId:      orderId,
 			FundingTotal: cv,
-			CoinType:     contract.BuyerOrder.Payment.AmountCurrency.Code,
+			CoinType:     order.Payment.AmountCurrency.Code,
 		}
 		l.broadcast <- n
 		err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
