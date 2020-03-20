@@ -158,7 +158,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect reason: %s", resp["reason"])
         if resp["code"] != "ERR_INSUFFICIENT_INVENTORY":
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect code: %s", resp["code"])
-        if resp["remainingInventory"] != "6":
+        if int(resp["remainingInventory"]) != 6:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect remainingInventory: %d", resp["remainingInventory"])
 
         print("PurchaseDirectOnlineTest - PASS")

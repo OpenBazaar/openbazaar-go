@@ -39,7 +39,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
-        if self.vendor_version == 4:
+        if self.vendor_version == "v4":
             listing_json["metadata"]["priceCurrency"] = "t" + self.cointype
         else:
             listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
@@ -110,7 +110,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             "feeLevel": "NORMAL",
             "requireAssociateOrder": False
         }
-        if self.buyer_version == 4:
+        if self.buyer_version == "v4":
             spend["amount"] = payment_amount
             spend["wallet"] = "T" + self.cointype
 
@@ -144,7 +144,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice send order fulfillment
         with open('testdata/'+ self.vendor_version +'/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
