@@ -172,7 +172,8 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 	if err != nil {
 		return common.BytesToHash([]byte{}), err
 	}
-	rawTx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+	gasLimit = 500000
+	rawTx := types.NewTransaction(nonce, tokenAddress, big.NewInt(0), gasLimit, gasPrice, data)
 	signedTx, err := from.SignTransaction(types.HomesteadSigner{}, rawTx) //types.SignTx(tx, types.HomesteadSigner{}, privateKey)
 	if err != nil {
 		return common.BytesToHash([]byte{}), err

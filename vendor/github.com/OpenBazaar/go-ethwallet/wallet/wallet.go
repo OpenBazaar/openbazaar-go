@@ -663,11 +663,11 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 // Spend - Send ether to an external wallet
 func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
-		hash common.Hash
-		h *chainhash.Hash
+		hash      common.Hash
+		h         *chainhash.Hash
 		watchOnly bool
-		nonce int32
-		err error
+		nonce     int32
+		err       error
 	)
 	actualRecipient := addr
 
@@ -1501,7 +1501,7 @@ func (wallet *EthereumWallet) CreateAddress() (common.Address, error) {
 // PrintKeys - used to print the keys for this wallet
 func (wallet *EthereumWallet) PrintKeys() {
 	privateKeyBytes := crypto.FromECDSA(wallet.account.privateKey)
-	log.Debug(string(privateKeyBytes))
+	log.Debug(hexutil.Encode(privateKeyBytes)[2:])
 	publicKey := wallet.account.privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {

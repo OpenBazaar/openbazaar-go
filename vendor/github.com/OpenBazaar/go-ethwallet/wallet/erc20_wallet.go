@@ -56,6 +56,7 @@ type ERC20Wallet struct {
 	deployAddressMain    common.Address
 	deployAddressRopsten common.Address
 	deployAddressRinkeby common.Address
+	currentdeployAddress common.Address
 	token                *Token
 	listeners            []func(wi.TransactionCallback)
 }
@@ -85,6 +86,7 @@ type TokenDetail struct {
 	deployAddressMain    common.Address
 	deployAddressRopsten common.Address
 	deployAddressRinkeby common.Address
+	currentdeployAddress common.Address
 }
 
 // NewERC20Wallet will return a reference to the ERC20 Wallet
@@ -151,14 +153,20 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 	token.deployAddressMain = common.HexToAddress(deployAddrMain.(string))
 
 	if deployAddrRopsten, ok = cfg.Options["RopstenAddress"]; ok {
-		token.deployAddressMain = common.HexToAddress(deployAddrRopsten.(string))
+		token.deployAddressRopsten = common.HexToAddress(deployAddrRopsten.(string))
 	}
 
 	if deployAddrRinkeby, ok = cfg.Options["RinkebyAddress"]; ok {
 		token.deployAddressRinkeby = common.HexToAddress(deployAddrRinkeby.(string))
 	}
 
-	erc20Token, err := NewToken(token.deployAddressMain, client)
+	token.currentdeployAddress = token.deployAddressMain
+	if strings.Contains(cfg.ClientAPIs[0], "rinkeby") {
+		token.currentdeployAddress = token.deployAddressRinkeby
+	} else if strings.Contains(cfg.ClientAPIs[0], "ropsten") {
+		token.currentdeployAddress = token.deployAddressRopsten
+	}
+	erc20Token, err := NewToken(token.currentdeployAddress, client)
 	if err != nil {
 		log.Errorf("error initilaizing erc20 token failed: %s", err.Error())
 		return nil, err
@@ -184,6 +192,7 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 		deployAddressMain:    token.deployAddressMain,
 		deployAddressRopsten: token.deployAddressRopsten,
 		deployAddressRinkeby: token.deployAddressRinkeby,
+		currentdeployAddress: token.currentdeployAddress,
 		token:                erc20Token,
 		listeners:            []func(wi.TransactionCallback){},
 	}, nil
@@ -196,7 +205,7 @@ func (wallet *ERC20Wallet) Params() *chaincfg.Params {
 
 // GetBalance returns the balance for the wallet
 func (wallet *ERC20Wallet) GetBalance() (*big.Int, error) {
-	return wallet.client.GetTokenBalance(wallet.account.Address(), wallet.deployAddressMain)
+	return wallet.client.GetTokenBalance(wallet.account.Address(), wallet.currentdeployAddress)
 }
 
 // GetUnconfirmedBalance returns the unconfirmed balance for the wallet
@@ -207,7 +216,7 @@ func (wallet *ERC20Wallet) GetUnconfirmedBalance() (*big.Int, error) {
 // Transfer will transfer the amount from this wallet to the spec address
 func (wallet *ERC20Wallet) Transfer(to string, value *big.Int, spendAll bool, fee big.Int) (common.Hash, error) {
 	toAddress := common.HexToAddress(to)
-	return wallet.client.TransferToken(wallet.account, toAddress, wallet.deployAddressMain, value, spendAll, fee)
+	return wallet.client.TransferToken(wallet.account, toAddress, wallet.currentdeployAddress, value, spendAll, fee)
 }
 
 // Start will start the wallet daemon
@@ -508,17 +517,84 @@ func (wallet *ERC20Wallet) Transactions() ([]wi.Txn, error) {
 
 // GetTransaction - Get info on a specific transaction
 func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
-	tx, _, err := wallet.client.GetTransaction(common.HexToHash(txid.String()))
+	// tx, _, err := wallet.client.GetTransaction(common.HexToHash(txid.String()))
+	// if err != nil {
+	// 	return wi.Txn{}, err
+	// }
+	// return wi.Txn{
+	// 	Txid:      tx.Hash().String(),
+	// 	Value:     tx.Value().String(),
+	// 	Height:    0,
+	// 	Timestamp: time.Now(),
+	// 	WatchOnly: false,
+	// 	Bytes:     tx.Data(),
+	// }, nil
+	tx, _, err := wallet.client.GetTransaction(common.HexToHash(util.EnsureCorrectPrefix(txid.String())))
 	if err != nil {
 		return wi.Txn{}, err
 	}
+
+	chainID, err := wallet.client.NetworkID(context.Background())
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
+	msg, err := tx.AsMessage(types.NewEIP155Signer(chainID)) // HomesteadSigner{})
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
+	//value := tx.Value().String()
+	fromAddr := msg.From()
+	toAddr := msg.To()
+	valueSub := big.NewInt(5000000)
+	value := tx.Value()
+
+	if strings.HasPrefix(hexutil.Encode(msg.Data()), "0xa9059cbb") {
+		value = big.NewInt(0).SetBytes(msg.Data()[36:])
+	}
+
+	if tx.To().String() == wallet.currentdeployAddress.String() {
+		toAddr = wallet.address.address
+		valueSub = value
+	} else {
+		v, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
+		if err == nil {
+			if tx.To().String() == v.Implementation.String() {
+				toAddr = wallet.address.address
+			}
+			if msg.Value().Cmp(valueSub) > 0 {
+				valueSub = msg.Value()
+			}
+		}
+	}
+
 	return wi.Txn{
-		Txid:      tx.Hash().String(),
-		Value:     tx.Value().String(),
-		Height:    0,
-		Timestamp: time.Now(),
-		WatchOnly: false,
-		Bytes:     tx.Data(),
+		Txid:        util.EnsureCorrectPrefix(tx.Hash().Hex()),
+		Value:       value.String(),
+		Height:      0,
+		Timestamp:   time.Now(),
+		WatchOnly:   false,
+		Bytes:       tx.Data(),
+		ToAddress:   util.EnsureCorrectPrefix(toAddr.String()),
+		FromAddress: util.EnsureCorrectPrefix(msg.From().Hex()),
+		Outputs: []wi.TransactionOutput{
+			{
+				Address: EthAddress{toAddr},
+				Value:   *valueSub,
+				Index:   0,
+			},
+			{
+				Address: EthAddress{&fromAddr},
+				Value:   *valueSub,
+				Index:   1,
+			},
+			{
+				Address: EthAddress{msg.To()},
+				Value:   *valueSub,
+				Index:   2,
+			},
+		},
 	}, nil
 }
 
@@ -969,7 +1045,7 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 
 				tx, err = smtct.AddTokenTransaction(auth, script.Buyer, script.Seller,
 					script.Moderator, script.Threshold, script.Timeout, shash,
-					value, script.TxnID, wallet.deployAddressMain)
+					value, script.TxnID, wallet.currentdeployAddress)
 
 				if err == nil {
 					h = tx.Hash()
@@ -988,7 +1064,7 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 
 		tx, err = smtct.AddTokenTransaction(auth, script.Buyer, script.Seller,
 			script.Moderator, script.Threshold, script.Timeout, shash,
-			value, script.TxnID, wallet.deployAddressMain)
+			value, script.TxnID, wallet.currentDeployAddress)
 
 		if err == nil {
 			h = tx.Hash()
@@ -1539,7 +1615,7 @@ func (wallet *ERC20Wallet) GenerateMultisigScript(keys []hd.ExtendedKey, thresho
 	builder.Buyer = ecKeys[0]
 	builder.Seller = ecKeys[1]
 	builder.MultisigAddress = ver.Implementation
-	builder.TokenAddress = wallet.deployAddressMain
+	builder.TokenAddress = wallet.currentDeployAddress
 
 	if threshold > 1 {
 		builder.Moderator = ecKeys[2]
