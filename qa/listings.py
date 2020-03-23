@@ -35,7 +35,7 @@ class ListingsTest(OpenBazaarTestFramework):
         # POST listing
         with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.vendor_version == 4:
+        if self.vendor_version == "v4":
             ljson["metadata"]["priceCurrency"] = "t" + self.cointype
         else:
             ljson["item"]["priceCurrency"]["code"] = "t" + self.cointype

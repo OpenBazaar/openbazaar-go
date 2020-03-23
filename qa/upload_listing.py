@@ -16,11 +16,12 @@ class UploadListingTest(OpenBazaarTestFramework):
     def run_test(self):
         with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.vendor_version == 4:
+        if self.vendor_version == "v4":
             listing_json["metadata"]["priceCurrency"] = "t" + self.cointype
         else:
             listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
-        listing_json["item"]["priceCurrency"]["divisibility"] = 8
+            listing_json["item"]["priceCurrency"]["divisibility"] = 8
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         api_url = self.nodes[1]["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -35,7 +36,7 @@ class UploadListingTest(OpenBazaarTestFramework):
             inv = resp["ron-swanson-tshirt"]
             if inv == None:
                 raise TestFailure("UploadListingTest - FAIL: Did not return inventory for listing")
-            if inv["inventory"] != "213":
+            if int(inv["inventory"]) != 213:
                 raise TestFailure("UploadListingTest - FAIL: Returned incorrect amount of inventory: %d", inv["inventory"])
         elif r.status_code == 404:
             raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
