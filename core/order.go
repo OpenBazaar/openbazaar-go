@@ -460,6 +460,10 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 }
 
 func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, bool, error) {
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), false, err
+	}
 	// Vendor responded
 	if resp.MessageType == pb.Message_ERROR {
 		return "", "", *big.NewInt(0), false, extractErrorMessage(resp)
@@ -468,7 +472,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 		return "", "", *big.NewInt(0), false, errors.New("vendor responded to the order with an incorrect message type")
 	}
 	rc := new(pb.RicardianContract)
-	err := proto.Unmarshal(resp.Payload.Value, rc)
+	err = proto.Unmarshal(resp.Payload.Value, rc)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, errors.New("error parsing the vendor's response")
 	}
@@ -493,7 +497,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
@@ -501,6 +505,10 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 }
 
 func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, error) {
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), err
+	}
 	// Vendor offline
 	// Send using offline messaging
 	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
@@ -532,11 +540,11 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 	if err != nil {
 		log.Error(err)
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
-	return orderID, contract.BuyerOrder.Payment.Address, *total, err
+	return orderID, v5Order.Payment.Address, *total, err
 }
 
 func extractErrorMessage(m *pb.Message) error {
