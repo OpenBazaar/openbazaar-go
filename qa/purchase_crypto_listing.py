@@ -56,10 +56,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
 
-        check_amt = "350000000000000000"
-        if self.vendor_version == 4:
-            check_amt = 350000000000000000
-        if resp["ether"]["inventory"] != check_amt:
+        if int(resp["ether"]["inventory"]) != 350000000000000000:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
@@ -89,7 +86,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
         amt = 0
-        if self.buyer_version == 4:
+        if self.buyer_version == "v4":
             amt = payment_amount
         else:
             amt = int(payment_amount["amount"])
@@ -136,7 +133,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             "feeLevel": "NORMAL",
             "requireAssociateOrder": False
         }
-        if self.buyer_version == 4:
+        if self.buyer_version == "v4":
             spend["amount"] = payment_amount
             spend["wallet"] = "T" + self.cointype
 
@@ -205,11 +202,12 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
 
-        check_amt = "340000000000000000"
-        if self.buyer_version == 4:
-            check_amt = 250000000
-        if resp["ether"]["inventory"] != check_amt:
-            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
+        if self.buyer_version == "v4":
+            if int(resp["ether"]["inventory"]) != 340000000000000000:
+                raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
+        if self.vendor_version == "v4":
+            if int(resp["ether"]["inventory"]) != 350000000:
+                raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")
 

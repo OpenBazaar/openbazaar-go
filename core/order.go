@@ -217,14 +217,6 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_MODERATED
 	payment.Moderator = data.Moderator
-	defn, err := n.LookupCurrency(data.PaymentCoin)
-	if err != nil {
-		return nil, errors.New("invalid payment coin")
-	}
-	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:         defn.Code.String(),
-		Divisibility: uint32(defn.Divisibility),
-	}
 
 	profile, err := n.FetchProfile(data.Moderator, true)
 	if err != nil {
@@ -242,7 +234,15 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 		return nil, errors.New("moderator does not accept our currency")
 	}
 	contract.BuyerOrder.Payment = payment
+	defn, err := n.LookupCurrency(data.PaymentCoin)
+	if err != nil {
+		return nil, errors.New("invalid payment coin")
+	}
 	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payment.AmountCurrency = &pb.CurrencyDefinition{
+			Code:         defn.Code.String(),
+			Divisibility: uint32(defn.Divisibility),
+		}
 		payment.AmountCurrency = &pb.CurrencyDefinition{
 			Code:         defn.Code.String(),
 			Divisibility: uint32(defn.Divisibility),
@@ -307,7 +307,11 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 	fee := wal.GetFeePerByte(wallet.NORMAL)
-	contract.BuyerOrder.BigRefundFee = fee.String()
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		contract.BuyerOrder.BigRefundFee = fee.String()
+	} else {
+		contract.BuyerOrder.RefundFee = fee.Uint64()
+	}
 
 	err = wal.AddWatchedAddresses(addr)
 	if err != nil {

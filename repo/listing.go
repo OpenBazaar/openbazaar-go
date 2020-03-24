@@ -919,7 +919,7 @@ func (cs ListingCoupons) GetProtobuf() []*pb.Listing_Coupon {
 	var cspb = make([]*pb.Listing_Coupon, len(cs))
 	for i, c := range cs {
 		cspb[i] = &pb.Listing_Coupon{
-			Title:           c.GetTitle(),
+			Title: c.GetTitle(),
 		}
 		if c.GetPercentOff() > 0 {
 			cspb[i].Discount = &pb.Listing_Coupon_PercentDiscount{
