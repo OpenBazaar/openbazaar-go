@@ -52,7 +52,7 @@ class EthDisputeCloseSplitTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("EthDisputeCloseSplitTest - FAIL: Moderator POST failed. Reason: %s", resp["reason"])
         moderatorId = charlie["peerId"]
-        time.sleep(4)
+        time.sleep(40)
 
         # post profile for alice
         with open('testdata/profile.json') as profile_file:

@@ -47,6 +47,7 @@ type EthClient struct {
 	eClient *etherscan.Client
 	ws      *websocket.Conn
 	url     string
+	wsurl   string
 }
 
 var txns []wi.Txn
@@ -81,6 +82,7 @@ func NewEthClient(url string) (*EthClient, error) {
 		Client:  conn,
 		eClient: econn,
 		url:     url,
+		wsurl:   wsURL,
 		ws:      ws,
 	}, nil
 
