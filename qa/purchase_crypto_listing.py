@@ -36,8 +36,12 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to vendor
-        with open('testdata/'+ self.vendor_version +'/listing_crypto.json') as listing_file:
-            listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+        if self.vendor_version == "v5":
+            with open('testdata/'+ self.vendor_version +'/listing_crypto_compatibility.json') as listing_file:
+                listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+        else:
+            with open('testdata/'+ self.vendor_version +'/listing_crypto.json') as listing_file:
+                listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = vendor["gateway_url"] + "ob/listing"
@@ -56,7 +60,9 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
 
-        if int(resp["ether"]["inventory"]) != 350000000000000000:
+        if self.vendor_version == "v5" and int(resp["ether"]["inventory"]) != 350000000000000000:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
+        elif self.vendor_version == "v4" and int(resp["ether"]["inventory"]) != 350000000:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
@@ -65,7 +71,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        if resp[0]["coinType"] != "TETH":
+        if resp[0]["coinType"] != "ETH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
         listingId = resp[0]["hash"]
 
@@ -80,6 +86,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Purchase post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
+            print(order_json)
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         orderId = resp["orderId"]
@@ -103,7 +110,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
+            print(resp["contract"]["vendorListings"][0])
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -118,7 +126,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
@@ -156,7 +164,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as unfunded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "TETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -203,10 +211,10 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
 
         if self.buyer_version == "v4":
-            if int(resp["ether"]["inventory"]) != 340000000000000000:
+            if int(resp["ether"]["inventory"]) != 350000000000000000:
                 raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
         if self.vendor_version == "v4":
-            if int(resp["ether"]["inventory"]) != 350000000:
+            if int(resp["ether"]["inventory"]) != 250000000:
                 raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")
