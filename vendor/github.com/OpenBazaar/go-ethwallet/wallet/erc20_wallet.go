@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/nanmu42/etherscan-api"
+	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/go-ethwallet/util"
@@ -40,6 +41,7 @@ import (
 
 var doneERC20, doneBalanceTickerERC20 chan bool
 var currencyDefinitionERC20 wi.CurrencyDefinition
+var logERC = logging.MustGetLogger("ercwallet")
 
 // ERC20Wallet is the wallet implementation for ethereum
 type ERC20Wallet struct {
@@ -94,13 +96,13 @@ type TokenDetail struct {
 func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*ERC20Wallet, error) {
 	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
 	if err != nil {
-		log.Errorf("error initializing wallet: %v", err)
+		logERC.Errorf("error initializing wallet: %v", err)
 		return nil, err
 	}
 	var myAccount *Account
 	myAccount, err = NewAccountFromMnemonic(mnemonic, "", params)
 	if err != nil {
-		log.Errorf("mnemonic based pk generation failed: %s", err.Error())
+		logERC.Errorf("mnemonic based pk generation failed: %s", err.Error())
 		return nil, err
 	}
 	addr := myAccount.Address()
@@ -116,7 +118,7 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 		registryKey = "RopstenRegistryAddress"
 	}
 	if regAddr, ok = cfg.Options[registryKey]; !ok {
-		log.Errorf("ethereum registry not found: %s", cfg.Options[registryKey])
+		logERC.Errorf("ethereum registry not found: %s", cfg.Options[registryKey])
 		return nil, err
 	}
 
@@ -124,7 +126,7 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 
 	reg, err := NewRegistry(common.HexToAddress(ethConfig.RegistryAddress), client)
 	if err != nil {
-		log.Errorf("error initilaizing contract failed: %s", err.Error())
+		logERC.Errorf("error initilaizing contract failed: %s", err.Error())
 		return nil, err
 	}
 	er := NewEthereumPriceFetcher(proxy)
@@ -133,21 +135,21 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 
 	var name, symbol, deployAddrMain, deployAddrRopsten, deployAddrRinkeby interface{}
 	if name, ok = cfg.Options["Name"]; !ok {
-		log.Errorf("erc20 token name not found: %s", cfg.Options["Name"])
+		logERC.Errorf("erc20 token name not found: %s", cfg.Options["Name"])
 		return nil, err
 	}
 
 	token.name = name.(string)
 
 	if symbol, ok = cfg.Options["Symbol"]; !ok {
-		log.Errorf("erc20 token symbol not found: %s", cfg.Options["Symbol"])
+		logERC.Errorf("erc20 token symbol not found: %s", cfg.Options["Symbol"])
 		return nil, err
 	}
 
 	token.symbol = symbol.(string)
 
 	if deployAddrMain, ok = cfg.Options["MainNetAddress"]; !ok {
-		log.Errorf("erc20 token address not found: %s", cfg.Options["MainNetAddress"])
+		logERC.Errorf("erc20 token address not found: %s", cfg.Options["MainNetAddress"])
 		return nil, err
 	}
 
@@ -169,7 +171,7 @@ func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic str
 	}
 	erc20Token, err := NewToken(token.currentdeployAddress, client)
 	if err != nil {
-		log.Errorf("error initilaizing erc20 token failed: %s", err.Error())
+		logERC.Errorf("error initilaizing erc20 token failed: %s", err.Error())
 		return nil, err
 	}
 
@@ -244,7 +246,7 @@ func (wallet *ERC20Wallet) Start() {
 					go func(txnData []byte) {
 						_, err := wallet.checkTxnRcpt(&hash, txnData)
 						if err != nil {
-							log.Errorf(err.Error())
+							logERC.Errorf(err.Error())
 						}
 					}(txn.Bytes)
 				}
@@ -259,7 +261,7 @@ func (wallet *ERC20Wallet) Start() {
 
 		currentBalance, err := wallet.GetBalance()
 		if err != nil {
-			log.Infof("err fetching initial balance: %v", err)
+			logERC.Infof("err fetching initial balance: %v", err)
 		}
 		currentTip, _ := wallet.ChainTip()
 
@@ -271,7 +273,7 @@ func (wallet *ERC20Wallet) Start() {
 				// fetch the current balance
 				fetchedBalance, err := wallet.GetBalance()
 				if err != nil {
-					log.Infof("err fetching balance at %v: %v", time.Now(), err)
+					logERC.Infof("err fetching balance at %v: %v", time.Now(), err)
 					continue
 				}
 				if fetchedBalance.Cmp(currentBalance) != 0 {
@@ -355,7 +357,7 @@ func (wallet *ERC20Wallet) MasterPublicKey() *hd.ExtendedKey {
 	publicKey := wallet.account.privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Fatal("error casting public key to ECDSA")
+		logERC.Fatal("error casting public key to ECDSA")
 	}
 
 	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
@@ -421,7 +423,7 @@ func (wallet *ERC20Wallet) DecodeAddress(addr string) (btcutil.Address, error) {
 	if len(addr) > 64 {
 		ethAddr, err = ethTokenScriptToAddr(addr)
 		if err != nil {
-			log.Error(err.Error())
+			logERC.Error(err.Error())
 		}
 	} else {
 		ethAddr = common.HexToAddress(addr)
@@ -491,7 +493,7 @@ func (wallet *ERC20Wallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, err
 	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
 		1, 0, false)
 	if err != nil {
-		log.Error("err fetching transactions : ", err)
+		logERC.Error("err fetching transactions : ", err)
 		return []wi.Txn{}, nil
 	}
 
@@ -594,6 +596,10 @@ func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 
 	if strings.HasPrefix(hexutil.Encode(msg.Data()), "0xa9059cbb") {
 		value = big.NewInt(0).SetBytes(msg.Data()[36:])
+	} else if strings.HasPrefix(hexutil.Encode(msg.Data()), "0x57bced76") {
+		b := msg.Data()
+		value = big.NewInt(0).SetBytes(b[len(b)-(3*32) : len(b)-(2*32)])
+		valueSub = value
 	}
 
 	if tx.To().String() == wallet.currentdeployAddress.String() {
@@ -656,7 +662,7 @@ func (wallet *ERC20Wallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 	est, err := wallet.client.GetEthGasStationEstimate()
 	ret := big.NewInt(0)
 	if err != nil {
-		log.Errorf("err fetching ethgas station data: %v", err)
+		logERC.Errorf("err fetching ethgas station data: %v", err)
 		return *ret
 	}
 	switch feeLevel {
@@ -672,7 +678,6 @@ func (wallet *ERC20Wallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 
 // Spend - Send ether to an external wallet
 func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
-	fmt.Println(",,, in erc20 spend ..... ", amount.String(), "  ", addr.String(), referenceID)
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
@@ -708,15 +713,15 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 			if err != nil {
 				return nil, err
 			}
-			// _, scrHash, err := GenTokenScriptHash(ethScript)
-			// if err != nil {
-			// 	log.Error(err.Error())
-			// }
-			//addrScrHash :=  ethScript. //common.HexToAddress(scrHash)
-			actualRecipient = EthAddress{address: &ethScript.Seller} //EthAddress{address: &addrScrHash}
+			_, scrHash, err := GenTokenScriptHash(ethScript)
+			if err != nil {
+				logERC.Error(err.Error())
+			}
+			addrScrHash := common.HexToAddress(scrHash)
+			actualRecipient = EthAddress{address: &addrScrHash} //EthAddress{address: &ethScript.Seller} //EthAddress{address: &addrScrHash}
 			hash, _, err = wallet.callAddTokenTransaction(ethScript, &amount, feeLevel)
 			if err != nil {
-				log.Errorf("error call add txn: %v", err)
+				logERC.Errorf("error call add txn: %v", err)
 				return nil, wi.ErrInsufficientFunds
 			}
 		} else {
@@ -744,7 +749,7 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 			if err == nil {
 				err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(hash.Hex()), "0", 0, time.Now(), true)
 				if err0 != nil {
-					log.Error(err0.Error())
+					logERC.Error(err0.Error())
 				}
 			}
 		}
@@ -789,7 +794,7 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 		}
 		hash, err = wallet.callAddTokenTransaction(ethScript, &amount)
 		if err != nil {
-			log.Errorf("error call add token txn: %v", err)
+			logERC.Errorf("error call add token txn: %v", err)
 		}
 	} else {
 		hash, err = wallet.Transfer(addr.String(), &amount)
@@ -898,6 +903,7 @@ func (wallet *ERC20Wallet) callListeners(txnCB wi.TransactionCallback) {
 	}
 }
 
+// AssociateTransactionWithOrder is used to transition order state
 func (wallet *ERC20Wallet) AssociateTransactionWithOrder(txnCB wi.TransactionCallback) {
 	for _, l := range wallet.listeners {
 		go l(txnCB)
@@ -914,7 +920,7 @@ func (wallet *ERC20Wallet) checkTxnRcpt(hash *common.Hash, data []byte) (*common
 
 	rcpt, err = wallet.client.TransactionReceipt(context.Background(), *hash)
 	if err != nil {
-		log.Infof("fetching txn rcpt: %v", err)
+		logERC.Infof("fetching txn rcpt: %v", err)
 	}
 
 	if rcpt != nil {
@@ -928,7 +934,7 @@ func (wallet *ERC20Wallet) checkTxnRcpt(hash *common.Hash, data []byte) (*common
 			}
 			err = wallet.db.Txns().Delete(chash)
 			if err != nil {
-				log.Errorf("err deleting the pending txn : %v", err)
+				logERC.Errorf("err deleting the pending txn : %v", err)
 			}
 			n := new(big.Int)
 			n, _ = n.SetString(pTxn.Amount, 10)
@@ -986,7 +992,7 @@ func (wallet *ERC20Wallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int) bo
 	requiredBalance = new(big.Int).Add(requiredBalance, &amount)
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
-		log.Error("err fetching erc20 wallet balance")
+		logERC.Error("err fetching erc20 wallet balance")
 		currentBalance = big.NewInt(0)
 	}
 	if requiredBalance.Cmp(currentBalance) > 0 {
@@ -1014,11 +1020,11 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 	fromAddress := wallet.account.Address()
 	nonce, err := wallet.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	gasPrice, err := wallet.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
@@ -1041,7 +1047,7 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 
 	smtct, err := NewEscrow(script.MultisigAddress, wallet.client)
 	if err != nil {
-		log.Fatalf("error initilaizing contract failed: %s", err.Error())
+		logERC.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
 
 	var tx *types.Transaction
@@ -1055,11 +1061,11 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 	//time.Sleep(2 * time.Minute)
 	header, err := wallet.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		log.Errorf("error fetching latest blk: %v", err)
+		logERC.Errorf("error fetching latest blk: %v", err)
 	}
 	tclient, err := ethclient.Dial(wallet.client.wsurl)
 	if err != nil {
-		log.Errorf("error establishing ws conn: %v", err)
+		logERC.Errorf("error establishing ws conn: %v", err)
 	}
 
 	query := ethereum.FilterQuery{
@@ -1077,14 +1083,14 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 	for !flag {
 		select {
 		case err := <-sub1.Err():
-			log.Fatal(err)
+			logERC.Fatal(err)
 		case vLog := <-logs:
-			//fmt.Println(vLog) // pointer to event log
+			//logERC.Info(vLog) // pointer to event log
 			//spew.Dump(vLog)
-			//fmt.Println(vLog.Topics[0])
-			fmt.Println(vLog.Address.String())
+			//logERC.Info(vLog.Topics[0])
+			logERC.Info(vLog.Address.String())
 			if tx.Hash() == vLog.TxHash {
-				fmt.Println("we have found the approval ...")
+				logERC.Info("we have found the approval ...")
 				//time.Sleep(2 * time.Minute)
 				spew.Dump(vLog)
 				nonce, _ = wallet.client.PendingNonceAt(context.Background(), fromAddress)
@@ -1120,61 +1126,6 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 			h = tx.Hash()
 		}
 	*/
-
-	return h, nonce, err
-
-}
-
-func (wallet *ERC20Wallet) callAddTransaction(script EthRedeemScript, value *big.Int, feeLevel wi.FeeLevel) (common.Hash, uint64, error) {
-
-	h := common.BigToHash(big.NewInt(0))
-
-	// call registry to get the deployed address for the escrow ct
-	fromAddress := wallet.account.Address()
-	nonce, err := wallet.client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-	gasPrice, err := wallet.client.SuggestGasPrice(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	gasPriceETHGAS := wallet.GetFeePerByte(feeLevel)
-	if gasPriceETHGAS.Int64() < gasPrice.Int64() {
-		gasPriceETHGAS = *gasPrice
-	}
-	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
-
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = value          // in wei
-	auth.GasLimit = maxGasLimit // in units
-	auth.GasPrice = gasPrice
-
-	// lets check if the caller has enough balance to make the
-	// multisign call
-	if !wallet.balanceCheck(feeLevel, *big.NewInt(0)) {
-		// the wallet does not have the required balance
-		return h, nonce, wi.ErrInsufficientFunds
-	}
-
-	shash, _, err := GenTokenScriptHash(script)
-	if err != nil {
-		return h, nonce, err
-	}
-
-	smtct, err := NewEscrow(script.MultisigAddress, wallet.client)
-	if err != nil {
-		log.Fatalf("error initilaizing contract failed: %s", err.Error())
-	}
-
-	var tx *types.Transaction
-	tx, err = smtct.AddTransaction(auth, script.Buyer, script.Seller,
-		script.Moderator, script.Threshold, script.Timeout, shash, script.TxnID)
-	if err == nil {
-		h = tx.Hash()
-	} else {
-		return h, 0, err
-	}
 
 	txns = append(txns, wi.Txn{
 		Txid:      tx.Hash().Hex(),
@@ -1218,7 +1169,7 @@ func (wallet *ERC20Wallet) GenerateMultisigScript(keys []hd.ExtendedKey, thresho
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 
 	if util.IsZeroAddress(ver.Implementation) {
@@ -1264,7 +1215,7 @@ func (wallet *ERC20Wallet) GenerateMultisigScript(keys []hd.ExtendedKey, thresho
 	scriptKey := append(addr.Bytes(), redeemScript...)
 	err = wallet.db.WatchedScripts().Put(scriptKey)
 	if err != nil {
-		log.Errorf("err saving the redeemscript: %v", err)
+		logERC.Errorf("err saving the redeemscript: %v", err)
 	}
 
 	return retAddr, redeemScript, nil
@@ -1412,13 +1363,13 @@ func (wallet *ERC20Wallet) CreateMultisigSignature(ins []wi.TransactionInput, ou
 	txData = append(txData, []byte("Ethereum Signed Message:\n32")...)
 	txData = append(txData, payloadHash[:]...)
 	txnHash := crypto.Keccak256(txData)
-	log.Debugf("txnHash        : %s", hexutil.Encode(txnHash))
-	log.Debugf("phash          : %s", hexutil.Encode(payloadHash[:]))
+	logERC.Debugf("txnHash        : %s", hexutil.Encode(txnHash))
+	logERC.Debugf("phash          : %s", hexutil.Encode(payloadHash[:]))
 	copy(txHash[:], txnHash)
 
 	sig, err := crypto.Sign(txHash[:], wallet.account.privateKey)
 	if err != nil {
-		log.Errorf("error signing in createmultisig : %v", err)
+		logERC.Errorf("error signing in createmultisig : %v", err)
 	}
 	sigs = append(sigs, wi.Signature{InputIndex: 1, Signature: sig})
 
@@ -1533,7 +1484,7 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 
 	smtct, err := NewEscrow(rScript.MultisigAddress, wallet.client)
 	if err != nil {
-		log.Fatalf("error initializing contract failed: %s", err.Error())
+		logERC.Fatalf("error initializing contract failed: %s", err.Error())
 	}
 
 	destinations := []common.Address{}
@@ -1550,11 +1501,11 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	fromAddress := wallet.account.Address()
 	nonce, err := wallet.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	gasPrice, err := wallet.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
@@ -1568,7 +1519,7 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	requiredBalance := new(big.Int).Mul(gasPrice, big.NewInt(maxGasLimit))
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
-		log.Error("err fetching eth wallet balance")
+		logERC.Error("err fetching eth wallet balance")
 		currentBalance = big.NewInt(0)
 	}
 
@@ -1594,7 +1545,7 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	// this is a pending txn
 	_, scrHash, err := GenTokenScriptHash(rScript)
 	if err != nil {
-		log.Error(err.Error())
+		logERC.Error(err.Error())
 	}
 	data, err := SerializePendingTxn(PendingTxn{
 		TxnID:   tx.Hash(),
@@ -1607,7 +1558,7 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	if err == nil {
 		err0 := wallet.db.Txns().Put(data, ut.NormalizeAddress(tx.Hash().Hex()), "0", 0, time.Now(), true)
 		if err0 != nil {
-			log.Error(err0.Error())
+			logERC.Error(err0.Error())
 		}
 	}
 
@@ -1651,7 +1602,7 @@ func (wallet *ERC20Wallet) GenerateMultisigScript(keys []hd.ExtendedKey, thresho
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 
 	if util.IsZeroAddress(ver.Implementation) {
@@ -1790,7 +1741,7 @@ func (wallet *ERC20Wallet) CreateMultisigSignature(ins []wi.TransactionInput, ou
 
 	sig, err := crypto.Sign(txHash[:], wallet.account.privateKey)
 	if err != nil {
-		log.Errorf("error signing in createmultisig : %v", err)
+		logERC.Errorf("error signing in createmultisig : %v", err)
 	}
 	sigs = append(sigs, wi.Signature{InputIndex: 1, Signature: sig})
 
@@ -1857,7 +1808,7 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 
 	smtct, err := NewEscrow(rScript.MultisigAddress, wallet.client)
 	if err != nil {
-		log.Fatalf("error initilaizing contract failed: %s", err.Error())
+		logERC.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
 
 	destinations := []common.Address{}
@@ -1871,11 +1822,11 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	fromAddress := wallet.account.Address()
 	nonce, err := wallet.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	gasPrice, err := wallet.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		logERC.Fatal(err)
 	}
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
@@ -1888,8 +1839,8 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 
 	tx, err = smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
 
-	//fmt.Println(tx)
-	//fmt.Println(err)
+	//logERC.Info(tx)
+	//logERC.Info(err)
 
 	if err != nil {
 		return nil, err
@@ -1981,9 +1932,9 @@ func (wallet *ERC20Wallet) CreateAddress() (common.Address, error) {
 	fromAddress := wallet.account.Address()
 	nonce, err := wallet.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		fmt.Println(err)
+		logERC.Info(err)
 	}
 	addr := crypto.CreateAddress(fromAddress, nonce)
-	//fmt.Println("Addr : ", addr.String())
+	//logERC.Info("Addr : ", addr.String())
 	return addr, err
 }
