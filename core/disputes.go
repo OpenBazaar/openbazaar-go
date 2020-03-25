@@ -738,25 +738,39 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if out, ok := outMap["buyer"]; ok {
 		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
-			BigAmount:       out.Value.String(),
+		}
+		if preferredContract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+			payout.BuyerOutput.BigAmount = out.Value.String()
+		} else {
+			payout.BuyerOutput.Amount = out.Value.Uint64()
 		}
 	}
 	if out, ok := outMap["vendor"]; ok {
 		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
-			BigAmount:       out.Value.String(),
+		}
+		if preferredContract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+			payout.VendorOutput.BigAmount = out.Value.String()
+		} else {
+			payout.VendorOutput.Amount = out.Value.Uint64()
 		}
 	}
 	if out, ok := outMap["moderator"]; ok {
 		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
-			BigAmount:       out.Value.String(),
+		}
+		if preferredContract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+			payout.ModeratorOutput.BigAmount = out.Value.String()
+		} else {
+			payout.ModeratorOutput.Amount = out.Value.Uint64()
 		}
 	}
 
-	payout.PayoutCurrency = &pb.CurrencyDefinition{
-		Code:         preferredOrder.Payment.AmountCurrency.Code,
-		Divisibility: preferredOrder.Payment.AmountCurrency.Divisibility,
+	if preferredContract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payout.PayoutCurrency = &pb.CurrencyDefinition{
+			Code:         preferredOrder.Payment.AmountCurrency.Code,
+			Divisibility: preferredOrder.Payment.AmountCurrency.Divisibility,
+		}
 	}
 
 	d.Payout = payout

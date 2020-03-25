@@ -107,7 +107,8 @@ func (r *DisputeCaseRecord) ResolutionPaymentFeePerByte(ratio PayoutRatio, defau
 	n := new(big.Int)
 	switch {
 	case ratio.BuyerMajority(), ratio.EvenMajority():
-		n, _ = n.SetString(r.BuyerContract.BuyerOrder.BigRefundFee, 10)
+		v5order, _ := ToV5Order(r.BuyerContract.BuyerOrder, nil)
+		n, _ = n.SetString(v5order.BigRefundFee, 10)
 		return n
 	case ratio.VendorMajority():
 		if len(r.VendorContract.VendorOrderFulfillment) > 0 && r.VendorContract.VendorOrderFulfillment[0].Payout != nil {
