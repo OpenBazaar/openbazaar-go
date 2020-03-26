@@ -502,12 +502,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		return ErrCloseFailureCaseExpired
 	}
 
-	var outpoints = dispute.ResolutionPaymentOutpoints(payDivision)
-	if outpoints == nil {
-		log.Errorf("no outpoints to resolve in dispute for order %s", orderID)
-		return ErrCloseFailureNoOutpoints
-	}
-
 	if dispute.VendorContract == nil && vendorPercentage > 0 {
 		return errors.New("vendor must provide his copy of the contract before you can release funds to the vendor")
 	}
@@ -519,6 +513,24 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	preferredOrder, err := repo.ToV5Order(preferredContract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
+	}
+
+	var outpoints = dispute.ResolutionPaymentOutpoints(payDivision)
+	if outpoints == nil {
+		log.Errorf("no outpoints to resolve in dispute for order %s", orderID)
+		return ErrCloseFailureNoOutpoints
+	}
+	for i, o := range outpoints {
+		if preferredContract.VendorListings[0].Metadata.Version < repo.ListingVersion {
+			if o.BigValue != "" {
+				n, ok := new(big.Int).SetString(o.BigValue, 10)
+				if !ok {
+					return errors.New("invalid amount")
+				}
+				outpoints[i].Value = n.Uint64()
+				outpoints[i].BigValue = ""
+			}
+		}
 	}
 
 	// TODO: Remove once broken contracts are migrated
@@ -563,9 +575,15 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Calculate total out value
 	totalOut := big.NewInt(0)
 	for _, o := range outpoints {
-		n, ok := new(big.Int).SetString(o.BigValue, 10)
-		if !ok {
-			return errors.New("invalid total out amount")
+		var n *big.Int
+		if o.Value > 0 {
+			n = big.NewInt(int64(o.Value))
+		} else {
+			ok := false
+			n, ok = new(big.Int).SetString(o.BigValue, 10)
+			if !ok {
+				return errors.New("invalid amount")
+			}
 		}
 		totalOut = new(big.Int).Add(totalOut, n)
 	}
@@ -640,9 +658,15 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		n, ok := new(big.Int).SetString(o.BigValue, 10)
-		if !ok {
-			return errors.New("invalid amount")
+		var n *big.Int
+		if o.Value > 0 {
+			n = big.NewInt(int64(o.Value))
+		} else {
+			ok := false
+			n, ok = new(big.Int).SetString(o.BigValue, 10)
+			if !ok {
+				return errors.New("invalid amount")
+			}
 		}
 		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
