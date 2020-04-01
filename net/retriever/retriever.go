@@ -97,7 +97,7 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 
 func (m *MessageRetriever) Run() {
 	dht := time.NewTicker(time.Hour)
-	peers := time.NewTicker(time.Minute * 10)
+	peers := time.NewTicker(time.Second * 10)
 	defer dht.Stop()
 	defer peers.Stop()
 	go m.fetchPointersFromDHT()
@@ -243,7 +243,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, n *core.IpfsNode, addr ma.Mult
 	var err error
 
 	go func() {
-		ciphertext, err = ipfs.Cat(n, addr.String(), time.Minute*5)
+		ciphertext, err = ipfs.Cat(n, addr.String(), time.Second*5)
 		c <- struct{}{}
 	}()
 
