@@ -1,0 +1,10 @@
+{
+  "orderId": "",
+  "slug": "",
+  "physicalDelivery": [
+    {
+      "shipper": "UPS",
+      "trackingNumber": "1234"
+    }
+  ]
+}

@@ -52,6 +52,7 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 	}
 	p, err := repo.UnmarshalJSONProfile(b)
 	if err != nil {
+		log.Error("Profile fetch error", peerID, err)
 		return pro, err
 	}
 	p.NormalizeDataForAllSchemas()

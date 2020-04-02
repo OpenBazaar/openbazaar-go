@@ -132,7 +132,6 @@ func (l SignedListing) VerifySignature() error {
 	if err != nil {
 		return fmt.Errorf("marshaling listing: %s", err.Error())
 	}
-
 	pubkey, err := l.GetListing().GetVendorID().IdentityKey()
 	if err != nil {
 		return fmt.Errorf("getting identity pubkey: %s", err.Error())

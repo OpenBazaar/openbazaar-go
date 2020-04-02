@@ -165,9 +165,13 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 
 	contract.BuyerOrder.Payment = payment
-	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:         defn.Code.String(),
-		Divisibility: uint32(defn.Divisibility),
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payment.AmountCurrency = &pb.CurrencyDefinition{
+			Code:         defn.Code.String(),
+			Divisibility: uint32(defn.Divisibility),
+		}
+	} else {
+		payment.Coin = defn.Code.String()
 	}
 
 	// Calculate payment amount
@@ -180,7 +184,11 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 		return "", "", retCurrency, false, ErrSpendAmountIsDust
 	}
 
-	payment.BigAmount = total.String()
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payment.BigAmount = total.String()
+	} else {
+		payment.Amount = total.Uint64()
+	}
 
 	contract, err = n.SignOrder(contract)
 	if err != nil {
@@ -209,14 +217,6 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_MODERATED
 	payment.Moderator = data.Moderator
-	defn, err := n.LookupCurrency(data.PaymentCoin)
-	if err != nil {
-		return nil, errors.New("invalid payment coin")
-	}
-	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:         defn.Code.String(),
-		Divisibility: uint32(defn.Divisibility),
-	}
 
 	profile, err := n.FetchProfile(data.Moderator, true)
 	if err != nil {
@@ -234,15 +234,32 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 		return nil, errors.New("moderator does not accept our currency")
 	}
 	contract.BuyerOrder.Payment = payment
-	payment.AmountCurrency = &pb.CurrencyDefinition{
-		Code:         defn.Code.String(),
-		Divisibility: uint32(defn.Divisibility),
+	defn, err := n.LookupCurrency(data.PaymentCoin)
+	if err != nil {
+		return nil, errors.New("invalid payment coin")
 	}
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payment.AmountCurrency = &pb.CurrencyDefinition{
+			Code:         defn.Code.String(),
+			Divisibility: uint32(defn.Divisibility),
+		}
+		payment.AmountCurrency = &pb.CurrencyDefinition{
+			Code:         defn.Code.String(),
+			Divisibility: uint32(defn.Divisibility),
+		}
+	} else {
+		payment.Coin = defn.Code.String()
+	}
+
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return nil, err
 	}
-	payment.BigAmount = total.String()
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		payment.BigAmount = total.String()
+	} else {
+		payment.Amount = total.Uint64()
+	}
 	contract.BuyerOrder.Payment = payment
 
 	fpb := wal.GetFeePerByte(wallet.NORMAL)
@@ -290,7 +307,11 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	payment.RedeemScript = hex.EncodeToString(redeemScript)
 	payment.Chaincode = hex.EncodeToString(chaincode)
 	fee := wal.GetFeePerByte(wallet.NORMAL)
-	contract.BuyerOrder.BigRefundFee = fee.String()
+	if contract.VendorListings[0].Metadata.Version >= repo.ListingVersion {
+		contract.BuyerOrder.BigRefundFee = fee.String()
+	} else {
+		contract.BuyerOrder.RefundFee = fee.Uint64()
+	}
 
 	err = wal.AddWatchedAddresses(addr)
 	if err != nil {
@@ -341,7 +362,12 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), false, err
+	}
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
@@ -351,8 +377,12 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, big.Int, error) {
 	// Vendor offline
 	// Change payment code to direct
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), err
+	}
 
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
@@ -368,7 +398,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	/* Generate a payment address using the first child key derived from the buyer's
 	   and vendors's masterPubKeys and a random chaincode. */
 	chaincode := make([]byte, 32)
-	_, err := rand.Read(chaincode)
+	_, err = rand.Read(chaincode)
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}
@@ -434,6 +464,10 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 }
 
 func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, bool, error) {
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), false, err
+	}
 	// Vendor responded
 	if resp.MessageType == pb.Message_ERROR {
 		return "", "", *big.NewInt(0), false, extractErrorMessage(resp)
@@ -442,7 +476,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 		return "", "", *big.NewInt(0), false, errors.New("vendor responded to the order with an incorrect message type")
 	}
 	rc := new(pb.RicardianContract)
-	err := proto.Unmarshal(resp.Payload.Value, rc)
+	err = proto.Unmarshal(resp.Payload.Value, rc)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, errors.New("error parsing the vendor's response")
 	}
@@ -467,7 +501,7 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
@@ -475,6 +509,10 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 }
 
 func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, big.Int, error) {
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return "", "", *big.NewInt(0), err
+	}
 	// Vendor offline
 	// Send using offline messaging
 	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
@@ -506,11 +544,11 @@ func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContr
 	if err != nil {
 		log.Error(err)
 	}
-	total, ok := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
+	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
-	return orderID, contract.BuyerOrder.Payment.Address, *total, err
+	return orderID, v5Order.Payment.Address, *total, err
 }
 
 func extractErrorMessage(m *pb.Message) error {
@@ -708,7 +746,6 @@ func getListing(n *OpenBazaarNode, contract *pb.RicardianContract, item repo.Ite
 	if err := sl.GetListing().GetVendorID().Valid(); err != nil {
 		return nil, fmt.Errorf("invalid vendor info: %s", err.Error())
 	}
-
 	if err := sl.ValidateListing(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
 		return nil, fmt.Errorf("validating listing (%s): %s", sl.GetSlug(), err.Error())
 	}
@@ -820,11 +857,16 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (*big.Int, 
 
 // CancelOfflineOrder - cancel order
 func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		return err
+	}
+
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.AmountCurrency.Code)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(v5Order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
 	}
@@ -854,7 +896,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return errors.New("cannot cancel order because utxo has already been spent")
 	}
 
-	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	chaincode, err := hex.DecodeString(v5Order.Payment.Chaincode)
 	if err != nil {
 		return err
 	}
@@ -866,11 +908,11 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	redeemScript, err := hex.DecodeString(v5Order.Payment.RedeemScript)
 	if err != nil {
 		return err
 	}
-	refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+	refundAddress, err := wal.DecodeAddress(v5Order.RefundAddress)
 	if err != nil {
 		return err
 	}
@@ -982,7 +1024,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 			}
 			for _, vendorCoupon := range nrl.GetProtobuf().Coupons {
 				if id.B58String() == vendorCoupon.GetHash() {
-					if disc, ok := new(big.Int).SetString(vendorCoupon.BigPriceDiscount, 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
+					if disc, ok := new(big.Int).SetString(vendorCoupon.GetBigPriceDiscount(), 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
 						// apply fixed discount
 						itemOriginAmt = itemOriginAmt.SubBigInt(disc)
 					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {

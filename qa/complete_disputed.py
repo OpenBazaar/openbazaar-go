@@ -43,7 +43,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # make charlie a moderator
-        with open('testdata/moderation.json') as listing_file:
+        with open('testdata/'+ self.moderator_version +'/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
         r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
@@ -56,16 +56,20 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/listing.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
+        if self.vendor_version == "v4":
+            listing_json["metadata"]["priceCurrency"] = "t" + self.cointype
+        else:
+            listing_json["item"]["priceCurrency"]["code"] = "t" + self.cointype
+
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -87,7 +91,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["moderator"] = moderatorId
@@ -135,6 +139,10 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             "feeLevel": "NORMAL",
             "requireAssociateOrder": False
         }
+        if self.buyer_version == "v4":
+            spend["amount"] = payment_amount
+            spend["wallet"] = "T" + self.cointype
+
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
@@ -167,7 +175,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDisputedTest - FAIL: Alice incorrectly saved as unfunded")
 
         # alice send order fulfillment
-        with open('testdata/fulfillment.json') as fulfillment_file:
+        with open('testdata/'+ self.vendor_version +'/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["orderId"] = orderId
         fulfillment_json["slug"] = slug
@@ -179,7 +187,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("CompleteDisputedTest - FAIL: Fulfillment POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
-        
+
         # Bob open dispute
         dispute = {
             "orderId": orderId,
@@ -288,7 +296,12 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
-            if confirmed <= (generated_coins*100000000) - int(payment_amount["amount"]):
+            amt = 0
+            if self.buyer_version == "v4":
+                amt = payment_amount
+            else:
+                amt = int(payment_amount["amount"])
+            if confirmed <= (generated_coins*100000000) - amt:
                 raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to detect dispute payout")
         elif r.status_code == 404:
             raise TestFailure("CompleteDisputedTest - FAIL: Receive coins endpoint not found")

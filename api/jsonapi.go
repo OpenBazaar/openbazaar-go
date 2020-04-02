@@ -1675,9 +1675,14 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
@@ -2022,8 +2027,14 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
+
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, or.OrderID)
@@ -2111,7 +2122,13 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, d.OrderID)
@@ -2257,8 +2274,14 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	v5order, err := repo.ToV5Order(contract.BuyerOrder, nil)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5order.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
@@ -3696,7 +3719,10 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
 			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
+			_, err := rand.Read(idBytes)
+			if err != nil {
+				return
+			}
 			id = base58.Encode(idBytes)
 		}
 
@@ -4402,4 +4428,27 @@ func (i *jsonAPIHandler) GETScanOfflineMessages(w http.ResponseWriter, r *http.R
 		}
 	}
 	SanitizedResponse(w, `{}`)
+}
+
+func (i *jsonAPIHandler) POSTHashMessage(w http.ResponseWriter, r *http.Request) {
+	type hashRequest struct {
+		Content string `json:"content"`
+	}
+	var (
+		req hashRequest
+		err = json.NewDecoder(r.Body).Decode(&req)
+	)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	messageHash, err := ipfs.EncodeMultihash([]byte(req.Content))
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, fmt.Sprintf(`{"hash": "%s"}`,
+		messageHash.B58String()))
 }
