@@ -29,7 +29,11 @@ import (
 
 const DefaultPointerPrefixLength = 14
 
-var log = logging.MustGetLogger("retriever")
+var (
+	// Initialize a clear pointerList for the DHT on start
+	pointerList = []string{}
+	log         = logging.MustGetLogger("retriever")
+)
 
 type MRConfig struct {
 	Db        repo.Datastore
@@ -66,6 +70,20 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
+func stringInSlice(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+// Reset on startup
+func (m *MessageRetriever) ResetPointerList() {
+	pointerList = []string{}
+}
+
 func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	var client *http.Client
 	if cfg.Dialer != nil {
@@ -100,8 +118,8 @@ func (m *MessageRetriever) Run() {
 	peers := time.NewTicker(time.Minute)
 	defer dht.Stop()
 	defer peers.Stop()
-	go m.fetchPointersFromDHT()
 	go m.fetchPointersFromPushNodes()
+	go m.fetchPointersFromDHT()
 	for {
 		select {
 		case <-dht.C:
@@ -159,7 +177,8 @@ func (m *MessageRetriever) downloadMessages(peerOut chan ps.PeerInfo) {
 	inFlight := make(map[string]bool)
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
-		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) && !inFlight[p.Addrs[0].String()] {
+		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) && !stringInSlice(p.Addrs[0].String(), pointerList) && !inFlight[p.Addrs[0].String()] {
+			pointerList = append(pointerList, p.Addrs[0].String())
 			inFlight[p.Addrs[0].String()] = true
 			log.Debugf("Found pointer with location %s", p.Addrs[0].String())
 			// IPFS
