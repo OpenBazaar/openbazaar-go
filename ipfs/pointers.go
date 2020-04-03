@@ -89,6 +89,7 @@ func PutPointerToPeer(dht *routing.IpfsDHT, ctx context.Context, peer peer.ID, p
 
 func GetPointersFromPeer(dht *routing.IpfsDHT, ctx context.Context, p peer.ID, key *cid.Cid) ([]*ps.PeerInfo, error) {
 	pmes := dhtpb.NewMessage(dhtpb.Message_GET_PROVIDERS, key.Bytes(), 0)
+	log.Debugf("Fetching pointers from: %v\n", p.Pretty())
 	resp, err := dht.SendRequest(ctx, p, pmes)
 	if err != nil {
 		return []*ps.PeerInfo{}, err
