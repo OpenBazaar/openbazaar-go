@@ -114,7 +114,7 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 }
 
 func (m *MessageRetriever) Run() {
-	dht := time.NewTicker(time.Hour)
+	dht := time.NewTicker(time.Second * 60)
 	peers := time.NewTicker(time.Second * 10)
 	defer dht.Stop()
 	defer peers.Stop()
