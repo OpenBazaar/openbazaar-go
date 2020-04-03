@@ -156,6 +156,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) && !inFlight[p.Addrs[0].String()] {
+			log.Debugf("Looking for pointer [%v] at %v\n", p.ID.Pretty(), p.Addrs)
 			inFlight[p.Addrs[0].String()] = true
 			log.Debugf("Found pointer with location %s", p.Addrs[0].String())
 			// IPFS
