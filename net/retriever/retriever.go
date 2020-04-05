@@ -237,7 +237,7 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*35)
 			defer cancel()
-			time.Sleep(time.Second*15)
+			time.Sleep(time.Second * 15)
 			provs, err := ipfs.GetPointersFromPeer(m.routing, ctx, pid, &k)
 			if err != nil {
 				log.Errorf("Could not get pointers from push node because: %v", err)
