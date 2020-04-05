@@ -179,6 +179,7 @@ func (m *MessageRetriever) downloadMessages(peerOut chan ps.PeerInfo) {
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) && !stringInSlice(p.Addrs[0].String(), pointerList) && !inFlight[p.Addrs[0].String()] {
 			pointerList = append(pointerList, p.Addrs[0].String())
+			log.Debugf("Looking for pointer [%v] at %v\n", p.ID.Pretty(), p.Addrs)
 			inFlight[p.Addrs[0].String()] = true
 			log.Debugf("Found pointer with location %s", p.Addrs[0].String())
 			// IPFS
