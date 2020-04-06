@@ -322,7 +322,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 	if err != nil {
 		return
 	}
-	if !funded {
+	if !funded || (funded && state == pb.OrderState_AWAITING_PAYMENT) {
 		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
