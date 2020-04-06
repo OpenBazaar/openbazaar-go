@@ -289,7 +289,7 @@ const headerValidJSONResponse = `{
 const inventoryUpdateJSON = `[{
 	"slug": "ron_swanson_tshirt",
 	"variant": 0,
-	"quantity": 17
+	"quantity": "17"
 }]`
 
 //
@@ -309,8 +309,8 @@ const moderatorValidJSON = `{
 	"fee": {
 		"feeType": "FIXED_PLUS_PERCENTAGE",
 		"fixedFee": {
-			"currencyCode": "USD",
-			"amount": 300
+			"currency": {code: "USD", divisibility: 8},
+			"amount": "300"
 		},
 		"percentage": 5
 	}
@@ -331,42 +331,54 @@ const walletAddressJSONResponse = `{
 
 const walletBalanceJSONResponse = `{
     "TBCH": {
-        "confirmed": 0,
+        "confirmed": "0",
+				"currency": {
+                        "code": "TBCH",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Testnet Bitcoin Cash"
+        },
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TBTC": {
-        "confirmed": 0,
+        "confirmed": "0",
+				"currency": {
+                        "code": "TBTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Testnet Bitcoin"
+        },
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TLTC": {
-        "confirmed": 0,
+        "confirmed": "0",
+				"currency": {
+                        "code": "TLTC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Testnet Litecoin"
+        },
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     },
     "TZEC": {
-        "confirmed": 0,
+        "confirmed": "0",
+				"currency": {
+                        "code": "TZEC",
+						"currencyType": "crypto",
+						"divisibility": 8,
+						"name": "Testnet Zcash"
+        },
         "height": 0,
-        "unconfirmed": 0
+        "unconfirmed": "0"
     }
 }`
 
 //
 // Spending
 //
-
-const spendJSON = `{
-	"wallet": "btc",
-	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
-	"amount": 1700000,
-	"feeLevel": "NORMAL"
-}`
-
-const insuffientFundsJSON = `{
-	"success": false,
-	"reason": "ERROR_INSUFFICIENT_FUNDS"
-}`
 
 const invalidCoinJSON = `{
     	"success": false,

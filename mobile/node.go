@@ -26,6 +26,8 @@ import (
 	ipfslogging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log/writer"
 	"gx/ipfs/Qmc85NSvmSG4Frn9Vb2cBc1rMyULH6D3TNVEfCzSKoUpip/go-multiaddr-net"
 
+	_ "net/http/pprof"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -35,7 +37,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
@@ -51,7 +52,6 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	_ "net/http/pprof"
 )
 
 var log = logging.MustGetLogger("mobile")
@@ -127,9 +127,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted, stdoutBackendFormatted)
 	logging.SetLevel(logging.INFO, "")
 
-	migrations.WalletCoinType = config.CoinType
-
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), wi.Bitcoin)
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -165,7 +163,10 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
-	ioutil.WriteFile(path.Join(config.RepoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	err = ioutil.WriteFile(path.Join(config.RepoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	if err != nil {
+		log.Error(err)
+	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(config.RepoPath)
@@ -300,6 +301,12 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	ncfg.Routing = constructMobileRouting
 
 	node.PublishLock.Lock()
+
+	// assert reserve wallet is available on startup for later usage
+	_, err = node.ReserveCurrencyConverter()
+	if err != nil {
+		return nil, fmt.Errorf("verifying reserve currency converter: %s", err.Error())
+	}
 
 	return &Node{OpenBazaarNode: node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig, startMtx: sync.Mutex{}}, nil
 }
@@ -483,9 +490,15 @@ func (n *Node) start() error {
 
 		n.OpenBazaarNode.PublishLock.Unlock()
 		publishUnlocked = true
-		n.OpenBazaarNode.UpdateFollow()
+		err = n.OpenBazaarNode.UpdateFollow()
+		if err != nil {
+			log.Error(err)
+		}
 		if !n.OpenBazaarNode.InitalPublishComplete {
-			n.OpenBazaarNode.SeedNode()
+			err = n.OpenBazaarNode.SeedNode()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		n.OpenBazaarNode.SetUpRepublisher(republishInterval)
 	}()
@@ -523,8 +536,17 @@ func (n *Node) Restart() error {
 	n.startMtx.Lock()
 	defer n.startMtx.Unlock()
 
+	var wg sync.WaitGroup
+
 	if n.started {
-		return n.stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := n.stop(); err != nil {
+				log.Error(err)
+			}
+		}()
+		wg.Wait()
 	}
 
 	// This node has been stopped by the stop command so we need to create

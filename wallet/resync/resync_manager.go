@@ -35,12 +35,12 @@ func (r *ResyncManager) Start() {
 func (r *ResyncManager) CheckUnfunded() {
 	unfundedSales, err := r.sales.GetUnfunded()
 	if err != nil {
-		log.Error(err)
+		log.Errorf("get unfunded sales: %s", err)
 		return
 	}
 	unfundedPurchases, err := r.purchases.GetUnfunded()
 	if err != nil {
-		log.Error(err)
+		log.Errorf("get unfunded purchases: %s", err)
 		return
 	}
 	unfunded := append(unfundedSales, unfundedPurchases...)

@@ -54,18 +54,39 @@ func (r *PointerRepublisher) Republish() {
 		switch p.Purpose {
 		case ipfs.MESSAGE:
 			if time.Since(p.Timestamp) > kPointerExpiration {
-				r.db.Pointers().Delete(p.Value.ID)
+				err = r.db.Pointers().Delete(p.Value.ID)
+				if err != nil {
+					log.Error(err)
+				}
 			} else {
-				go ipfs.PublishPointer(r.routing, ctx, p)
-				for _, peer := range r.pushNodes {
-					go ipfs.PutPointerToPeer(r.routing, context.Background(), peer, p)
+				go func(d *dht.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+					err := ipfs.PublishPointer(d, ctx, pointer)
+					if err != nil {
+						log.Error(err)
+					}
+				}(r.routing, ctx, p)
+				for _, peer0 := range r.pushNodes {
+					go func(d *dht.IpfsDHT, ctx context.Context, peerID peer.ID, pointer ipfs.Pointer) {
+						err := ipfs.PutPointerToPeer(d, ctx, peerID, pointer)
+						if err != nil {
+							log.Error(err)
+						}
+					}(r.routing, context.Background(), peer0, p)
 				}
 			}
 		case ipfs.MODERATOR:
 			if republishModerator {
-				go ipfs.PublishPointer(r.routing, ctx, p)
+				go func(d *dht.IpfsDHT, ctx context.Context, pointer ipfs.Pointer) {
+					err := ipfs.PublishPointer(d, ctx, pointer)
+					if err != nil {
+						log.Error(err)
+					}
+				}(r.routing, ctx, p)
 			} else {
-				r.db.Pointers().Delete(p.Value.ID)
+				err = r.db.Pointers().Delete(p.Value.ID)
+				if err != nil {
+					log.Error(err)
+				}
 			}
 		default:
 			continue

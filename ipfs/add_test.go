@@ -10,16 +10,22 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	setup()
+	mustSetup()
 	retCode := m.Run()
 	teardown()
 	os.Exit(retCode)
 }
 
-func setup() {
-	os.MkdirAll(path.Join(os.TempDir(), "root"), os.ModePerm)
+func mustSetup() {
+	err := os.MkdirAll(path.Join(os.TempDir(), "root"), os.ModePerm)
+	if err != nil {
+		panic(err.Error())
+	}
 	d := []byte("hello world")
-	ioutil.WriteFile(path.Join(os.TempDir(), "root", "test"), d, os.ModePerm)
+	err = ioutil.WriteFile(path.Join(os.TempDir(), "root", "test"), d, os.ModePerm)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func teardown() {

@@ -14,7 +14,7 @@ class ListingsTest(OpenBazaarTestFramework):
 
     def run_test(self):
         vendor = self.nodes[1]
-        browser = self.nodes[2]
+        buyer = self.nodes[2]
 
         currency = "tbtc"
 
@@ -33,9 +33,13 @@ class ListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ListingsTest - FAIL: Listings GET failed. Reason: %s", resp["reason"])
 
         # POST listing
-        with open('testdata/listing.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing.json') as listing_file:
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
-        ljson["metadata"]["pricingCurrency"] = "T" + self.cointype
+        if self.vendor_version == "v4":
+            ljson["metadata"]["priceCurrency"] = "t" + self.cointype
+        else:
+            ljson["item"]["priceCurrency"]["code"] = "t" + self.cointype
+        ljson["metadata"]["acceptedCurrencies"] = ["t" + self.cointype.lower()]
         currency = "T" + self.cointype
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(ljson, indent=4))
@@ -79,7 +83,7 @@ class ListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ListingsTest - FAIL: Listing should have acceptedCurrences in metadata")
 
         # check vendor's index from another node
-        api_url = browser["gateway_url"] + "ob/listings/" + vendor["peerId"]
+        api_url = buyer["gateway_url"] + "ob/listings/" + vendor["peerId"]
         r = requests.get(api_url)
         if r.status_code == 404:
             raise TestFailure("ListingsTest - FAIL: Listings get endpoint not found")
@@ -109,4 +113,4 @@ class ListingsTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running ListingTest")
-    ListingsTest().main()
+    ListingsTest().main(["--regtest", "--disableexchangerates"])

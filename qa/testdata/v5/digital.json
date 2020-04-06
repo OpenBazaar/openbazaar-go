@@ -1,0 +1,51 @@
+{
+	"slug": "",
+	"metadata": {
+		"version": 5,
+		"contractType": "DIGITAL_GOOD",
+		"format": "FIXED_PRICE",
+		"expiry": "2030-08-17T04:52:19.000Z",
+		"acceptedCurrencies": ["TBTC", "TBCH", "TLTC", "TZEC"]
+	},
+	"item": {
+		"title": "Citizenfour",
+		"description": "A documentarian and a reporter travel to Hong Kong for the first of many meetings with Edward Snowden.",
+		"processingTime": "1 confirmation",
+    "bigPrice": "12000000",
+    "priceCurrency": {
+      "code": "TBTC",
+      "divisibility": 8
+    },
+		"tags": [
+			"documentary"
+		],
+		"images": [
+			{
+				"tiny": "QmUAuYuiafnJRZxDDX7MuruMNsicYNuyub5vUeAcupUBNs",
+				"small": "QmXSEqXLCzpCByJU4wqbJ37TcBEj77FKMUWUP1qLh56847",
+				"medium": "QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h",
+				"large": "QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9",
+				"original": "QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6",
+				"filename": "citizenfour.jpg"
+			}
+		],
+		"categories": [
+			"movies"
+		],
+		"condition": "New",
+		"skus": []
+	},
+	"taxes": [
+		{
+			"taxType": "Sales tax",
+			"taxRegions": [
+				"UNITED_STATES"
+			],
+			"taxShipping": false,
+			"percentage": 7
+		}
+	],
+	"moderators": [],
+	"termsAndConditions": "NA",
+	"refundPolicy": "No refuns for you. All sales are final."
+}

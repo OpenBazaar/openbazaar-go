@@ -44,10 +44,12 @@ message CaseRespApi {
 
 message TransactionRecord {
     string txid                         = 1;
-    int64 value                         = 2;
+    int64  value                        = 2  [deprecated = true];
     uint32 confirmations                = 3;
     uint32 height                       = 4;
     google.protobuf.Timestamp timestamp = 5;
+    CurrencyDefinition currency         = 6;
+    string bigValue                     = 7;
 }
 
 message PeerAndProfile {

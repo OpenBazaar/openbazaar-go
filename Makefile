@@ -57,6 +57,11 @@ qa_test: openbazaard ## Run QA test suite against current working copy
 	$(info "Running QA... (openbazaard: ../$(OPENBAZAARD_NAME) bitcoind: $(BITCOIND_PATH)/bin/bitcoind)")
 	(cd qa && ./runtests.sh ../$(OPENBAZAARD_NAME) $(BITCOIND_PATH)/bin/bitcoind)
 
+.PHONY: qa_eth_test
+qa_eth_test: openbazaard ## Run ETH-based QA test suite against current working copy
+	$(info "Running ETH QA... (openbazaard: ../$(OPENBAZAARD_NAME))")
+	(cd qa && ./runtests_eth.sh ../$(OPENBAZAARD_NAME))
+
 ##
 ## Docker
 ##

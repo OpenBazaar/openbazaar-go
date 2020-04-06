@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"math/big"
 
 	peer "gx/ipfs/QmYVXrKrKHDC9FobgmcmshCDyWwdrfwfanNQN4oxJ9Fk3h/go-libp2p-peer"
 	"time"
@@ -162,16 +163,16 @@ type InventoryStore interface {
 
 	/* Put an inventory count for a listing
 	   Override the existing count if it exists */
-	Put(slug string, variantIndex int, count int64) error
+	Put(slug string, variantIndex int, count *big.Int) error
 
 	// Return the count for a specific listing including variants
-	GetSpecific(slug string, variantIndex int) (int64, error)
+	GetSpecific(slug string, variantIndex int) (*big.Int, error)
 
 	// Get the count for all variants of a given listing
-	Get(slug string) (map[int]int64, error)
+	Get(slug string) (map[int]*big.Int, error)
 
 	// Fetch all inventory maps for each slug
-	GetAll() (map[string]map[int]int64, error)
+	GetAll() (map[string]map[int]*big.Int, error)
 
 	// Delete a listing and related count
 	Delete(slug string, variant int) error
@@ -438,8 +439,15 @@ type MessageStore interface {
 	Queryable
 
 	// Save a new message
-	Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg Message) error
+	Put(messageID, orderID string, mType pb.Message_MessageType, peerID string, msg Message, err string, receivedAt int64, pubkey []byte) error
 
 	// GetByOrderIDType returns the message for specified order and type
 	GetByOrderIDType(orderID string, mType pb.Message_MessageType) (*Message, string, error)
+
+	// GetAllErrored returns the all messages with error
+	GetAllErrored() ([]OrderMessage, error)
+
+	// MarkAsResolved sets the message as resolved and will no longer return
+	// with GetAllErrored
+	MarkAsResolved(OrderMessage) error
 }

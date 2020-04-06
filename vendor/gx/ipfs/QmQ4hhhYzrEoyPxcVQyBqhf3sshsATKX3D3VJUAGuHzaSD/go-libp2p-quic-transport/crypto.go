@@ -80,10 +80,10 @@ func keyToCertificate(sk ic.PrivKey) (interface{}, *x509.Certificate, error) {
 		return nil, nil, err
 	}
 	tmpl := &x509.Certificate{
-		SerialNumber: sn,
-		NotBefore:    time.Now().Add(-24 * time.Hour),
-		NotAfter:     time.Now().Add(certValidityPeriod),
-		IsCA:         true,
+		SerialNumber:          sn,
+		NotBefore:             time.Now().Add(-24 * time.Hour),
+		NotAfter:              time.Now().Add(certValidityPeriod),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 

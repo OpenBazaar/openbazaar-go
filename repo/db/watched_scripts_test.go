@@ -15,7 +15,10 @@ var wsdb repo.WatchedScriptStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	err := initDatabaseTables(conn, "")
+	if err != nil {
+		log.Error(err)
+	}
 	wsdb = NewWatchedScriptStore(conn, new(sync.Mutex), wallet.Bitcoin)
 }
 

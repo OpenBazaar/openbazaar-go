@@ -61,7 +61,10 @@ func TestPutDuplicateFollowing(t *testing.T) {
 	}
 	defer teardown()
 
-	fldb.Put("abc")
+	err = fldb.Put("abc")
+	if err != nil {
+		t.Error(err)
+	}
 	err = fldb.Put("abc")
 	if err == nil {
 		t.Error("Expected unquire constriant error to be thrown")
@@ -75,16 +78,34 @@ func TestCountFollowing(t *testing.T) {
 	}
 	defer teardown()
 
-	fldb.Put("abc")
-	fldb.Put("123")
-	fldb.Put("xyz")
+	err = fldb.Put("abc")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fldb.Put("123")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fldb.Put("xyz")
+	if err != nil {
+		t.Error(err)
+	}
 	x := fldb.Count()
 	if x != 3 {
 		t.Errorf("Expected 3 got %d", x)
 	}
-	fldb.Delete("abc")
-	fldb.Delete("123")
-	fldb.Delete("xyz")
+	err = fldb.Delete("abc")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fldb.Delete("123")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fldb.Delete("xyz")
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestDeleteFollowing(t *testing.T) {
@@ -94,7 +115,10 @@ func TestDeleteFollowing(t *testing.T) {
 	}
 	defer teardown()
 
-	fldb.Put("abc")
+	err = fldb.Put("abc")
+	if err != nil {
+		t.Error(err)
+	}
 	err = fldb.Delete("abc")
 	if err != nil {
 		t.Error(err)
@@ -102,7 +126,10 @@ func TestDeleteFollowing(t *testing.T) {
 	stmt, _ := fldb.PrepareQuery("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string
-	stmt.QueryRow("abc").Scan(&follower)
+	err = stmt.QueryRow("abc").Scan(&follower)
+	if err != nil {
+		t.Log(err)
+	}
 	if follower != "" {
 		t.Error("Failed to delete follower")
 	}
@@ -116,7 +143,10 @@ func TestGetFollowing(t *testing.T) {
 	defer teardown()
 
 	for i := 0; i < 100; i++ {
-		fldb.Put(strconv.Itoa(i))
+		err = fldb.Put(strconv.Itoa(i))
+		if err != nil {
+			t.Error(err)
+		}
 	}
 	followers, err := fldb.Get("", 100)
 	if err != nil {
@@ -165,7 +195,10 @@ func TestIFollow(t *testing.T) {
 	}
 	defer teardown()
 
-	fldb.Put("abc")
+	err = fldb.Put("abc")
+	if err != nil {
+		t.Error(err)
+	}
 	if !fldb.IsFollowing("abc") {
 		t.Error("I follow failed to return correctly")
 	}

@@ -115,9 +115,9 @@ func (z *EthereumPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, er
 	return copy, nil
 }
 
-// UnitsPerCoin - return satoshis in 1 BTC
-func (z *EthereumPriceFetcher) UnitsPerCoin() int {
-	return exchange.SatoshiPerBTC
+// UnitsPerCoin - return weis in 1 ETH
+func (z *EthereumPriceFetcher) UnitsPerCoin() int64 {
+	return 1000000000000000000
 }
 
 func (z *EthereumPriceFetcher) fetchCurrentRates() error {
@@ -135,6 +135,7 @@ func (z *EthereumPriceFetcher) fetchCurrentRates() error {
 func (z *EthereumPriceFetcher) run() {
 	z.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
+	defer ticker.Stop()
 	for range ticker.C {
 		z.fetchCurrentRates()
 	}

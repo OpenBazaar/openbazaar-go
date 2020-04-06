@@ -17,7 +17,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-const RepoVersion = "26"
+const RepoVersion = "34"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -224,12 +224,15 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 	return mnemonic, nil
 }
 
-/* Returns the directory to store repo data in.
-   It depends on the OS and whether or not we are on testnet. */
-func GetRepoPath(isTestnet bool) (string, error) {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+// GetRepoPath returns the directory to store repo data in.
+func GetRepoPath(isTestnet bool, repoPath string) (string, error) {
+	ctx := schema.SchemaContext{
 		TestModeEnabled: isTestnet,
-	})
+	}
+	if repoPath != "" {
+		ctx.DataPath = repoPath
+	}
+	paths, err := schema.NewCustomSchemaManager(ctx)
 	if err != nil {
 		return "", err
 	}

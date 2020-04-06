@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -24,64 +25,47 @@ func NewKeyStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinType) repo.Ke
 func (k *KeysDB) Put(scriptAddress []byte, keyPath wallet.KeyPath) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	tx, err := k.db.Begin()
+	stmt, err := k.PrepareQuery("insert into keys(coin, scriptAddress, purpose, keyIndex, used) values(?,?,?,?,?)")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into keys(coin, scriptAddress, purpose, keyIndex, used) values(?,?,?,?,?)")
-	if err != nil {
-		return err
+		return fmt.Errorf("prepare key sql: %s", err.Error())
 	}
 	defer stmt.Close()
+
 	_, err = stmt.Exec(k.coinType.CurrencyCode(), hex.EncodeToString(scriptAddress), int(keyPath.Purpose), keyPath.Index, 0)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit key: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 
 func (k *KeysDB) ImportKey(scriptAddress []byte, key *btcec.PrivateKey) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	tx, err := k.db.Begin()
+	stmt, err := k.PrepareQuery("insert into keys(coin, scriptAddress, purpose, used, key) values(?,?,?,?,?)")
 	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into keys(coin, scriptAddress, purpose, used, key) values(?,?,?,?,?)")
-	if err != nil {
-		return err
+		return fmt.Errorf("prepare key sql: %s", err.Error())
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(k.coinType.CurrencyCode(), hex.EncodeToString(scriptAddress), -1, 0, hex.EncodeToString(key.Serialize()))
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit key: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 
 func (k *KeysDB) MarkKeyAsUsed(scriptAddress []byte) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	tx, err := k.db.Begin()
+	stmt, err := k.PrepareQuery("update keys set used=1 where scriptAddress=? and coin=?")
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare key sql: %s", err.Error())
 	}
-	stmt, err := tx.Prepare("update keys set used=1 where scriptAddress=? and coin=?")
-	if err != nil {
-		return err
-	}
-
 	defer stmt.Close()
+
 	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), k.coinType.CurrencyCode())
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit key update: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 

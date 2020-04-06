@@ -1,0 +1,320 @@
+{
+    "listing": {
+        "slug": "eth-1",
+        "vendorID": {
+            "peerID": "QmTu37nuzs6DVKyFQf9UZmuL2gQMpALcfzsmEQ8WzZof9y",
+            "pubkeys": {
+                "identity": "CAESIABU8HRiB7Wkj/zRzzI2fZNzWhH8AojrgFsH5ZFghikw",
+                "bitcoin": "AuZe/azbdpyeRmD9ed+/y3FJgkfux3sZw9GzoadksGyK"
+            },
+            "bitcoinSig": "MEUCIQDleSZUT0APmo0+y9F3j/kzbplVb/2+66AnfBHyZkgZ6wIgHtSUVim7RHqOPr67mlg11rE/xqphGCpvLrMRs8KYjUg="
+        },
+        "metadata": {
+            "version": 5,
+            "contractType": "PHYSICAL_GOOD",
+            "format": "FIXED_PRICE",
+            "expiry": "2037-12-31T05:00:00.000Z",
+            "acceptedCurrencies": [
+                "BTC",
+                "BCH",
+                "ZEC",
+                "LTC",
+                "ETH"
+            ],
+            "pricingCurrency": {
+                "code": "USD",
+                "divisibility": 2,
+                "currencyType": "fiat"
+            },
+            "escrowTimeoutHours": 1
+        },
+        "item": {
+            "title": "ETH - $1",
+            "description": "This is a listing example.",
+            "processingTime": "3 days",
+            "price": {
+                "currency": {
+                    "code": "USD",
+                    "divisibility": 2,
+                    "currencyType": "fiat"
+                },
+                "amount": "100"
+            },
+            "tags": [
+                "vintage dress"
+            ],
+            "images": [
+                {
+                    "filename": "front",
+                    "original": "QmNexx7SaJCVCjyGGG3j2k7fenn3iVhtWdm9RvKvT7GTLq",
+                    "large": "QmfTKL3Z67mWKTKf9XKSCj1ptmDRaZLr5yjPS4JrVDgo5h",
+                    "medium": "QmTJfeeapZwFM8EoZAuf16JsSJyxZtKaAR6hmWiMf4CTcF",
+                    "small": "QmVsoT9iabv6GZhxhvtjSpQMJA6QyMivGTs6MmHJr6TBm9",
+                    "tiny": "QmbjyAxYee4y3443kAMLcmRVwggZsRDKiyXnXus1qdJJWz"
+                }
+            ],
+            "categories": [
+                "👚 Apparel & Accessories"
+            ],
+            "condition": "New",
+            "options": [
+                {
+                    "name": "Color",
+                    "description": "Color of the dress.",
+                    "variants": [
+                        {
+                            "name": "Red",
+                            "image": {
+                                "filename": "front",
+                                "original": "QmNexx7SaJCVCjyGGG3j2k7fenn3iVhtWdm9RvKvT7GTLq",
+                                "large": "QmfTKL3Z67mWKTKf9XKSCj1ptmDRaZLr5yjPS4JrVDgo5h",
+                                "medium": "QmTJfeeapZwFM8EoZAuf16JsSJyxZtKaAR6hmWiMf4CTcF",
+                                "small": "QmVsoT9iabv6GZhxhvtjSpQMJA6QyMivGTs6MmHJr6TBm9",
+                                "tiny": "QmbjyAxYee4y3443kAMLcmRVwggZsRDKiyXnXus1qdJJWz"
+                            }
+                        },
+                        {
+                            "name": "Cream",
+                            "image": {
+                                "filename": "cream",
+                                "original": "QmTEUnCjuQPj1ggj5UL5vJujkgBiNYY4jkteugnogiCJny",
+                                "large": "QmNsFdsX2LNALG2WBxw6E6FTPZWgJcRAcLHnKdWczrCNf9",
+                                "medium": "QmQaSzaoHzp8raZLtPEFyCjTnwfXvDGKdXFM83STDVWG43",
+                                "small": "QmP3BVFuga7N4XEX8iU2MFYC7pc6mfTRQRrpZbKiVy2Csr",
+                                "tiny": "QmU1cBgjyHpuzDYbEd4iDVuPzxgKM3CqhRhDJqkHWCKBXq"
+                            }
+                        },
+                        {
+                            "name": "Black",
+                            "image": {
+                                "filename": "black",
+                                "original": "QmZsZ78FJwt281gfeUvGzDnsBW7WNjPWW3aJWDKskhpCRr",
+                                "large": "QmXixGseetihe6vZiWcTw9N1pieok1YtRoxwvyd5d7jz6s",
+                                "medium": "QmZydpAJoLsJWbP5vmh59W6bW1kuiCV34yD62hq28AtP7b",
+                                "small": "QmcADxUo89ZsEAWiYsuUk7hrgjWDMKXL1CtoA9sTNrQFFP",
+                                "tiny": "QmdA3Nmc8VnwSvt98Deo2RQztEiCsAkNLhron73bnBzARe"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Sizes",
+                    "description": "Size of the dress.",
+                    "variants": [
+                        {
+                            "name": "Small"
+                        },
+                        {
+                            "name": "Medium"
+                        },
+                        {
+                            "name": "Large"
+                        },
+                        {
+                            "name": "Extra Large"
+                        }
+                    ]
+                }
+            ],
+            "skus": [
+                {
+                    "variantCombo": [
+                        0,
+                        0
+                    ],
+                    "productID": "dress-red-small",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        0,
+                        1
+                    ],
+                    "productID": "dress-red-medium",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "100"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        0,
+                        2
+                    ],
+                    "productID": "dress-red-large",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        1,
+                        0
+                    ],
+                    "productID": "dress-cream-small",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        1,
+                        1
+                    ],
+                    "productID": "dress-cream-medium",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        1,
+                        2
+                    ],
+                    "productID": "dress-cream-large",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        2,
+                        0
+                    ],
+                    "productID": "dress-black-small",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        2,
+                        1
+                    ],
+                    "productID": "dress-black-medium",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                },
+                {
+                    "variantCombo": [
+                        2,
+                        2
+                    ],
+                    "productID": "dress-black-large",
+                    "surcharge": {
+                        "currency": {
+                            "code": "USD",
+                            "divisibility": 2,
+                            "currencyType": "fiat"
+                        },
+                        "amount": "0"
+                    }
+                }
+            ]
+        },
+        "shippingOptions": [
+            {
+                "name": "Worldwide",
+                "type": "FIXED_PRICE",
+                "regions": [
+                    "ALL"
+                ],
+                "services": [
+                    {
+                        "name": "Standard",
+                        "price": {
+                            "currency": {
+                                "code": "USD",
+                                "divisibility": 2,
+                                "currencyType": "fiat"
+                            },
+                            "amount": "0"
+                        },
+                        "estimatedDelivery": "3 days",
+                        "additionalItemPrice": {
+                            "currency": {
+                                "code": "USD",
+                                "divisibility": 2,
+                                "currencyType": "fiat"
+                            },
+                            "amount": "0"
+                        }
+                    },
+                    {
+                        "name": "Express",
+                        "price": {
+                            "currency": {
+                                "code": "USD",
+                                "divisibility": 2,
+                                "currencyType": "fiat"
+                            },
+                            "amount": "100"
+                        },
+                        "estimatedDelivery": "3 days",
+                        "additionalItemPrice": {
+                            "currency": {
+                                "code": "USD",
+                                "divisibility": 2,
+                                "currencyType": "fiat"
+                            },
+                            "amount": "0"
+                        }
+                    }
+                ]
+            }
+        ],
+        "taxes": [
+        ],
+        "coupons": [
+        ],
+        "moderators": [
+            "QmdEB7us3cUQx7pZqvXmS6gj5cAm8q4KwwtsLbQ2VyCGjA",
+            "Qmc6X28HFbeBRvFPWszhJPGnHUMtrxVK9fDK2zY1oF93cr"
+        ],
+        "termsAndConditions": "These are my terms and conditions.",
+        "refundPolicy": "This is my refund policy."
+    },
+    "signature": "fVFuw2LF3iCeKa6w+whuRsyd6M2pu7ir1rzkm3WJiaI/m9l8i/NPurj9i3dzKN3CAxjppJmyGeHjD+4CxTZ9Bw=="
+}

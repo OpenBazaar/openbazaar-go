@@ -101,7 +101,7 @@ func TestSaleRecord_SupportsTimedEscrowRelease(t *testing.T) {
 	}
 	subject := factory.NewSaleRecord()
 	for _, test := range tests {
-		subject.Contract.BuyerOrder.Payment.Coin = test.currency
+		subject.Contract.BuyerOrder.Payment.AmountCurrency = &pb.CurrencyDefinition{Code: test.currency, Divisibility: 8}
 		supportsEscrowRelease := subject.SupportsTimedEscrowRelease()
 		if supportsEscrowRelease != test.supportsEscrowRelease {
 			t.Errorf("SupportsEscrowRelease test failed for %s."+

@@ -1,0 +1,33 @@
+{
+	"shipTo": "Seymour Butts",
+	"address": "31 Spooner Street",
+	"city": "Quahog",
+	"state": "RI",
+	"postalCode": "00093",
+	"countryCode": "UNITED_STATES",
+	"addressNotes": "",
+	"moderator": "",
+	"paymentCoin": "",
+	"items": [
+		{
+			"listingHash": "",
+			"bigQuantity": "1",
+			"options": [
+				{
+					"name": "Color",
+					"value": "Red"
+				},
+				{
+					"name": "Size",
+					"value": "Large"
+				}
+			],
+			"shipping": {
+					"name": "Domestic Shipping",
+					"service": "Standard"
+			},
+			"memo": "thanks!",
+			"coupons": ["discount"]
+		}
+	]
+}

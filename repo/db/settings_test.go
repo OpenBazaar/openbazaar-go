@@ -79,10 +79,16 @@ func TestInvalidSettingsGet(t *testing.T) {
 
 	_, err = stmt.Exec("settings", string("Test fail"))
 	if err != nil {
-		tx.Rollback()
+		err0 := tx.Rollback()
+		if err0 != nil {
+			t.Log(err0)
+		}
 		t.Error(err)
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = sdb.Get()
 	if err == nil {
 		t.Error("settings get didn't error with invalid data")

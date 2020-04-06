@@ -1,0 +1,154 @@
+{
+    "listing": {
+        "slug": "physical-good-listing",
+        "vendorID": {
+            "peerID": "QmVisrQ9apmvTLnq9FSNKbP8dYvBvkP4AeeysHZg89oB9q",
+            "pubkeys": {
+                "identity": "CAESIBHz9BLX+9JlUN7cfPdaoh1QFN/a4gjJBzmVOZfSFD5G",
+                "bitcoin": "Ai4YTSiFiBLqNxjV/iLcKilp4iaJCIvnatSf15EV25M2"
+            },
+            "bitcoinSig": "MEUCIQC7jvfG23aHIpPjvQjT1unn23PuKNSykh9v/Hc7v3vmoQIgMFI8BBtju7tAgpI66jKAL6PKWGb7jImVBo1DcDoNbpI="
+        },
+        "metadata": {
+            "version": 4,
+            "contractType": "PHYSICAL_GOOD",
+            "format": "FIXED_PRICE",
+            "expiry": "2037-12-31T05:00:00.000Z",
+            "acceptedCurrencies": [
+                "ZEC",
+                "LTC",
+                "BTC",
+                "BCH"
+            ],
+            "pricingCurrency": "BCH",
+            "escrowTimeoutHours": 1080,
+            "coinDivisibility": 100000000
+        },
+        "item": {
+            "title": "Physical Good Listing",
+            "description": "A short description. (because a picture is worth a thousand words)",
+            "price": 12345678000,
+            "tags": [
+                "test"
+            ],
+            "images": [
+                {
+                    "filename": "sanic-too-slow.gif",
+                    "original": "QmXyed6vsnUWxxC97Uo8eb2j91tVUgu4y6d8htSAHXjLEQ",
+                    "large": "QmQieQ8yUx98wzXmgW8mYyAA824dGFA6NYLMAnNjGUkjtS",
+                    "medium": "QmZAVH8cRE8rTydrg9aTgkXtNroGpq53hAcwo1jSTaXM83",
+                    "small": "QmTgMSgckmBFat6noQrg3f3A1LZMkujSsnqYwoJ4uhPi8Q",
+                    "tiny": "QmdKLLsLGpYTmzNePPuJsRNcchqQNXqA5VQYinVvUH7VJd"
+                }
+            ],
+            "categories": [
+                "cheap-goods"
+            ],
+            "condition": "NEW",
+            "options": [
+                {
+                    "name": "Color",
+                    "variants": [
+                        {
+                            "name": "Blue"
+                        },
+                        {
+                            "name": "Red"
+                        }
+                    ]
+                }
+            ],
+            "skus": [
+                {
+                    "variantCombo": [
+                        0
+                    ],
+                    "productID": "SKU12Blue"
+                },
+                {
+                    "variantCombo": [
+                        1
+                    ],
+                    "productID": "SKU12Red"
+                }
+            ]
+        },
+        "shippingOptions": [
+            {
+                "name": "EU Shipping",
+                "type": "FIXED_PRICE",
+                "regions": [
+                    "AUSTRIA",
+                    "BELGIUM",
+                    "BULGARIA",
+                    "CROATIA",
+                    "CYPRUS",
+                    "CZECH_REPUBLIC",
+                    "DENMARK",
+                    "ESTONIA",
+                    "FINLAND",
+                    "FRANCE",
+                    "GERMANY",
+                    "GREECE",
+                    "HUNGARY",
+                    "IRELAND",
+                    "ITALY",
+                    "LATVIA",
+                    "LITHUANIA",
+                    "LUXEMBOURG",
+                    "MALTA",
+                    "NETHERLANDS",
+                    "POLAND",
+                    "PORTUGAL",
+                    "ROMANIA",
+                    "SLOVAKIA",
+                    "SLOVENIA",
+                    "SPAIN",
+                    "SWEDEN",
+                    "UNITED_KINGDOM"
+                ],
+                "services": [
+                    {
+                        "name": "EU Express",
+                        "price": 1000000000,
+                        "estimatedDelivery": "1 week",
+                        "additionalItemPrice": 100000000
+                    },
+                    {
+                        "name": "EU Lost Package",
+                        "price": 200000000,
+                        "estimatedDelivery": "1 month",
+                        "additionalItemPrice": 50000000
+                    }
+                ]
+            },
+            {
+                "name": "US Only",
+                "type": "FIXED_PRICE",
+                "regions": [
+                    "UNITED_STATES"
+                ],
+                "services": [
+                    {
+                        "name": "US Express",
+                        "price": 500000000,
+                        "estimatedDelivery": "5 days",
+                        "additionalItemPrice": 100000000
+                    }
+                ]
+            }
+        ],
+        "coupons": [
+            {
+                "title": "50% off",
+                "hash": "QmbN4rDGYgWPkrKGeb72QWVXQ8wMUXLGhzShbAmuD6uucu",
+                "percentDiscount": 50
+            }
+        ],
+        "moderators": [
+        ],
+        "termsAndConditions": "All sales final.",
+        "refundPolicy": "Returns are not allowed."
+    },
+    "signature": "U1NrZmH+Txqt5S5RbRAN0mAKBj4173SxytatUNAv2aKT9tPqEPDZvRnc9xtfxlD8lL98qFF2L9OTb3VoNRzCBA=="
+}

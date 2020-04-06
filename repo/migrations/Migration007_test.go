@@ -157,7 +157,7 @@ func TestMigration007(t *testing.T) {
 			t.Error("Unexpected case ID returned")
 		}
 		timeSinceMigration := time.Since(time.Unix(actualCase.LastNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(3) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on case to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 	}
@@ -198,7 +198,7 @@ func TestMigration007(t *testing.T) {
 			t.Error("Unexpected orderID returned")
 		}
 		timeSinceMigration := time.Since(time.Unix(actualPurchase.LastNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(3) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 	}
@@ -239,7 +239,7 @@ func TestMigration007(t *testing.T) {
 			t.Error("Unexpected orderID returned")
 		}
 		timeSinceMigration := time.Since(time.Unix(actualSale.LastNotifiedAt, 0))
-		if timeSinceMigration > (time.Duration(2) * time.Second) {
+		if timeSinceMigration > (time.Duration(3) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 	}

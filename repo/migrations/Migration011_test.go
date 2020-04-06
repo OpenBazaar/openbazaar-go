@@ -12,13 +12,16 @@ import (
 
 func TestMigration011(t *testing.T) {
 	// Setup
-	os.Mkdir("./datastore", os.ModePerm)
+	err := os.Mkdir("./datastore", os.ModePerm)
+	if err != nil {
+		t.Log(err)
+	}
 	defer os.RemoveAll("./datastore")
 	defer testMigration011SetupFixtures(t)()
 
 	// Test migration up
 	var m migrations.Migration011
-	err := m.Up(".", "", true)
+	err = m.Up(".", "", true)
 	if err != nil {
 		t.Fatal(err)
 	}

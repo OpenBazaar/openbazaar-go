@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"math/big"
 	"sync"
 	"testing"
 
@@ -8,14 +9,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
-
-//var ivdb repo.InventoryStore
-
-//func init() {
-//conn, _ := sql.Open("sqlite3", ":memory:")
-//initDatabaseTables(conn, "")
-//ivdb = NewInventoryStore(conn, new(sync.Mutex))
-//}
 
 func buildNewInventoryStore() (repo.InventoryStore, func(), error) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
@@ -42,7 +35,7 @@ func TestPutInventory(t *testing.T) {
 	}
 	defer teardown()
 
-	err = ivdb.Put("slug", 0, 5)
+	err = ivdb.Put("slug", 0, big.NewInt(5))
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,8 +69,11 @@ func TestPutReplaceInventory(t *testing.T) {
 	}
 	defer teardown()
 
-	ivdb.Put("slug", 0, 6)
-	err = ivdb.Put("slug", 0, 5)
+	err = ivdb.Put("slug", 0, big.NewInt(6))
+	if err != nil {
+		t.Log(err)
+	}
+	err = ivdb.Put("slug", 0, big.NewInt(5))
 	if err != nil {
 		t.Error("Error replacing inventory value")
 	}
@@ -90,9 +86,12 @@ func TestGetSpecificInventory(t *testing.T) {
 	}
 	defer teardown()
 
-	ivdb.Put("slug", 0, 5)
+	err = ivdb.Put("slug", 0, big.NewInt(5))
+	if err != nil {
+		t.Log(err)
+	}
 	count, err := ivdb.GetSpecific("slug", 0)
-	if err != nil || count != 5 {
+	if err != nil || count.Cmp(big.NewInt(5)) != 0 {
 		t.Error("Error in inventory get")
 	}
 	_, err = ivdb.GetSpecific("xyz", 0)
@@ -108,7 +107,10 @@ func TestDeleteInventory(t *testing.T) {
 	}
 	defer teardown()
 
-	ivdb.Put("slug", 0, 5)
+	err = ivdb.Put("slug", 0, big.NewInt(5))
+	if err != nil {
+		t.Log(err)
+	}
 	err = ivdb.Delete("slug", 0)
 	if err != nil {
 		t.Error(err)
@@ -116,7 +118,10 @@ func TestDeleteInventory(t *testing.T) {
 	stmt, _ := ivdb.PrepareQuery("select slug from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
-	stmt.QueryRow("inventory").Scan(&slug)
+	err = stmt.QueryRow("inventory").Scan(&slug)
+	if err != nil {
+		t.Log(err)
+	}
 	if slug != "" {
 		t.Error("Failed to delete inventory")
 	}
@@ -129,8 +134,14 @@ func TestDeleteAllInventory(t *testing.T) {
 	}
 	defer teardown()
 
-	ivdb.Put("slug", 0, 5)
-	ivdb.Put("slug", 1, 10)
+	err = ivdb.Put("slug", 0, big.NewInt(5))
+	if err != nil {
+		t.Log(err)
+	}
+	err = ivdb.Put("slug", 1, big.NewInt(10))
+	if err != nil {
+		t.Log(err)
+	}
 	err = ivdb.DeleteAll("slug")
 	if err != nil {
 		t.Error(err)
@@ -138,7 +149,10 @@ func TestDeleteAllInventory(t *testing.T) {
 	stmt, _ := ivdb.PrepareQuery("select slug from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
-	stmt.QueryRow("slug").Scan(&slug)
+	err = stmt.QueryRow("slug").Scan(&slug)
+	if err != nil {
+		t.Log(err)
+	}
 	if slug != "" {
 		t.Error("Failed to delete inventory")
 	}
@@ -152,10 +166,16 @@ func TestGetAllInventory(t *testing.T) {
 	defer teardown()
 
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug1", i, int64(i))
+		err = ivdb.Put("slug1", i, big.NewInt(int64(i)))
+		if err != nil {
+			t.Log(err)
+		}
 	}
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug2", i, int64(i))
+		err = ivdb.Put("slug2", i, big.NewInt(int64(i)))
+		if err != nil {
+			t.Log(err)
+		}
 	}
 	inventory, err := ivdb.GetAll()
 	if err != nil {
@@ -180,7 +200,10 @@ func TestGetInventory(t *testing.T) {
 	defer teardown()
 
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug", i, int64(i))
+		err = ivdb.Put("slug", i, big.NewInt(int64(i)))
+		if err != nil {
+			t.Log(err)
+		}
 	}
 	inventory, err := ivdb.Get("slug")
 	if err != nil {

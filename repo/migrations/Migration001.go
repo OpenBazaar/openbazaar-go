@@ -16,7 +16,10 @@ func (Migration001) Up(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 	var cfgIface interface{}
-	json.Unmarshal(configFile, &cfgIface)
+	err = json.Unmarshal(configFile, &cfgIface)
+	if err != nil {
+		return err
+	}
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
 		return errors.New("invalid config file")
@@ -119,7 +122,10 @@ func (Migration001) Down(repoPath string, dbPassword string, testnet bool) error
 		return err
 	}
 	var cfgIface interface{}
-	json.Unmarshal(configFile, &cfgIface)
+	err = json.Unmarshal(configFile, &cfgIface)
+	if err != nil {
+		return err
+	}
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
 		return errors.New("invalid config file")

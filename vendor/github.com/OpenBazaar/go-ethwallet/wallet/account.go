@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/btcsuite/btcd/chaincfg"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -20,12 +21,12 @@ type EthAddress struct {
 
 // String representation of eth address
 func (addr EthAddress) String() string {
-	return addr.address.String()
+	return addr.address.Hex() // [2:] //String()[2:]
 }
 
 // EncodeAddress returns hex representation of the address
 func (addr EthAddress) EncodeAddress() string {
-	return addr.address.Hex()
+	return addr.address.Hex() // [2:]
 }
 
 // ScriptAddress returns byte representation of address
@@ -59,7 +60,7 @@ func NewAccountFromKeyfile(keyFile, password string) (*Account, error) {
 }
 
 // NewAccountFromMnemonic returns generated account
-func NewAccountFromMnemonic(mnemonic, password string) (*Account, error) {
+func NewAccountFromMnemonic(mnemonic, password string, params *chaincfg.Params) (*Account, error) {
 	seed := bip39.NewSeed(mnemonic, password)
 
 	/*
@@ -76,10 +77,27 @@ func NewAccountFromMnemonic(mnemonic, password string) (*Account, error) {
 
 	*/
 
-	privateKeyECDSA, err := crypto.ToECDSA(seed[:32])
+	// This is no longer used. 31 Dec 2018
+	/*
+		privateKeyECDSA, err := crypto.ToECDSA(seed[:32])
+		if err != nil {
+			return nil, err
+		}
+	*/
+
+	mPrivKey, err := hd.NewMaster(seed, params)
 	if err != nil {
+		log.Errorf("err initializing btc priv key : %v", err)
 		return nil, err
 	}
+
+	exPrivKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		log.Errorf("err extracting btcec priv key : %v", err)
+		return nil, err
+	}
+
+	privateKeyECDSA := exPrivKey.ToECDSA()
 
 	/*
 		fmt.Println(privateKeyECDSA)

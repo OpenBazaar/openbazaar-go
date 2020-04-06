@@ -15,7 +15,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo"
 )
 
-var routerCacheURI string
+//var routerCacheURI string
 
 // UpdateIPFSGlobalProtocolVars is a hack to manage custom protocol strings
 // which do not yet have an API to manage their configuration
@@ -34,7 +34,7 @@ func UpdateIPFSGlobalProtocolVars(testnetEnable bool) {
 // PrepareIPFSConfig builds the configuration options for the internal
 // IPFS node.
 func PrepareIPFSConfig(r repo.Repo, routerAPIEndpoint string, testEnable, regtestEnable bool) *ipfscore.BuildCfg {
-	routerCacheURI = routerAPIEndpoint
+	//routerCacheURI = routerAPIEndpoint
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
@@ -72,8 +72,8 @@ func constructRegtestRouting(ctx context.Context, host p2phost.Host, dstore ds.B
 		dhtopts.Datastore(dstore),
 		dhtopts.Validator(validator),
 		dhtopts.Protocols(
-			IPFSProtocolKademliaMainnetOne,
-			IPFSProtocolDHTMainnetLegacy,
+			IPFSProtocolKademliaTestnetOne,
+			IPFSProtocolAppTestnetOne,
 		),
 	)
 }

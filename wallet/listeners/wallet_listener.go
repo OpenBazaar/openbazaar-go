@@ -1,6 +1,8 @@
 package bitcoin
 
 import (
+	"math/big"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 )
@@ -18,17 +20,27 @@ func NewWalletListener(db repo.Datastore, broadcast chan repo.Notifier, coinType
 
 func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	if !cb.WatchOnly {
-		metadata, _ := l.db.TxMetadata().Get(cb.Txid)
+		metadata, err := l.db.TxMetadata().Get(cb.Txid)
+		if err != nil {
+			log.Debugf("tx metadata not found for id (%s): %s", cb.Txid, err.Error())
+		}
+
 		status := "UNCONFIRMED"
 		confirmations := 0
 		if cb.Height > 0 {
 			status = "PENDING"
 			confirmations = 1
 		}
-		n := repo.IncomingTransaction{
-			Wallet:        l.coinType.CurrencyCode(),
+
+		txValue, err := repo.NewCurrencyValueWithLookup(cb.Value.String(), l.coinType.CurrencyCode())
+		if err != nil {
+			log.Errorf("failed parsing currency value (%s %s): %s", cb.Value.String(), l.coinType.CurrencyCode(), err.Error())
+			return
+		}
+
+		l.broadcast <- repo.IncomingTransaction{
 			Txid:          cb.Txid,
-			Value:         cb.Value,
+			Value:         txValue,
 			Address:       metadata.Address,
 			Status:        status,
 			Memo:          metadata.Memo,
@@ -37,8 +49,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
-			CanBumpFee:    cb.Value > 0,
+			CanBumpFee:    cb.Value.Cmp(big.NewInt(0)) > 0,
 		}
-		l.broadcast <- n
 	}
 }

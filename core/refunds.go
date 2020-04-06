@@ -3,6 +3,9 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -24,35 +27,39 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	if err != nil {
 		return err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
+	if err != nil {
+		return err
+	}
+	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
-		var outValue int64
+		outValue := big.NewInt(0)
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return err
 				}
-				outValue += r.Value
+				outValue = new(big.Int).Add(outValue, &r.Value)
 				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
 
-		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return err
 		}
 		output := wallet.TransactionOutput{
 			Address: refundAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			return err
 		}
@@ -64,12 +71,12 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		redeemScript, err := hex.DecodeString(order.Payment.RedeemScript)
 		if err != nil {
 			return err
 		}
-
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		f, _ := new(big.Int).SetString(order.BigRefundFee, 10)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
 		if err != nil {
 			return err
 		}
@@ -80,23 +87,24 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		}
 		refundMsg.Sigs = sigs
 	} else {
-		var outValue int64
+		outValue := big.NewInt(0)
 		for _, r := range records {
-			if r.Value > 0 {
-				outValue += r.Value
+			if r.Value.Cmp(big.NewInt(0)) > 0 {
+				outValue = new(big.Int).Add(outValue, &r.Value)
 			}
 		}
-		refundAddr, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddr, err := wal.DecodeAddress(order.RefundAddress)
 		if err != nil {
 			return err
 		}
-		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL, orderID, false)
+		txid, err := wal.Spend(*outValue, refundAddr, wallet.NORMAL, orderID, false)
 		if err != nil {
 			return err
 		}
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
-		txinfo.Value = uint64(outValue)
+		txinfo.BigValue = outValue.String()
+		txinfo.ValueCurrency = contract.BuyerOrder.Payment.AmountCurrency
 		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg
@@ -104,8 +112,15 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	if err != nil {
 		return err
 	}
-	n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
-	n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_REFUNDED, true)
+	err = n.SendRefund(order.BuyerID.PeerID, contract)
+	if err != nil {
+		// TODO: do we retry a failed refund send?
+		log.Error(err)
+	}
+	err = n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_REFUNDED, true)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 

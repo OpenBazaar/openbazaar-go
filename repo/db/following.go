@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -19,15 +20,15 @@ func NewFollowingStore(db *sql.DB, lock *sync.Mutex) repo.FollowingStore {
 func (f *FollowingDB) Put(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	tx, _ := f.db.Begin()
-	stmt, _ := tx.Prepare("insert into following(peerID) values(?)")
-	defer stmt.Close()
-	_, err := stmt.Exec(follower)
+	stmt, err := f.PrepareQuery("insert into following(peerID) values(?)")
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("prepare following sql: %s", err.Error())
 	}
-	tx.Commit()
+	defer stmt.Close()
+	_, err = stmt.Exec(follower)
+	if err != nil {
+		return fmt.Errorf("commit following: %s", err.Error())
+	}
 	return nil
 }
 
@@ -48,7 +49,10 @@ func (f *FollowingDB) Get(offsetId string, limit int) ([]string, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var peerID string
-		rows.Scan(&peerID)
+		err = rows.Scan(&peerID)
+		if err != nil {
+			log.Error(err)
+		}
 		ret = append(ret, peerID)
 	}
 	return ret, nil
@@ -69,7 +73,10 @@ func (f *FollowingDB) Count() int {
 	defer f.lock.Unlock()
 	row := f.db.QueryRow("select Count(*) from following")
 	var count int
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		log.Error(err)
+	}
 	return count
 }
 

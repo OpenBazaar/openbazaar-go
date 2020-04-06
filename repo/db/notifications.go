@@ -134,19 +134,16 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 func (n *NotficationsDB) MarkAsRead(notifID string) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	tx, err := n.db.Begin()
+	stmt, err := n.PrepareQuery("update notifications set read=1 where notifID=?")
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare notification sql: %s", err.Error())
 	}
-	stmt, _ := tx.Prepare("update notifications set read=1 where notifID=?")
-
 	defer stmt.Close()
+
 	_, err = stmt.Exec(notifID)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return fmt.Errorf("commit notification as read: %s", err.Error())
 	}
-	tx.Commit()
 	return nil
 }
 

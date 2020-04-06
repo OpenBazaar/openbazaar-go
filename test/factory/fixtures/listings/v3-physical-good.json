@@ -1,0 +1,151 @@
+{
+    "listing": {
+        "slug": "physical-listing",
+        "vendorID": {
+            "peerID": "Qmdxhx4PMb8ovRG1FW6CuF1ZBaY3KXWp8e9ND2vPfaGdv1",
+            "pubkeys": {
+                "identity": "CAESIO09q05xH2g6aoOrK9TBURLvBZIqZrejpPhek+YTWeBl",
+                "bitcoin": "AiLFa8gc1En/4n9xzHO0JfQ6ymebxcl02WGnFjkd9MZS"
+            },
+            "bitcoinSig": "MEQCIBfHyKAEyYgp2vb32u2BB79MBAl0a1hs8TZ71KK7HeGSAiBZyZtGEX1UcrqQ16GoviuTesblZUzCzfW3L97bCNvETA=="
+        },
+        "metadata": {
+            "version": 3,
+            "contractType": "PHYSICAL_GOOD",
+            "format": "FIXED_PRICE",
+            "expiry": "2037-12-31T05:00:00.000Z",
+            "acceptedCurrencies": [
+                "BCH"
+            ],
+            "pricingCurrency": "BCH",
+            "escrowTimeoutHours": 1080,
+            "coinDivisibility": 100000000
+        },
+        "item": {
+            "title": "Physical Listing",
+            "description": "Description of a physical listing",
+            "price": 1235000000,
+            "tags": [
+                "test"
+            ],
+            "images": [
+                {
+                    "filename": "sanic-too-slow.gif",
+                    "original": "zb2rhd8G4d6vmkUVFyzF8wjQngY86CRRzy4NdE3zdVp4K9cSJ",
+                    "large": "zb2rhodiuogttcVGgabxdGsmzRHoMmSgTkCmrhFZSgaasV4dj",
+                    "medium": "zb2rhgfPd1QT98RoXMr8F4xLyE1hCWEmWqfxKXUp7mEUDoT42",
+                    "small": "zb2rhb2iWYwMc7sSSmUi4Fe8ifRQrEj6rfzX46XCJc6ozpCtB",
+                    "tiny": "zb2rhgfm6R7SXqn1H4bRqBqfEBn5ts1iDzpspjJ2UmEenDYr1"
+                }
+            ],
+            "categories": [
+                "cheap-goods"
+            ],
+            "condition": "NEW",
+            "options": [
+                {
+                    "name": "Color",
+                    "variants": [
+                        {
+                            "name": "Red"
+                        },
+                        {
+                            "name": "Blue"
+                        }
+                    ]
+                }
+            ],
+            "skus": [
+                {
+                    "variantCombo": [
+                        0
+                    ],
+                    "productID": "SKU12Red"
+                },
+                {
+                    "variantCombo": [
+                        1
+                    ],
+                    "productID": "SKU12Blue"
+                }
+            ]
+        },
+        "shippingOptions": [
+            {
+                "name": "EU Shipping",
+                "type": "FIXED_PRICE",
+                "regions": [
+                    "AUSTRIA",
+                    "BELGIUM",
+                    "BULGARIA",
+                    "CROATIA",
+                    "CYPRUS",
+                    "CZECH_REPUBLIC",
+                    "DENMARK",
+                    "ESTONIA",
+                    "FINLAND",
+                    "FRANCE",
+                    "GERMANY",
+                    "GREECE",
+                    "HUNGARY",
+                    "IRELAND",
+                    "ITALY",
+                    "LATVIA",
+                    "LITHUANIA",
+                    "LUXEMBOURG",
+                    "MALTA",
+                    "NETHERLANDS",
+                    "POLAND",
+                    "PORTUGAL",
+                    "ROMANIA",
+                    "SLOVAKIA",
+                    "SLOVENIA",
+                    "SPAIN",
+                    "SWEDEN",
+                    "UNITED_KINGDOM"
+                ],
+                "services": [
+                    {
+                        "name": "EU Express",
+                        "price": 1000000000,
+                        "estimatedDelivery": "1 week",
+                        "additionalItemPrice": 100000000
+                    },
+                    {
+                        "name": "EU Lost Package",
+                        "price": 50000000,
+                        "estimatedDelivery": "1 month"
+                    }
+                ]
+            },
+            {
+                "name": "US Only",
+                "type": "FIXED_PRICE",
+                "regions": [
+                    "UNITED_STATES"
+                ],
+                "services": [
+                    {
+                        "name": "US Express",
+                        "price": 500000000,
+                        "estimatedDelivery": "5 days",
+                        "additionalItemPrice": 100000000
+                    }
+                ]
+            }
+        ],
+        "coupons": [
+            {
+                "title": "50% Off",
+                "hash": "QmQcuGE7tPcF9CYhgLHVmaRofSGhvxZnZGq6dRTmUHa8o5",
+                "percentDiscount": 50
+            }
+        ],
+        "moderators": [
+            "QmRjZqsCr4EgV1RhMWTHcXE6MM77nxDSCwgNNrzWkYSNwt"
+        ],
+        "termsAndConditions": "Terms and Conditions",
+        "refundPolicy": "Return Policy"
+    },
+    "signature": "8MAXoVKz/dbrrMfF9mwoEZEs0UL4dJgLHGSBMjxYcGPoKa43Z6sx7km/N4Exs7XXTRcVGMXu1PUr2TJkFAliBw=="
+}

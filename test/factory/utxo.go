@@ -15,7 +15,7 @@ func NewUtxo() wallet.Utxo {
 	return wallet.Utxo{
 		Op:           *outpoint,
 		AtHeight:     300000,
-		Value:        100000000,
+		Value:        "100000000",
 		ScriptPubkey: []byte("scriptpubkey"),
 		WatchOnly:    false,
 	}

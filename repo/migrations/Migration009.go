@@ -259,7 +259,7 @@ func coinTypeForContract(contract *pb.RicardianContract) string {
 	coinType := ""
 
 	if len(contract.VendorListings) > 0 {
-		coinType = contract.VendorListings[0].Metadata.CoinType
+		coinType = contract.VendorListings[0].Metadata.CryptoCurrencyCode
 	}
 
 	return coinType

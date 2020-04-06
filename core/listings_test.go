@@ -1,9 +1,11 @@
 package core_test
 
 import (
+	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"testing"
 )
 
 func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
@@ -15,21 +17,38 @@ func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
 	var (
 		regularListingSlug    = "test_regular_listing"
 		cryptoListingSlug     = "test_crypto_listing"
-		newAcceptedCurrencies = []string{"BCH", "LTC"}
+		newAcceptedCurrencies = []string{"TBCH", "TLTC"}
 		cryptoListingCurrency = "TBTC"
 	)
 
 	regularListing := factory.NewListing(regularListingSlug)
 	regularListing.Metadata.AcceptedCurrencies = []string{"TBTC"}
+	regularRepoListing, err := repo.NewListingFromProtobuf(regularListing)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if err := node.CreateListing(regularListing); err != nil {
+	lb, err := regularRepoListing.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := node.CreateListing(lb); err != nil {
 		t.Fatal(err)
 	}
 
 	cryptoListing := factory.NewCryptoListing(cryptoListingSlug)
 	regularListing.Metadata.AcceptedCurrencies = []string{cryptoListingCurrency}
+	cryptoRepoListing, err := repo.NewListingFromProtobuf(cryptoListing)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if err := node.CreateListing(cryptoListing); err != nil {
+	clb, err := cryptoRepoListing.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := node.CreateListing(clb); err != nil {
 		t.Fatal(err)
 	}
 
