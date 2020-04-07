@@ -155,7 +155,7 @@ class EthPurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseModeratedOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # startup alice again
-        self.start_node(1, alice)
+        self.start_node(alice)
         time.sleep(80)
 
         # check alice detected order and payment

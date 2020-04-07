@@ -450,7 +450,7 @@ func (n PaymentNotification) GetID() string             { return n.ID }
 func (n PaymentNotification) GetType() NotificationType { return NotifierTypePaymentNotification }
 func (n PaymentNotification) GetSMTPTitleAndBody() (string, string, bool) {
 	form := "Payment for order \"%s\" received (total %d)."
-	return "Payment received", fmt.Sprintf(form, n.OrderId, n.FundingTotal.Amount), true
+	return "Payment received", fmt.Sprintf(form, n.OrderId, n.FundingTotal), true
 }
 
 type OrderConfirmationNotification struct {

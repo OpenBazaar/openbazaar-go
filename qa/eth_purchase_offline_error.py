@@ -100,7 +100,7 @@ class EthPurchaseOfflineErrorTest(OpenBazaarTestFramework):
             raise TestFailure("EthPurchaseOfflineErrorTest - FAIL: Bob incorrectly saved as funded")
 
         # startup alice again
-        self.start_node(1, alice)
+        self.start_node(alice)
         time.sleep(45)
 
         # check alice detected processing error

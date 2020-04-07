@@ -147,7 +147,7 @@ class EthCancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("EthCancelDirectOfflineTest - FAIL: Bob failed to save as canceled")
 
         # startup alice again
-        self.start_node(1, alice)
+        self.start_node(alice)
         time.sleep(160)
 
         # check alice detected order

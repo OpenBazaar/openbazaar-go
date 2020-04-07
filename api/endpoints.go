@@ -115,8 +115,6 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTBulkUpdateCurrency(w, r)
 	case strings.HasPrefix(path, "/ob/resendordermessage"):
 		i.POSTResendOrderMessage(w, r)
-	case strings.HasPrefix(path, "/ob/hashmessage"):
-		i.POSTHashMessage(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}

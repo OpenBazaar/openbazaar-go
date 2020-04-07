@@ -129,7 +129,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 				log.Errorf("update funding for sale (%s): %s", orderId, err)
 			}
 			// This is a dispute payout. We should set the order state.
-			if len(records) > 0 && fundsReleased {
+			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
@@ -154,14 +154,8 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
-				if state == pb.OrderState_DECIDED {
-					if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
-						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
-					}
-				} else {
-					if err := l.db.Sales().Put(orderId, *contract, state, false); err != nil {
-						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
-					}
+				if err := l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 				}
 			}
 		} else {
@@ -169,7 +163,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			if err != nil {
 				log.Errorf("update funding for purchase (%s): %s", orderId, err)
 			}
-			if len(records) > 0 && fundsReleased {
+			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
@@ -198,14 +192,8 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("persist dispute acceptance notification for order (%s): %s", orderId, err)
 					}
 				}
-				if state == pb.OrderState_DECIDED {
-					if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
-						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
-					}
-				} else {
-					if err := l.db.Purchases().Put(orderId, *contract, state, false); err != nil {
-						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
-					}
+				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false); err != nil {
+					log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 				}
 			}
 		}
@@ -225,17 +213,12 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	if err != nil {
 		return
 	}
-	order, err := repo.ToV5Order(contract.BuyerOrder, nil)
-	if err != nil {
-		log.Error(err)
-		return
-	}
 	if !funded {
-		currencyValue, err := repo.NewCurrencyValueWithLookup(order.Payment.BigAmount, order.Payment.AmountCurrency.Code)
+		currencyValue, err := repo.NewCurrencyValueWithLookup(contract.BuyerOrder.Payment.BigAmount, contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Failed parsing CurrencyValue for (%s, %s): %s",
-				order.Payment.BigAmount,
-				order.Payment.AmountCurrency.Code,
+				contract.BuyerOrder.Payment.BigAmount,
+				contract.BuyerOrder.Payment.AmountCurrency.Code,
 				err.Error(),
 			)
 			return
@@ -327,13 +310,8 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 	if err != nil {
 		return
 	}
-	order, err := repo.ToV5Order(contract.BuyerOrder, nil)
-	if err != nil {
-		log.Error(err)
-		return
-	}
 	if !funded {
-		requestedAmount, _ := new(big.Int).SetString(order.Payment.BigAmount, 10)
+		requestedAmount, _ := new(big.Int).SetString(contract.BuyerOrder.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
@@ -347,7 +325,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 				}
 			}
 		}
-		def, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
+		def, err := repo.AllCurrencies().Lookup(contract.BuyerOrder.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Error looking up currency: %s", err)
 			return
@@ -362,7 +340,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			Type:         "payment",
 			OrderId:      orderId,
 			FundingTotal: cv,
-			CoinType:     order.Payment.AmountCurrency.Code,
+			CoinType:     contract.BuyerOrder.Payment.AmountCurrency.Code,
 		}
 		l.broadcast <- n
 		err = l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))

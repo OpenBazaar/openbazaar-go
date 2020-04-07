@@ -129,7 +129,7 @@ class EthPurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
 
         # startup alice again
-        self.start_node(1, alice)
+        self.start_node(alice)
         time.sleep(60)
 
         # check alice detected order and payment
