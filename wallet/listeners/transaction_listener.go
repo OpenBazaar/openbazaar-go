@@ -215,7 +215,6 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
-		// If we have already seen this transaction for some reason, just return
 		if r.Txid != txid {
 			funding = *new(big.Int).Add(&funding, &r.Value)
 		}
@@ -317,10 +316,8 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
-		funding = *new(big.Int).Add(&funding, &r.Value)
-		// If we have already seen this transaction for some reason, just return
-		if r.Txid == txid {
-			return
+		if r.Txid != txid {
+			funding = *new(big.Int).Add(&funding, &r.Value)
 		}
 	}
 	orderId, err := calcOrderId(contract.BuyerOrder)
