@@ -200,17 +200,16 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	var funding = output.Value
 	for _, r := range records {
-		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
 		if r.Txid == txid {
-			return
+			funding += r.Value
 		}
 	}
 	orderId, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return
 	}
-	if !funded {
+	if !funded || (funded && state == pb.OrderState_AWAITING_PAYMENT) {
 		requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
 		if funding >= requestedAmount {
 			log.Debugf("Received payment for order %s", orderId)
@@ -285,17 +284,16 @@ func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.R
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
-		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
 		if r.Txid == txid {
-			return
+			funding += r.Value
 		}
 	}
 	orderId, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return
 	}
-	if !funded {
+	if !funded || (funded && state == pb.OrderState_AWAITING_PAYMENT) {
 		requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
 		if funding >= requestedAmount {
 			log.Debugf("Payment for purchase %s detected", orderId)
