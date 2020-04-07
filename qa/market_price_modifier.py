@@ -32,19 +32,23 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # post profile for vendor
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = vendor["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listings to vendor
-        with open('testdata/listing_crypto.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-            listing_json["metadata"]["coinType"] = "TBCH"
-            listing_json["metadata"]["coinDivisibility"] = 8
+            if self.vendor_version == 5:
+                listing_json["metadata"]["coinType"] = "TBCH"
+                listing_json["metadata"]["coinDivisibility"] = 8
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
-            listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
+            if self.vendor_version == 4:
+                listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
+            else:
+                listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -104,7 +108,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Listing doesn't include priceModifier")
 
         # buyer send orders
-        with open('testdata/order_crypto.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id
         order_json["paymentCoin"] = "T" + self.cointype
@@ -119,7 +123,7 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
         payment_address = resp["paymentAddress"]
         payment_amount = int(resp["amount"]["amount"])
 
-        with open('testdata/order_crypto.json') as order_file:
+        with open('testdata/'+ self.buyer_version +'/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id_with_modifier
         order_json["paymentCoin"] = "T" + self.cointype
@@ -132,7 +136,10 @@ class MarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("MarketPriceModifierTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         payment_address_with_modifier = resp["paymentAddress"]
-        payment_amount_with_modifier = int(resp["amount"]["amount"])
+        if self.buyer_version == 4:
+            payment_address_with_modifier = resp["amount"]
+        else:
+            payment_amount_with_modifier = int(resp["amount"]["amount"])
 
         # Check that modified price is different than regular price
         pct_change = round((payment_amount-payment_amount_with_modifier) / payment_amount * -100, 2)

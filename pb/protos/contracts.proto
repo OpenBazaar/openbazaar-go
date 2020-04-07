@@ -145,9 +145,11 @@ message Listing {
             string hash         = 2;
             string discountCode = 3;
         }
-        float percentDiscount   = 5;
-        uint64 priceDiscount    = 6 [deprecated = true]; // prefer bigPriceDiscount
-        string bigPriceDiscount = 7; // added schema v5
+        oneof discount {
+            float percentDiscount = 5;
+            uint64 priceDiscount = 6 [deprecated = true]; // prefer bigPriceDiscount
+            string bigPriceDiscount = 7; // added schema v5
+        }
     }
 }
 

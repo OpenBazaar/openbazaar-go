@@ -296,6 +296,9 @@ func (wallet *ERC20Wallet) Transactions() ([]wi.Txn, error) {
 		if t.IsError != 0 {
 			status = wi.StatusError
 		}
+		if t.Confirmations > 0 && t.Confirmations < 300 {
+			status = wi.StatusPending
+		}
 		tnew := wi.Txn{
 			Txid:          t.Hash,
 			Value:         t.Value.Int().String(),

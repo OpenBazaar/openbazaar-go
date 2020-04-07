@@ -156,7 +156,7 @@ class EthRejectModeratedOffline(OpenBazaarTestFramework):
 
 
         # startup alice again
-        self.start_node(alice)
+        self.start_node(1, alice)
         time.sleep(45)
 
         # alice reject order

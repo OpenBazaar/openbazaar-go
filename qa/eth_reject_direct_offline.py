@@ -128,7 +128,7 @@ class EthRejectDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("EthRejectDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # startup alice again
-        self.start_node(alice)
+        self.start_node(1, alice)
         time.sleep(60)
 
         # alice reject order

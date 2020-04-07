@@ -1,0 +1,9 @@
+{
+  "description": "I am a moderator!!!",
+  "termsAndConditions": "I moderate stuff",
+  "languages": ["english"],
+  "fee": {
+    "feeType": "PERCENTAGE",
+    "percentage": 10.0
+  }
+}
