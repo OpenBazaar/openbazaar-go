@@ -199,8 +199,8 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			if err != nil {
 				log.Errorf("update funding for purchase (%s): %s", orderId, err)
 			}
-			if len(records) > 0 && fundsReleased && contract != nil && contract.Dispute != nil {
-				if contract.DisputeAcceptance == nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
+			if len(records) > 0 && fundsReleased && contract.Dispute != nil {
+				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
 					accept.Timestamp = ts
