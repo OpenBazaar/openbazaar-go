@@ -51,6 +51,26 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 	return contract, state, funded, records, err
 }
 
+// cleanupOrderState - scan each order to ensure the state in the db matches the state of the contract stored
+func (l *TransactionListener) cleanupOrderState(isSale bool, txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord)  {
+
+	orderId, err := calcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return
+	}
+	log.Debugf("Cleaning up order state for: #%s\n", orderId)
+
+	if contract.DisputeResolution != nil && state != pb.OrderState_RESOLVED {
+		log.Infof("Out of sync order. Found %s and should be %s\n", state, pb.OrderState_RESOLVED)
+		if isSale {
+			l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+		} else {
+			l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+		}
+
+	}
+}
+
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	l.Lock()
 	defer l.Unlock()
@@ -69,11 +89,13 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		//contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
+			l.cleanupOrderState(true, cb.Txid, output, contract, state, funded, records)
 			continue
 		}
 		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, false)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
+			l.cleanupOrderState(false, cb.Txid, output, contract, state, funded, records)
 			continue
 		}
 	}
