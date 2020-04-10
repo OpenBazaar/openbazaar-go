@@ -195,7 +195,7 @@ class EthPurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != "340000000000000000":
+        if resp["ether"]["inventory"] != "349999999900000000":
             raise TestFailure("EthPurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("EthPurchaseCryptoListingTest - PASS")
