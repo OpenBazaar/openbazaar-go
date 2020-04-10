@@ -43,7 +43,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
             listing_json["metadata"]["coinDivisibility"] = 18
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
-            listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
+            listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -136,7 +136,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         # Check that modified price is different than regular price
         pct_change = round((payment_amount-payment_amount_with_modifier) / payment_amount * -100, 2)
         if pct_change != self.price_modifier:
-            raise TestFailure("EthMarketPriceModifierTest - FAIL: Incorrect price modification: wanted %f but got %f", self.price_modifier, pct_change)
+            raise TestFailure(f"EthMarketPriceModifierTest - FAIL: Incorrect price modification: wanted {self.price_modifier} but got {pct_change}")
 
         print("EthMarketPriceModifierTest - PASS")
 
