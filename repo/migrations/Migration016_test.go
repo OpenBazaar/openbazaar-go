@@ -121,7 +121,7 @@ const postMigration016Config = `{
 		"ETH": {
 			"Type": "API",
 			"API": [
-				"https://rinkeby.infura.io"
+				"https://mainnet.infura.io"
 			],
 			"APITestnet": [
 				"https://rinkeby.infura.io"
