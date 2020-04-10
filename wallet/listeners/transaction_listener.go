@@ -168,7 +168,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 					}
 				} else {
-					if err := l.db.Sales().Put(orderId, *contract, state, false); err != nil {
+					if err := l.db.Sales().Put(orderId, *contract, state, !unseenTx); err != nil {
 						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
 					}
 				}
@@ -212,7 +212,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 					}
 				} else {
-					if err := l.db.Purchases().Put(orderId, *contract, state, false); err != nil {
+					if err := l.db.Purchases().Put(orderId, *contract, state, !unseenTx); err != nil {
 						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
 					}
 				}
