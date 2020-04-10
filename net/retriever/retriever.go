@@ -156,6 +156,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) && !inFlight[p.Addrs[0].String()] {
+			log.Debugf("Looking for pointer [%v] at %v\n", p.ID.Pretty(), p.Addrs)
 			inFlight[p.Addrs[0].String()] = true
 			log.Debugf("Found pointer with location %s", p.Addrs[0].String())
 			// IPFS
@@ -211,12 +212,15 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 		wg.Add(1)
 		go func(pid peer.ID) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*35)
 			defer cancel()
+			time.Sleep(time.Second*15)
 			provs, err := ipfs.GetPointersFromPeer(m.routing, ctx, pid, &k)
 			if err != nil {
+				log.Errorf("Could not get pointers from push node because: %v", err)
 				return
 			}
+			log.Debugf("Successfully queried %s for pointers", pid.Pretty())
 			for _, pi := range provs {
 				peerOut <- *pi
 			}
