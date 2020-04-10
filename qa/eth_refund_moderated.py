@@ -41,7 +41,7 @@ class EthRefundModeratedTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # make charlie a moderator
-        with open('testdata/moderation.json') as listing_file:
+        with open('testdata/v5/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
         r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
@@ -54,13 +54,13 @@ class EthRefundModeratedTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/v5/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/eth_listing.json') as listing_file:
+        with open('testdata/v5/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
@@ -84,7 +84,7 @@ class EthRefundModeratedTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/v5/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["moderator"] = moderatorId
@@ -164,7 +164,7 @@ class EthRefundModeratedTest(OpenBazaarTestFramework):
         if resp["funded"] == False:
             raise TestFailure("EthRefundModeratedTest - FAIL: Alice incorrectly saved as unfunded")
         time.sleep(5)
-        
+
         # alice refund order
         api_url = alice["gateway_url"] + "ob/refund"
         refund = {"orderId": orderId}
@@ -175,7 +175,7 @@ class EthRefundModeratedTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("EthRefundModeratedTest - FAIL: Refund POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
-        
+
         # alice check order refunded correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)

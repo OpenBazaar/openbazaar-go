@@ -105,7 +105,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 
-		fundsReleased := true
+		var (
+			fundsReleased = true
+			unseenTx      = true
+		)
 		for i, r := range records {
 			if util.AreAddressesEqual(input.LinkedAddress.String(), r.Address) {
 				records[i].Spent = true
@@ -113,24 +116,30 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			if records[i].Value.Cmp(big.NewInt(0)) > 0 && !records[i].Spent {
 				fundsReleased = false
 			}
+			if r.Txid == cb.Txid {
+				unseenTx = false
+			}
 		}
 		val := new(big.Int).Mul(&input.Value, big.NewInt(-1))
-		record := &wallet.TransactionRecord{
-			Timestamp: time.Now(),
-			Txid:      cb.Txid,
-			Index:     input.OutpointIndex,
-			Value:     *val,
-			Address:   input.LinkedAddress.String(),
+		if unseenTx {
+			record := &wallet.TransactionRecord{
+				Timestamp: time.Now(),
+				Txid:      cb.Txid,
+				Index:     input.OutpointIndex,
+				Value:     *val,
+				Address:   input.LinkedAddress.String(),
+			}
+			records = append(records, record)
 		}
-		records = append(records, record)
+		records = removeDuplicateRecords(records)
 		if isForSale {
 			err = l.db.Sales().UpdateFunding(orderId, funded, records)
 			if err != nil {
 				log.Errorf("update funding for sale (%s): %s", orderId, err)
 			}
 			// This is a dispute payout. We should set the order state.
-			if len(records) > 0 && fundsReleased {
-				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+			if len(records) > 0 && fundsReleased && contract != nil && contract.Dispute != nil {
+				if contract.DisputeAcceptance == nil && contract.BuyerOrder.BuyerID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
 					accept.Timestamp = ts
@@ -159,7 +168,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 					}
 				} else {
-					if err := l.db.Sales().Put(orderId, *contract, state, false); err != nil {
+					if err := l.db.Sales().Put(orderId, *contract, state, !unseenTx); err != nil {
 						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
 					}
 				}
@@ -169,8 +178,8 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			if err != nil {
 				log.Errorf("update funding for purchase (%s): %s", orderId, err)
 			}
-			if len(records) > 0 && fundsReleased {
-				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
+			if len(records) > 0 && fundsReleased && contract != nil && contract.Dispute != nil {
+				if contract.DisputeAcceptance == nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 					accept := new(pb.DisputeAcceptance)
 					ts, _ := ptypes.TimestampProto(time.Now())
 					accept.Timestamp = ts
@@ -203,7 +212,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						log.Errorf("failed updating order (%s) to RESOLVED: %s", orderId, err.Error())
 					}
 				} else {
-					if err := l.db.Purchases().Put(orderId, *contract, state, false); err != nil {
+					if err := l.db.Purchases().Put(orderId, *contract, state, !unseenTx); err != nil {
 						log.Errorf("failed updating order (%s) with DisputeAcceptance: %s", orderId, err.Error())
 					}
 				}
@@ -213,12 +222,15 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 }
 
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	funding := output.Value
+	var (
+		funding  = output.Value
+		unseenTx = true
+	)
 	for _, r := range records {
-		funding = *new(big.Int).Add(&funding, &r.Value)
-		// If we have already seen this transaction for some reason, just return
-		if r.Txid == txid {
-			return
+		if r.Txid != txid {
+			funding = *new(big.Int).Add(&funding, &r.Value)
+		} else {
+			unseenTx = false
 		}
 	}
 	orderId, err := calcOrderId(contract.BuyerOrder)
@@ -230,7 +242,8 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		log.Error(err)
 		return
 	}
-	if !funded {
+
+	if !funded || (funded && state == pb.OrderState_AWAITING_PAYMENT) {
 		currencyValue, err := repo.NewCurrencyValueWithLookup(order.Payment.BigAmount, order.Payment.AmountCurrency.Code)
 		if err != nil {
 			log.Errorf("Failed parsing CurrencyValue for (%s, %s): %s",
@@ -278,61 +291,68 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		}
 	}
 
-	record := &wallet.TransactionRecord{
-		Timestamp: time.Now(),
-		Txid:      txid,
-		Index:     output.Index,
-		Value:     output.Value,
-		Address:   output.Address.String(),
-	}
-	records = append(records, record)
-	err = l.db.Sales().UpdateFunding(orderId, funded, records)
-	if err != nil {
-		log.Error(err)
-	}
+	if unseenTx {
+		record := &wallet.TransactionRecord{
+			Timestamp: time.Now(),
+			Txid:      txid,
+			Index:     output.Index,
+			Value:     output.Value,
+			Address:   output.Address.String(),
+		}
+		records = removeDuplicateRecords(append(records, record))
+		err = l.db.Sales().UpdateFunding(orderId, funded, records)
+		if err != nil {
+			log.Error(err)
+		}
 
-	// Save tx metadata
-	var thumbnail string
-	var title string
-	if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
-		thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
-		title = contract.VendorListings[0].Item.Title
-	}
-	bumpable := false
-	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
-		bumpable = true
-	}
-	if err := l.db.TxMetadata().Put(repo.Metadata{
-		Txid:       txid,
-		Address:    "",
-		Memo:       title,
-		OrderId:    orderId,
-		Thumbnail:  thumbnail,
-		CanBumpFee: bumpable,
-	}); err != nil {
-		log.Errorf("failed updating tx metadata (%s): %s", txid, err.Error())
+		// Save tx metadata
+		var thumbnail string
+		var title string
+		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
+			title = contract.VendorListings[0].Item.Title
+		}
+		bumpable := false
+		if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+			bumpable = true
+		}
+		if err := l.db.TxMetadata().Put(repo.Metadata{
+			Txid:       txid,
+			Address:    "",
+			Memo:       title,
+			OrderId:    orderId,
+			Thumbnail:  thumbnail,
+			CanBumpFee: bumpable,
+		}); err != nil {
+			log.Errorf("failed updating tx metadata (%s): %s", txid, err.Error())
+		}
 	}
 }
 
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	funding := output.Value
+	var (
+		funding  = output.Value
+		unseenTx = true
+	)
+
 	for _, r := range records {
-		funding = *new(big.Int).Add(&funding, &r.Value)
-		// If we have already seen this transaction for some reason, just return
-		if r.Txid == txid {
-			return
+		if r.Txid != txid {
+			funding = *new(big.Int).Add(&funding, &r.Value)
+		} else {
+			unseenTx = false
 		}
 	}
 	orderId, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return
 	}
+
 	order, err := repo.ToV5Order(contract.BuyerOrder, nil)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	if !funded {
+	if !funded || (funded && state == pb.OrderState_AWAITING_PAYMENT) {
 		requestedAmount, _ := new(big.Int).SetString(order.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
 			log.Debugf("Payment for purchase %s detected", orderId)
@@ -371,17 +391,19 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		}
 	}
 
-	record := &wallet.TransactionRecord{
-		Txid:      txid,
-		Index:     output.Index,
-		Value:     output.Value,
-		Address:   output.Address.String(),
-		Timestamp: time.Now(),
-	}
-	records = append(records, record)
-	err = l.db.Purchases().UpdateFunding(orderId, funded, records)
-	if err != nil {
-		log.Error(err)
+	if unseenTx {
+		record := &wallet.TransactionRecord{
+			Txid:      txid,
+			Index:     output.Index,
+			Value:     output.Value,
+			Address:   output.Address.String(),
+			Timestamp: time.Now(),
+		}
+		records = removeDuplicateRecords(append(records, record))
+		err = l.db.Purchases().UpdateFunding(orderId, funded, records)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 }
 
@@ -446,4 +468,16 @@ func calcOrderId(order *pb.Order) (string, error) {
 		return "", err
 	}
 	return id.B58String(), nil
+}
+
+func removeDuplicateRecords(recs []*wallet.TransactionRecord) []*wallet.TransactionRecord {
+	keys := make(map[string]bool)
+	list := []*wallet.TransactionRecord{}
+	for _, entry := range recs {
+		if _, value := keys[entry.Txid]; !value {
+			keys[entry.Txid] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

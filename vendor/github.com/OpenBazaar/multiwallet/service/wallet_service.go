@@ -554,8 +554,8 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		}
 		if saved.Height != height {
 			cb.Timestamp = saved.Timestamp
-			ws.callbackListeners(cb)
 		}
+		ws.callbackListeners(cb)
 	}
 }
 
