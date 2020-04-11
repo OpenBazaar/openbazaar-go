@@ -15,7 +15,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
         vendor = self.nodes[1]
 
         # post profile for vendor
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/'+ self.vendor_version +'/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = vendor["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
@@ -27,7 +27,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ManageCryptoListingsTest - FAIL: Incorrect listing count: %d", len(resp))
 
         # post listing to vendor
-        with open('testdata/listing_crypto.json') as listing_file:
+        with open('testdata/'+ self.vendor_version +'/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
 
         listing_json["coinType"] = "TETH"

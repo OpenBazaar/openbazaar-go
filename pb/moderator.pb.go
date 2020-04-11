@@ -3,9 +3,11 @@
 
 package pb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -16,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Moderator_Fee_FeeType int32
 
@@ -31,6 +33,7 @@ var Moderator_Fee_FeeType_name = map[int32]string{
 	1: "PERCENTAGE",
 	2: "FIXED_PLUS_PERCENTAGE",
 }
+
 var Moderator_Fee_FeeType_value = map[string]int32{
 	"FIXED":                 0,
 	"PERCENTAGE":            1,
@@ -40,8 +43,9 @@ var Moderator_Fee_FeeType_value = map[string]int32{
 func (x Moderator_Fee_FeeType) String() string {
 	return proto.EnumName(Moderator_Fee_FeeType_name, int32(x))
 }
+
 func (Moderator_Fee_FeeType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_693ca1f6a156447c, []int{0, 0, 0}
+	return fileDescriptor_44f20453d9230215, []int{0, 0, 0}
 }
 
 type Moderator struct {
@@ -59,16 +63,17 @@ func (m *Moderator) Reset()         { *m = Moderator{} }
 func (m *Moderator) String() string { return proto.CompactTextString(m) }
 func (*Moderator) ProtoMessage()    {}
 func (*Moderator) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_693ca1f6a156447c, []int{0}
+	return fileDescriptor_44f20453d9230215, []int{0}
 }
+
 func (m *Moderator) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator.Unmarshal(m, b)
 }
 func (m *Moderator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Moderator.Marshal(b, m, deterministic)
 }
-func (dst *Moderator) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Moderator.Merge(dst, src)
+func (m *Moderator) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator.Merge(m, src)
 }
 func (m *Moderator) XXX_Size() int {
 	return xxx_messageInfo_Moderator.Size(m)
@@ -127,16 +132,17 @@ func (m *Moderator_Fee) Reset()         { *m = Moderator_Fee{} }
 func (m *Moderator_Fee) String() string { return proto.CompactTextString(m) }
 func (*Moderator_Fee) ProtoMessage()    {}
 func (*Moderator_Fee) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_693ca1f6a156447c, []int{0, 0}
+	return fileDescriptor_44f20453d9230215, []int{0, 0}
 }
+
 func (m *Moderator_Fee) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator_Fee.Unmarshal(m, b)
 }
 func (m *Moderator_Fee) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Moderator_Fee.Marshal(b, m, deterministic)
 }
-func (dst *Moderator_Fee) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Moderator_Fee.Merge(dst, src)
+func (m *Moderator_Fee) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator_Fee.Merge(m, src)
 }
 func (m *Moderator_Fee) XXX_Size() int {
 	return xxx_messageInfo_Moderator_Fee.Size(m)
@@ -182,16 +188,17 @@ func (m *Moderator_Price) Reset()         { *m = Moderator_Price{} }
 func (m *Moderator_Price) String() string { return proto.CompactTextString(m) }
 func (*Moderator_Price) ProtoMessage()    {}
 func (*Moderator_Price) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_693ca1f6a156447c, []int{0, 1}
+	return fileDescriptor_44f20453d9230215, []int{0, 1}
 }
+
 func (m *Moderator_Price) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator_Price.Unmarshal(m, b)
 }
 func (m *Moderator_Price) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Moderator_Price.Marshal(b, m, deterministic)
 }
-func (dst *Moderator_Price) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Moderator_Price.Merge(dst, src)
+func (m *Moderator_Price) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator_Price.Merge(m, src)
 }
 func (m *Moderator_Price) XXX_Size() int {
 	return xxx_messageInfo_Moderator_Price.Size(m)
@@ -246,16 +253,17 @@ func (m *DisputeUpdate) Reset()         { *m = DisputeUpdate{} }
 func (m *DisputeUpdate) String() string { return proto.CompactTextString(m) }
 func (*DisputeUpdate) ProtoMessage()    {}
 func (*DisputeUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_693ca1f6a156447c, []int{1}
+	return fileDescriptor_44f20453d9230215, []int{1}
 }
+
 func (m *DisputeUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeUpdate.Unmarshal(m, b)
 }
 func (m *DisputeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisputeUpdate.Marshal(b, m, deterministic)
 }
-func (dst *DisputeUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisputeUpdate.Merge(dst, src)
+func (m *DisputeUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeUpdate.Merge(m, src)
 }
 func (m *DisputeUpdate) XXX_Size() int {
 	return xxx_messageInfo_DisputeUpdate.Size(m)
@@ -295,16 +303,16 @@ func (m *DisputeUpdate) GetSerializedContract() []byte {
 }
 
 func init() {
+	proto.RegisterEnum("Moderator_Fee_FeeType", Moderator_Fee_FeeType_name, Moderator_Fee_FeeType_value)
 	proto.RegisterType((*Moderator)(nil), "Moderator")
 	proto.RegisterType((*Moderator_Fee)(nil), "Moderator.Fee")
 	proto.RegisterType((*Moderator_Price)(nil), "Moderator.Price")
 	proto.RegisterType((*DisputeUpdate)(nil), "DisputeUpdate")
-	proto.RegisterEnum("Moderator_Fee_FeeType", Moderator_Fee_FeeType_name, Moderator_Fee_FeeType_value)
 }
 
-func init() { proto.RegisterFile("moderator.proto", fileDescriptor_moderator_693ca1f6a156447c) }
+func init() { proto.RegisterFile("moderator.proto", fileDescriptor_44f20453d9230215) }
 
-var fileDescriptor_moderator_693ca1f6a156447c = []byte{
+var fileDescriptor_44f20453d9230215 = []byte{
 	// 469 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x92, 0xdb, 0x8b, 0xd3, 0x40,
 	0x14, 0xc6, 0xcd, 0xa5, 0x5b, 0x73, 0xba, 0xdb, 0x2d, 0x23, 0x4a, 0x2c, 0x22, 0xa1, 0x88, 0xf6,

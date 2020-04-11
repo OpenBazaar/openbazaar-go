@@ -1,0 +1,15 @@
+{
+  "orderId": "",
+  "ratings": [
+    {
+      "slug": "",
+      "overall": 4,
+      "quality": 5,
+      "description": 5,
+      "customerService": 4,
+      "deliverySpeed": 3,
+      "review": "I love it!",
+      "anonymous": true
+    }
+  ]
+}
