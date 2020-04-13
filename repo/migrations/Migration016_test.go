@@ -207,7 +207,7 @@ func TestMigration016(t *testing.T) {
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration016Config), "") {
-		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Logf("actual: %s, expected %s", re.ReplaceAllString(string(configBytes), ""), re.ReplaceAllString(string(postMigration016Config), ""))
 		t.Fatal("incorrect post-migration config")
 	}
 
