@@ -167,8 +167,8 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:           "coup",
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
 			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
 		},
 	}
@@ -198,9 +198,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:             &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:            "coup",
-			Discount: &pb.Listing_Coupon_BigPriceDiscount{ BigPriceDiscount: "6000"},
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
+			Discount: &pb.Listing_Coupon_BigPriceDiscount{BigPriceDiscount: "6000"},
 		},
 	}
 
@@ -452,8 +452,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	}
 	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:           "coup",
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
 			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
 		},
 	}
@@ -483,8 +483,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	}
 	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:          &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:         "coup",
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
 			Discount: &pb.Listing_Coupon_BigPriceDiscount{BigPriceDiscount: "6000"},
 		},
 	}

@@ -248,7 +248,7 @@ func TestV4PhysicalGoodDataNormalizesToLatestSchema(t *testing.T) {
 			},
 			Coupons: []*pb.Listing_Coupon{
 				{
-					PriceDiscount: expectedCouponDiscount,
+					Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: expectedCouponDiscount},
 				},
 			},
 		}
