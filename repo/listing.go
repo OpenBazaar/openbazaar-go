@@ -1560,7 +1560,7 @@ func (l *Listing) ValidateListing(testnet bool) (err error) {
 		if priceCurrency, err := AllCurrencies().Lookup(price.Currency.Code.String()); err != nil {
 			return errors.New("invalid pricing currency")
 		} else {
-			if uint(price.Currency.Divisibility) > priceCurrency.Divisibility {
+			if price.Currency.Divisibility > priceCurrency.Divisibility {
 				return errors.New("pricing currency divisibility is too large")
 			}
 		}

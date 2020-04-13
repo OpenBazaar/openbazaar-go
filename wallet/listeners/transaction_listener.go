@@ -56,7 +56,7 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 }
 
 // cleanupOrderState - scan each order to ensure the state in the db matches the state of the contract stored
-func (l *TransactionListener) cleanupOrderState(isSale bool, txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
+func (l *TransactionListener) cleanupOrderState(isSale bool, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 
 	orderId, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
@@ -67,11 +67,13 @@ func (l *TransactionListener) cleanupOrderState(isSale bool, txid string, output
 	if contract.DisputeResolution != nil && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED {
 		log.Infof("Out of sync order. Found %s and should either DECIDED be %s\n", state, pb.OrderState_RESOLVED)
 		if isSale {
-			l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+			err = l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 		} else {
-			l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+			err = l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 		}
-
+		if err != nil {
+			log.Errorf("Error saving new order state: %s", err)
+		}
 	}
 }
 
@@ -95,13 +97,13 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		//contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
-			l.cleanupOrderState(true, cb.Txid, output, contract, state, funded, records)
+			l.cleanupOrderState(true, output, contract, state, funded, records)
 			continue
 		}
 		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, false)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
-			l.cleanupOrderState(false, cb.Txid, output, contract, state, funded, records)
+			l.cleanupOrderState(false, output, contract, state, funded, records)
 			continue
 		}
 	}
