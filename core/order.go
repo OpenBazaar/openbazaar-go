@@ -982,7 +982,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		// calculate base amount
 		if nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
 			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String() {
-			var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), 0)
+			var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), uint(nrl.GetCryptoDivisibility()))
 			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(nrl.GetProtobuf(), item), originDef)
 
 			if priceModifier := nrl.GetPriceModifier(); priceModifier != 0 {
