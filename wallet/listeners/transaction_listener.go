@@ -56,7 +56,7 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 }
 
 // cleanupOrderState - scan each order to ensure the state in the db matches the state of the contract stored
-func (l *TransactionListener) cleanupOrderState(isSale bool, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
+func (l *TransactionListener) cleanupOrderState(isSale bool, contract *pb.RicardianContract, state pb.OrderState) {
 
 	orderId, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
@@ -97,13 +97,13 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		//contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
-			l.cleanupOrderState(true, output, contract, state, funded, records)
+			l.cleanupOrderState(true, contract, state)
 			continue
 		}
 		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, false)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
-			l.cleanupOrderState(false, output, contract, state, funded, records)
+			l.cleanupOrderState(false, contract, state)
 			continue
 		}
 	}
