@@ -494,7 +494,11 @@ func (wallet *ERC20Wallet) Balance() (confirmed, unconfirmed int64) {
 
 // TransactionsFromBlock - Returns a list of transactions for this wallet begining from the specified block
 func (wallet *ERC20Wallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, error) {
-	txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
+	// txns, err := wallet.client.eClient.NormalTxByAddress(util.EnsureCorrectPrefix(wallet.account.Address().String()), startBlock, nil,
+	// 	1, 0, false)
+	contractAddress := wallet.currentdeployAddress.String()
+	accountAddress := util.EnsureCorrectPrefix(wallet.account.Address().String())
+	txns, err := wallet.client.eClient.ERC20Transfers(&contractAddress, &accountAddress, startBlock, nil,
 		1, 0, false)
 	if err != nil {
 		logERC.Error("err fetching transactions : ", err)
@@ -505,9 +509,6 @@ func (wallet *ERC20Wallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, err
 	for _, t := range txns {
 		status := wi.StatusConfirmed
 		prefix := ""
-		if t.IsError != 0 {
-			status = wi.StatusError
-		}
 		if strings.ToLower(t.From) == strings.ToLower(wallet.address.String()) {
 			prefix = "-"
 		}
