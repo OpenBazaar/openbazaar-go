@@ -29,13 +29,13 @@ class EthRejectDirectOfflineTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/v5/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/eth_listing.json') as listing_file:
+        with open('testdata/v5/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
@@ -67,7 +67,7 @@ class EthRejectDirectOfflineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/v5/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["paymentCoin"] = "T" + self.cointype

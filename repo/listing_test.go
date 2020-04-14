@@ -248,7 +248,7 @@ func TestV4PhysicalGoodDataNormalizesToLatestSchema(t *testing.T) {
 			},
 			Coupons: []*pb.Listing_Coupon{
 				{
-					PriceDiscount: expectedCouponDiscount,
+					Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: expectedCouponDiscount},
 				},
 			},
 		}
@@ -307,7 +307,7 @@ func TestV4PhysicalGoodDataNormalizesToLatestSchema(t *testing.T) {
 	if c := nlp.Coupons[0]; c == nil {
 		t.Error("expected coupon to be present, but was nil")
 	} else {
-		if cd := c.BigPriceDiscount; cd != fmt.Sprintf("%d", expectedCouponDiscount) {
+		if cd := c.GetBigPriceDiscount(); cd != fmt.Sprintf("%d", expectedCouponDiscount) {
 			t.Errorf("expected coupon discount to be (%d), but was (%s)", expectedCouponDiscount, cd)
 		}
 	}

@@ -29,13 +29,13 @@ class EthFulfillDirectOnlineTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # post profile for alice
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/v5/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = alice["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/eth_listing.json') as listing_file:
+        with open('testdata/v5/eth_listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         listing_json["item"]["priceCurrency"]["code"] = "T" + self.cointype
         listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
@@ -60,7 +60,7 @@ class EthFulfillDirectOnlineTest(OpenBazaarTestFramework):
         listingId = resp[0]["hash"]
 
         # bob send order
-        with open('testdata/order_direct.json') as order_file:
+        with open('testdata/v5/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["paymentCoin"] = "T" + self.cointype
@@ -137,9 +137,9 @@ class EthFulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("EthFulfillDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("EthFulfillDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice send order fulfillment
-        with open('testdata/fulfillment.json') as fulfillment_file:
+        with open('testdata/v5/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["orderId"] = orderId
         fulfillment_json["slug"] = slug
