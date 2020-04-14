@@ -101,6 +101,8 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		feeLevel = wallet.NORMAL
 	}
 
+	log.Info("before wallet spend : amt - ", amt.String(), "  addr : ", addr.String())
+	log.Info("fee level : ", feeLevel, "  orderID  ", args.OrderID, " spend all ", args.SpendAll)
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {

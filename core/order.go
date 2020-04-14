@@ -137,24 +137,30 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 	}
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
+		log.Info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
+		log.Info("after prepareModeratedOrderContract, err: ", err)
 		if err != nil {
 			return "", "", retCurrency, false, err
 		}
 
 		contract, err = n.SignOrder(contract)
+		log.Info("after signorder  : ", err)
 		if err != nil {
 			return "", "", retCurrency, false, err
 		}
 
 		// Send to order vendor
 		merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
+		log.Info("after send order, err : ", err)
 		if err != nil {
 			id, addr, amt, err := processOfflineModeratedOrder(n, contract)
 			retCurrency.Amount = &amt
 			return id, addr, retCurrency, false, err
 		}
+		log.Info("ven dor is online ................")
 		id, addr, amt, f, err := processOnlineModeratedOrder(merchantResponse, n, contract)
+		log.Info("after processOnlineModeratedOrder, err : ", err)
 		retCurrency.Amount = &amt
 		return id, addr, retCurrency, f, err
 
@@ -470,14 +476,17 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 	}
 	// Vendor responded
 	if resp.MessageType == pb.Message_ERROR {
+		log.Info("ret 1111111111111111111111")
 		return "", "", *big.NewInt(0), false, extractErrorMessage(resp)
 	}
 	if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
+		log.Info("ret 2222222222222222222222")
 		return "", "", *big.NewInt(0), false, errors.New("vendor responded to the order with an incorrect message type")
 	}
 	rc := new(pb.RicardianContract)
 	err = proto.Unmarshal(resp.Payload.Value, rc)
 	if err != nil {
+		log.Info("ret 33333333333333333333333  ", err)
 		return "", "", *big.NewInt(0), false, errors.New("error parsing the vendor's response")
 	}
 	contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
@@ -487,24 +496,30 @@ func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *
 		}
 	}
 	err = n.ValidateOrderConfirmation(contract, true)
+	log.Info("ret 444444444444444444444444444  : ", err)
 	if err != nil {
 		return "", "", *big.NewInt(0), false, err
 	}
 	if contract.VendorOrderConfirmation.PaymentAddress != contract.BuyerOrder.Payment.Address {
+		log.Info("ret 555555555555555555555555555")
 		return "", "", *big.NewInt(0), false, errors.New("vendor responded with incorrect multisig address")
 	}
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
+		log.Info("ret 6666666666666666666666666  : ", err)
 		return "", "", *big.NewInt(0), false, err
 	}
 	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 	if err != nil {
+		log.Info("ret 777777777777777777777777777   : ", err)
 		return "", "", *big.NewInt(0), false, err
 	}
 	total, ok := new(big.Int).SetString(v5Order.Payment.BigAmount, 10)
 	if !ok {
+		log.Info("ret 88888888888888888888888888")
 		return "", "", *big.NewInt(0), false, errors.New("invalid payment amount")
 	}
+	log.Info("ret last : ", orderID, "   ", contract.VendorOrderConfirmation.PaymentAddress, "   ", total.String())
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, *total, true, nil
 }
 

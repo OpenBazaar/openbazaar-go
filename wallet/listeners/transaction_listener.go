@@ -55,11 +55,13 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 	return contract, state, funded, records, err
 }
 
+// OnTransactionReceived  - the beating heart of ob-go order processing
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	log.Info("Transaction received", cb.Txid, cb.Height)
 
 	l.Lock()
 	defer l.Unlock()
+	log.Info("txn outputs: ", cb.Outputs)
 	for _, output := range cb.Outputs {
 		if output.Address == nil {
 			continue
@@ -78,6 +80,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, false)
+		log.Info("lets see if this is a a purchase ...", err == nil)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
 			continue
@@ -315,7 +318,9 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 }
 
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
+	log.Info("in process purchase ")
 	funding := output.Value
+	log.Info("111 funding  : ", funding.String(), "   funded   : ", funded)
 	for _, r := range records {
 		funding = *new(big.Int).Add(&funding, &r.Value)
 		// If we have already seen this transaction for some reason, just return
@@ -323,7 +328,9 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			return
 		}
 	}
-	orderId, err := calcOrderId(contract.BuyerOrder)
+	log.Info("222 funding  : ", funding.String())
+	orderID, err := calcOrderId(contract.BuyerOrder)
+	log.Info("after caclorder id, err : ", err)
 	if err != nil {
 		return
 	}
@@ -335,15 +342,15 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 	if !funded {
 		requestedAmount, _ := new(big.Int).SetString(order.Payment.BigAmount, 10)
 		if funding.Cmp(requestedAmount) >= 0 {
-			log.Debugf("Payment for purchase %s detected", orderId)
+			log.Debugf("Payment for purchase %s detected", orderID)
 			funded = true
 			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
-				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false); err != nil {
-					log.Errorf("failed updating order (%s) to AWAITING_FULFILLMENT: %s", orderId, err.Error())
+				if err := l.db.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_FULFILLMENT, false); err != nil {
+					log.Errorf("failed updating order (%s) to AWAITING_FULFILLMENT: %s", orderID, err.Error())
 				}
 			} else if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation == nil { // Unconfirmed go into PENDING
-				if err := l.db.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false); err != nil {
-					log.Errorf("failed updating order (%s) to PENDING: %s", orderId, err.Error())
+				if err := l.db.Purchases().Put(orderID, *contract, pb.OrderState_PENDING, false); err != nil {
+					log.Errorf("failed updating order (%s) to PENDING: %s", orderID, err.Error())
 				}
 			}
 		}
@@ -360,7 +367,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		n := repo.PaymentNotification{
 			ID:           repo.NewNotificationID(),
 			Type:         "payment",
-			OrderId:      orderId,
+			OrderId:      orderID,
 			FundingTotal: cv,
 			CoinType:     order.Payment.AmountCurrency.Code,
 		}
@@ -379,7 +386,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 		Timestamp: time.Now(),
 	}
 	records = append(records, record)
-	err = l.db.Purchases().UpdateFunding(orderId, funded, records)
+	err = l.db.Purchases().UpdateFunding(orderID, funded, records)
 	if err != nil {
 		log.Error(err)
 	}

@@ -228,6 +228,7 @@ func (wallet *ERC20Wallet) Start() {
 	doneBalanceTickerERC20 = make(chan bool)
 	// start the ticker to check for pending txn rcpts
 	go func(wallet *ERC20Wallet) {
+		logERC.Info("txn check ticker .....")
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
@@ -236,12 +237,15 @@ func (wallet *ERC20Wallet) Start() {
 			case <-done:
 				return
 			case <-ticker.C:
+				logERC.Info("tick  tick .....")
 				// get the pending txns
 				txns, err := wallet.db.Txns().GetAll(true)
+				logERC.Info("do we have txns .... ", txns, "    ", err)
 				if err != nil {
 					continue
 				}
 				for _, txn := range txns {
+					logERC.Info("lets qqqqqqqqqqqq ", txn.Txid)
 					hash := common.HexToHash(txn.Txid)
 					go func(txnData []byte) {
 						_, err := wallet.checkTxnRcpt(&hash, txnData)
@@ -576,6 +580,7 @@ func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	// 	WatchOnly: false,
 	// 	Bytes:     tx.Data(),
 	// }, nil
+	logERC.Info("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 	tx, _, err := wallet.client.GetTransaction(common.HexToHash(util.EnsureCorrectPrefix(txid.String())))
 	if err != nil {
 		return wi.Txn{}, err
@@ -591,11 +596,15 @@ func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 		return wi.Txn{}, err
 	}
 
+	logERC.Info("AAAAAAAAAa111111111111")
+
 	//value := tx.Value().String()
 	fromAddr := msg.From()
 	toAddr := msg.To()
 	valueSub := big.NewInt(5000000)
 	value := tx.Value()
+
+	logERC.Info(hexutil.Encode(msg.Data()))
 
 	if strings.HasPrefix(hexutil.Encode(msg.Data()), "0xa9059cbb") {
 		value = big.NewInt(0).SetBytes(msg.Data()[36:])
@@ -604,6 +613,8 @@ func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 		value = big.NewInt(0).SetBytes(b[len(b)-(3*32) : len(b)-(2*32)])
 		valueSub = value
 	}
+
+	logERC.Info(value.String())
 
 	if tx.To().String() == wallet.currentdeployAddress.String() {
 		toAddr = wallet.address.address
@@ -681,6 +692,7 @@ func (wallet *ERC20Wallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 
 // Spend - Send ether to an external wallet
 func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+	logERC.Info(",,, in erc20 spend ..... ", amount.String(), "  ", addr.String(), referenceID)
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
@@ -703,6 +715,7 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 		key := addrEth.Bytes()
 		redeemScript := []byte{}
 
+		logERC.Info("if this a moderated or disputed order, then it is a script address .... ")
 		for _, script := range scripts {
 			if bytes.Equal(key, script[:common.AddressLength]) {
 				isScript = true
@@ -710,6 +723,8 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 				break
 			}
 		}
+
+		logERC.Info("is this a script : ", isScript)
 
 		if isScript {
 			ethScript, err := DeserializeEthScript(redeemScript)
@@ -721,6 +736,7 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 				logERC.Error(err.Error())
 			}
 			addrScrHash := common.HexToAddress(scrHash)
+			logERC.Info("addrScrHash  : ", addrScrHash.String())
 			actualRecipient = EthAddress{address: &addrScrHash} //EthAddress{address: &ethScript.Seller} //EthAddress{address: &addrScrHash}
 			hash, _, err = wallet.callAddTokenTransaction(ethScript, &amount, feeLevel)
 			if err != nil {
@@ -737,8 +753,10 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 			return nil, err
 		}
 
+		logERC.Info("we have the hash here : ", hash.String())
 		// txn is pending
 		nonce, err := wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
+		logERC.Info("after get nonce  ", nonce, "    ", err)
 		if err == nil {
 			data, err := SerializePendingTxn(PendingTxn{
 				TxnID:     hash,
@@ -758,12 +776,15 @@ func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel 
 		}
 	}
 
+	logERC.Info("almost near  ... ", err)
+
 	if err == nil {
 		h, err = util.CreateChainHash(hash.Hex())
 		if err == nil {
 			wallet.invokeTxnCB(h.String(), &amount)
 		}
 	}
+	logERC.Info("before return : ", h, "    ", err)
 	return h, err
 }
 
@@ -915,23 +936,28 @@ func (wallet *ERC20Wallet) AssociateTransactionWithOrder(txnCB wi.TransactionCal
 
 // checkTxnRcpt check the txn rcpt status
 func (wallet *ERC20Wallet) checkTxnRcpt(hash *common.Hash, data []byte) (*common.Hash, error) {
+	logERC.Info("in chk txn rcpt .... ", hash.String())
 	var rcpt *types.Receipt
 	pTxn, err := DeserializePendingTxn(data)
+	logERC.Info("after deserializing data   : ", err)
 	if err != nil {
 		return nil, err
 	}
 
 	rcpt, err = wallet.client.TransactionReceipt(context.Background(), *hash)
+	logERC.Info("after TransactionReceipt  ", rcpt, "    ", err)
 	if err != nil {
 		logERC.Infof("fetching txn rcpt: %v", err)
 	}
 
 	if rcpt != nil {
+		logERC.Info("rcpt is not nil .... status : ", rcpt.Status)
 		// good. so the txn has been processed but we have to account for failed
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
 			chash, err := util.CreateChainHash((*hash).Hex())
+			logERC.Info("after create chain hash  : ", chash.String(), "   ", err)
 			if err != nil {
 				return nil, err
 			}
@@ -939,6 +965,7 @@ func (wallet *ERC20Wallet) checkTxnRcpt(hash *common.Hash, data []byte) (*common
 			if err != nil {
 				logERC.Errorf("err deleting the pending txn : %v", err)
 			}
+			logERC.Info("amount  : ", pTxn.Amount)
 			n := new(big.Int)
 			n, _ = n.SetString(pTxn.Amount, 10)
 			toAddr := common.HexToAddress(pTxn.To)
