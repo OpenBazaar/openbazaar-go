@@ -119,9 +119,9 @@ func NewListing(slug string) *pb.Listing {
 		},
 		Coupons: []*pb.Listing_Coupon{
 			{
-				Title:            "Insider's Discount",
-				Code:             &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
-				BigPriceDiscount: "5",
+				Title:    "Insider's Discount",
+				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				Discount: &pb.Listing_Coupon_BigPriceDiscount{BigPriceDiscount: "5"},
 			},
 		},
 	}

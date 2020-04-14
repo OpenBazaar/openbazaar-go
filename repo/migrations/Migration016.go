@@ -84,7 +84,7 @@ func migration016DefaultWalletConfig() *Migration016WalletsConfig {
 		},
 		ETH: &migration016CoinConfig{
 			Type:             "API",
-			APIPool:          []string{"https://rinkeby.infura.io"},
+			APIPool:          []string{"https://mainnet.infura.io"},
 			APITestnetPool:   []string{"https://rinkeby.infura.io"},
 			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    7,

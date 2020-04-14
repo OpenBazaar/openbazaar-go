@@ -108,6 +108,7 @@ func (am01) Up(repoPath, dbPassword string, testnet bool) error {
 		return errors.New("invalid config: invalid ETH Wallet")
 	}
 
+	ethWalletCfg["API"] = []string{"https://mainnet.infura.io"}
 	ethWalletCfg["APIPool"] = []string{"https://mainnet.infura.io"}
 	ethWalletCfg["APITestnetPool"] = []string{"https://rinkeby.infura.io"}
 	ethWalletCfg["WalletOptions"] = map[string]interface{}{

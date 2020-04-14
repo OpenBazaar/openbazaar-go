@@ -84,6 +84,9 @@ const postAM01Config = `{
 			]
 	  },
 	  "ETH": {
+			"API": [
+				"https://mainnet.infura.io"
+			],
 			"APIPool": [
 				"https://mainnet.infura.io"
 			],
@@ -166,6 +169,7 @@ func TestAM01(t *testing.T) {
 	w := config["Wallets"].(map[string]interface{})
 	eth := w["ETH"].(map[string]interface{})
 
+	AM01AssertAPI(t, eth["API"], "https://mainnet.infura.io")
 	AM01AssertAPI(t, eth["APIPool"], "https://mainnet.infura.io")
 	AM01AssertAPI(t, eth["APITestnetPool"], "https://rinkeby.infura.io")
 

@@ -167,9 +167,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:           "coup",
-			PercentDiscount: 10,
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
+			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
 		},
 	}
 
@@ -198,9 +198,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:             &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:            "coup",
-			BigPriceDiscount: "6000",
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
+			Discount: &pb.Listing_Coupon_BigPriceDiscount{BigPriceDiscount: "6000"},
 		},
 	}
 
@@ -452,9 +452,9 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	}
 	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:            &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:           "coup",
-			PercentDiscount: 10,
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
+			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
 		},
 	}
 
@@ -483,9 +483,9 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	}
 	v4Contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:          &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
-			Title:         "coup",
-			PriceDiscount: 6000,
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
+			Title:    "coup",
+			Discount: &pb.Listing_Coupon_BigPriceDiscount{BigPriceDiscount: "6000"},
 		},
 	}
 
@@ -503,8 +503,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total.Int64() != 69000 {
-		t.Errorf("Calculated wrong order total. Wanted 69000, got %d", total.Int64())
+	if total.Int64() != 75000 {
+		t.Errorf("Calculated wrong order total. Wanted 75000, got %d", total.Int64())
 	}
 
 	// Test with tax no tax shipping
@@ -529,8 +529,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total.Int64() != 71200 {
-		t.Errorf("Calculated wrong order total. Wanted 71200, got %d", total.Int64())
+	if total.Int64() != 77500 {
+		t.Errorf("Calculated wrong order total. Wanted 77500, got %d", total.Int64())
 	}
 
 	// Test with tax with tax shipping
@@ -555,8 +555,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total.Int64() != 72450 {
-		t.Fatalf("Calculated wrong order total. Wanted 72450, got %d", total.Int64())
+	if total.Int64() != 78750 {
+		t.Fatalf("Calculated wrong order total. Wanted 78750, got %d", total.Int64())
 	}
 
 	// Test local pickup
@@ -575,8 +575,8 @@ func TestOpenBazaarNode_CalculateOrderTotalWithV4Schema(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total.Int64() != 46200 {
-		t.Errorf("Calculated wrong order total. Wanted 46200, got %d", total.Int64())
+	if total.Int64() != 52500 {
+		t.Errorf("Calculated wrong order total. Wanted 52500, got %d", total.Int64())
 	}
 }
 

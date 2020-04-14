@@ -31,19 +31,19 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # post profile for vendor
-        with open('testdata/profile.json') as profile_file:
+        with open('testdata/v5/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
         api_url = vendor["gateway_url"] + "ob/profile"
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listings to vendor
-        with open('testdata/eth_listing_crypto.json') as listing_file:
+        with open('testdata/v5/eth_listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
             listing_json["metadata"]["coinType"] = "TETH"
             listing_json["metadata"]["coinDivisibility"] = 18
             listing_json["metadata"]["acceptedCurrencies"] = ["T" + self.cointype]
             listing_json_with_modifier = deepcopy(listing_json)
-            listing_json_with_modifier["metadata"]["priceModifier"] = self.price_modifier
+            listing_json_with_modifier["item"]["priceModifier"] = self.price_modifier
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -103,7 +103,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
             raise TestFailure("EthMarketPriceModifierTest - FAIL: Listing doesn't include priceModifier")
 
         # buyer send orders
-        with open('testdata/order_crypto.json') as order_file:
+        with open('testdata/v5/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id
         order_json["paymentCoin"] = "T" + self.cointype
@@ -118,7 +118,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         payment_address = resp["paymentAddress"]
         payment_amount = int(resp["amount"]["amount"])
 
-        with open('testdata/order_crypto.json') as order_file:
+        with open('testdata/v5/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listing_id_with_modifier
         order_json["paymentCoin"] = "T" + self.cointype
@@ -136,7 +136,7 @@ class EthMarketPriceModifierTest(OpenBazaarTestFramework):
         # Check that modified price is different than regular price
         pct_change = round((payment_amount-payment_amount_with_modifier) / payment_amount * -100, 2)
         if pct_change != self.price_modifier:
-            raise TestFailure("EthMarketPriceModifierTest - FAIL: Incorrect price modification: wanted %f but got %f", self.price_modifier, pct_change)
+            raise TestFailure(f"EthMarketPriceModifierTest - FAIL: Incorrect price modification: wanted {self.price_modifier} but got {pct_change}")
 
         print("EthMarketPriceModifierTest - PASS")
 
