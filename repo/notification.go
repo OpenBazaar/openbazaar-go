@@ -5,6 +5,7 @@ import (
 	"encoding/json" //"errors"
 	"fmt"
 	mh "gx/ipfs/QmerPMzPk1mJVowm8KgmoknWa4yCYvvugMPsgWmDNUvDLW/go-multihash"
+	"math/big"
 	"time"
 )
 
@@ -313,7 +314,27 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 	case NotifierTypeOrderNewNotification:
 		var notifier = OrderNotification{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
-			return err
+			notifierLegacy := OrderNotificationV4{}
+			if err2 := json.Unmarshal(payload.NotifierData, &notifierLegacy); err2 != nil {
+				return err2
+			}
+			notifier.OrderId = notifierLegacy.OrderId
+			notifier.BuyerHandle = notifierLegacy.BuyerHandle
+			notifier.BuyerID = notifierLegacy.BuyerID
+			notifier.ID = notifierLegacy.ID
+			notifier.Price = &CurrencyValue{
+				Amount: new(big.Int).SetUint64(notifierLegacy.Price.Amount),
+				Currency: CurrencyDefinition{
+					Code:         CurrencyCode(notifierLegacy.Price.CurrencyCode),
+					Divisibility: uint(notifierLegacy.Price.CoinDivisibility),
+				},
+			}
+			notifier.PriceModifier = notifierLegacy.PriceModifier
+			notifier.Slug = notifierLegacy.Slug
+			notifier.Type = notifierLegacy.Type
+			notifier.ListingType = notifierLegacy.ListingType
+			notifier.Thumbnail = notifierLegacy.Thumbnail
+			notifier.Title = notifierLegacy.Title
 		}
 		n.NotifierData = notifier
 	case NotifierTypePaymentNotification:
@@ -406,6 +427,27 @@ type OrderNotification struct {
 	ListingType   string           `json:"listingType"`
 	OrderId       string           `json:"orderId"`
 	Price         *CurrencyValue   `json:"price"`
+	PriceModifier float32          `json:"priceModifier"`
+	Slug          string           `json:"slug"`
+	Thumbnail     Thumbnail        `json:"thumbnail"`
+	Title         string           `json:"title"`
+	Type          NotificationType `json:"type"`
+}
+
+type ListingPrice struct {
+	Amount           uint64  `json:"amount"`
+	CurrencyCode     string  `json:"currencyCode"`
+	PriceModifier    float32 `json:"priceModifier"`
+	CoinDivisibility uint32  `json:"coinDivisibility"`
+}
+
+type OrderNotificationV4 struct {
+	BuyerHandle   string           `json:"buyerHandle"`
+	BuyerID       string           `json:"buyerId"`
+	ID            string           `json:"notificationId"`
+	ListingType   string           `json:"listingType"`
+	OrderId       string           `json:"orderId"`
+	Price         ListingPrice     `json:"price"`
 	PriceModifier float32          `json:"priceModifier"`
 	Slug          string           `json:"slug"`
 	Thumbnail     Thumbnail        `json:"thumbnail"`
