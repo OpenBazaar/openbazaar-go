@@ -75,6 +75,18 @@ func (l *TransactionListener) cleanupOrderState(isSale bool, contract *pb.Ricard
 			log.Errorf("Error saving new order state: %s", err)
 		}
 	}
+
+	if contract.DisputeAcceptance != nil && state == pb.OrderState_FULFILLED {
+		log.Infof("Out of sync order. Found %s and should be %s\n", state, pb.OrderState_DECIDED)
+		if isSale {
+			err = l.db.Sales().Put(orderId, *contract, pb.OrderState_DECIDED, false)
+		} else {
+			err = l.db.Purchases().Put(orderId, *contract, pb.OrderState_DECIDED, false)
+		}
+		if err != nil {
+			log.Errorf("Error saving new order state: %s", err)
+		}
+	}
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
