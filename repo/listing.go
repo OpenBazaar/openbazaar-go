@@ -271,6 +271,13 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 			}
 		}
 	}
+
+	for _, s := range sl.Listing.Item.Skus {
+		if s.BigSurcharge == "" {
+			s.BigSurcharge = "0"
+		}
+	}
+
 	return sl, nil
 }
 
