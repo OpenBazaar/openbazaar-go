@@ -542,9 +542,30 @@ func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, 
 		if strings.ToLower(t.From) == strings.ToLower(wallet.address.String()) {
 			prefix = "-"
 		}
+
+		val := t.Value.Int().String()
+
+		if val == "0" {	// Internal Transaction
+			internalTxns, err := wallet.client.eClient.InternalTxByAddress(t.To, &t.BlockNumber, &t.BlockNumber, 1, 0, false)
+			if err != nil && len(unconf) == 0 {
+				log.Errorf("Transaction Errored: %v\n", err)
+				continue
+			}
+			intVal, _ := new(big.Int).SetString("0", 10)
+			for _, v := range internalTxns {
+				fmt.Println(v.From, v.To, v.Value)
+				if v.To == t.From {
+					intVal = new(big.Int).Add(intVal, v.Value.Int())
+				}
+			}
+			val = intVal.String()
+		} else {
+			val = prefix + val
+		}
+
 		tnew := wi.Txn{
 			Txid:          util.EnsureCorrectPrefix(t.Hash),
-			Value:         prefix + t.Value.Int().String(),
+			Value:         val,
 			Height:        int32(t.BlockNumber),
 			Timestamp:     t.TimeStamp.Time(),
 			WatchOnly:     false,
