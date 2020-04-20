@@ -641,6 +641,13 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 			}
 		}
 	}
+
+	for _, s := range sl.Listing.Item.Skus {
+		if s.BigSurcharge == "" {
+			s.BigSurcharge = "0"
+		}
+	}
+
 	return sl, nil
 }
 
