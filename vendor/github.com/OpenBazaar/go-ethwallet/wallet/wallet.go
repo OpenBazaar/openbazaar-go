@@ -545,8 +545,7 @@ func (wallet *EthereumWallet) TransactionsFromBlock(startBlock *int) ([]wi.Txn, 
 
 		val := t.Value.Int().String()
 
-		if val == "0" {
-			fmt.Printf("VALUE: %s\n", t.Value.Int().String())
+		if val == "0" {	// Internal Transaction
 			internalTxns, err := wallet.client.eClient.InternalTxByAddress(t.To, &t.BlockNumber, &t.BlockNumber, 1, 0, false)
 			if err != nil && len(unconf) == 0 {
 				log.Errorf("Transaction Errored: %v\n", err)
