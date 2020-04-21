@@ -169,7 +169,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 		}
 		log.Debugf("%s respone: %v", endpoint, resp)
 	}()
-	
+
 	n.seedLock.Unlock()
 	n.InitalPublishComplete = true
 	go n.publish(rootHash)
