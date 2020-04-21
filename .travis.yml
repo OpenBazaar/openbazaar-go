@@ -8,7 +8,7 @@ env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
   - go get -u github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/tcnksm/ghr
-  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b $(go env GOPATH)/bin latest
 install:
   - echo "No external dependencies required. Skipping travis default library dependency setup to use vendors..."
 script:
