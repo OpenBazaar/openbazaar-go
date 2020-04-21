@@ -159,17 +159,26 @@ func (n *OpenBazaarNode) SeedNode() error {
 	n.RootHash = rootHash
 
 	go func() {
-		// Ping search endpoint with published hash
+		// Update search endpoint with published hash
 		peerId, _ := n.GetNodeID()
-		endpoint := fmt.Sprintf("https://search.ob1.io/ping/%s/%s", peerId.PeerID, rootHash)
+		endpoint := fmt.Sprintf("https://search.ob1.io/update/%s/%s", peerId.PeerID, rootHash)
 		log.Infof("Publishing new rootHash to: %s\n", endpoint)
-		resp, err := http.Get(endpoint)
-		if err != nil {
-			log.Errorf("Search Ping did not succeed. %v\n", err)
+
+		var client *http.Client
+		if n.TorDialer != nil {
+			tbTransport := &http.Transport{Dial: n.TorDialer.Dial}
+			client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+		} else {
+			client = &http.Client{Timeout: time.Second * 30}
 		}
-		log.Debugf("%s respone: %v", endpoint, resp)
+
+		resp, err := client.Get(endpoint)
+		if err != nil {
+			log.Errorf("Search update did not succeed. %v\n", err)
+		}
+		log.Debugf("%s response: %v", endpoint, resp)
 	}()
-	
+
 	n.seedLock.Unlock()
 	n.InitalPublishComplete = true
 	go n.publish(rootHash)
