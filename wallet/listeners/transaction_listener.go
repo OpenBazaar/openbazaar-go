@@ -76,12 +76,12 @@ func (l *TransactionListener) cleanupOrderState(isSale bool, contract *pb.Ricard
 		}
 	}
 
-	if contract.DisputeAcceptance != nil && state == pb.OrderState_FULFILLED {
-		log.Infof("Out of sync order. Found %s and should be %s\n", state, pb.OrderState_DECIDED)
+	if contract.DisputeAcceptance != nil && state == pb.OrderState_DISPUTED {
+		log.Infof("Out of sync order. Found %s and should be %s\n", state, pb.OrderState_RESOLVED)
 		if isSale {
-			err = l.db.Sales().Put(orderId, *contract, pb.OrderState_DECIDED, false)
+			err = l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 		} else {
-			err = l.db.Purchases().Put(orderId, *contract, pb.OrderState_DECIDED, false)
+			err = l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 		}
 		if err != nil {
 			log.Errorf("Error saving new order state: %s", err)
