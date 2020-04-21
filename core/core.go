@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"path"
 	"sync"
 	"time"
@@ -156,6 +157,19 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	n.RootHash = rootHash
+
+	go func() {
+		// Ping search endpoint with published hash
+		peerId, _ := n.GetNodeID()
+		endpoint := fmt.Sprintf("https://search.ob1.io/ping/%s/%s", peerId.PeerID, rootHash)
+		log.Infof("Publishing new rootHash to: %s\n", endpoint)
+		resp, err := http.Get(endpoint)
+		if err != nil {
+			log.Errorf("Search Ping did not succeed. %v\n", err)
+		}
+		log.Debugf("%s respone: %v", endpoint, resp)
+	}()
+	
 	n.seedLock.Unlock()
 	n.InitalPublishComplete = true
 	go n.publish(rootHash)
