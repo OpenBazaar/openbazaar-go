@@ -185,6 +185,18 @@ func UpdateListing(r []byte, isTestnet bool, dstore *Datastore, repoPath string)
 	if err != nil {
 		return Listing{}, err
 	}
+	skus := ld.Item.Skus
+	for _, sku := range skus {
+		if sku.BigSurcharge == "" {
+			sku.BigSurcharge = "0"
+		}
+		if sku.BigQuantity == "" {
+			sku.BigQuantity = "0"
+		}
+	}
+
+	ld.Item.Skus = skus
+
 	slug := ld.Slug
 	exists, err := listingExists(slug, repoPath, isTestnet)
 	if err != nil {
