@@ -1,9 +1,10 @@
 package repo
 
 import (
+	"math/big"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	"math/big"
 )
 
 // ToV5Order scans through the order looking for any deprecated fields and turns them into their v5 counterpart.
@@ -35,6 +36,10 @@ func ToV5Order(order *pb.Order, lookupFunc func(currencyCode string) (CurrencyDe
 		newOrder.Payment.Amount = 0
 	}
 
+	if order.Payment.AmountCurrency == nil && order.Payment.Coin == "" {
+		order.Payment.Coin = "BTC"
+	}
+
 	if order.Payment.Coin != "" && order.Payment.AmountCurrency == nil {
 		def, err := lookupFunc(order.Payment.Coin)
 		if err != nil {
@@ -46,5 +51,6 @@ func ToV5Order(order *pb.Order, lookupFunc func(currencyCode string) (CurrencyDe
 		}
 		newOrder.Payment.Coin = ""
 	}
+
 	return newOrder, nil
 }

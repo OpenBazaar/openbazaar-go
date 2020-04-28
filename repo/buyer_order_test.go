@@ -1,9 +1,10 @@
 package repo
 
 import (
+	"testing"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"testing"
 )
 
 func TestToV5Order(t *testing.T) {
@@ -22,7 +23,7 @@ func TestToV5Order(t *testing.T) {
 				RefundFee: 1000,
 				Payment:   &pb.Order_Payment{},
 			},
-			expected: `{"payment":{"method":"ADDRESS_REQUEST"},"bigRefundFee":"1000"}`,
+			expected: `{"payment":{"method":"ADDRESS_REQUEST","amountCurrency":{"code":"BTC","divisibility":8}},"bigRefundFee":"1000"}`,
 		},
 		{
 			name: "item quantity test",
@@ -34,7 +35,7 @@ func TestToV5Order(t *testing.T) {
 				},
 				Payment: &pb.Order_Payment{},
 			},
-			expected: `{"items":[{"bigQuantity":"19"}],"payment":{"method":"ADDRESS_REQUEST"}}`,
+			expected: `{"items":[{"bigQuantity":"19"}],"payment":{"method":"ADDRESS_REQUEST","amountCurrency":{"code":"BTC","divisibility":8}}}`,
 		},
 		{
 			name: "item quantity64 test",
@@ -46,7 +47,7 @@ func TestToV5Order(t *testing.T) {
 				},
 				Payment: &pb.Order_Payment{},
 			},
-			expected: `{"items":[{"bigQuantity":"19"}],"payment":{"method":"ADDRESS_REQUEST"}}`,
+			expected: `{"items":[{"bigQuantity":"19"}],"payment":{"method":"ADDRESS_REQUEST","amountCurrency":{"code":"BTC","divisibility":8}}}`,
 		},
 		{
 			name: "payment amount test",
@@ -55,7 +56,7 @@ func TestToV5Order(t *testing.T) {
 					Amount: 2000,
 				},
 			},
-			expected: `{"payment":{"method":"ADDRESS_REQUEST","bigAmount":"2000"}}`,
+			expected: `{"payment":{"method":"ADDRESS_REQUEST","bigAmount":"2000","amountCurrency":{"code":"BTC","divisibility":8}}}`,
 		},
 		{
 			name: "payment amount currency",
@@ -78,7 +79,6 @@ func TestToV5Order(t *testing.T) {
 		if err != nil {
 			t.Errorf("Test %s marshalling failed: %s", test.name, err)
 		}
-
 		if out != test.expected {
 			t.Errorf("Test %s incorrect output: Expected %s, got %s", test.name, test.expected, out)
 		}
