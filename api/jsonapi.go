@@ -1621,6 +1621,10 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	order, _ := i.node.GetOrder(conf.OrderID)
+	v5contract := order.Contract
+
 	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1628,7 +1632,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	lookupCoin := v5contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, conf.OrderID)
@@ -1776,7 +1780,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
+	_, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1787,14 +1791,17 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	order, _ := i.node.GetOrder(can.OrderID)
+	v5contract := order.Contract
+
+	lookupCoin := v5contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, can.OrderID)
 		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
-	err = i.node.RefundOrder(contract, records)
+	err = i.node.RefundOrder(v5contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1980,14 +1987,17 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	_, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	order, _ := i.node.GetOrder(fulfill.OrderId)
+	v5contract := order.Contract
+
+	lookupCoin := v5contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, fulfill.OrderId)
@@ -1998,7 +2008,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, "order must be in state AWAITING_FULFILLMENT or PARTIALLY_FULFILLED to fulfill")
 		return
 	}
-	err = i.node.FulfillOrder(&fulfill, contract, records)
+	err = i.node.FulfillOrder(&fulfill, v5contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2326,7 +2336,8 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	lookupCoin := contract.BuyerOrder.Payment.AmountCurrency.Code
+	order, _ := i.node.GetOrder(rel.OrderID)
+	lookupCoin := order.Contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {
 		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", lookupCoin, rel.OrderID)
