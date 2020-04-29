@@ -1622,7 +1622,11 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	order, _ := i.node.GetOrder(conf.OrderID)
+	order, err := i.node.GetOrder(conf.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	v5contract := order.Contract
 
 	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
@@ -1791,7 +1795,11 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	order, _ := i.node.GetOrder(can.OrderID)
+	order, err := i.node.GetOrder(can.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	v5contract := order.Contract
 
 	lookupCoin := v5contract.BuyerOrder.Payment.AmountCurrency.Code
@@ -1994,7 +2002,11 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	order, _ := i.node.GetOrder(fulfill.OrderId)
+	order, err := i.node.GetOrder(fulfill.OrderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
 	v5contract := order.Contract
 
 	lookupCoin := v5contract.BuyerOrder.Payment.AmountCurrency.Code
@@ -2223,7 +2235,11 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if buyerContract.BuyerOrder.Payment.BigAmount == "" {
-		v5order, _ := repo.ToV5Order(buyerContract.BuyerOrder, nil)
+		v5order, err := repo.ToV5Order(buyerContract.BuyerOrder, nil)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 		buyerContract.BuyerOrder = v5order
 	}
 
@@ -2342,7 +2358,12 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	order, _ := i.node.GetOrder(rel.OrderID)
+	order, err := i.node.GetOrder(rel.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Could not retrieve the order")
+		return
+	}
+
 	lookupCoin := order.Contract.BuyerOrder.Payment.AmountCurrency.Code
 	_, err = i.node.LookupCurrency(lookupCoin)
 	if err != nil {

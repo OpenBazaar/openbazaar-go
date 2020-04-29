@@ -106,6 +106,10 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *p
 	}
 
 	order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return err
+	}
+
 	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
