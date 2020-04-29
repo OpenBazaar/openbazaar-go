@@ -2221,6 +2221,12 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	if buyerContract.BuyerOrder.Payment.BigAmount == "" {
+		v5order, _ := repo.ToV5Order(buyerContract.BuyerOrder, nil)
+		buyerContract.BuyerOrder = v5order
+	}
+
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract
 	resp.BuyerOpened = buyerOpened
