@@ -191,12 +191,25 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 		if len(rc.VendorListings) > 0 {
 			slug = rc.VendorListings[0].Slug
 		}
+
+		// Convert buyerOrder to v5
+		v5order, err := repo.ToV5Order(rc.BuyerOrder, nil)
+		if err != nil {
+			return nil, 0, err
+		}
+		rc.BuyerOrder = v5order
+
 		if rc.BuyerOrder != nil && rc.BuyerOrder.Payment != nil && rc.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 			moderated = true
 		}
 
 		if len(rc.VendorListings) > 0 && rc.VendorListings[0].Metadata != nil && rc.VendorListings[0].Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			coinType = ""
+		}
+
+		if totalStr == "" {
+			log.Warningf("the database total is empty when it should contain a value")
+			totalStr = rc.BuyerOrder.Payment.BigAmount
 		}
 
 		if strings.Contains(totalStr, "e") {
