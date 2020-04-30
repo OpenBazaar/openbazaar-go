@@ -1640,6 +1640,8 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	if err != nil {
 		return err
 	}
+	fmt.Sprintf("order payment address: %s", order.Payment.Address)
+	fmt.Sprintf("order payment address: %s", addr.String())
 	if strings.TrimPrefix(order.Payment.Address, "0x") != strings.TrimPrefix(addr.String(), "0x") {
 		return errors.New("invalid payment address")
 	}
