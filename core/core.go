@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"path"
 	"sync"
 	"time"
@@ -31,7 +32,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.14.0"
+	VERSION = "0.14.1"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
@@ -156,6 +157,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	n.RootHash = rootHash
+
 	n.seedLock.Unlock()
 	n.InitalPublishComplete = true
 	go n.publish(rootHash)
@@ -180,6 +182,27 @@ func (n *OpenBazaarNode) publish(hash string) {
 		log.Error(err)
 		return
 	}
+
+	go func() {
+		// Update search endpoint with published hash
+		peerId, _ := n.GetNodeID()
+		endpoint := fmt.Sprintf("https://search.ob1.io/update/%s/%s", peerId.PeerID, hash)
+		log.Infof("Publishing new rootHash to: %s\n", endpoint)
+
+		var client *http.Client
+		if n.TorDialer != nil {
+			tbTransport := &http.Transport{Dial: n.TorDialer.Dial}
+			client = &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+		} else {
+			client = &http.Client{Timeout: time.Second * 30}
+		}
+
+		resp, err := client.Get(endpoint)
+		if err != nil {
+			log.Errorf("Search update did not succeed. %v\n", err)
+		}
+		log.Debugf("%s response: %v", endpoint, resp)
+	}()
 
 	inflightPublishRequests++
 	err = ipfs.Publish(n.IpfsNode, hash)

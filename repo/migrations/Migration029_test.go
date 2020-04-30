@@ -24,8 +24,8 @@ var stmt = `PRAGMA key = 'letmein';
 					vendorID text, vendorHandle text, title text,
 					shippingName text, shippingAddress text, paymentAddr text,
 					funded integer, transactions blob,
-					lastDisputeTimeoutNotifiedAt integer not null default 0,
-					lastDisputeExpiryNotifiedAt integer not null default 0,
+					lastDisputeTimeoutNotifiedAt integer default 0,
+					lastDisputeExpiryNotifiedAt integer default 0,
 					disputedAt integer not null default 0, coinType not null default '',
 					paymentCoin not null default '');
 				create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);`
@@ -52,7 +52,7 @@ func TestMigration029(t *testing.T) {
 	if _, err := db.Exec("INSERT INTO sales (orderID, total) values (?,?)", "asdf", 3); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec("INSERT INTO purchases (orderID, total) values (?,?)", "asdf", 3); err != nil {
+	if _, err := db.Exec("INSERT INTO purchases (orderID, total, lastDisputeExpiryNotifiedAt) values (?,?, NULL)", "asdf", 3); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec("INSERT INTO inventory (invID, count) values (?,?)", "asdf", "3"); err != nil {

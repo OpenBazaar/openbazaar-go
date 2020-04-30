@@ -17,6 +17,7 @@ var (
 	AM02_insert_sales      = "INSERT INTO sales SELECT orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, coinType, paymentCoin FROM temp_sales;"
 	AM02_drop_temp_sales   = "DROP TABLE temp_sales;"
 
+	AM02_up_update_purchases   = "update purchases set lastDisputeExpiryNotifiedAt = 0 where lastDisputeExpiryNotifiedAt is NULL;"
 	AM02_up_create_purchases   = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total text, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
 	AM02_down_create_purchases = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
 	AM02_temp_purchases        = "ALTER TABLE purchases RENAME TO temp_purchases;"
@@ -56,6 +57,7 @@ func (AM02) Up(repoPath string, dbPassword string, testnet bool) error {
 	}
 
 	upSequence := strings.Join([]string{
+		AM02_up_update_purchases,
 		AM02_temp_sales,
 		AM02_up_create_sales,
 		AM02_insert_sales,

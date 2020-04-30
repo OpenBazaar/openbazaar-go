@@ -68,6 +68,13 @@ func (Migration033) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 	if _, err = tx.Exec(upSequence); err != nil {
+		if err.Error() == "duplicate column name: err" {
+			err = writeRepoVer(repoPath, migrationCreateMessagesAM09UpVer)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		if rErr := tx.Rollback(); rErr != nil {
 			return fmt.Errorf("rollback failed: (%s) due to (%s)", rErr.Error(), err.Error())
 		}

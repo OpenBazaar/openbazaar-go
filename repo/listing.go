@@ -271,6 +271,13 @@ func GetListingFromSlug(slug, repoPath string, isTestnet bool, dStore *Datastore
 			}
 		}
 	}
+
+	for _, s := range sl.Listing.Item.Skus {
+		if s.BigSurcharge == "" {
+			s.BigSurcharge = "0"
+		}
+	}
+
 	return sl, nil
 }
 
@@ -1022,10 +1029,21 @@ func (l *Listing) GetShippingOptions() ([]*pb.Listing_ShippingOption, error) {
 	}
 	switch l.GetVersion() {
 	case 3, 4:
-		for _, o := range so {
-			for _, s := range o.Services {
-				s.BigPrice = big.NewInt(int64(s.Price)).String()
-				s.BigAdditionalItemPrice = big.NewInt(int64(s.AdditionalItemPrice)).String()
+		for a, o := range so {
+			for x, s := range o.Services {
+				so[a].Services[x].BigPrice = big.NewInt(int64(s.Price)).String()
+				so[a].Services[x].BigAdditionalItemPrice = big.NewInt(int64(s.AdditionalItemPrice)).String()
+			}
+		}
+	case 5:
+		for a, o := range so {
+			for x, s := range o.Services {
+				if s.BigPrice == "" {
+					so[a].Services[x].BigPrice = "0"
+				}
+				if s.BigAdditionalItemPrice == "" {
+					so[a].Services[x].BigAdditionalItemPrice = "0"
+				}
 			}
 		}
 	}
@@ -1205,6 +1223,9 @@ func (l *Listing) GetInventory() (map[int]*big.Int, error) {
 		var amtStr string
 		switch l.GetVersion() {
 		case 5:
+			if s.BigQuantity == "" {
+				continue
+			}
 			amtStr = s.BigQuantity
 		default:
 			amtStr = strconv.Itoa(int(s.Quantity))

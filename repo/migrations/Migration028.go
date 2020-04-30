@@ -258,8 +258,17 @@ func (migrateListingsToV5Schema) Up(repoPath, databasePassword string, testnetEn
 			Indent: "    ",
 		}
 
-		var oldListingIndex []MigrateListingsToV5Schema_V4ListingIndexData
+		var listingIndex []MigrateListingsToV5Schema_V5ListingIndexData
 		listingsJSON, err := ioutil.ReadFile(listingsFilePath)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listingsJSON, &listingIndex); err == nil {
+			return writeRepoVer(repoPath, 28)
+		}
+
+		var oldListingIndex []MigrateListingsToV5Schema_V4ListingIndexData
+		listingsJSON, err = ioutil.ReadFile(listingsFilePath)
 		if err != nil {
 			return err
 		}

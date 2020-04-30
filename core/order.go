@@ -62,32 +62,36 @@ func (n *OpenBazaarNode) GetOrder(orderID string) (*pb.OrderRespApi, error) {
 		isSale = true
 	}
 
-	for i, l := range contract.VendorListings {
-		repoListing, err := repo.NewListingFromProtobuf(l)
-		if err != nil {
-			log.Errorf("failed getting contract listing: %s", err.Error())
-			return nil, err
-		}
-		normalizedListing, err := repoListing.Normalize()
-		if err != nil {
-			log.Errorf("failed converting contract listing to v5 schema: %s", err.Error())
-			return nil, err
-		}
-		contract.VendorListings[i] = normalizedListing.GetProtobuf()
-	}
-
 	resp := new(pb.OrderRespApi)
 	resp.Contract = contract
 	resp.Funded = funded
 	resp.Read = read
 	resp.State = state
 
-	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
-	if err != nil {
-		log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
-		return nil, err
+	if contract.BuyerOrder.Payment.AmountCurrency != nil {
+		resp.Contract.BuyerOrder = contract.BuyerOrder
+	} else {
+		for i, l := range contract.VendorListings {
+			repoListing, err := repo.NewListingFromProtobuf(l)
+			if err != nil {
+				log.Errorf("failed getting contract listing: %s", err.Error())
+				return nil, err
+			}
+			normalizedListing, err := repoListing.Normalize()
+			if err != nil {
+				log.Errorf("failed converting contract listing to v5 schema: %s", err.Error())
+				return nil, err
+			}
+			contract.VendorListings[i] = normalizedListing.GetProtobuf()
+		}
+
+		v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+		if err != nil {
+			log.Errorf("failed converting contract buyer order to v5 schema: %s", err.Error())
+			return nil, err
+		}
+		resp.Contract.BuyerOrder = v5Order
 	}
-	resp.Contract.BuyerOrder = v5Order
 
 	paymentTxs, refundTx, err := n.BuildTransactionRecords(contract, records, state)
 	if err != nil {
