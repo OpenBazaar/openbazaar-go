@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"sync"
-	"time"
-
 	"github.com/OpenBazaar/openbazaar-go/mobile"
 	"github.com/jessevdk/go-flags"
+	"os"
+	"path"
 )
 
 type Options struct {
@@ -21,7 +19,7 @@ var (
 )
 
 func main() {
-	var dataPath = "/Users/mg/work/ob/openbazaar-go/config_mobile_test"
+	var dataPath = path.Join(os.TempDir(), "ob-mobile")
 	if _, err := parser.Parse(); err != nil {
 		if len(os.Args) > 1 && os.Args[1] == "-h" {
 			os.Exit(0)
@@ -35,7 +33,6 @@ func main() {
 	}
 
 	var (
-		wg     sync.WaitGroup
 		n, err = mobile.NewNodeWithConfig(&mobile.NodeConfig{
 			RepoPath: dataPath,
 			Testnet:  options.TestnetEnabled,
@@ -48,18 +45,5 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	time.Sleep(time.Second * 10)
-	fmt.Println("restarting...", time.Now())
-
-	wg.Add(1)
-
-	go func() {
-		err := n.Restart()
-		if err != nil {
-			panic(fmt.Sprintf("failed to restart: %s", err.Error()))
-		}
-	}()
-
-	wg.Wait()
-
+	select{}
 }
