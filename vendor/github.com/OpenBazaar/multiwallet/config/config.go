@@ -51,9 +51,10 @@ type CoinConfig struct {
 	CoinType wallet.CoinType
 
 	// The default fee-per-byte for each level
-	LowFee    uint64
-	MediumFee uint64
-	HighFee   uint64
+	SuperLowFee uint64
+	LowFee      uint64
+	MediumFee   uint64
+	HighFee     uint64
 
 	// The highest allowable fee-per-byte
 	MaxFee uint64
@@ -104,14 +105,15 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		feeApi := "https://btc.fees.openbazaar.org"
 		db, _ := mockDB.GetDatastoreForWallet(wallet.Bitcoin)
 		btcCfg := CoinConfig{
-			CoinType:   wallet.Bitcoin,
-			FeeAPI:     feeApi,
-			LowFee:     140,
-			MediumFee:  160,
-			HighFee:    180,
-			MaxFee:     2000,
-			ClientAPIs: apiEndpoints,
-			DB:         db,
+			CoinType:    wallet.Bitcoin,
+			FeeAPI:      feeApi,
+			SuperLowFee: 70,
+			LowFee:      140,
+			MediumFee:   160,
+			HighFee:     180,
+			MaxFee:      2000,
+			ClientAPIs:  apiEndpoints,
+			DB:          db,
 		}
 		cfg.Coins = append(cfg.Coins, btcCfg)
 	}
@@ -132,14 +134,15 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		}
 		db, _ := mockDB.GetDatastoreForWallet(wallet.BitcoinCash)
 		bchCfg := CoinConfig{
-			CoinType:   wallet.BitcoinCash,
-			FeeAPI:     "",
-			LowFee:     140,
-			MediumFee:  160,
-			HighFee:    180,
-			MaxFee:     2000,
-			ClientAPIs: apiEndpoints,
-			DB:         db,
+			CoinType:    wallet.BitcoinCash,
+			FeeAPI:      "",
+			SuperLowFee: 70,
+			LowFee:      140,
+			MediumFee:   160,
+			HighFee:     180,
+			MaxFee:      2000,
+			ClientAPIs:  apiEndpoints,
+			DB:          db,
 		}
 		cfg.Coins = append(cfg.Coins, bchCfg)
 	}
@@ -160,14 +163,15 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		}
 		db, _ := mockDB.GetDatastoreForWallet(wallet.Zcash)
 		zecCfg := CoinConfig{
-			CoinType:   wallet.Zcash,
-			FeeAPI:     "",
-			LowFee:     140,
-			MediumFee:  160,
-			HighFee:    180,
-			MaxFee:     2000,
-			ClientAPIs: apiEndpoints,
-			DB:         db,
+			CoinType:    wallet.Zcash,
+			FeeAPI:      "",
+			SuperLowFee: 70,
+			LowFee:      140,
+			MediumFee:   160,
+			HighFee:     180,
+			MaxFee:      2000,
+			ClientAPIs:  apiEndpoints,
+			DB:          db,
 		}
 		cfg.Coins = append(cfg.Coins, zecCfg)
 	}
@@ -189,14 +193,15 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		}
 		db, _ := mockDB.GetDatastoreForWallet(wallet.Litecoin)
 		ltcCfg := CoinConfig{
-			CoinType:   wallet.Litecoin,
-			FeeAPI:     "",
-			LowFee:     140,
-			MediumFee:  160,
-			HighFee:    180,
-			MaxFee:     2000,
-			ClientAPIs: apiEndpoints,
-			DB:         db,
+			CoinType:    wallet.Litecoin,
+			FeeAPI:      "",
+			SuperLowFee: 70,
+			LowFee:      140,
+			MediumFee:   160,
+			HighFee:     180,
+			MaxFee:      2000,
+			ClientAPIs:  apiEndpoints,
+			DB:          db,
 		}
 		cfg.Coins = append(cfg.Coins, ltcCfg)
 	}
@@ -213,14 +218,15 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 		}
 		db, _ := mockDB.GetDatastoreForWallet(wallet.Ethereum)
 		ethCfg := CoinConfig{
-			CoinType:   wallet.Ethereum,
-			FeeAPI:     "",
-			LowFee:     140,
-			MediumFee:  160,
-			HighFee:    180,
-			MaxFee:     2000,
-			ClientAPIs: apiEndpoints,
-			DB:         db,
+			CoinType:    wallet.Ethereum,
+			FeeAPI:      "",
+			SuperLowFee: 70,
+			LowFee:      140,
+			MediumFee:   160,
+			HighFee:     180,
+			MaxFee:      2000,
+			ClientAPIs:  apiEndpoints,
+			DB:          db,
 			Options: map[string]interface{}{
 				"RegistryAddress":        EthereumRegistryAddressMainnet,
 				"RinkebyRegistryAddress": EthereumRegistryAddressRinkeby,

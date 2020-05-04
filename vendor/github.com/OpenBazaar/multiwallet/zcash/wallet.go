@@ -83,7 +83,7 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 		er = NewZcashPriceFetcher(proxy)
 	}
 
-	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, er)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.SuperLowFee, er)
 
 	return &ZCashWallet{
 		db:            cfg.DB,

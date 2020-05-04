@@ -19,29 +19,32 @@ type feeCache struct {
 }
 
 type Fees struct {
-	Priority uint64 `json:"priority"`
-	Normal   uint64 `json:"normal"`
-	Economic uint64 `json:"economic"`
+	Priority      uint64 `json:"priority"`
+	Normal        uint64 `json:"normal"`
+	Economic      uint64 `json:"economic"`
+	SuperEconomic uint64 `json:"superEconomic"`
 }
 
 type FeeProvider struct {
-	maxFee      uint64
-	priorityFee uint64
-	normalFee   uint64
-	economicFee uint64
-	feeAPI      string
+	maxFee           uint64
+	priorityFee      uint64
+	normalFee        uint64
+	economicFee      uint64
+	superEconomicFee uint64
+	feeAPI           string
 
 	httpClient httpClient
 
 	cache *feeCache
 }
 
-func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, feeAPI string, proxy proxy.Dialer) *FeeProvider {
+func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee, superEconomicFee uint64, feeAPI string, proxy proxy.Dialer) *FeeProvider {
 	fp := FeeProvider{
 		maxFee:      maxFee,
 		priorityFee: priorityFee,
 		normalFee:   normalFee,
 		economicFee: economicFee,
+		superEconomicFee: superEconomicFee,
 		feeAPI:      feeAPI,
 		cache:       new(feeCache),
 	}
@@ -84,6 +87,8 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 		return fp.selectFee(fees.Normal, wallet.PRIOIRTY)
 	case wallet.ECONOMIC:
 		return fp.selectFee(fees.Economic, wallet.PRIOIRTY)
+	case wallet.SUPER_ECONOMIC:
+		return fp.selectFee(fees.SuperEconomic, wallet.PRIOIRTY)
 	case wallet.FEE_BUMP:
 		return fp.selectFee(fees.Priority, wallet.PRIOIRTY)
 	default:

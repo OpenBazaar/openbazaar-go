@@ -84,7 +84,7 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 		er = NewLitecoinPriceFetcher(proxy)
 	}
 
-	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, er)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.SuperLowFee, er)
 
 	return &LitecoinWallet{
 		db:            cfg.DB,
