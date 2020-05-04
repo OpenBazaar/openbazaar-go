@@ -39,16 +39,17 @@ type WalletsConfig struct {
 }
 
 type CoinConfig struct {
-	Type             string                 `json:"Type"`
-	APIPool          []string               `json:"API"`
-	APITestnetPool   []string               `json:"APITestnet"`
-	MaxFee           uint64                 `json:"MaxFee"`
-	FeeAPI           string                 `json:"FeeAPI"`
-	HighFeeDefault   uint64                 `json:"HighFeeDefault"`
-	MediumFeeDefault uint64                 `json:"MediumFeeDefault"`
-	LowFeeDefault    uint64                 `json:"LowFeeDefault"`
-	TrustedPeer      string                 `json:"TrustedPeer"`
-	WalletOptions    map[string]interface{} `json:"WalletOptions"`
+	Type               string                 `json:"Type"`
+	APIPool            []string               `json:"API"`
+	APITestnetPool     []string               `json:"APITestnet"`
+	MaxFee             uint64                 `json:"MaxFee"`
+	FeeAPI             string                 `json:"FeeAPI"`
+	SuperLowFeeDefault uint64                 `json:"SuperLowFeeDefault"`
+	HighFeeDefault     uint64                 `json:"HighFeeDefault"`
+	MediumFeeDefault   uint64                 `json:"MediumFeeDefault"`
+	LowFeeDefault      uint64                 `json:"LowFeeDefault"`
+	TrustedPeer        string                 `json:"TrustedPeer"`
+	WalletOptions      map[string]interface{} `json:"WalletOptions"`
 }
 
 type DataSharing struct {
