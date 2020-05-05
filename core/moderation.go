@@ -236,7 +236,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 			bigAmount = profile.ModeratorInfo.Fee.FixedFee.BigAmount
 		}
 
-		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
+		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(bigAmount, curDef)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parse moderator fee currency: %s", err)
 		}
