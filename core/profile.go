@@ -362,8 +362,17 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 		if profile.ModeratorInfo.Fee != nil {
+			var moderatorCurrencyCode string
+			if profile.ModeratorInfo.Fee.FixedFee != nil {
+				if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency == nil {
+					moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.CurrencyCode
+				} else {
+					moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code
+				}
+			}
+
 			if profile.ModeratorInfo.Fee.FeeType != pb.Moderator_Fee_PERCENTAGE && profile.ModeratorInfo.Fee.FixedFee != nil &&
-				len(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code) > repo.WordMaxCharacters {
+				len(moderatorCurrencyCode) > repo.WordMaxCharacters {
 				return fmt.Errorf("moderator fee currency code character length is greater than the max of %d", repo.WordMaxCharacters)
 			}
 		}

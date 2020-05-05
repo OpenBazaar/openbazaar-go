@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 
 	routing "gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
@@ -148,6 +149,9 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 
 // GetModeratorFee is called by the Moderator when determining their take of the dispute
 func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCode string) (*big.Int, error) {
+	var curDef *pb.CurrencyDefinition
+	var bigAmount string
+
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return big.NewInt(0), err
@@ -168,7 +172,29 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 		return feePercentAmt.AmountBigInt(), nil
 
 	case pb.Moderator_Fee_FIXED:
-		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
+		if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency == nil {
+			currency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode)
+			if err != nil {
+				return nil, err
+			}
+			curDef = &pb.CurrencyDefinition{
+				Code:         currency.Code.String(),
+				Divisibility: uint32(currency.Divisibility),
+			}
+			bigAmount = strconv.FormatUint(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
+		} else {
+			currency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
+			if err != nil {
+				return nil, err
+			}
+			curDef = &pb.CurrencyDefinition{
+				Code:         currency.Code.String(),
+				Divisibility: uint32(currency.Divisibility),
+			}
+			bigAmount = profile.ModeratorInfo.Fee.FixedFee.BigAmount
+		}
+
+		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(bigAmount, curDef)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parse moderator fee currency: %s", err)
 		}
@@ -188,7 +214,29 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal *big.Int, txCurrencyCo
 		return convertedModFee.AmountBigInt(), nil
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
-		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(profile.ModeratorInfo.Fee.FixedFee.BigAmount, profile.ModeratorInfo.Fee.FixedFee.AmountCurrency)
+		if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency == nil {
+			currency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode)
+			if err != nil {
+				return nil, err
+			}
+			curDef = &pb.CurrencyDefinition{
+				Code:         currency.Code.String(),
+				Divisibility: uint32(currency.Divisibility),
+			}
+			bigAmount = strconv.FormatUint(profile.ModeratorInfo.Fee.FixedFee.Amount, 10)
+		} else {
+			currency, err := n.LookupCurrency(profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code)
+			if err != nil {
+				return nil, err
+			}
+			curDef = &pb.CurrencyDefinition{
+				Code:         currency.Code.String(),
+				Divisibility: uint32(currency.Divisibility),
+			}
+			bigAmount = profile.ModeratorInfo.Fee.FixedFee.BigAmount
+		}
+
+		modFeeValue, err := repo.NewCurrencyValueFromProtobuf(bigAmount, curDef)
 		if err != nil {
 			return big.NewInt(0), fmt.Errorf("parse moderator fee currency: %s", err)
 		}
