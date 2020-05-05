@@ -363,10 +363,12 @@ func ValidateProfile(profile *pb.Profile) error {
 		}
 		if profile.ModeratorInfo.Fee != nil {
 			var moderatorCurrencyCode string
-			if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency == nil {
-				moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.CurrencyCode
-			} else {
-				moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code
+			if profile.ModeratorInfo.Fee.FixedFee != nil {
+				if profile.ModeratorInfo.Fee.FixedFee.AmountCurrency == nil {
+					moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.CurrencyCode
+				} else {
+					moderatorCurrencyCode = profile.ModeratorInfo.Fee.FixedFee.AmountCurrency.Code
+				}
 			}
 
 			if profile.ModeratorInfo.Fee.FeeType != pb.Moderator_Fee_PERCENTAGE && profile.ModeratorInfo.Fee.FixedFee != nil &&
