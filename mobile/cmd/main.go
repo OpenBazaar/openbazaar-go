@@ -45,5 +45,5 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	select{}
+	select {}
 }
