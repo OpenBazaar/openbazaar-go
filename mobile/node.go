@@ -70,7 +70,7 @@ type Node struct {
 
 var (
 	fileLogFormat = logging.MustStringFormatter(
-		`%{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+		`[Haven] %{time:2006-01-02 15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 	)
 	publishUnlocked    = false
 	mainLoggingBackend logging.Backend
@@ -122,7 +122,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	obFileBackend := logging.NewLogBackend(obLog, "", 0)
 	obFileBackendFormatted := logging.NewBackendFormatter(obFileBackend, fileLogFormat)
-	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted)
+	stdoutBackend := logging.NewLogBackend(os.Stdout, "", 0)
+	stdoutBackendFormatted := logging.NewBackendFormatter(stdoutBackend, fileLogFormat)
+	mainLoggingBackend = logging.SetBackend(obFileBackendFormatted, stdoutBackendFormatted)
 	logging.SetLevel(logging.INFO, "")
 
 	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), wi.Bitcoin)
@@ -282,7 +284,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Datastore:                     sqliteDB,
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
-		OfflineMessageFailoverTimeout: 5 * time.Second,
+		OfflineMessageFailoverTimeout: 3 * time.Second,
 		PushNodes:                     pushNodes,
 		RepoPath:                      config.RepoPath,
 		UserAgent:                     core.USERAGENT,
@@ -324,6 +326,13 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 	n.cancel = cancel
 
 	ctx := commands.Context{}
+
+	ipfscore.DefaultBootstrapConfig = ipfscore.BootstrapConfig{
+		MinPeerThreshold:  8,
+		Period:            time.Second * 10,
+		ConnectionTimeout: time.Second * 10 / 3,
+	}
+
 	nd, err := ipfscore.NewNode(cctx, config)
 	if err != nil {
 		return nil, ctx, err

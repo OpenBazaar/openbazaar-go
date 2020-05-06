@@ -91,24 +91,25 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 		WaitGroup:  new(sync.WaitGroup),
 	}
 
-	mr.Add(1)
+	mr.Add(2)
 	return &mr
 }
 
 func (m *MessageRetriever) Run() {
 	dht := time.NewTicker(time.Hour)
-	peers := time.NewTicker(time.Minute * 10)
+	peers := time.NewTicker(time.Minute)
 	defer dht.Stop()
 	defer peers.Stop()
-	go m.fetchPointers(true)
+	go m.fetchPointersFromDHT()
+	go m.fetchPointersFromPushNodes()
 	for {
 		select {
 		case <-dht.C:
 			m.Add(1)
-			go m.fetchPointers(true)
+			go m.fetchPointersFromDHT()
 		case <-peers.C:
 			m.Add(1)
-			go m.fetchPointers(false)
+			go m.fetchPointersFromPushNodes()
 		}
 	}
 }
@@ -116,41 +117,44 @@ func (m *MessageRetriever) Run() {
 // RunOnce - used to fetch messages only once
 func (m *MessageRetriever) RunOnce() {
 	m.Add(1)
-	go m.fetchPointers(true)
+	go m.fetchPointersFromDHT()
 	m.Add(1)
-	go m.fetchPointers(false)
+	go m.fetchPointersFromPushNodes()
 }
 
-func (m *MessageRetriever) fetchPointers(useDHT bool) {
+func (m *MessageRetriever) fetchPointersFromDHT() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	wg := new(sync.WaitGroup)
-	downloaded := 0
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := make(chan ps.PeerInfo)
 	go func(c chan ps.PeerInfo) {
-		pwg := new(sync.WaitGroup)
-		pwg.Add(1)
-		go func(c chan ps.PeerInfo) {
-			out := m.getPointersDataPeers()
-			for p := range out {
-				c <- p
-			}
-			pwg.Done()
-		}(c)
-		if useDHT {
-			pwg.Add(1)
-			go func(c chan ps.PeerInfo) {
-				iout := ipfs.FindPointersAsync(m.routing, ctx, mh, m.prefixLen)
-				for p := range iout {
-					c <- p
-				}
-				pwg.Done()
-			}(c)
+		iout := ipfs.FindPointersAsync(m.routing, ctx, mh, m.prefixLen)
+		for p := range iout {
+			c <- p
 		}
-		pwg.Wait()
 		close(c)
+
 	}(peerOut)
+
+	m.downloadMessages(peerOut)
+}
+
+func (m *MessageRetriever) fetchPointersFromPushNodes() {
+	peerOut := make(chan ps.PeerInfo)
+	go func(c chan ps.PeerInfo) {
+		out := m.getPointersDataPeers()
+		for p := range out {
+			c <- p
+		}
+		close(c)
+
+	}(peerOut)
+	m.downloadMessages(peerOut)
+}
+
+func (m *MessageRetriever) downloadMessages(peerOut chan ps.PeerInfo) {
+	wg := new(sync.WaitGroup)
+	downloaded := 0
 
 	inFlight := make(map[string]bool)
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
@@ -239,7 +243,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, n *core.IpfsNode, addr ma.Mult
 	var err error
 
 	go func() {
-		ciphertext, err = ipfs.Cat(n, addr.String(), time.Minute*5)
+		ciphertext, err = ipfs.Cat(n, addr.String(), time.Second*10)
 		c <- struct{}{}
 	}()
 

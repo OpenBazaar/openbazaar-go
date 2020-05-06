@@ -98,23 +98,32 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		}
 	}
 	log.Debugf("Sending offline message to: %s, Message Type: %s, PointerID: %s, Location: %s", p.Pretty(), m.MessageType.String(), pointer.Cid.String(), pointer.Value.Addrs[0].String())
-	OfflineMessageWaitGroup.Add(2)
+
+	// We publish our pointers to three different locations:
+	// 1. The pushnodes
+	// 2. The DHT
+	// 3. Pubsub
+	// Each one is done in a separate goroutine so as to not block but we
+	// do increment the OfflineMessageWaitGroup which is used to block
+	// shutdown until all publishing is finished.
+	OfflineMessageWaitGroup.Add(2 + len(n.PushNodes))
+	for _, p := range n.PushNodes {
+		go func(pid peer.ID) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			err := ipfs.PutPointerToPeer(n.DHT, ctx, pid, pointer)
+			if err != nil {
+				log.Error(err)
+			}
+			OfflineMessageWaitGroup.Done()
+		}(p)
+	}
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		err := ipfs.PublishPointer(n.DHT, ctx, pointer)
 		if err != nil {
 			log.Error(err)
-		}
-
-		// Push provider to our push nodes for redundancy
-		for _, p := range n.PushNodes {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			err := ipfs.PutPointerToPeer(n.DHT, ctx, p, pointer)
-			if err != nil {
-				log.Error(err)
-			}
 		}
 
 		OfflineMessageWaitGroup.Done()
