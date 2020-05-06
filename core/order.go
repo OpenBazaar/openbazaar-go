@@ -390,7 +390,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	if !ok {
 		return "", "", *big.NewInt(0), errors.New("invalid payment amount")
 	}
-	fpb := wal.GetFeePerByte(wallet.NORMAL)
+	fpb := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
 	f := new(big.Int).Mul(&fpb, big.NewInt(int64(EscrowReleaseSize)))
 	t := new(big.Int).Div(total, big.NewInt(4))
 

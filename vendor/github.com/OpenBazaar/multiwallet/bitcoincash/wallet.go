@@ -84,7 +84,7 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 		go exchangeRates.Run()
 	}
 
-	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, exchangeRates)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.SuperLowFee, exchangeRates)
 
 	return &BitcoinCashWallet{
 		db:            cfg.DB,

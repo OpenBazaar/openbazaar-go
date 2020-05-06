@@ -97,6 +97,8 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
 		feeLevel = wallet.ECONOMIC
+	case "SUPER_ECONOMIC":
+		feeLevel = wallet.SUPER_ECONOMIC
 	default:
 		feeLevel = wallet.NORMAL
 	}

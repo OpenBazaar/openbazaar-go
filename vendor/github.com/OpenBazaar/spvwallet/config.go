@@ -41,9 +41,10 @@ type Config struct {
 	Proxy proxy.Dialer
 
 	// The default fee-per-byte for each level
-	LowFee    uint64
-	MediumFee uint64
-	HighFee   uint64
+	SuperLowFee uint64
+	LowFee      uint64
+	MediumFee   uint64
+	HighFee     uint64
 
 	// The highest allowable fee-per-byte
 	MaxFee uint64
