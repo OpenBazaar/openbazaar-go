@@ -502,6 +502,25 @@ func (l *Listing) GetAcceptedCurrencies() []string {
 	return l.listingProto.Metadata.AcceptedCurrencies
 }
 
+// SetPrices
+func (l *Listing) SetPrices(percentage float64) error {
+
+	currentPrice, ok := new(big.Float).SetString(l.listingProto.Item.BigPrice)
+	if !ok {
+		return nil
+	}
+
+	multiple := percentage/100 + 1
+	floatFactor := new(big.Float).SetFloat64(multiple)
+
+	newPrice := new(big.Float).Mul(currentPrice, floatFactor)
+	newPriceInt, _ := newPrice.Int(nil)
+
+	l.listingProto.Item.BigPrice = newPriceInt.String()
+
+	return nil
+}
+
 // SetAcceptedCurrencies the listing's accepted currency codes. Assumes the node
 // serving the listing has already validated the wallet supports the currencies.
 func (l *Listing) SetAcceptedCurrencies(codes ...string) error {

@@ -651,6 +651,48 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	return sl, nil
 }
 
+func (n *OpenBazaarNode) SetPriceOnListings(percentage float64) error {
+	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
+	if err != nil {
+		return err
+	}
+	walkpath := func(p string, f os.FileInfo, err error) error {
+		if !f.IsDir() && filepath.Ext(p) == ".json" {
+			signedProto, err := GetSignedListingFromPath(p)
+			if err != nil {
+				return err
+			}
+
+			oldSL := repo.NewSignedListingFromProtobuf(signedProto)
+			l := oldSL.GetListing()
+
+			l.SetPrices(percentage)
+
+			lb, err := l.MarshalJSON()
+			if err != nil {
+				return fmt.Errorf("marshaling signed listing (%s): %s", l.GetSlug(), err.Error())
+			}
+			err = n.UpdateListing(lb, false)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	err = filepath.Walk(absPath, walkpath)
+	if err != nil {
+		return err
+	}
+
+	err = n.SeedNode()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // SetCurrencyOnListings - set currencies accepted for a listing
 func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
