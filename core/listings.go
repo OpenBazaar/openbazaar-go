@@ -666,7 +666,10 @@ func (n *OpenBazaarNode) SetPriceOnListings(percentage float64) error {
 			oldSL := repo.NewSignedListingFromProtobuf(signedProto)
 			l := oldSL.GetListing()
 
-			l.SetPrices(percentage)
+			err = l.SetPrices(percentage)
+			if err != nil {
+				return err
+			}
 
 			lb, err := l.MarshalJSON()
 			if err != nil {

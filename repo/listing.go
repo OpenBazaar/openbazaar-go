@@ -516,7 +516,13 @@ func (l *Listing) SetPrices(percentage float64) error {
 	newPrice := new(big.Float).Mul(currentPrice, floatFactor)
 	newPriceInt, _ := newPrice.Int(nil)
 
-	l.listingProto.Item.BigPrice = newPriceInt.String()
+	// Check if new price is negative
+	zeroInt, _ := new(big.Int).SetString("0", 10)
+	if newPriceInt.Cmp(zeroInt) == -1 {
+		l.listingProto.Item.BigPrice = "1"
+	} else {
+		l.listingProto.Item.BigPrice = newPriceInt.String()
+	}
 
 	return nil
 }
