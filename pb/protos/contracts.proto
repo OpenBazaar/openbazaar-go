@@ -49,8 +49,8 @@ message Listing {
         string cryptoCurrencyCode          = 9 [json_name = "coinType"];
         uint32 cryptoDivisibility          = 10 [json_name = "coinDivisibility"];
         float priceModifier                = 11 [deprecated = true];
-        string sendCountryCode             = 12;
-        string sendPostalCode              = 13;
+        string shippingFromCountryCode     = 12;
+        string shippingFromPostalCode      = 13;
 
         enum ContractType {
             PHYSICAL_GOOD  = 0;
