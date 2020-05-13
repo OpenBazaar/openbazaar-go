@@ -658,7 +658,9 @@ func init() {
 	proto.RegisterType((*OrderPaymentTxn)(nil), "OrderPaymentTxn")
 }
 
-func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
+func init() {
+	proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd)
+}
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
 	// 873 bytes of a gzipped FileDescriptorProto

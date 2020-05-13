@@ -817,7 +817,9 @@ func init() {
 	proto.RegisterEnum("CountryCode", CountryCode_name, CountryCode_value)
 }
 
-func init() { proto.RegisterFile("countrycodes.proto", fileDescriptor_18ecd71e04cfbc43) }
+func init() {
+	proto.RegisterFile("countrycodes.proto", fileDescriptor_18ecd71e04cfbc43)
+}
 
 var fileDescriptor_18ecd71e04cfbc43 = []byte{
 	// 2291 bytes of a gzipped FileDescriptorProto
