@@ -38,17 +38,19 @@ message Listing {
     string refundPolicy                     = 10;
 
     message Metadata {
-        uint32 version                     = 1;
-        ContractType contractType          = 2;
-        Format format                      = 3;
-        google.protobuf.Timestamp expiry   = 4;
-        repeated string acceptedCurrencies = 5;
-        string pricingCurrency             = 6 [deprecated = true];
-        string language                    = 7;
-        uint32 escrowTimeoutHours          = 8;
-        string cryptoCurrencyCode          = 9 [json_name = "coinType"];
-        uint32 cryptoDivisibility          = 10 [json_name = "coinDivisibility"];
-        float priceModifier                = 11 [deprecated = true];
+        uint32 version                          = 1;
+        ContractType contractType               = 2;
+        Format format                           = 3;
+        google.protobuf.Timestamp expiry        = 4;
+        repeated string acceptedCurrencies      = 5;
+        string pricingCurrency                  = 6 [deprecated = true];
+        string language                         = 7;
+        uint32 escrowTimeoutHours               = 8;
+        string cryptoCurrencyCode               = 9 [json_name = "coinType"];
+        uint32 cryptoDivisibility               = 10 [json_name = "coinDivisibility"];
+        float priceModifier                     = 11 [deprecated = true];
+        CountryCode shippingFromCountryCode     = 12;
+        string shippingFromPostalCode      = 13;
 
         enum ContractType {
             PHYSICAL_GOOD  = 0;

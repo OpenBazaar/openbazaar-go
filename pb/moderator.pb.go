@@ -310,7 +310,9 @@ func init() {
 	proto.RegisterType((*DisputeUpdate)(nil), "DisputeUpdate")
 }
 
-func init() { proto.RegisterFile("moderator.proto", fileDescriptor_44f20453d9230215) }
+func init() {
+	proto.RegisterFile("moderator.proto", fileDescriptor_44f20453d9230215)
+}
 
 var fileDescriptor_44f20453d9230215 = []byte{
 	// 469 bytes of a gzipped FileDescriptorProto
