@@ -51,7 +51,7 @@ func main() {
 
 	_, err := parser.AddCommand("gencerts",
 		"Generate certificates",
-		"Generate self-singned certificates",
+		"Generate self-signed certificates",
 		&cmd.GenerateCertificates{})
 	if err != nil {
 		log.Error(err)
