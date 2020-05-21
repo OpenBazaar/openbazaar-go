@@ -81,16 +81,16 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 		fees = fp.cache.fees
 	}
 	switch feeLevel {
-	case wallet.PRIOIRTY:
-		return fp.selectFee(fees.Priority, wallet.PRIOIRTY)
+	case wallet.PRIORITY:
+		return fp.selectFee(fees.Priority, wallet.PRIORITY)
 	case wallet.NORMAL:
-		return fp.selectFee(fees.Normal, wallet.PRIOIRTY)
+		return fp.selectFee(fees.Normal, wallet.PRIORITY)
 	case wallet.ECONOMIC:
-		return fp.selectFee(fees.Economic, wallet.PRIOIRTY)
+		return fp.selectFee(fees.Economic, wallet.PRIORITY)
 	case wallet.SUPER_ECONOMIC:
-		return fp.selectFee(fees.SuperEconomic, wallet.PRIOIRTY)
+		return fp.selectFee(fees.SuperEconomic, wallet.PRIORITY)
 	case wallet.FEE_BUMP:
-		return fp.selectFee(fees.Priority, wallet.PRIOIRTY)
+		return fp.selectFee(fees.Priority, wallet.PRIORITY)
 	default:
 		return fp.normalFee
 	}
@@ -108,7 +108,7 @@ func (fp *FeeProvider) selectFee(fee uint64, feeLevel wallet.FeeLevel) uint64 {
 
 func (fp *FeeProvider) defaultFee(feeLevel wallet.FeeLevel) uint64 {
 	switch feeLevel {
-	case wallet.PRIOIRTY:
+	case wallet.PRIORITY:
 		return fp.priorityFee
 	case wallet.NORMAL:
 		return fp.normalFee
