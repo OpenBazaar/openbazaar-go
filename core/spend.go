@@ -100,7 +100,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	case "SUPER_ECONOMIC":
 		feeLevel = wallet.SUPER_ECONOMIC
 	default:
-		feeLevel = wallet.NORMAL
+		feeLevel = wallet.ECONOMIC
 	}
 
 	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
