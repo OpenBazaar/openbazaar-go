@@ -26,7 +26,8 @@
                 "divisibility": 2,
                 "currencyType": "fiat"
             },
-            "escrowTimeoutHours": 1
+            "escrowTimeoutHours": 1,
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "title": "ETH - $1",

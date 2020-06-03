@@ -21,7 +21,8 @@
                 "LTC",
                 "ETH"
             ],
-            "escrowTimeoutHours": 1
+            "escrowTimeoutHours": 1,
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "title": "ETH - $1",
