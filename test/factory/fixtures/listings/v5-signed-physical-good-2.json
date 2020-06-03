@@ -20,7 +20,8 @@
         "BTC",
         "BCH"
       ],
-      "escrowTimeoutHours": 1080
+      "escrowTimeoutHours": 1080,
+      "shippingFromCountryCode": "NA"
     },
     "item": {
       "title": "EXAMPLE FILE 1",

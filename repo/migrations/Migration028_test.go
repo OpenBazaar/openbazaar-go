@@ -3,6 +3,12 @@ package migrations_test
 import (
 	"encoding/base64"
 	"encoding/json"
+	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -11,11 +17,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
 	coremock "github.com/ipfs/go-ipfs/core/mock"
-	crypto "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"testing"
 )
 
 const (
@@ -31,7 +32,8 @@ var (
             "contractType": "PHYSICAL_GOOD",
             "format": "FIXED_PRICE",
             "pricingCurrency": "BTC",
-            "priceModifier": 1
+            "priceModifier": 1,
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "price": 100,
@@ -71,7 +73,8 @@ var (
             "format": "MARKET_PRICE",
             "coinType": "BAT",
             "coinDivisibility": 8,
-            "priceModifier": 50
+            "priceModifier": 50,
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "skus": [
@@ -90,7 +93,8 @@ var (
         "metadata": {
             "version": 5,
             "contractType": "PHYSICAL_GOOD",
-            "format": "FIXED_PRICE"
+            "format": "FIXED_PRICE",
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "skus": [
@@ -134,7 +138,8 @@ var (
             "contractType": "CRYPTOCURRENCY",
             "format": "MARKET_PRICE",
             "coinType": "BAT",
-            "coinDivisibility": 8
+            "coinDivisibility": 8,
+            "shippingFromCountryCode": "NA"
         },
         "item": {
             "skus": [
@@ -240,10 +245,14 @@ func TestMigrateListingsToV5Schema(t *testing.T) {
 	}
 
 	if string(upMigratedListing) != postMigrateListingsToV5Schema_ListingJSON {
+		t.Log(string(upMigratedListing))
+		t.Log(postMigrateListingsToV5Schema_ListingJSON)
 		t.Error("Failed to migrate listing up")
 	}
 
 	if string(upMigratedCryptoListing) != postMigrateListingsToV5Schema_CryptoListingJSON {
+		t.Log(string(upMigratedCryptoListing))
+		t.Log(postMigrateListingsToV5Schema_CryptoListingJSON)
 		t.Error("Failed to migrate crypto listing up")
 	}
 
