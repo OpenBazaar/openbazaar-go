@@ -3468,7 +3468,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(fl) {
 	case "PRIORITY":
-		feeLevel = wallet.PRIOIRTY
+		feeLevel = wallet.PRIORITY
 	case "NORMAL":
 		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
@@ -3526,7 +3526,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
-			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
+			priority := wal.GetFeePerByte(wallet.PRIORITY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
 			superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
@@ -3555,7 +3555,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
 		return
 	}
-	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
+	priority := wal.GetFeePerByte(wallet.PRIORITY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
 	superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)

@@ -152,7 +152,7 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 				key, err := w.txstore.GetKeyForScript(output.PkScript)
 				if key != nil && err == nil { // This is our change output
 					// Calculate change - additional fee
-					feePerByte := w.GetFeePerByte(PRIOIRTY)
+					feePerByte := w.GetFeePerByte(PRIORITY)
 					estimatedSize := EstimateSerializeSize(len(msgTx.TxIn), msgTx.TxOut, false)
 					fee := estimatedSize * int(feePerByte)
 					newValue := output.Value - int64(fee)

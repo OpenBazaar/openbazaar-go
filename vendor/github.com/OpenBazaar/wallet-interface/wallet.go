@@ -283,7 +283,7 @@ type walletCanBumpFee interface {
 type FeeLevel int
 
 const (
-	PRIOIRTY       FeeLevel = 0
+	PRIORITY       FeeLevel = 0
 	NORMAL                  = 1
 	ECONOMIC                = 2
 	FEE_BUMP                = 3
