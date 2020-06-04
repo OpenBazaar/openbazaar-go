@@ -101,6 +101,7 @@ func TestSettingsSetModerator(t *testing.T) {
 	"showNsfw": true,
 	"smtpSettings": {
 			"notifications": false,
+			"openBazaarName": "",
 			"password": "",
 			"recipientEmail": "",
 			"senderEmail": "",

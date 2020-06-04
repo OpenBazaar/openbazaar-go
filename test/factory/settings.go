@@ -22,6 +22,7 @@ func MustNewValidSettings() repo.SettingsData {
 		"mispaymentBuffer": 1,
 		"smtpSettings"  : {
 			"notifications": false,
+			"openBazaarName": "",
 			"password": "",
 			"recipientEmail": "",
 			"senderEmail": "",
