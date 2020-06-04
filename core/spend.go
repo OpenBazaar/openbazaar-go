@@ -29,6 +29,7 @@ type SpendRequest struct {
 	OrderID                string                   `json:"orderId"`
 	RequireAssociatedOrder bool                     `json:"requireOrder"`
 	SpendAll               bool                     `json:"spendAll"`
+	CustomFee              string                   `json:"customFee"`
 }
 
 type SpendResponse struct {
@@ -99,11 +100,18 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		feeLevel = wallet.ECONOMIC
 	case "SUPER_ECONOMIC":
 		feeLevel = wallet.SUPER_ECONOMIC
+	case "CUSTOM":
+		feeLevel = wallet.CUSTOM
 	default:
 		feeLevel = wallet.ECONOMIC
 	}
 
-	txid, err := wal.Spend(*amt, addr, feeLevel, args.OrderID, args.SpendAll)
+	fee := wallet.Fee{
+		FeeLevel:  feeLevel,
+		CustomFee: args.CustomFee,
+	}
+
+	txid, err := wal.Spend(*amt, addr, fee, args.OrderID, args.SpendAll)
 	if err != nil {
 		switch {
 		case err == wallet.ErrInsufficientFunds:
