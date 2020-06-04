@@ -29,7 +29,7 @@ import (
 	"github.com/OpenBazaar/multiwallet/util"
 )
 
-func (w *BitcoinWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
+func (w *BitcoinWallet) buildTx(amount int64, addr btc.Address, fee wi.Fee, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
@@ -82,8 +82,17 @@ func (w *BitcoinWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeL
 	}
 
 	// Get the fee per kilobyte
-	f := w.GetFeePerByte(feeLevel)
-	feePerKB := f.Int64() * 1000
+	var feePerKB int64
+	if fee.CustomFee != "" {
+		cf, err := strconv.Atoi(fee.CustomFee)
+		if err != nil {
+			return nil, err
+		}
+		feePerKB = int64(cf) * 1000
+	} else {
+		f := w.GetFeePerByte(fee.FeeLevel)
+		feePerKB = f.Int64() * 1000
+	}
 
 	// outputs
 	out := wire.NewTxOut(amount, script)
@@ -133,7 +142,7 @@ func (w *BitcoinWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeL
 	return authoredTx.Tx, nil
 }
 
-func (w *BitcoinWallet) buildSpendAllTx(addr btc.Address, feeLevel wi.FeeLevel) (*wire.MsgTx, error) {
+func (w *BitcoinWallet) buildSpendAllTx(addr btc.Address, fee wi.Fee) (*wire.MsgTx, error) {
 	tx := wire.NewMsgTx(1)
 
 	height, _ := w.ws.ChainTip()
@@ -152,18 +161,28 @@ func (w *BitcoinWallet) buildSpendAllTx(addr btc.Address, feeLevel wi.FeeLevel) 
 	}
 
 	// Get the fee
-	fee0 := w.GetFeePerByte(feeLevel)
-	feePerByte := fee0.Int64()
+	var feePerByte int64
+	if fee.CustomFee != "" {
+		cf, err := strconv.Atoi(fee.CustomFee)
+		if err != nil {
+			return nil, err
+		}
+		feePerByte = int64(cf)
+	} else {
+		fee0 := w.GetFeePerByte(fee.FeeLevel)
+		feePerByte = fee0.Int64()
+	}
+
 	estimatedSize := EstimateSerializeSize(1, []*wire.TxOut{wire.NewTxOut(0, script)}, false, P2PKH)
-	fee := int64(estimatedSize) * feePerByte
+	feeCost := int64(estimatedSize) * feePerByte
 
 	// Check for dust output
-	if txrules.IsDustAmount(btc.Amount(totalIn-fee), len(script), txrules.DefaultRelayFeePerKb) {
+	if txrules.IsDustAmount(btc.Amount(totalIn-feeCost), len(script), txrules.DefaultRelayFeePerKb) {
 		return nil, wi.ErrorDustAmount
 	}
 
 	// Build the output
-	out := wire.NewTxOut(totalIn-fee, script)
+	out := wire.NewTxOut(totalIn-feeCost, script)
 	tx.TxOut = append(tx.TxOut, out)
 
 	// BIP 69 sorting
@@ -649,7 +668,10 @@ func (w *BitcoinWallet) estimateSpendFee(amount int64, feeLevel wi.FeeLevel) (ui
 	if err != nil {
 		return 0, err
 	}
-	tx, err := w.buildTx(amount, addr, feeLevel, nil)
+	fee := wi.Fee{
+		FeeLevel: feeLevel,
+	}
+	tx, err := w.buildTx(amount, addr, fee, nil)
 	if err != nil {
 		return 0, err
 	}

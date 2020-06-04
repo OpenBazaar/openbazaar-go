@@ -295,18 +295,18 @@ func (w *LitecoinWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 	return *big.NewInt(int64(w.fp.GetFeePerByte(feeLevel)))
 }
 
-func (w *LitecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *LitecoinWallet) Spend(amount big.Int, addr btcutil.Address, fee wi.Fee, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
 		tx  *wire.MsgTx
 		err error
 	)
 	if spendAll {
-		tx, err = w.buildSpendAllTx(addr, feeLevel)
+		tx, err = w.buildSpendAllTx(addr, fee)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		tx, err = w.buildTx(amount.Int64(), addr, feeLevel, nil)
+		tx, err = w.buildTx(amount.Int64(), addr, fee, nil)
 		if err != nil {
 			return nil, err
 		}
