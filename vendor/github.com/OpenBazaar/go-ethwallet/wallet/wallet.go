@@ -675,7 +675,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 	switch feeLevel {
 	case wi.NORMAL:
 		ret, _ = big.NewFloat(est.Average * 100000000).Int(nil)
-	case wi.ECONOMIC:
+	case wi.ECONOMIC, wi.SUPER_ECONOMIC:
 		ret, _ = big.NewFloat(est.SafeLow * 100000000).Int(nil)
 	case wi.PRIORITY, wi.FEE_BUMP:
 		ret, _ = big.NewFloat(est.Fast * 100000000).Int(nil)
