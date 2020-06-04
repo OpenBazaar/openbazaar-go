@@ -4083,6 +4083,12 @@ func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *ht
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	profile, err := i.node.GetProfile()
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	settings.OpenBazaarName = profile.Name
 	notifier := smtpNotifier{&settings}
 	err = notifier.notify(repo.TestNotification{})
 	if err != nil {
