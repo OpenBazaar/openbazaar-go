@@ -55,6 +55,7 @@ const settingsJSON = `{
 	"mispaymentBuffer": 1,
     "smtpSettings": {
         "notifications": true,
+		"openBazaarName": "",
         "serverAddress": "smtp.urbanart.com:465",
         "username": "urbanart",
         "password": "letmein",
@@ -94,6 +95,7 @@ const settingsUpdateJSON = `{
 	"mispaymentBuffer": 1,
     "smtpSettings": {
         "notifications": true,
+		"openBazaarName": "",
         "serverAddress": "smtp.urbanart.com:465",
         "username": "urbanart",
         "password": "letmein",
@@ -142,6 +144,7 @@ const settingsPatchedJSON = `{
 	"mispaymentBuffer": 1,
     "smtpSettings": {
         "notifications": true,
+		"openBazaarName": "",
         "serverAddress": "smtp.urbanart.com:465",
         "username": "urbanart",
         "password": "letmein",

@@ -68,6 +68,13 @@ func (m *notificationManager) getNotifiers() []notifier {
 
 	// SMTP notifier
 	conf := settings.SMTPSettings
+
+	profile, err := m.node.GetProfile()
+	if err != nil {
+		return nil
+	}
+	conf.OpenBazaarName = profile.Name
+
 	if conf != nil && conf.Notifications {
 		notifiers = append(notifiers, &smtpNotifier{settings: conf})
 	}
@@ -85,7 +92,7 @@ func (notifier *smtpNotifier) notify(n repo.Notifier) error {
 		"To: %s",
 		"MIME-Version: 1.0",
 		"Content-Type: text/html; charset=UTF-8",
-		"Subject: [OpenBazaar] %s\r\n",
+		"Subject: [OpenBazaar - %s] %s\r\n",
 		"%s\r\n",
 	}, "\r\n")
 	head, body, ok := n.GetSMTPTitleAndBody()
@@ -93,7 +100,7 @@ func (notifier *smtpNotifier) notify(n repo.Notifier) error {
 		return nil
 	}
 	conf := notifier.settings
-	data := fmt.Sprintf(template, conf.SenderEmail, conf.RecipientEmail, head, body)
+	data := fmt.Sprintf(template, conf.SenderEmail, conf.RecipientEmail, conf.OpenBazaarName, head, body)
 	return sendEmail(notifier.settings, []byte(data))
 }
 

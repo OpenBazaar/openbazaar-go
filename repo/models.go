@@ -40,6 +40,7 @@ type SMTPSettings struct {
 	Password       string `json:"password"`
 	SenderEmail    string `json:"senderEmail"`
 	RecipientEmail string `json:"recipientEmail"`
+	OpenBazaarName string `json:"openBazaarName"`
 }
 
 type Follower struct {
