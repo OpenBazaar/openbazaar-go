@@ -1098,10 +1098,19 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 
 	for _, item := range v5Order.Items {
 		var itemOriginAmt *repo.CurrencyValue
+		l, err := ParseContractForListing(item.ListingHash, contract)
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
+		}
 
-		nrl, err := GetNormalizedListing(item.ListingHash, contract)
+		rl, err := repo.NewListingFromProtobuf(l)
 		if err != nil {
 			return big.NewInt(0), err
+		}
+
+		nrl, err := rl.Normalize()
+		if err != nil {
+			return big.NewInt(0), fmt.Errorf("normalize legacy listing: %s", err.Error())
 		}
 
 		// keep track of physical listings for shipping caluclation
