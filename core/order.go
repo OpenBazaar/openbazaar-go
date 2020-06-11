@@ -932,7 +932,11 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
-	couponDiscount, err := GetTotalCouponCodeDiscount(nrl, firstItem.CouponCodes)
+	cv := &repo.CurrencyValue{
+		Amount:   totalSurcharge.Add(totalSurcharge, itemOriginAmt.Amount),
+		Currency: listingCurDef,
+	}
+	couponDiscount, err := GetTotalCouponCodeDiscount(nrl, firstItem.CouponCodes, cv)
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
@@ -1132,7 +1136,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		itemOriginAmt = itemOriginAmt.AddBigInt(totalSurcharge)
 
 		// apply coupon discounts
-		totalDiscount, err := GetTotalCouponCodeDiscount(nrl, item.CouponCodes)
+		totalDiscount, err := GetTotalCouponCodeDiscount(nrl, item.CouponCodes, itemOriginAmt)
 		if err != nil {
 			return big.NewInt(0), err
 		}
@@ -1182,7 +1186,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 	return total, nil
 }
 
-func GetTotalCouponCodeDiscount(nrl *repo.Listing, couponCodes []string) (*big.Int, error) {
+func GetTotalCouponCodeDiscount(nrl *repo.Listing, couponCodes []string, itemAmount *repo.CurrencyValue) (*big.Int, error) {
 	totalCouponCodeDiscount := big.NewInt(0)
 
 	for _, couponCode := range couponCodes {
@@ -1198,8 +1202,8 @@ func GetTotalCouponCodeDiscount(nrl *repo.Listing, couponCodes []string) (*big.I
 					totalCouponCodeDiscount.Sub(totalCouponCodeDiscount, disc)
 				} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
 					// apply percentage discount
-					disc, _ := toHundredths(-discountF).Int(nil)
-					totalCouponCodeDiscount.Add(totalCouponCodeDiscount, disc)
+					disc := itemAmount.AddBigFloatProduct(toHundredths(-discountF))
+					totalCouponCodeDiscount.Sub(totalCouponCodeDiscount, new(big.Int).Sub(itemAmount.Amount, disc.Amount))
 				}
 			}
 		}
