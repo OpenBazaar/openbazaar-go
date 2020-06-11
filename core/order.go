@@ -886,6 +886,9 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 
 	// Get base price of item
 	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
 	firstItem := v5Order.Items[0]
 
 	nrl, err := GetNormalizedListing(firstItem.ListingHash, contract)
@@ -930,6 +933,9 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 		return emptyCheckoutBreakdown, err
 	}
 	couponDiscount, err := GetTotalCouponCodeDiscount(nrl, firstItem.CouponCodes)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
 	couponDiscount = couponDiscount.Mul(couponDiscount, new(big.Int).SetInt64(-1))
 	couponCurrencyValue := repo.NewCurrencyValueFromBigInt(couponDiscount, listingCurDef)
 
