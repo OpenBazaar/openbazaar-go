@@ -859,6 +859,138 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *repo.PurchaseData) (*big.Int, 
 	return n.CalculateOrderTotal(contract)
 }
 
+// CheckoutBreakdown - returns order total and breakdown of charges
+func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.CheckoutBreakdown, error) {
+	var checkoutBreakdown repo.CheckoutBreakdown
+	emptyCheckoutBreakdown := repo.CheckoutBreakdown{}
+
+	cc, err := n.ReserveCurrencyConverter()
+	if err != nil {
+		return emptyCheckoutBreakdown, fmt.Errorf("preparing reserve currency converter: %s", err.Error())
+	}
+
+	contract, err := n.createContractWithOrder(data)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+	payment := new(pb.Order_Payment)
+	defn, err := n.LookupCurrency(data.PaymentCoin)
+	if err != nil {
+		return emptyCheckoutBreakdown, errors.New("invalid payment coin")
+	}
+	payment.AmountCurrency = &pb.CurrencyDefinition{
+		Code:         defn.Code.String(),
+		Divisibility: uint32(defn.Divisibility),
+	}
+	contract.BuyerOrder.Payment = payment
+
+	// Get base price of item
+	v5Order, err := repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+	firstItem := v5Order.Items[0]
+
+	nrl, err := GetNormalizedListing(firstItem.ListingHash, contract)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	totalSurcharge, err := GetTotalSurchargeAmount(nrl, firstItem.Options)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	itemOriginAmt, err := GetOriginalAmount(nrl, firstItem)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	// Calculate total items
+	totalQuantity := new(big.Int).SetInt64(0)
+	for _, i := range data.Items {
+		iCount, ok := new(big.Int).SetString(i.Quantity, 10)
+		if !ok {
+			return emptyCheckoutBreakdown, err
+		}
+		totalQuantity = totalQuantity.Add(totalQuantity, iCount)
+	}
+
+	// Calculate total price for the order
+	totalPrice, err := n.CalculateOrderTotal(contract)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	finalBasePrice, _, err := itemOriginAmt.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	// Coupon Codes Discount
+	listingCurDef, err := n.LookupCurrency(contract.VendorListings[0].Item.PriceCurrency.Code)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+	couponDiscount, err := GetTotalCouponCodeDiscount(nrl, firstItem.CouponCodes)
+	couponDiscount = couponDiscount.Mul(couponDiscount, new(big.Int).SetInt64(-1))
+	couponCurrencyValue := repo.NewCurrencyValueFromBigInt(couponDiscount, listingCurDef)
+
+	finalCouponDiscount, _, err := couponCurrencyValue.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	optionCurrencyValue := repo.NewCurrencyValueFromBigInt(totalSurcharge, listingCurDef)
+
+	finalOptionSurcharge, _, err := optionCurrencyValue.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+
+	// Shipping Costs
+	isPhysicalGood := false
+	var physicalGoods = make(map[string]*repo.Listing)
+
+	if nrl.GetContractType() == pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+		isPhysicalGood = true
+		physicalGoods[firstItem.ListingHash] = nrl
+	}
+
+	shippingTotal := new(big.Int).SetInt64(0)
+	if isPhysicalGood {
+
+		shippingTotal, err = n.calculateShippingTotalForListings(contract, physicalGoods)
+		if err != nil {
+			return emptyCheckoutBreakdown, err
+		}
+	}
+
+	// Taxes
+	taxesTotal := new(big.Int).SetInt64(0)
+	for _, tax := range nrl.GetProtobuf().Taxes {
+		for _, taxRegion := range tax.TaxRegions {
+			if contract.BuyerOrder.Shipping.Country == taxRegion {
+				factor := toHundredths(tax.Percentage)
+				taxes, _ := new(big.Float).Mul(new(big.Float).SetInt(itemOriginAmt.Amount), factor).Int(nil)
+				taxesTotal = new(big.Int).Add(taxesTotal, taxes)
+				break
+			}
+		}
+	}
+
+	checkoutBreakdown.Tax = taxesTotal.String()
+	checkoutBreakdown.ShippingPrice = shippingTotal.String()
+	checkoutBreakdown.Coupon = finalCouponDiscount.Amount.String()
+	checkoutBreakdown.OptionSurcharge = finalOptionSurcharge.Amount.String()
+	checkoutBreakdown.BasePrice = finalBasePrice.Amount.String()
+	checkoutBreakdown.PriceCurrency = repo.CheckoutCurrency{
+		Code:         itemOriginAmt.Currency.Code.String(),
+		Divisibility: int(itemOriginAmt.Currency.Divisibility),
+	}
+	checkoutBreakdown.TotalPrice = totalPrice.String()
+	checkoutBreakdown.Quantity = totalQuantity.String()
+
+	return checkoutBreakdown, nil
+}
+
 // CancelOfflineOrder - cancel order
 func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
@@ -952,10 +1084,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 	var (
 		total         = big.NewInt(0)
 		physicalGoods = make(map[string]*repo.Listing)
-		toHundredths  = func(f float32) *big.Float {
-			return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
-		}
-		v5Order, err = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
+		v5Order, err  = repo.ToV5Order(contract.BuyerOrder, n.LookupCurrency)
 	)
 	if err != nil {
 		return big.NewInt(0), fmt.Errorf("normalizing buyer order: %s", err.Error())
@@ -963,19 +1092,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 
 	for _, item := range v5Order.Items {
 		var itemOriginAmt *repo.CurrencyValue
-		l, err := ParseContractForListing(item.ListingHash, contract)
-		if err != nil {
-			return big.NewInt(0), fmt.Errorf("listing not found in contract for item %s", item.ListingHash)
-		}
 
-		rl, err := repo.NewListingFromProtobuf(l)
+		nrl, err := GetNormalizedListing(item.ListingHash, contract)
 		if err != nil {
 			return big.NewInt(0), err
-		}
-
-		nrl, err := rl.Normalize()
-		if err != nil {
-			return big.NewInt(0), fmt.Errorf("normalize legacy listing: %s", err.Error())
 		}
 
 		// keep track of physical listings for shipping caluclation
@@ -984,60 +1104,24 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		}
 
 		// calculate base amount
-		if nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
-			nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String() {
-			var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), uint(nrl.GetCryptoDivisibility()))
-			itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(nrl.GetProtobuf(), item), originDef)
-
-			if priceModifier := nrl.GetPriceModifier(); priceModifier != 0 {
-				itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(priceModifier))
-			}
-		} else {
-			oAmt, err := nrl.GetPrice()
-			if err != nil {
-				return big.NewInt(0), err
-			}
-			itemOriginAmt = oAmt
+		itemOriginAmt, err = GetOriginalAmount(nrl, item)
+		if err != nil {
+			return big.NewInt(0), err
 		}
 
 		// apply surcharges
-		selectedSku, err := GetSelectedSku(nrl.GetProtobuf(), item.Options)
+		totalSurcharge, err := GetTotalSurchargeAmount(nrl, item.Options)
 		if err != nil {
 			return big.NewInt(0), err
 		}
-		skus, err := nrl.GetSkus()
-		if err != nil {
-			return big.NewInt(0), err
-		}
-		for i, sku := range skus {
-			if selectedSku == i {
-				// surcharge may be positive or negative
-				surcharge, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
-				if ok && surcharge.Cmp(big.NewInt(0)) != 0 {
-					itemOriginAmt = itemOriginAmt.AddBigInt(surcharge)
-				}
-				break
-			}
-		}
+		itemOriginAmt = itemOriginAmt.AddBigInt(totalSurcharge)
 
 		// apply coupon discounts
-		for _, couponCode := range item.CouponCodes {
-			id, err := ipfs.EncodeMultihash([]byte(couponCode))
-			if err != nil {
-				return big.NewInt(0), err
-			}
-			for _, vendorCoupon := range nrl.GetProtobuf().Coupons {
-				if id.B58String() == vendorCoupon.GetHash() {
-					if disc, ok := new(big.Int).SetString(vendorCoupon.GetBigPriceDiscount(), 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
-						// apply fixed discount
-						itemOriginAmt = itemOriginAmt.SubBigInt(disc)
-					} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
-						// apply percentage discount
-						itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(-discountF))
-					}
-				}
-			}
+		totalDiscount, err := GetTotalCouponCodeDiscount(nrl, item.CouponCodes)
+		if err != nil {
+			return big.NewInt(0), err
 		}
+		itemOriginAmt = itemOriginAmt.AddBigInt(totalDiscount)
 
 		// apply taxes
 		for _, tax := range nrl.GetProtobuf().Taxes {
@@ -1081,6 +1165,98 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 	total.Add(total, shippingTotal)
 
 	return total, nil
+}
+
+func GetTotalCouponCodeDiscount(nrl *repo.Listing, couponCodes []string) (*big.Int, error) {
+	totalCouponCodeDiscount := big.NewInt(0)
+
+	for _, couponCode := range couponCodes {
+		id, err := ipfs.EncodeMultihash([]byte(couponCode))
+		if err != nil {
+			return big.NewInt(0), err
+		}
+		coupons := nrl.GetProtobuf().Coupons
+		for _, vendorCoupon := range coupons {
+			if id.B58String() == vendorCoupon.GetHash() {
+				if disc, ok := new(big.Int).SetString(vendorCoupon.GetBigPriceDiscount(), 10); ok && disc.Cmp(big.NewInt(0)) > 0 {
+					// apply fixed discount
+					totalCouponCodeDiscount.Sub(totalCouponCodeDiscount, disc)
+				} else if discountF := vendorCoupon.GetPercentDiscount(); discountF > 0 {
+					// apply percentage discount
+					disc, _ := toHundredths(-discountF).Int(nil)
+					totalCouponCodeDiscount.Add(totalCouponCodeDiscount, disc)
+				}
+			}
+		}
+	}
+	return totalCouponCodeDiscount, nil
+}
+
+func GetTotalSurchargeAmount(nrl *repo.Listing, options []*pb.Order_Item_Option) (*big.Int, error) {
+	totalSurchargeAmount := big.NewInt(0)
+
+	selectedSku, err := GetSelectedSku(nrl.GetProtobuf(), options)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	skus, err := nrl.GetSkus()
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	for i, sku := range skus {
+		if selectedSku == i {
+			// surcharge may be positive or negative
+			surcharge, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
+			if ok && surcharge.Cmp(big.NewInt(0)) != 0 {
+				totalSurchargeAmount.Add(totalSurchargeAmount, surcharge)
+			}
+			break
+		}
+	}
+	return totalSurchargeAmount, nil
+}
+func toHundredths(f float32) *big.Float {
+	return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
+}
+
+func GetNormalizedListing(listingHash string, contract *pb.RicardianContract) (*repo.Listing, error) {
+	l, err := ParseContractForListing(listingHash, contract)
+	if err != nil {
+		return nil, fmt.Errorf("listing not found in contract for item %s", listingHash)
+	}
+
+	rl, err := repo.NewListingFromProtobuf(l)
+	if err != nil {
+		return nil, err
+	}
+
+	nrl, err := rl.Normalize()
+	if err != nil {
+		return nil, fmt.Errorf("normalize legacy listing: %s", err.Error())
+	}
+
+	return nrl, nil
+}
+
+func GetOriginalAmount(nrl *repo.Listing, item *pb.Order_Item) (*repo.CurrencyValue, error) {
+	var itemOriginAmt *repo.CurrencyValue
+
+	if nrl.GetContractType() == pb.Listing_Metadata_CRYPTOCURRENCY.String() &&
+		nrl.GetFormat() == pb.Listing_Metadata_MARKET_PRICE.String() {
+		var originDef = repo.NewUnknownCryptoDefinition(nrl.GetCryptoCurrencyCode(), uint(nrl.GetCryptoDivisibility()))
+		itemOriginAmt = repo.NewCurrencyValueFromBigInt(GetOrderQuantity(nrl.GetProtobuf(), item), originDef)
+
+		if priceModifier := nrl.GetPriceModifier(); priceModifier != 0 {
+			itemOriginAmt = itemOriginAmt.AddBigFloatProduct(toHundredths(priceModifier))
+		}
+	} else {
+		oAmt, err := nrl.GetPrice()
+		if err != nil {
+			return nil, err
+		}
+		itemOriginAmt = oAmt
+	}
+	return itemOriginAmt, nil
 }
 
 func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*repo.Listing) (*big.Int, error) {
