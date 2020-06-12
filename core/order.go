@@ -991,10 +991,6 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 	checkoutBreakdown.Coupon = finalCouponDiscount.Amount.String()
 	checkoutBreakdown.OptionSurcharge = finalOptionSurcharge.Amount.String()
 	checkoutBreakdown.BasePrice = finalBasePrice.Amount.String()
-	checkoutBreakdown.PriceCurrency = repo.CheckoutCurrency{
-		Code:         itemOriginAmt.Currency.Code.String(),
-		Divisibility: int(itemOriginAmt.Currency.Divisibility),
-	}
 	checkoutBreakdown.TotalPrice = totalPrice.String()
 	checkoutBreakdown.Quantity = totalQuantity.String()
 
