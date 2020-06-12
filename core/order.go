@@ -896,7 +896,7 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 		return emptyCheckoutBreakdown, err
 	}
 
-	totalSurcharge, err := GetTotalSurchargeAmount(nrl, firstItem.Options)
+	itemSurcharge, err := GetItemSurchargeAmount(nrl, firstItem.Options)
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
@@ -932,8 +932,9 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
+	totalSurcharge := new(big.Int).Mul(itemSurcharge, totalQuantity)
 	cv := &repo.CurrencyValue{
-		Amount:   totalSurcharge.Add(totalSurcharge, itemOriginAmt.Amount),
+		Amount:   new(big.Int).Add(itemSurcharge, itemOriginAmt.Amount),
 		Currency: listingCurDef,
 	}
 	couponDiscount, err := GetTotalCouponCodeDiscount(nrl, firstItem.CouponCodes, cv)
@@ -966,11 +967,16 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 
 	shippingTotal := new(big.Int).SetInt64(0)
 	if isPhysicalGood {
-
-		shippingTotal, err = n.calculateShippingTotalForListings(contract, physicalGoods)
+		shippingTotal, err = getPretaxShippingCost(v5Order, nrl)
 		if err != nil {
 			return emptyCheckoutBreakdown, err
 		}
+	}
+	// Convert to final currency
+	shippingCurrencyValue := repo.NewCurrencyValueFromBigInt(shippingTotal, listingCurDef)
+	finalShippingTotal, _, err := shippingCurrencyValue.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
 	}
 
 	// Taxes
@@ -979,15 +985,33 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 		for _, taxRegion := range tax.TaxRegions {
 			if contract.BuyerOrder.Shipping.Country == taxRegion {
 				factor := toHundredths(tax.Percentage)
-				taxes, _ := new(big.Float).Mul(new(big.Float).SetInt(itemOriginAmt.Amount), factor).Int(nil)
+
+				var taxes *big.Int
+				amountToTax := new(big.Int).SetInt64(0)
+
+				totalBasePrice := new(big.Int).Mul(itemOriginAmt.Amount, totalQuantity)
+				amountToTax.Add(totalBasePrice, totalSurcharge)
+				amountToTax.Sub(amountToTax, couponDiscount)
+
+				if tax.TaxShipping {
+					amountToTax.Add(amountToTax, shippingTotal)
+				}
+
+				taxes, _ = new(big.Float).Mul(new(big.Float).SetInt(amountToTax), factor).Int(nil)
 				taxesTotal = new(big.Int).Add(taxesTotal, taxes)
+
 				break
 			}
 		}
 	}
+	taxesCurrencyValue := repo.NewCurrencyValueFromBigInt(taxesTotal, listingCurDef)
+	finalTaxesTotal, _, err := taxesCurrencyValue.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
 
-	checkoutBreakdown.Tax = taxesTotal.String()
-	checkoutBreakdown.ShippingPrice = shippingTotal.String()
+	checkoutBreakdown.Tax = finalTaxesTotal.Amount.String()
+	checkoutBreakdown.ShippingPrice = finalShippingTotal.Amount.String()
 	checkoutBreakdown.Coupon = finalCouponDiscount.Amount.String()
 	checkoutBreakdown.OptionSurcharge = finalOptionSurcharge.Amount.String()
 	checkoutBreakdown.BasePrice = finalBasePrice.Amount.String()
@@ -995,6 +1019,60 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 	checkoutBreakdown.Quantity = totalQuantity.String()
 
 	return checkoutBreakdown, nil
+}
+
+func getPretaxShippingCost(v5Order *pb.Order, nrl *repo.Listing) (*big.Int, error) {
+	pretaxShippingCost := new(big.Int).SetInt64(0)
+
+	for _, item := range v5Order.Items {
+		//shippingOption := item.ShippingOption
+
+		itemQuantity, ok := new(big.Int).SetString(item.BigQuantity, 10)
+		if !ok {
+			return new(big.Int).SetInt64(0), errors.New("bad bigQuantity")
+		}
+		listingShippingOptions, err := nrl.GetShippingOptions()
+		if err != nil {
+			return new(big.Int).SetInt64(0), err
+		}
+
+		for _, listingShippingOption := range listingShippingOptions {
+			if inShippingRegions(v5Order.Shipping.Country, listingShippingOption.Regions) {
+				for _, listingService := range listingShippingOption.Services {
+					if item.ShippingOption.Service == listingService.Name {
+						servicePrice, _ := new(big.Int).SetString(listingService.BigPrice, 10)
+						if err != nil {
+							return new(big.Int).SetInt64(0), err
+						}
+						additionalItemPrice, _ := new(big.Int).SetString(listingService.BigAdditionalItemPrice, 10)
+						if err != nil {
+							return new(big.Int).SetInt64(0), err
+						}
+
+						pretaxShippingCost.Add(pretaxShippingCost, servicePrice)
+
+						if itemQuantity.Cmp(new(big.Int).SetInt64(1)) == 1 {
+							// Add additional item price for each quantity over 1
+							additionalCost := new(big.Int).Mul(additionalItemPrice, itemQuantity)
+							pretaxShippingCost.Add(pretaxShippingCost, additionalCost)
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+	return pretaxShippingCost, nil
+}
+
+func inShippingRegions(needle pb.CountryCode, regions []pb.CountryCode) bool {
+	for _, region := range regions {
+		if needle == region || region == pb.CountryCode_ALL {
+			return true
+		}
+	}
+	return false
 }
 
 // CancelOfflineOrder - cancel order
@@ -1125,11 +1203,11 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (*b
 		}
 
 		// apply surcharges
-		totalSurcharge, err := GetTotalSurchargeAmount(nrl, item.Options)
+		itemSurcharge, err := GetItemSurchargeAmount(nrl, item.Options)
 		if err != nil {
 			return big.NewInt(0), err
 		}
-		itemOriginAmt = itemOriginAmt.AddBigInt(totalSurcharge)
+		itemOriginAmt = itemOriginAmt.AddBigInt(itemSurcharge)
 
 		// apply coupon discounts
 		totalDiscount, err := GetTotalCouponCodeDiscount(nrl, item.CouponCodes, itemOriginAmt)
@@ -1207,8 +1285,8 @@ func GetTotalCouponCodeDiscount(nrl *repo.Listing, couponCodes []string, itemAmo
 	return totalCouponCodeDiscount, nil
 }
 
-func GetTotalSurchargeAmount(nrl *repo.Listing, options []*pb.Order_Item_Option) (*big.Int, error) {
-	totalSurchargeAmount := big.NewInt(0)
+func GetItemSurchargeAmount(nrl *repo.Listing, options []*pb.Order_Item_Option) (*big.Int, error) {
+	itemSurchargeAmount := big.NewInt(0)
 
 	selectedSku, err := GetSelectedSku(nrl.GetProtobuf(), options)
 	if err != nil {
@@ -1223,12 +1301,12 @@ func GetTotalSurchargeAmount(nrl *repo.Listing, options []*pb.Order_Item_Option)
 			// surcharge may be positive or negative
 			surcharge, ok := new(big.Int).SetString(sku.BigSurcharge, 10)
 			if ok && surcharge.Cmp(big.NewInt(0)) != 0 {
-				totalSurchargeAmount.Add(totalSurchargeAmount, surcharge)
+				itemSurchargeAmount.Add(itemSurchargeAmount, surcharge)
 			}
 			break
 		}
 	}
-	return totalSurchargeAmount, nil
+	return itemSurchargeAmount, nil
 }
 func toHundredths(f float32) *big.Float {
 	return new(big.Float).Mul(big.NewFloat(float64(f)), big.NewFloat(0.01))
@@ -1298,14 +1376,15 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			continue
 		}
 
-		// Check selected option exists
-		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
-		for _, so := range rl.GetProtobuf().ShippingOptions {
-			shippingOptions[strings.ToLower(so.Name)] = so
+		// Check if physical good
+		if rl.GetContractType() != pb.Listing_Metadata_PHYSICAL_GOOD.String() {
+			continue
 		}
-		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
-		if !ok {
-			return big.NewInt(0), errors.New("shipping option not found in listing")
+
+		// Check selected option exists
+		option, err := getShippingOption(rl, item.ShippingOption.Name)
+		if err != nil {
+			return big.NewInt(0), err
 		}
 
 		if option.Type == pb.Listing_ShippingOption_LOCAL_PICKUP {
@@ -1438,6 +1517,18 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	shippingTotal = new(big.Int).Add(shippingTotal, sts0)
 
 	return shippingTotal, nil
+}
+
+func getShippingOption(rl *repo.Listing, optionName string) (*pb.Listing_ShippingOption, error) {
+	shippingOptions := make(map[string]*pb.Listing_ShippingOption)
+	for _, so := range rl.GetProtobuf().ShippingOptions {
+		shippingOptions[strings.ToLower(so.Name)] = so
+	}
+	option, ok := shippingOptions[strings.ToLower(optionName)]
+	if !ok {
+		return nil, errors.New("shipping option not found in listing")
+	}
+	return option, nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
