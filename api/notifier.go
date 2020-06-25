@@ -73,9 +73,9 @@ func (m *notificationManager) getNotifiers() []notifier {
 	if err != nil {
 		return nil
 	}
-	conf.OpenBazaarName = profile.Name
 
 	if conf != nil && conf.Notifications {
+		conf.OpenBazaarName = profile.Name
 		notifiers = append(notifiers, &smtpNotifier{settings: conf})
 	}
 	return notifiers
