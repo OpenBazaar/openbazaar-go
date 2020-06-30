@@ -91,6 +91,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTShutdown(w, r)
 	case strings.HasPrefix(path, "/ob/estimatetotal"):
 		i.POSTEstimateTotal(w, r)
+	case strings.HasPrefix(path, "/ob/checkoutbreakdown"):
+		i.POSTCheckoutBreakdown(w, r)
 	case strings.HasPrefix(path, "/ob/fetchratings"):
 		i.POSTFetchRatings(w, r)
 	case strings.HasPrefix(path, "/ob/sales"):
