@@ -928,7 +928,7 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 	}
 
 	// Coupon Codes Discount
-	listingCurDef, err := n.LookupCurrency(contract.VendorListings[0].Item.PriceCurrency.Code)
+	listingCurDef, err := n.LookupCurrency(v5Order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
