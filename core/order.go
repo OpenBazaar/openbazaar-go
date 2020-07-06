@@ -973,8 +973,13 @@ func (n *OpenBazaarNode) CheckoutBreakdown(data *repo.PurchaseData) (repo.Checko
 		}
 	}
 	// Convert to final currency
-	shippingCurrencyValue := repo.NewCurrencyValueFromBigInt(shippingTotal, listingCurDef)
-	finalShippingTotal, _, err := shippingCurrencyValue.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
+	originalPrice, err := nrl.GetPrice()
+	if err != nil {
+		return emptyCheckoutBreakdown, err
+	}
+	originalPrice.Amount = shippingTotal
+
+	finalShippingTotal, _, err := originalPrice.ConvertUsingProtobufDef(v5Order.Payment.AmountCurrency, cc)
 	if err != nil {
 		return emptyCheckoutBreakdown, err
 	}
