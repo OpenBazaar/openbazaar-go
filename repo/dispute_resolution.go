@@ -1,9 +1,11 @@
 package repo
 
 import (
+	"math/big"
+	"strconv"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	"math/big"
 )
 
 // ToV5DisputeResolution scans through the dispute resolution looking for any deprecated fields and
@@ -12,6 +14,13 @@ func ToV5DisputeResolution(disputeResolution *pb.DisputeResolution) *pb.DisputeR
 	newDisputeResolution := proto.Clone(disputeResolution).(*pb.DisputeResolution)
 	if disputeResolution.Payout == nil {
 		return newDisputeResolution
+	}
+
+	for i, input := range disputeResolution.Payout.Inputs {
+		if input.Value != 0 && input.BigValue == "" {
+			input.BigValue = strconv.FormatUint(input.Value, 10)
+			newDisputeResolution.Payout.Inputs[i] = input
+		}
 	}
 
 	if disputeResolution.Payout.BuyerOutput != nil &&
