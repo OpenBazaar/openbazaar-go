@@ -2,11 +2,16 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"strconv"
 
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/wire"
 )
+
+var BumpFeeAlreadyConfirmedError = errors.New("Transaction is confirmed, cannot bump fee")
+var BumpFeeTransactionDeadError = errors.New("Cannot bump fee of dead transaction")
+var BumpFeeNotFoundError = errors.New("Transaction either doesn't exist or has already been spent")
 
 func CalcBalance(utxos []wi.Utxo, txns []wi.Txn) (confirmed, unconfirmed int64) {
 	var txmap = make(map[string]wi.Txn)

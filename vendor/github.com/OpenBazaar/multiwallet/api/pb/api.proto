@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/timestamp.proto";
+
+service API {
+  rpc Stop (Empty) returns (Empty) {}
+  rpc CurrentAddress (KeySelection) returns (Address) {}
+  rpc NewAddress (KeySelection) returns (Address) {}
+  rpc ChainTip (CoinSelection) returns (Height) {}
+  rpc Balance (CoinSelection) returns (Balances) {}
+  rpc MasterPrivateKey (CoinSelection) returns (Key) {}
+  rpc MasterPublicKey (CoinSelection) returns (Key) {}
+  rpc HasKey (Address) returns (BoolResponse) {}
+  rpc Params (Empty) returns (NetParams) {}
+  rpc Transactions (CoinSelection) returns (TransactionList) {}
+  rpc GetTransaction (Txid) returns (Tx) {}
+  rpc GetFeePerByte (FeeLevelSelection) returns (FeePerByte) {}
+  rpc Spend (SpendInfo) returns (Txid) {}
+  rpc BumpFee (Txid) returns (Txid) {}
+  rpc AddWatchedScript (Address) returns (Empty) {}
+  rpc GetConfirmations (Txid) returns (Confirmations) {}
+  rpc SweepAddress (SweepInfo) returns (Txid) {}
+  rpc CreateMultisigSignature (CreateMultisigInfo) returns (SignatureList) {}
+  rpc Multisign (MultisignInfo) returns (RawTx) {}
+  rpc EstimateFee (EstimateFeeData) returns (Fee) {}
+  rpc GetKey (Address) returns (Key) {}
+  rpc ListKeys (CoinSelection) returns (Keys) {}
+  rpc ListAddresses (CoinSelection) returns (Addresses) {}
+  rpc WalletNotify (CoinSelection) returns (stream Tx) {}
+  rpc DumpTables (CoinSelection) returns (stream Row) {}
+}
+
+enum CoinType {
+    BITCOIN      = 0;
+    BITCOIN_CASH = 1;
+    ZCASH        = 2;
+    LITECOIN     = 3;
+    ETHEREUM     = 4;
+}
+
+message Empty {}
+
+message CoinSelection {
+    CoinType coin = 1;
+}
+
+enum KeyPurpose {
+    INTERNAL = 0;
+    EXTERNAL = 1;
+}
+
+message Row {
+    string data = 1;
+}
+
+message KeySelection {
+    CoinType coin      = 1;
+    KeyPurpose purpose = 2;
+}
+
+message Address {
+    CoinType coin = 1;
+    string addr   = 2;
+}
+
+message Height {
+    uint32 height = 1;
+}
+
+message Balances {
+    uint64 confirmed   = 1;
+    uint64 unconfirmed = 2;
+}
+
+message Key {
+    string key = 1;
+}
+
+message Keys {
+    repeated Key keys = 1;
+}
+
+message Addresses {
+    repeated Address addresses = 1;
+}
+
+message BoolResponse {
+    bool bool = 1;
+}
+
+message NetParams {
+    string name = 1;
+}
+
+message TransactionList {
+    repeated Tx transactions = 1;
+}
+
+message Tx {
+    string txid                         = 1;
+    int64 value                         = 2;
+    int32 height                        = 3;
+    google.protobuf.Timestamp timestamp = 4;
+    bool watchOnly                      = 5;
+    bytes raw                           = 6;
+}
+
+message Txid {
+    CoinType coin = 1;
+    string hash   = 2;
+}
+
+enum FeeLevel {
+    ECONOMIC = 0;
+    NORMAL   = 1;
+    PRIORITY = 2;
+}
+
+message FeeLevelSelection {
+    CoinType coin      = 1;
+    FeeLevel feeLevel  = 2;
+}
+
+message FeePerByte {
+    uint64 fee = 1;
+}
+
+message Fee {
+    uint64 fee = 1;
+}
+
+message SpendInfo {
+    CoinType coin     = 1;
+    string address    = 2;
+    uint64 amount     = 3;
+    FeeLevel feeLevel = 4;
+    string memo       = 5;
+}
+
+message Confirmations {
+    uint32 confirmations = 1;
+}
+
+message Utxo {
+    string txid  = 1;
+    uint32 index = 2;
+    uint64 value = 3;
+}
+
+message SweepInfo {
+    CoinType coin       = 1;
+    repeated Utxo utxos = 2;
+    string address      = 3;
+    string key          = 4;
+    bytes redeemScript  = 5;
+    FeeLevel feeLevel   = 6;
+}
+
+message Input {
+    string txid  = 1;
+    uint32 index = 2;
+}
+
+message Output {
+    bytes scriptPubKey = 1;
+    uint64 value       = 2;
+}
+
+message Signature {
+    uint32 index    = 1;
+    bytes signature = 2;
+}
+
+message CreateMultisigInfo {
+    CoinType coin           = 1;
+    repeated Input inputs   = 2;
+    repeated Output outputs = 3;
+    string key              = 4;
+    bytes redeemScript      = 5;
+    uint64 feePerByte       = 6;
+}
+
+message SignatureList {
+    repeated Signature sigs = 1;
+}
+
+message MultisignInfo {
+    CoinType coin           = 1;
+    repeated Input inputs   = 2;
+    repeated Output outputs = 3;
+    repeated Signature sig1 = 4;
+    repeated Signature sig2 = 5;
+    bytes redeemScript      = 6;
+    uint64 feePerByte       = 7;
+    bool broadcast          = 8;
+}
+
+message RawTx {
+    bytes tx = 1;
+}
+
+message EstimateFeeData {
+    CoinType coin           = 1;
+    repeated Input inputs   = 2;
+    repeated Output outputs = 3;
+    uint64 feePerByte       = 4;
+}

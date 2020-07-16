@@ -17,8 +17,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
-	"github.com/OpenBazaar/spvwallet"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -38,7 +36,7 @@ type BitcoinWallet struct {
 	params *chaincfg.Params
 	client model.APIClient
 	ws     *service.WalletService
-	fp     *spvwallet.FeeProvider
+	fp     *util.FeeProvider
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
@@ -75,7 +73,7 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 	if err != nil {
 		return nil, err
 	}
-	er := exchangerates.NewBitcoinPriceFetcher(proxy)
+	er := util.NewBitcoinPriceFetcher(proxy)
 	if !disableExchangeRates {
 		go er.Run()
 	}
@@ -85,7 +83,7 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 		return nil, err
 	}
 
-	fp := spvwallet.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.SuperLowFee, cfg.FeeAPI, proxy)
+	fp := util.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.SuperLowFee, er)
 
 	return &BitcoinWallet{
 		db:            cfg.DB,
@@ -253,7 +251,7 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 }
 
 func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
-	txn, err := w.db.Txns().Get(txid)
+	txn, err := w.db.Txns().Get(txid.String())
 	if err == nil {
 		tx := wire.NewMsgTx(1)
 		rbuf := bytes.NewReader(txn.Bytes)
@@ -285,7 +283,7 @@ func (w *BitcoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	return txn, err
 }
 
-func (w *BitcoinWallet) ChainTip() (uint32, chainhash.Hash) {
+func (w *BitcoinWallet) ChainTip() (uint32, string) {
 	return w.ws.ChainTip()
 }
 
@@ -385,7 +383,7 @@ func (w *BitcoinWallet) ReSyncBlockchain(fromTime time.Time) {
 }
 
 func (w *BitcoinWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
-	txn, err := w.db.Txns().Get(txid)
+	txn, err := w.db.Txns().Get(txid.String())
 	if err != nil {
 		return 0, 0, err
 	}

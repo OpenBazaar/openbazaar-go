@@ -12,7 +12,6 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 
-	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
@@ -261,15 +260,15 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 }
 
 func (w *LitecoinWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	txn, err := w.db.Txns().Get(txid)
+	txn, err := w.db.Txns().Get(txid.String())
 	if err != nil {
 		return nil, err
 	}
 	if txn.Height > 0 {
-		return nil, spvwallet.BumpFeeAlreadyConfirmedError
+		return nil, util.BumpFeeAlreadyConfirmedError
 	}
 	if txn.Height < 0 {
-		return nil, spvwallet.BumpFeeTransactionDeadError
+		return nil, util.BumpFeeTransactionDeadError
 	}
 	// Check utxos for CPFP
 	utxos, _ := w.db.Utxos().GetAll()
@@ -302,7 +301,7 @@ func (w *LitecoinWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			return transactionID, nil
 		}
 	}
-	return nil, spvwallet.BumpFeeNotFoundError
+	return nil, util.BumpFeeNotFoundError
 }
 
 func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
@@ -340,7 +339,7 @@ func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Ad
 	txType := P2PKH
 	if redeemScript != nil {
 		txType = P2SH_1of2_Multisig
-		_, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+		_, err := util.LockTimeFromRedeemScript(*redeemScript)
 		if err == nil {
 			txType = P2SH_Multisig_Timelock_1Sig
 		}
@@ -404,7 +403,7 @@ func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Ad
 			timeLocked = true
 			tx.Version = 2
 			for _, txIn := range tx.TxIn {
-				locktime, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+				locktime, err := util.LockTimeFromRedeemScript(*redeemScript)
 				if err != nil {
 					return nil, err
 				}
@@ -471,7 +470,7 @@ func (w *LitecoinWallet) createMultisigSignature(ins []wi.TransactionInput, outs
 
 	// Subtract fee
 	txType := P2SH_2of3_Multisig
-	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
+	_, err := util.LockTimeFromRedeemScript(redeemScript)
 	if err == nil {
 		txType = P2SH_Multisig_Timelock_2Sigs
 	}
@@ -526,7 +525,7 @@ func (w *LitecoinWallet) multisign(ins []wi.TransactionInput, outs []wi.Transact
 
 	// Subtract fee
 	txType := P2SH_2of3_Multisig
-	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
+	_, err := util.LockTimeFromRedeemScript(redeemScript)
 	if err == nil {
 		txType = P2SH_Multisig_Timelock_2Sigs
 	}
