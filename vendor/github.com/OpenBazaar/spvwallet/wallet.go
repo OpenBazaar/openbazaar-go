@@ -380,7 +380,7 @@ func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
 }
 
 func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
-	txn, err := w.txstore.Txns().Get(txid)
+	txn, err := w.txstore.Txns().Get(txid.String())
 	if err == nil {
 		tx := wire.NewMsgTx(1)
 		rbuf := bytes.NewReader(txn.Bytes)
@@ -411,7 +411,7 @@ func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 }
 
 func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
-	txn, err := w.txstore.Txns().Get(txid)
+	txn, err := w.txstore.Txns().Get(txid.String())
 	if err != nil {
 		return 0, 0, err
 	}
@@ -451,13 +451,12 @@ func (w *SPVWallet) AddTransactionListener(callback func(wallet.TransactionCallb
 	w.txstore.listeners = append(w.txstore.listeners, callback)
 }
 
-func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
-	var ch chainhash.Hash
+func (w *SPVWallet) ChainTip() (uint32, string) {
 	sh, err := w.blockchain.db.GetBestHeader()
 	if err != nil {
-		return 0, ch
+		return 0, ""
 	}
-	return sh.height, sh.header.BlockHash()
+	return sh.height, sh.header.BlockHash().String()
 }
 
 func (w *SPVWallet) AddWatchedAddresses(addrs ...btc.Address) error {

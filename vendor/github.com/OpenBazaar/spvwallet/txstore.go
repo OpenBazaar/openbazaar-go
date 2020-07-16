@@ -362,7 +362,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 	if hits > 0 || matchesWatchOnly {
 		ts.cbMutex.Lock()
 		ts.txidsMutex.Lock()
-		txn, err := ts.Txns().Get(tx.TxHash())
+		txn, err := ts.Txns().Get(tx.TxHash().String())
 		shouldCallback := false
 		if err != nil {
 			cb.Value = *big.NewInt(value)
@@ -376,7 +376,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if err == nil && txn.Height <= 0 {
-			ts.Txns().UpdateHeight(tx.TxHash(), int(height), txn.Timestamp)
+			ts.Txns().UpdateHeight(tx.TxHash().String(), int(height), txn.Timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				val0, _ := new(big.Int).SetString(txn.Value, 10)
@@ -409,7 +409,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Now())
+		err = ts.Txns().UpdateHeight(s.SpendTxid.String(), -1, time.Now())
 		if err != nil {
 			return err
 		}
@@ -448,7 +448,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			}
 		}
 	}
-	ts.Txns().UpdateHeight(txid, -1, time.Now())
+	ts.Txns().UpdateHeight(txid.String(), -1, time.Now())
 	return nil
 }
 
