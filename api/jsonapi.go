@@ -3468,7 +3468,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(fl) {
 	case "PRIORITY":
-		feeLevel = wallet.PRIORITY
+		feeLevel = wallet.PRIOIRTY
 	case "NORMAL":
 		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
@@ -3526,7 +3526,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
-			priority := wal.GetFeePerByte(wallet.PRIORITY)
+			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
 			superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
@@ -3555,7 +3555,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
 		return
 	}
-	priority := wal.GetFeePerByte(wallet.PRIORITY)
+	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
 	superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
@@ -3947,7 +3947,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
 			height, hash := wal.ChainTip()
-			ret[ct.CurrencyCode()] = status{height, hash.String()}
+			ret[ct.CurrencyCode()] = status{height, hash}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -3963,7 +3963,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	height, hash := wal.ChainTip()
-	st := status{height, hash.String()}
+	st := status{height, hash}
 	out, err := json.MarshalIndent(st, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
