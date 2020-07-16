@@ -651,17 +651,12 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 }
 
 // ChainTip - Get the height and best hash of the blockchain
-func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
+func (wallet *EthereumWallet) ChainTip() (uint32, string) {
 	num, hash, err := wallet.client.GetLatestBlock()
 	if err != nil {
-		return 0, *emptyChainHash
+		return 0, ""
 	}
-	h, err := util.CreateChainHash(hash.Hex())
-	if err != nil {
-		log.Error(err.Error())
-		h = emptyChainHash
-	}
-	return num, *h
+	return num, hash.String()
 }
 
 // GetFeePerByte - Get the current fee per byte
@@ -677,7 +672,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 		ret, _ = big.NewFloat(est.Average * 100000000).Int(nil)
 	case wi.ECONOMIC, wi.SUPER_ECONOMIC:
 		ret, _ = big.NewFloat(est.SafeLow * 100000000).Int(nil)
-	case wi.PRIORITY, wi.FEE_BUMP:
+	case wi.PRIOIRTY, wi.FEE_BUMP:
 		ret, _ = big.NewFloat(est.Fast * 100000000).Int(nil)
 	}
 	return *ret
