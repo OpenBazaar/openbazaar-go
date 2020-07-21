@@ -590,8 +590,8 @@ func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
 }
 
 // GetTransaction - Get info on a specific transaction
-func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
-	tx, _, err := wallet.client.GetTransaction(common.HexToHash(util.EnsureCorrectPrefix(txid.String())))
+func (wallet *EthereumWallet) GetTransaction(txid string) (wi.Txn, error) {
+	tx, _, err := wallet.client.GetTransaction(common.HexToHash(util.EnsureCorrectPrefix(txid)))
 	if err != nil {
 		return wi.Txn{}, err
 	}
@@ -679,7 +679,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 }
 
 // Spend - Send ether to an external wallet
-func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (string, error) {
 	var (
 		hash common.Hash
 		h *chainhash.Hash
@@ -700,7 +700,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 		// check if the addr is a multisig addr
 		scripts, err := wallet.db.WatchedScripts().GetAll()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		isScript := false
 		addrEth := common.HexToAddress(addr.String())
@@ -718,7 +718,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 		if isScript {
 			ethScript, err := DeserializeEthScript(redeemScript)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			_, scrHash, err := GenScriptHash(ethScript)
 			if err != nil {
@@ -729,22 +729,22 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			hash, _, err = wallet.callAddTransaction(ethScript, &amount, feeLevel)
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
-				return nil, wi.ErrInsufficientFunds
+				return "", wi.ErrInsufficientFunds
 			}
 		} else {
 			if !wallet.balanceCheck(feeLevel, amount) {
-				return nil, wi.ErrInsufficientFunds
+				return "", wi.ErrInsufficientFunds
 			}
 			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
 		}
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		// txn is pending
 		nonce, err = wallet.client.GetTxnNonce(util.EnsureCorrectPrefix(hash.Hex()))
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 	}
 	if err == nil {
@@ -768,7 +768,7 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			log.Error(err0.Error())
 		}
 	}
-	return h, nil
+	return h.String(), nil
 }
 
 func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value big.Int, bTime time.Time, withInput bool, height int64) wi.TransactionCallback {
@@ -854,8 +854,8 @@ func (wallet *EthereumWallet) checkTxnRcpt(hash *common.Hash, data []byte) (*com
 }
 
 // BumpFee - Bump the fee for the given transaction
-func (wallet *EthereumWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	return util.CreateChainHash(txid.String())
+func (wallet *EthereumWallet) BumpFee(txid string) (string, error) {
+	return txid, nil
 }
 
 // EstimateFee - Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
@@ -903,7 +903,7 @@ func (wallet *EthereumWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLe
 }
 
 // SweepAddress - Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
-func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
+func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (string, error) {
 
 	outs := []wi.TransactionOutput{}
 	for i, in := range utxos {
@@ -918,16 +918,16 @@ func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address 
 
 	sigs, err := wallet.CreateMultisigSignature([]wi.TransactionInput{}, outs, key, *redeemScript, *big.NewInt(1))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	data, err := wallet.Multisign([]wi.TransactionInput{}, outs, sigs, []wi.Signature{}, *redeemScript, *big.NewInt(1), false)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	hash := common.BytesToHash(data)
 
-	return util.CreateChainHash(hash.Hex())
+	return hash.Hex(), nil
 }
 
 // ExchangeRates - return the exchangerates
@@ -1442,11 +1442,11 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 }
 
 // GetConfirmations - Return the number of confirmations and the height for a transaction
-func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
+func (wallet *EthereumWallet) GetConfirmations(txid string) (confirms, atHeight uint32, err error) {
 	// TODO: etherscan api is being used
 	// when mainnet is activated we may need a way to set the
 	// url correctly - done 6 April 2019
-	hash := common.HexToHash(util.EnsureCorrectPrefix(txid.String()))
+	hash := common.HexToHash(util.EnsureCorrectPrefix(txid))
 	network := etherscan.Rinkby
 	if strings.Contains(wallet.client.url, "mainnet") {
 		network = etherscan.Mainnet

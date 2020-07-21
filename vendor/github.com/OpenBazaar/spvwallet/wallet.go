@@ -379,8 +379,8 @@ func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
 	return txns, nil
 }
 
-func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
-	txn, err := w.txstore.Txns().Get(txid.String())
+func (w *SPVWallet) GetTransaction(txid string) (wallet.Txn, error) {
+	txn, err := w.txstore.Txns().Get(txid)
 	if err == nil {
 		tx := wire.NewMsgTx(1)
 		rbuf := bytes.NewReader(txn.Bytes)
@@ -410,8 +410,8 @@ func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	return txn, err
 }
 
-func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
-	txn, err := w.txstore.Txns().Get(txid.String())
+func (w *SPVWallet) GetConfirmations(txid string) (uint32, uint32, error) {
+	txn, err := w.txstore.Txns().Get(txid)
 	if err != nil {
 		return 0, 0, err
 	}

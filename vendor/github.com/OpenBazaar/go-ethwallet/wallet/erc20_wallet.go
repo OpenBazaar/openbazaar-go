@@ -451,8 +451,8 @@ func (wallet *ERC20Wallet) callListeners(txnCB wi.TransactionCallback) {
 }
 
 // BumpFee - Bump the fee for the given transaction
-func (wallet *ERC20Wallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	return chainhash.NewHashFromStr(txid.String())
+func (wallet *ERC20Wallet) BumpFee(txid chainhash.Hash) (string, error) {
+	return txid.String(), nil
 }
 
 // EstimateFee - Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
@@ -476,8 +476,8 @@ func (wallet *ERC20Wallet) EstimateSpendFee(amount int64, feeLevel wi.FeeLevel) 
 }
 
 // SweepAddress - Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
-func (wallet *ERC20Wallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
-	return chainhash.NewHashFromStr("")
+func (wallet *ERC20Wallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (string, error) {
+	return "", nil
 }
 
 // ExchangeRates - return the exchangerates

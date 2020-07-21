@@ -6,13 +6,11 @@ import (
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/ipfs/go-cid"
 	"github.com/op/go-logging"
-	"math"
 	"math/big"
 	"sync"
 	"time"
@@ -94,6 +92,8 @@ func (fs *FilecoinService) Stop() {
 }
 
 func (fs *FilecoinService) ChainTip() (uint32, string) {
+	fs.lock.RLock()
+	defer fs.lock.RUnlock()
 	return fs.chainHeight, fs.bestBlock
 }
 
@@ -218,6 +218,13 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 	}
 	var relevant bool
 	cb := wallet.TransactionCallback{Txid: txHash.String(), Height: height, Timestamp: time.Unix(u.Time, 0)}
+
+	inAddr := ""
+	if u.Inputs != nil {
+		inAddr = u.Inputs[0].Addr
+	}
+
+	outAddr := u.Outputs[0].ScriptPubKey.Addresses[0]
 	for _, in := range u.Inputs {
 		faddr, err := NewFilecoinAddress(in.Addr)
 		if err != nil {
@@ -225,7 +232,13 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		v := big.NewInt(int64(math.Round(in.Value * float64(util.SatoshisPerCoin(fs.coinType)))))
+		var valueString string
+		if in.ValueIface == nil {
+			valueString = "0"
+		} else {
+			valueString = in.ValueIface.(string)
+		}
+		v, _ := new(big.Int).SetString(valueString, 10)
 		cbin := wallet.TransactionInput{
 			LinkedAddress: faddr,
 			Value:         *v,
@@ -234,7 +247,6 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 
 		if in.Addr == fs.addr.String() {
 			relevant = true
-			value.Sub(value, v)
 			hits++
 		}
 	}
@@ -248,7 +260,18 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		v := big.NewInt(int64(math.Round(out.Value * float64(util.SatoshisPerCoin(fs.coinType)))))
+		var valueOutString string
+		if out.ValueIface == nil {
+			if out.Value != 0 {
+				valueBig := new(big.Float).SetFloat64(out.Value).String()
+				valueOutString = valueBig
+			}
+
+			valueOutString = "0"
+		} else {
+			valueOutString = out.ValueIface.(string)
+		}
+		v, _ := new(big.Int).SetString(valueOutString, 10)
 
 		cbout := wallet.TransactionOutput{Address: faddr, Value: *v, Index: uint32(i)}
 		cb.Outputs = append(cb.Outputs, cbout)
@@ -258,6 +281,12 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			value.Add(value, v)
 			hits++
 		}
+	}
+
+	if inAddr == outAddr {
+		value = big.NewInt(0)
+	} else if inAddr == fs.addr.String() {
+		value = value.Mul(value, big.NewInt(-1))
 	}
 
 	if !relevant {

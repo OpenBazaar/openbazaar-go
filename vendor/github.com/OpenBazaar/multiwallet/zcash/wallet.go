@@ -19,7 +19,6 @@ import (
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
@@ -260,8 +259,8 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 	return txns, nil
 }
 
-func (w *ZCashWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
-	txn, err := w.db.Txns().Get(txid.String())
+func (w *ZCashWallet) GetTransaction(txid string) (wi.Txn, error) {
+	txn, err := w.db.Txns().Get(txid)
 	if err == nil {
 		tx := wire.NewMsgTx(1)
 		rbuf := bytes.NewReader(trimTxForDeserialization(txn.Bytes))
@@ -295,7 +294,7 @@ func (w *ZCashWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 	return *big.NewInt(int64(w.fp.GetFeePerByte(feeLevel)))
 }
 
-func (w *ZCashWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *ZCashWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (string, error) {
 	var (
 		tx  *wire.MsgTx
 		err error
@@ -303,24 +302,24 @@ func (w *ZCashWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.Fe
 	if spendAll {
 		tx, err = w.buildSpendAllTx(addr, feeLevel)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 	} else {
 		tx, err = w.buildTx(amount.Int64(), addr, feeLevel, nil)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 	}
 	// Broadcast
 	txid, err := w.Broadcast(tx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return chainhash.NewHashFromStr(txid)
+	return txid, nil
 }
 
-func (w *ZCashWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+func (w *ZCashWallet) BumpFee(txid string) (string, error) {
 	return w.bumpFee(txid)
 }
 
@@ -341,7 +340,7 @@ func (w *ZCashWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLevel) (bi
 	return *big.NewInt(int64(val)), err
 }
 
-func (w *ZCashWallet) SweepAddress(ins []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZCashWallet) SweepAddress(ins []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (string, error) {
 	return w.sweepAddress(ins, address, key, redeemScript, feeLevel)
 }
 
@@ -400,8 +399,8 @@ func (w *ZCashWallet) ReSyncBlockchain(fromTime time.Time) {
 	go w.ws.UpdateState()
 }
 
-func (w *ZCashWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
-	txn, err := w.db.Txns().Get(txid.String())
+func (w *ZCashWallet) GetConfirmations(txid string) (uint32, uint32, error) {
+	txn, err := w.db.Txns().Get(txid)
 	if err != nil {
 		return 0, 0, err
 	}

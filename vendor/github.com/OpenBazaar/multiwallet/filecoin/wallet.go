@@ -6,6 +6,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/lotus/lib/sigs"
+	_ "github.com/filecoin-project/lotus/lib/sigs/secp"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"io"
 	"math/big"
@@ -17,7 +18,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/model"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	faddr "github.com/filecoin-project/go-address"
@@ -78,7 +78,7 @@ func NewFilecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 		return nil, err
 	}
 
-	accountAddr, err := faddr.NewSecp256k1Address(accountECKey.PubKey().SerializeCompressed())
+	accountAddr, err := faddr.NewSecp256k1Address(accountECKey.PubKey().SerializeUncompressed())
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +136,26 @@ func (w *FilecoinWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.mPubKey
 }
 
+func (wallet *FilecoinWallet) BumpFee(txid string) (string, error) {
+	return txid, nil
+}
+
+func (wallet *FilecoinWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]wi.Signature, error) {
+	return nil, nil
+}
+
+func (w *FilecoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btcutil.Address, redeemScript []byte, err error) {
+	return nil, nil, nil
+}
+
+func (wallet *FilecoinWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
+	return nil, nil
+}
+
+func (wallet *FilecoinWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (string, error) {
+	return "", nil
+}
+
 func (w *FilecoinWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
 	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	var id []byte
@@ -157,22 +177,6 @@ func (w *FilecoinWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKe
 
 func (w *FilecoinWallet) CurrentAddress(purpose wi.KeyPurpose) btcutil.Address {
 	return &FilecoinAddress{addr: w.addr}
-}
-
-func (w *FilecoinWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]wi.Signature, error) {
-	return nil, nil
-}
-
-func (w *FilecoinWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error) {
-	return nil, nil
-}
-
-func (wallet *FilecoinWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
-	return chainhash.NewHashFromStr("")
-}
-
-func (w *FilecoinWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btcutil.Address, redeemScript []byte, err error) {
-	return nil, nil, nil
 }
 
 func (w *FilecoinWallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address {
@@ -256,8 +260,8 @@ func (w *FilecoinWallet) Transactions() ([]wi.Txn, error) {
 	return txns, nil
 }
 
-func (w *FilecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
-	txn, err := w.db.Txns().Get(txid.String())
+func (w *FilecoinWallet) GetTransaction(txid string) (wi.Txn, error) {
+	txn, err := w.db.Txns().Get(txid)
 	return txn, err
 }
 
@@ -269,10 +273,10 @@ func (w *FilecoinWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 	return *big.NewInt(0)
 }
 
-func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (string, error) {
 	address, err := faddr.NewFromString(addr.String())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if spendAll {
 		c, u := w.Balance()
@@ -280,19 +284,46 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 	}
 	bigAmt, err := types.BigFromString(amount.String())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+
+	txns, err := w.Transactions()
+	if err != nil {
+		return "", err
+	}
+
+	nonce := uint64(1)
+	for _, tx := range txns {
+		val, _ := new(big.Int).SetString(tx.Value, 10)
+		if val.Cmp(big.NewInt(0)) > 0 {
+			continue
+		}
+
+		m, err := types.DecodeMessage(tx.Bytes)
+		if err != nil {
+			return "", err
+		}
+		if m.Nonce > nonce {
+			nonce = m.Nonce
+		}
+	}
+	if nonce > 0 {
+		nonce++
+	}
+
 	m := types.Message{
-		To:    address,
-		Value: bigAmt,
-		From:  w.addr,
+		To:       address,
+		Value:    bigAmt,
+		From:     w.addr,
+		GasLimit: 1000,
+		Nonce:    nonce,
 	}
 
 	id := m.Cid()
 
 	cs, err := sigs.Sign(crypto.SigTypeSecp256k1, w.key.Serialize(), id.Bytes())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	signed := &types.SignedMessage{
@@ -302,15 +333,10 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 
 	// Broadcast
 	if err := w.Broadcast(signed); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	ch, err := chainhash.NewHash(id.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return ch, nil
+	return id.String(), nil
 }
 
 func (w *FilecoinWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte big.Int) big.Int {
@@ -363,8 +389,8 @@ func (w *FilecoinWallet) ReSyncBlockchain(fromTime time.Time) {
 	go w.fs.UpdateState()
 }
 
-func (w *FilecoinWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
-	txn, err := w.db.Txns().Get(txid.String())
+func (w *FilecoinWallet) GetConfirmations(txid string) (uint32, uint32, error) {
+	txn, err := w.db.Txns().Get(txid)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -438,18 +464,16 @@ func (w *FilecoinWallet) Broadcast(msg *types.SignedMessage) error {
 		ScriptPubKey: model.OutScript{
 			Addresses: []string{msg.Message.To.String()},
 		},
+		ValueIface: msg.Message.Value.String(),
 	}
 	cTxn.Outputs = append(cTxn.Outputs, output)
+
 	_, err = w.client.Broadcast(ser)
 	if err != nil {
 		return err
 	}
 	w.fs.ProcessIncomingTransaction(cTxn)
 	return nil
-}
-
-func (w *FilecoinWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	return nil, nil
 }
 
 // AssociateTransactionWithOrder used for ORDER_PAYMENT message
