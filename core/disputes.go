@@ -176,7 +176,7 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 			log.Errorf("Nil NewHashFromStr(%s)", r.Txid)
 			return false
 		}
-		actualConfirmations, _, err := wal.GetConfirmations(*hash)
+		actualConfirmations, _, err := wal.GetConfirmations(hash.String())
 		if err != nil {
 			log.Errorf("Failed GetConfirmations(%s): %s", hash.String(), err.Error())
 			return false

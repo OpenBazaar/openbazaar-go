@@ -115,7 +115,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		}
 	}
 
-	txn, err := wal.GetTransaction(*txid)
+	txn, err := wal.GetTransaction(txid)
 	if err != nil {
 		log.Errorf("get txn failed : %v", err.Error())
 		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
@@ -146,7 +146,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	if err := n.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid:       txid.String(),
+		Txid:       txid,
 		Address:    toAddress,
 		Memo:       memo,
 		OrderId:    args.OrderID,
@@ -163,7 +163,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	return &SpendResponse{
-		Txid:               txid.String(),
+		Txid:               txid,
 		ConfirmedBalance:   confirmed.Value.String(),
 		UnconfirmedBalance: unconfirmed.Value.String(),
 		Currency:           &defn,

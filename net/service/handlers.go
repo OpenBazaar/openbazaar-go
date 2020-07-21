@@ -1979,7 +1979,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	log.Debugf("retrieving %s transaction %s", paymentDetails.Coin, chash.String())
-	txn, err := wal.GetTransaction(*chash)
+	txn, err := wal.GetTransaction(chash.String())
 	if err != nil {
 		return nil, err
 	}

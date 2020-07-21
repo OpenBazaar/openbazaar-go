@@ -52,7 +52,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, nil, err
 			}
-			confirmations, height, err := wal.GetConfirmations(*ch)
+			confirmations, height, err := wal.GetConfirmations(ch.String())
 			if err != nil {
 				return paymentRecords, nil, err
 			}
@@ -93,7 +93,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, err
 			}
-			confirmations, height, err := wal.GetConfirmations(*ch)
+			confirmations, height, err := wal.GetConfirmations(ch.String())
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
