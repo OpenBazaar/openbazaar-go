@@ -334,7 +334,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 				return err
 			}
 
-			confirms, _, err := wal.GetConfirmations(*hash)
+			confirms, _, err := wal.GetConfirmations(hash.String())
 			if err != nil {
 				return err
 			}
