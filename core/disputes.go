@@ -592,6 +592,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return fmt.Errorf("currency (%s) not supported by wallet", preferredOrder.Payment.AmountCurrency.Code)
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
 	outMap := make(map[string]wallet.TransactionOutput)
@@ -743,7 +747,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		return err
 	}
 
-	sigs, err := wal.CreateMultisigSignature(inputs, outs, moderatorKey, redeemScriptBytes, *big.NewInt(0))
+	sigs, err := escrowWallet.CreateMultisigSignature(inputs, outs, moderatorKey, redeemScriptBytes, *big.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -982,6 +986,11 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Contract uses a coin not found in wallet")
 			return validationErrors
 		}
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			validationErrors = append(validationErrors, "Wallet does not support escrow")
+			return validationErrors
+		}
 		chaincode, err := hex.DecodeString(order.Payment.Chaincode)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
@@ -1008,7 +1017,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 		timeout, _ := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
-		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+		addr, redeemScript, err := escrowWallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error generating multisig script")
 			return validationErrors
@@ -1150,6 +1159,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 
 	// Create outputs
 	var outputs []wallet.TransactionOutput
@@ -1222,7 +1235,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	mySigs, err := wal.CreateMultisigSignature(inputs, outputs, signingKey, redeemScriptBytes, *big.NewInt(0))
+	mySigs, err := escrowWallet.CreateMultisigSignature(inputs, outputs, signingKey, redeemScriptBytes, *big.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -1249,7 +1262,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	peerID := order.BuyerID.PeerID
 
 	// Build, sign, and broadcast transaction
-	txnID, err := wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, *big.NewInt(0), true)
+	txnID, err := escrowWallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, *big.NewInt(0), true)
 	if err != nil {
 		return err
 	}

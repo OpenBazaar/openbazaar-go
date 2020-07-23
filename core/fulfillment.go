@@ -37,6 +37,10 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return errors.New("wallet does not support escrow")
+		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.String()
 		f := wal.GetFeePerByte(wallet.NORMAL)
@@ -79,7 +83,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if !ok {
 			return errors.New("invalid payout fee value")
 		}
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
+		signatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return err
 		}

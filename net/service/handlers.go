@@ -731,6 +731,10 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	if order.Payment.Method != pb.Order_Payment_MODERATED {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return nil, errors.New("wallet does not support escrow")
+		}
 		// Sweep the address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
@@ -774,11 +778,15 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		_, err = wal.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+		_, err = escrowWallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}
 	} else {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return nil, errors.New("wallet does not support escrow")
+		}
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -822,7 +830,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
-		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
+		buyerSignatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
 		}
@@ -831,7 +839,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *fee, true)
+		_, err = escrowWallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *fee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -926,6 +934,10 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	if order.Payment.Method == pb.Order_Payment_MODERATED {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return nil, errors.New("wallet does not support escrow")
+		}
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -969,7 +981,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
-		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
+		buyerSignatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *fee)
 		if err != nil {
 			return nil, err
 		}
@@ -978,7 +990,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *fee, true)
+		_, err = escrowWallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *fee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -1191,6 +1203,10 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 	if order.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return nil, errors.New("wallet does not support escrow")
+		}
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
 		for _, r := range records {
@@ -1243,7 +1259,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		if !ok {
 			return nil, errors.New("invalid amount")
 		}
-		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *payoutFee, true)
+		_, err = escrowWallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, *payoutFee, true)
 		if err != nil {
 			if err.Error() == "ERROR_INSUFFICIENT_FUNDS" {
 				err0 := service.node.Datastore.Messages().Put(

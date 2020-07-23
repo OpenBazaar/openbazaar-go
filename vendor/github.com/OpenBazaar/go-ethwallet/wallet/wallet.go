@@ -831,7 +831,7 @@ func (wallet *EthereumWallet) checkTxnRcpt(hash *common.Hash, data []byte) (*com
 			if err != nil {
 				return nil, err
 			}
-			err = wallet.db.Txns().Delete(chash)
+			err = wallet.db.Txns().Delete(chash.String())
 			if err != nil {
 				log.Errorf("err deleting the pending txn : %v", err)
 			}

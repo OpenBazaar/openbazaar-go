@@ -143,7 +143,7 @@ type Txns interface {
 	UpdateHeight(txid string, height int, timestamp time.Time) error
 
 	// Delete a transactions from the db
-	Delete(txid *chainhash.Hash) error
+	Delete(txid string) error
 }
 
 // Keys provides a database interface for the wallet to save key material, track

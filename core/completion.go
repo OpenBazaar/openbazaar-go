@@ -177,6 +177,10 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 	// Payout order if moderated and not disputed
 	if order.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return errors.New("wallet does not support escrow")
+		}
 		var ins []wallet.TransactionInput
 		outValue := new(big.Int)
 		for _, r := range records {
@@ -230,7 +234,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if !ok {
 			return errors.New("invalid payout fee per byte value")
 		}
-		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n)
+		buyerSignatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, *n)
 		if err != nil {
 			return err
 		}
@@ -318,6 +322,10 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 	defn, err := repo.AllCurrencies().Lookup(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		log.Errorf("Failed ReleaseFundsAfterTimeout(): %s", err.Error())
@@ -382,7 +390,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+	_, err = escrowWallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}

@@ -35,6 +35,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	if err != nil {
 		return err
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 	if order.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		outValue := big.NewInt(0)
@@ -76,7 +80,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			return err
 		}
 		f, _ := new(big.Int).SetString(order.BigRefundFee, 10)
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
+		signatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *f)
 		if err != nil {
 			return err
 		}

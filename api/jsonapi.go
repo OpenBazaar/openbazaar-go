@@ -3381,7 +3381,12 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "transaction not found in any wallet")
 		return
 	}
-	newTxid, err := wal.BumpFee(txHash.String())
+	feeBumper, ok := wal.(wallet.WalletCanBumpFee)
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, "wallet does not support bumping fees")
+		return
+	}
+	newTxid, err := feeBumper.BumpFee(txHash.String())
 	if err != nil {
 		if err == spvwallet.BumpFeeAlreadyConfirmedError {
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
