@@ -1,0 +1,25 @@
+language: go
+
+go:
+  - 1.12.x
+
+env:
+  global:
+    - GO111MODULE=on
+
+notifications:
+  email: false
+
+install:
+- go mod download
+
+before_script:
+- go fmt ./...
+- go build ./...
+- go test -run xxxx ./...
+
+script:
+- go test -race -short -coverprofile=coverage.txt ./...
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)
