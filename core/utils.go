@@ -48,11 +48,8 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 				return paymentRecords, nil, err
 			}
 			tx.Timestamp = ts
-			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(tx.Txid, "0x"))
-			if err != nil {
-				return paymentRecords, nil, err
-			}
-			confirmations, height, err := wal.GetConfirmations(ch.String())
+
+			confirmations, height, err := wal.GetConfirmations(tx.Txid)
 			if err != nil {
 				return paymentRecords, nil, err
 			}
