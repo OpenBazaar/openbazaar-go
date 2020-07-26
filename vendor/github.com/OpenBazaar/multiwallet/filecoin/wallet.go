@@ -336,6 +336,30 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 		return "", err
 	}
 
+	myAddr, err :=  NewFilecoinAddress(w.addr.String())
+	if err != nil {
+		return "", err
+	}
+	w.AssociateTransactionWithOrder(wi.TransactionCallback{
+		Timestamp: time.Now(),
+		Outputs: []wi.TransactionOutput{
+			{
+				Address: addr,
+				Value: amount,
+				OrderID: referenceID,
+			},
+		},
+		Inputs: []wi.TransactionInput{
+			{
+				Value: amount,
+				OrderID: referenceID,
+				LinkedAddress: myAddr,
+			},
+		},
+		Value: *amount.Mul(&amount, big.NewInt(-1)),
+		Txid: id.String(),
+	})
+
 	return id.String(), nil
 }
 
