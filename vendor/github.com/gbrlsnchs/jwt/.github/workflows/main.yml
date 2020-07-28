@@ -1,0 +1,44 @@
+name: 'Linux, macOS and Windows'
+on: [push, pull_request]
+jobs:
+  lint:
+    strategy:
+      matrix:
+        go: ['1.12', '1.13']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Set up Go 1.12
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.os }}
+      - name: Lint source code
+        env:
+          MAGEFILE_VERBOSE: true
+        run: |
+          GOBIN="$(pwd)/.bin" go install github.com/magefile/mage
+          ./.bin/mage install
+          ./.bin/mage lint
+
+  test:
+    needs: lint
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
+        go: ['1.11', '1.12', '1.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Go version ${{ matrix.go }}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Run test
+        env:
+          GO111MODULE: on
+          MAGEFILE_VERBOSE: true
+        shell: bash
+        run: |
+          GOBIN="$(pwd)/.bin" go install github.com/magefile/mage
+          ./.bin/mage test
