@@ -1,0 +1,348 @@
+version: 2.1
+
+orbs:
+  go: gotest/tools@0.0.9
+  shellcheck: circleci/shellcheck@1.3.15
+
+executors:
+  golang:
+    docker:
+      - image: circleci/golang:1.13
+    resource_class: 2xlarge
+  rust:
+    docker:
+      - image: filecoin/rust:latest
+    resource_class: 2xlarge
+
+jobs:
+  gofmt:
+    executor: golang
+    steps:
+      - configure_environment_variables
+      - prepare
+      - go/mod-download
+      - run:
+          command: "! go fmt ./... 2>&1 | read"
+  go_lint:
+    description: Run various linters
+    executor: golang
+    steps:
+      - configure_environment_variables
+      - prepare
+      - go/mod-download
+      - go/install-golangci-lint:
+          gobin: $HOME/.local/bin
+          version: 1.23.8
+      - run:
+          command: make go-lint
+  build_and_test_linux_cgo_bindings:
+    parameters:
+      run_leak_detector:
+        type: boolean
+        default: false
+    executor: golang
+    working_directory: ~/go/src/github.com/filecoin-project/filecoin-ffi
+    steps:
+      - configure_environment_variables
+      - prepare
+      - build_project
+      - restore_parameter_cache
+      - obtain_filecoin_parameters
+      - save_parameter_cache
+      - run_tests:
+          run_leak_detector: << parameters.run_leak_detector >>
+  build_darwin_cgo_bindings:
+    macos:
+      xcode: "10.0.0"
+    working_directory: ~/go/src/github.com/filecoin-project/filecoin-ffi
+    resource_class: large
+    steps:
+      - configure_environment_variables:
+          linux: false
+          darwin: true
+      - prepare:
+          linux: false
+          darwin: true
+      - build_project
+      - compile_tests
+      - ensure_generated_cgo_up_to_date
+  publish_linux_staticlib:
+    executor: golang
+    steps:
+      - configure_environment_variables
+      - prepare
+      - publish_release
+  publish_darwin_staticlib:
+    macos:
+      xcode: "10.0.0"
+    working_directory: ~/crate
+    steps:
+      - configure_environment_variables:
+          linux: false
+          darwin: true
+      - prepare:
+          linux: false
+          darwin: true
+      - run: cd rust && rustup install $(cat rust-toolchain)
+      - run: cd rust && rustup default $(cat rust-toolchain)
+      - run: cd rust && cargo fetch
+      - publish_release
+  cargo_fetch:
+    executor: rust
+    working_directory: /mnt/crate
+    steps:
+      - configure_environment_variables
+      - checkout
+      - restore_cache:
+          keys:
+            - cargo-v0-{{ checksum "rust/rust-toolchain" }}-{{ checksum "rust/Cargo.toml" }}-{{ checksum "rust/Cargo.lock" }}-{{ arch }}
+      - run: cd rust && rustup install $(cat rust-toolchain)
+      - run: cd rust && rustup default $(cat rust-toolchain)
+      - run: cd rust && rustup component add rustfmt
+      - run: cd rust && rustup component add clippy
+      - run: cd rust && cargo fetch
+      - run: cd rust && rustc +$(cat rust-toolchain) --version
+      - persist_to_workspace:
+          root: "."
+          paths:
+            - rust/Cargo.lock
+      - save_cache:
+          key: cargo-v0-{{ checksum "rust/rust-toolchain" }}-{{ checksum "rust/Cargo.toml" }}-{{ checksum "rust/Cargo.lock" }}-{{ arch }}
+          paths:
+            - /root/.cargo
+            - /root/.rustup
+  rustfmt:
+    executor: rust
+    working_directory: /mnt/crate
+    steps:
+      - configure_environment_variables
+      - checkout
+      - restore_cache:
+          keys:
+            - cargo-v0-{{ checksum "rust/rust-toolchain" }}-{{ checksum "rust/Cargo.toml" }}-{{ checksum "rust/Cargo.lock" }}-{{ arch }}
+      - run:
+          name: Run cargo fmt
+          command: cargo fmt --manifest-path ./rust/Cargo.toml --all -- --check
+  clippy:
+    executor: rust
+    working_directory: /mnt/crate
+    steps:
+      - configure_environment_variables
+      - checkout
+      - restore_cache:
+          keys:
+            - cargo-v0-{{ checksum "rust/rust-toolchain" }}-{{ checksum "rust/Cargo.toml" }}-{{ checksum "rust/Cargo.lock" }}-{{ arch }}
+      - run: cd rust && rustup install $(cat rust-toolchain)
+      - run: cd rust && rustup default $(cat rust-toolchain)
+      - run: cd rust && rustup component add rustfmt
+      - run: cd rust && rustup component add clippy
+      - run: cd rust && cargo fetch
+      - run:
+          name: Run cargo clippy
+          command: cd rust && cargo +$(cat rust-toolchain) clippy --all-targets --all-features -- -D warnings
+
+workflows:
+  version: 2
+  test_all:
+    jobs:
+      # Lint the install Bash script
+      - shellcheck/check:
+          pattern: 'install-filcrypto'
+      - cargo_fetch
+      - rustfmt:
+          requires:
+            - cargo_fetch
+      - clippy:
+          requires:
+            - cargo_fetch
+      - gofmt
+      - go_lint
+      - build_and_test_linux_cgo_bindings:
+          filters:
+            branches:
+              only:
+                - master
+          run_leak_detector: true
+      - build_and_test_linux_cgo_bindings:
+          filters:
+            branches:
+              ignore:
+                - master
+          run_leak_detector: false
+      - publish_linux_staticlib:
+          filters:
+            branches:
+              only:
+                - master
+      - build_darwin_cgo_bindings
+      - publish_darwin_staticlib:
+          filters:
+            branches:
+              only:
+                - master
+
+commands:
+  prepare:
+    parameters:
+      linux:
+        default: true
+        description: is a linux build environment?
+        type: boolean
+      darwin:
+        default: false
+        description: is a darwin build environment?
+        type: boolean
+    steps:
+      - checkout
+      - when:
+          condition: << parameters.linux >>
+          steps:
+            - go/install-ssh
+            - go/install: {package: git}
+            - run: sudo apt-get update
+            - run: sudo apt-get install -y jq valgrind ocl-icd-opencl-dev clang libssl-dev
+            - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - when:
+          condition: << parameters.darwin >>
+          steps:
+            - run:
+                name: Install Go
+                command: |
+                  curl https://dl.google.com/go/go1.13.7.darwin-amd64.pkg -o /tmp/go.pkg && \
+                  sudo installer -pkg /tmp/go.pkg -target /
+                  go version
+            - run:
+                name: Install other dependencies with Homebrew
+                command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config md5sha1sum jq
+            - run:
+                name: Install Rust toolchain
+                command: |
+                  curl https://sh.rustup.rs -sSf | sh -s -- -y
+                  rustc --version
+      - run:
+          name: Ensure appropriate toolchain is installed
+          command: |
+            rustup install $(cat ./rust/rust-toolchain)
+      - run: git submodule sync
+      - run: git submodule update --init
+
+  publish_release:
+    steps:
+      - run:
+          name: Build and publish the standard release
+          command: |
+            cd rust
+
+            TARBALL_PATH="/tmp/${CIRCLE_PROJECT_REPONAME}-$(uname)-standard.tar.gz"
+            RELEASE_NAME="${CIRCLE_PROJECT_REPONAME}-$(uname)-standard"
+
+            ./scripts/build-release.sh filcrypto $(cat ./rust-toolchain) --verbose --locked --all
+            ./scripts/package-release.sh $TARBALL_PATH
+            ./scripts/publish-release.sh $TARBALL_PATH $RELEASE_NAME
+      - run:
+          name: Build and publish the optimized release
+          command: |
+            cd rust
+
+            TARBALL_PATH="/tmp/${CIRCLE_PROJECT_REPONAME}-$(uname)-optimized.tar.gz"
+            RELEASE_NAME="${CIRCLE_PROJECT_REPONAME}-$(uname)-optimized"
+            RUSTFLAGS="-C target-feature=$(cat rustc-target-features-optimized.json | jq -r '.[].rustc_target_feature' | tr '\n' ',')"
+
+            ./scripts/build-release.sh filcrypto $(cat ./rust-toolchain) --verbose --locked --all
+            ./scripts/package-release.sh $TARBALL_PATH
+            ./scripts/publish-release.sh $TARBALL_PATH $RELEASE_NAME
+  configure_environment_variables:
+    parameters:
+      linux:
+        default: true
+        description: is a Linux build environment?
+        type: boolean
+      darwin:
+        default: false
+        description: is a Darwin build environment?
+        type: boolean
+    steps:
+      - run:
+          name: Configure environment variables
+          command: |
+            echo 'export FIL_PROOFS_PARAMETER_CACHE="${HOME}/filecoin-proof-parameters/"' >> $BASH_ENV
+            echo 'export GO111MODULE=on' >> $BASH_ENV
+            echo 'export GOPATH="${HOME}/go"' >> $BASH_ENV
+            echo 'export PATH="/usr/local/go/bin:${HOME}/.cargo/bin:${PATH}:${HOME}/go/bin:${HOME}/.bin"' >> $BASH_ENV
+            echo 'export RUST_LOG=info' >> $BASH_ENV
+            echo 'export CIRCLE_ARTIFACTS="/tmp"' >> $BASH_ENV
+      - when:
+          condition: << parameters.darwin >>
+          steps:
+            - run:
+                name: Add a few more environment variables
+                command: |
+                  echo 'export PATH="${HOME}/.cargo/bin:${HOME}/.bin:${PATH}"' >> $BASH_ENV
+  obtain_filecoin_parameters:
+    steps:
+      - run: |
+          DIR=$(pwd)
+          cd $(mktemp -d)
+          GOPATH=/tmp GO111MODULE=off go get github.com/filecoin-project/go-paramfetch/paramfetch
+          GOPATH=/tmp GO111MODULE=off go build -o go-paramfetch github.com/filecoin-project/go-paramfetch/paramfetch
+          ./go-paramfetch 2048 "${DIR}/parameters.json"
+  build_project:
+    steps:
+      - run:
+          name: Build project
+          command: make
+      - run:
+          name: Build project without CGO
+          command: env CGO_ENABLED=0 go build .
+  ensure_generated_cgo_up_to_date:
+    steps:
+      - run:
+          name: Generate CGO bindings (using forked c-for-go) and compare with what's tracked by Git
+          command: |
+            DIR=$(pwd)
+            git clone git@github.com:dtynn/c-for-go.git $GOPATH/src/github.com/xlab/c-for-go
+            cd $GOPATH/src/github.com/xlab/c-for-go
+            git checkout fix/2-mem-issues
+            GO111MODULE=off go get
+            GO111MODULE=off go build -o /tmp/c-for-go-forked main.go process.go
+            cd $DIR
+            /tmp/c-for-go-forked --ccincl --ccdefs --nostamp filcrypto.yml
+            git diff --exit-code ./generated/
+  run_tests:
+    parameters:
+      run_leak_detector:
+        type: boolean
+        default: false
+    steps:
+      - when:
+          condition: <<parameters.run_leak_detector>>
+          steps:
+            - run:
+                name: Run leak detector
+                command: make cgo-leakdetect
+                no_output_timeout: 60m
+
+      - run:
+          name: Run the Rust tests
+          command: cd rust && FIL_PROOFS_PARAMETER_CACHE="${HOME}/filecoin-proof-parameters/" RUST_LOG=info cargo test --all --release && cd ..
+          no_output_timeout: 60m
+      - run:
+          name: Run the Go tests
+          command: GODEBUG=cgocheck=2 RUST_LOG=info go test -p 1 -timeout 60m
+          no_output_timeout: 60m
+  compile_tests:
+    steps:
+      - run:
+          name: Build project and tests, but don't actually run the tests (used to verify that build/link works with Darwin)
+          command: GODEBUG=cgocheck=2 RUST_LOG=info go test -run=^$
+  restore_parameter_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v27b-proof-params-{{ arch }}
+  save_parameter_cache:
+    steps:
+      - save_cache:
+          key: v27b-proof-params-{{ arch }}
+          paths:
+            - "~/filecoin-proof-parameters/"

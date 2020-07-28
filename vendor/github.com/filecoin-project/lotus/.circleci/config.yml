@@ -1,0 +1,359 @@
+version: 2.1
+orbs:
+  go: gotest/tools@0.0.13
+
+executors:
+  golang:
+    docker:
+      - image: circleci/golang:1.14.2
+    resource_class: 2xlarge
+  ubuntu:
+    docker:
+      - image: ubuntu:19.10
+
+commands:
+  install-deps:
+    steps:
+      - go/install-ssh
+      - go/install: {package: git}
+  prepare:
+    parameters:
+      linux:
+        default: true
+        description: is a linux build environment?
+        type: boolean
+      darwin:
+        default: false
+        description: is a darwin build environment?
+        type: boolean
+    steps:
+      - checkout
+      - git_fetch_all_tags
+      - checkout
+      - when:
+          condition: << parameters.linux >>
+          steps:
+            - run: sudo apt-get update
+            - run: sudo apt-get install ocl-icd-opencl-dev
+      - run: git submodule sync
+      - run: git submodule update --init
+  download-params:
+    steps:
+      - restore_cache:
+          name: Restore parameters cache
+          keys:
+            - 'v25-2k-lotus-params'
+          paths:
+            - /var/tmp/filecoin-proof-parameters/
+      - run:  ./lotus fetch-params 2048
+      - save_cache:
+          name: Save parameters cache
+          key: 'v25-2k-lotus-params'
+          paths:
+            - /var/tmp/filecoin-proof-parameters/
+  install_ipfs:
+    steps:
+      - run: |
+          apt update
+          apt install -y wget
+          wget https://github.com/ipfs/go-ipfs/releases/download/v0.4.22/go-ipfs_v0.4.22_linux-amd64.tar.gz
+          wget https://github.com/ipfs/go-ipfs/releases/download/v0.4.22/go-ipfs_v0.4.22_linux-amd64.tar.gz.sha512
+          if [ "$(sha512sum go-ipfs_v0.4.22_linux-amd64.tar.gz)" != "$(cat go-ipfs_v0.4.22_linux-amd64.tar.gz.sha512)" ]
+          then
+            echo "ipfs failed checksum check"
+            exit 1
+          fi
+          tar -xf go-ipfs_v0.4.22_linux-amd64.tar.gz
+          mv go-ipfs/ipfs /usr/local/bin/ipfs
+          chmod +x /usr/local/bin/ipfs
+  git_fetch_all_tags:
+    steps:
+      - run:
+          name: fetch all tags
+          command: |
+            git fetch --all
+
+jobs:
+  mod-tidy-check:
+    executor: golang
+    steps:
+      - install-deps
+      - prepare
+      - go/mod-tidy-check
+
+  build-all:
+    executor: golang
+    steps:
+      - install-deps
+      - prepare
+      - run: sudo apt-get update
+      - run: sudo apt-get install npm
+      - run:
+          command: make buildall
+      - store_artifacts:
+          path: lotus
+      - store_artifacts:
+          path: lotus-storage-miner
+      - store_artifacts:
+          path: lotus-seal-worker
+      - run: mkdir linux && mv lotus lotus-storage-miner lotus-seal-worker linux/
+      - persist_to_workspace:
+          root: "."
+          paths:
+            - linux
+
+  build-debug:
+    executor: golang
+    steps:
+      - install-deps
+      - prepare
+      - run:
+          command: make debug
+
+  test: &test
+    description: |
+      Run tests with gotestsum.
+    parameters:
+      executor:
+        type: executor
+        default: golang
+      go-test-flags:
+        type: string
+        default: "-timeout 30m"
+        description: Flags passed to go test.
+      packages:
+        type: string
+        default: "./..."
+        description: Import paths of packages to be tested.
+      winpost-test:
+        type: string
+        default: "0"
+      test-suite-name:
+        type: string
+        default: unit
+        description: Test suite name to report to CircleCI.
+      gotestsum-format:
+        type: string
+        default: short
+        description: gotestsum format. https://github.com/gotestyourself/gotestsum#format
+      coverage:
+        type: string
+        default: -coverprofile=coverage.txt -coverpkg=github.com/filecoin-project/lotus/...
+        description: Coverage flag. Set to the empty string to disable.
+      codecov-upload:
+        type: boolean
+        default: false
+        description: |
+          Upload coverage report to https://codecov.io/. Requires the codecov API token to be
+          set as an environment variable for private projects.
+    executor: << parameters.executor >>
+    steps:
+      - install-deps
+      - prepare
+      - run:
+          command: make deps lotus
+          no_output_timeout: 30m
+      - download-params
+      - go/install-gotestsum:
+          gobin: $HOME/.local/bin
+      - run:
+          name: go test
+          environment:
+            GOTESTSUM_JUNITFILE: /tmp/test-reports/<< parameters.test-suite-name >>/junit.xml
+            GOTESTSUM_FORMAT: << parameters.gotestsum-format >>
+            LOTUS_TEST_WINDOW_POST: << parameters.winpost-test >>
+          command: |
+            mkdir -p /tmp/test-reports/<< parameters.test-suite-name >>
+            gotestsum -- \
+              << parameters.coverage >> \
+              << parameters.go-test-flags >> \
+              << parameters.packages >>
+          no_output_timeout: 30m
+      - store_test_results:
+          path: /tmp/test-reports
+      - when:
+          condition: << parameters.codecov-upload >>
+          steps:
+            - go/install: {package: bash}
+            - go/install: {package: curl}
+            - run:
+                shell: /bin/bash -eo pipefail
+                command: |
+                  bash <(curl -s https://codecov.io/bash)
+
+  test-short:
+    <<: *test
+  test-window-post:
+    <<: *test
+
+  build-macos:
+    description: build darwin lotus binary
+    macos:
+      xcode: "10.0.0"
+    working_directory: ~/go/src/github.com/filecoin-project/lotus
+    steps:
+      - prepare:
+          linux: false
+          darwin: true
+      - run:
+          name: Install go
+          command: |
+            curl -O https://dl.google.com/go/go1.14.2.darwin-amd64.pkg && \
+            sudo installer -pkg go1.14.2.darwin-amd64.pkg -target /
+      - run:
+          name: Install pkg-config
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config
+      - run: go version
+      - run:
+          name: Install Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - run:
+          name: Install jq
+          command: |
+            curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output /usr/local/bin/jq
+            chmod +x /usr/local/bin/jq
+      - restore_cache:
+          name: restore cargo cache
+          key: v3-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/lotus/go.sum" }}
+      - install-deps
+      - run:
+          command: make build
+          no_output_timeout: 30m
+      - store_artifacts:
+          path: lotus
+      - store_artifacts:
+          path: lotus-storage-miner
+      - store_artifacts:
+          path: lotus-seal-worker
+      - run: mkdir darwin && mv lotus lotus-storage-miner lotus-seal-worker darwin/
+      - persist_to_workspace:
+          root: "."
+          paths:
+            - darwin
+      - save_cache:
+          name: save cargo cache
+          key: v3-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/lotus/go.sum" }}
+          paths:
+            - "~/.rustup"
+            - "~/.cargo"
+
+  gofmt:
+    executor: golang
+    steps:
+      - install-deps
+      - prepare
+      - run:
+          command: "! go fmt ./... 2>&1 | read"
+
+  lint: &lint
+    description: |
+      Run golangci-lint.
+    parameters:
+      executor:
+        type: executor
+        default: golang
+      golangci-lint-version:
+        type: string
+        default: 1.27.0
+      concurrency:
+        type: string
+        default: '2'
+        description: |
+          Concurrency used to run linters. Defaults to 2 because NumCPU is not
+          aware of container CPU limits.
+      args:
+        type: string
+        default: ''
+        description: |
+          Arguments to pass to golangci-lint
+    executor: << parameters.executor >>
+    steps:
+      - install-deps
+      - prepare
+      - run:
+          command: make deps
+          no_output_timeout: 30m
+      - go/install-golangci-lint:
+          gobin: $HOME/.local/bin
+          version: << parameters.golangci-lint-version >>
+      - run:
+          name: Lint
+          command: |
+            $HOME/.local/bin/golangci-lint run -v --timeout 2m \
+              --concurrency << parameters.concurrency >> << parameters.args >>
+  lint-changes:
+    <<: *lint
+
+  lint-all:
+    <<: *lint
+
+  publish:
+    description: publish binary artifacts
+    executor: ubuntu
+    steps:
+      - run:
+          name: Install git jq curl
+          command: apt update && apt install -y git jq curl
+      - checkout
+      - git_fetch_all_tags
+      - checkout
+      - install_ipfs
+      - attach_workspace:
+          at: "."
+      - run:
+          name: Create bundles
+          command: ./scripts/build-bundle.sh
+      - run:
+          name: Publish release
+          command: ./scripts/publish-release.sh
+
+
+workflows:
+  version: 2.1
+  ci:
+    jobs:
+      - lint-changes:
+          args: "--new-from-rev origin/master"
+      - mod-tidy-check
+      - gofmt
+      - test:
+          codecov-upload: true
+      - test-window-post:
+          go-test-flags: "-run=TestWindowedPost"
+          winpost-test: "1"
+      - test-short:
+          go-test-flags: "--timeout 10m --short"
+          filters:
+            tags:
+              only:
+                - /^v\d+\.\d+\.\d+$/
+      - build-debug
+      - build-all:
+          requires:
+            - test-short
+          filters:
+            tags:
+              only:
+                - /^v\d+\.\d+\.\d+$/
+      - build-macos:
+          requires:
+            - test-short
+          filters:
+            branches:
+              ignore:
+                - /.*/
+            tags:
+              only:
+                - /^v\d+\.\d+\.\d+$/
+      - publish:
+          requires:
+            - build-all
+            - build-macos
+          filters:
+            branches:
+              ignore:
+                - /.*/
+            tags:
+              only:
+                - /^v\d+\.\d+\.\d+$/

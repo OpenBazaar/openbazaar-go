@@ -1,0 +1,38 @@
+---
+GENERATOR:
+  PackageName: generated
+  PackageDescription:
+  PackageLicense:
+  Options:
+    SafeStrings: true
+  Includes:
+    - ../filcrypto.h
+  FlagGroups:
+    - {name: LDFLAGS, flags: ["-L${SRCDIR}/.. -lfilcrypto"]}
+    - {name: pkg-config, flags: ["${SRCDIR}/../filcrypto.pc"]}
+
+PARSER:
+  Defines:
+    __has_include_next(x): 1
+  IncludePaths:
+    - /usr/include
+  SourcesPaths:
+    - ./filcrypto.h
+
+TRANSLATOR:
+  ConstRules:
+    defines: expand
+    enum: cgo
+  PtrTips:
+    function:
+      - {target: "^fil_destroy", tips: [ref]}
+  Rules:
+    global:
+      - {action: accept, from: "^fil"}
+      - {action: accept, from: "^FCPResponseStatus"}
+      - {transform: export}
+    private:
+      - {transform: unexport}
+    post-global:
+      - {transform: export}
+      - {load: snakecase}

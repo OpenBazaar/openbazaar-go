@@ -1,0 +1,53 @@
+stateDiagram-v2
+	state "DealStatusNew" as 0
+	state "DealStatusAwaitingAcceptance" as 5
+	state "DealStatusAccepted" as 6
+	state "DealStatusFailed" as 7
+	state "DealStatusRejected" as 8
+	state "DealStatusFundsNeeded" as 9
+	state "DealStatusOngoing" as 10
+	state "DealStatusFundsNeededLastPayment" as 11
+	state "DealStatusCompleted" as 12
+	state "DealStatusDealNotFound" as 13
+	state "DealStatusErrored" as 15
+	state "DealStatusBlocksComplete" as 16
+	state "DealStatusFinalizing" as 17
+	0 : On entry runs ReceiveDeal
+	5 : On entry runs DecideOnDeal
+	6 : On entry runs SendBlocks
+	7 : On entry runs SendFailResponse
+	8 : On entry runs SendFailResponse
+	9 : On entry runs ProcessPayment
+	10 : On entry runs SendBlocks
+	11 : On entry runs ProcessPayment
+	13 : On entry runs SendFailResponse
+	17 : On entry runs Finalize
+	[*] --> 0
+	note right of 0
+		The following events are not shown cause they can trigger from any state.
+
+		ProviderEventWriteResponseFailed - transitions state to DealStatusErrored
+		ProviderEventReadPaymentFailed - transitions state to DealStatusErrored
+	end note
+	0 --> 0 : ProviderEventOpen
+	0 --> 5 : ProviderEventDealReceived
+	5 --> 15 : ProviderEventDecisioningError
+	0 --> 7 : ProviderEventGetPieceSizeErrored
+	0 --> 13 : ProviderEventDealNotFound
+	0 --> 8 : ProviderEventDealRejected
+	5 --> 8 : ProviderEventDealRejected
+	5 --> 6 : ProviderEventDealAccepted
+	6 --> 7 : ProviderEventBlockErrored
+	10 --> 7 : ProviderEventBlockErrored
+	6 --> 16 : ProviderEventBlocksCompleted
+	10 --> 16 : ProviderEventBlocksCompleted
+	6 --> 9 : ProviderEventPaymentRequested
+	10 --> 9 : ProviderEventPaymentRequested
+	16 --> 11 : ProviderEventPaymentRequested
+	9 --> 7 : ProviderEventSaveVoucherFailed
+	11 --> 7 : ProviderEventSaveVoucherFailed
+	9 --> 9 : ProviderEventPartialPaymentReceived
+	11 --> 11 : ProviderEventPartialPaymentReceived
+	9 --> 10 : ProviderEventPaymentReceived
+	11 --> 17 : ProviderEventPaymentReceived
+	17 --> 12 : ProviderEventComplete

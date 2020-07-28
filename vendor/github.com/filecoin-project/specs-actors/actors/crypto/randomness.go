@@ -1,0 +1,14 @@
+package crypto
+
+// Specifies a domain for randomness generation.
+type DomainSeparationTag int
+
+const (
+	DomainSeparationTag_TicketProduction DomainSeparationTag = 1 + iota
+	DomainSeparationTag_ElectionProofProduction
+	DomainSeparationTag_WinningPoStChallengeSeed
+	DomainSeparationTag_WindowedPoStChallengeSeed
+	DomainSeparationTag_SealRandomness
+	DomainSeparationTag_InteractiveSealChallengeSeed
+	DomainSeparationTag_WindowedPoStDeadlineAssignment
+)
