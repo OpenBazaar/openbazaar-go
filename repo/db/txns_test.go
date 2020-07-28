@@ -173,7 +173,7 @@ func TestDeleteTxns(t *testing.T) {
 		t.Error(err)
 	}
 	txid := tx.TxHash()
-	err = txdb.Delete(&txid)
+	err = txdb.Delete(txid.String())
 	if err != nil {
 		t.Error(err)
 	}
