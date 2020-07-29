@@ -204,7 +204,7 @@ func (fs *FilecoinService) processIncomingBlock(block model.Block) {
 
 func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int32) {
 	hits := 0
-	value := new(big.Int)
+	value := big.NewInt(0)
 
 	height := int32(0)
 	if u.Confirmations > 0 {
