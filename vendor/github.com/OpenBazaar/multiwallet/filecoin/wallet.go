@@ -292,7 +292,7 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 		return "", err
 	}
 
-	nonce := uint64(1)
+	nonce := uint64(0)
 	for _, tx := range txns {
 		val, _ := new(big.Int).SetString(tx.Value, 10)
 		if val.Cmp(big.NewInt(0)) > 0 {
@@ -357,10 +357,10 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 			},
 		},
 		Value: *amount.Mul(&amount, big.NewInt(-1)),
-		Txid: id.String(),
+		Txid: signed.Cid().String(),
 	})
 
-	return id.String(), nil
+	return signed.Cid().String(), nil
 }
 
 func (w *FilecoinWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.TransactionOutput, feePerByte big.Int) big.Int {
@@ -483,14 +483,21 @@ func (w *FilecoinWallet) Broadcast(msg *types.SignedMessage) error {
 		Confirmations: 0,
 		Time:          time.Now().Unix(),
 		RawBytes:      ser,
-	}
-	output := model.Output{
-		ScriptPubKey: model.OutScript{
-			Addresses: []string{msg.Message.To.String()},
+		Inputs: []model.Input{
+			{
+				Addr: w.addr.String(),
+				ValueIface: msg.Message.Value.String(),
+			},
 		},
-		ValueIface: msg.Message.Value.String(),
+		Outputs: []model.Output {
+			{
+				ScriptPubKey: model.OutScript{
+					Addresses: []string{msg.Message.To.String()},
+				},
+				ValueIface: msg.Message.Value.String(),
+			},
+		},
 	}
-	cTxn.Outputs = append(cTxn.Outputs, output)
 
 	_, err = w.client.Broadcast(ser)
 	if err != nil {
