@@ -218,13 +218,6 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 	}
 	var relevant bool
 	cb := wallet.TransactionCallback{Txid: txHash.String(), Height: height, Timestamp: time.Unix(u.Time, 0)}
-
-	inAddr := ""
-	if u.Inputs != nil {
-		inAddr = u.Inputs[0].Addr
-	}
-
-	outAddr := u.Outputs[0].ScriptPubKey.Addresses[0]
 	for _, in := range u.Inputs {
 		faddr, err := NewFilecoinAddress(in.Addr)
 		if err != nil {
@@ -232,13 +225,7 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		var valueString string
-		if in.ValueIface == nil {
-			valueString = "0"
-		} else {
-			valueString = in.ValueIface.(string)
-		}
-		v, _ := new(big.Int).SetString(valueString, 10)
+		v, _ := new(big.Int).SetString(in.ValueIface.(string), 10)
 		cbin := wallet.TransactionInput{
 			LinkedAddress: faddr,
 			Value:         *v,
@@ -248,6 +235,7 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 		if in.Addr == fs.addr.String() {
 			relevant = true
 			hits++
+			value.Sub(value, v)
 		}
 	}
 	for i, out := range u.Outputs {
@@ -260,18 +248,7 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		var valueOutString string
-		if out.ValueIface == nil {
-			if out.Value != 0 {
-				valueBig := new(big.Float).SetFloat64(out.Value).String()
-				valueOutString = valueBig
-			}
-
-			valueOutString = "0"
-		} else {
-			valueOutString = out.ValueIface.(string)
-		}
-		v, _ := new(big.Int).SetString(valueOutString, 10)
+		v, _ := new(big.Int).SetString(out.ValueIface.(string), 10)
 
 		cbout := wallet.TransactionOutput{Address: faddr, Value: *v, Index: uint32(i)}
 		cb.Outputs = append(cb.Outputs, cbout)
@@ -281,12 +258,6 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			value.Add(value, v)
 			hits++
 		}
-	}
-
-	if inAddr == outAddr {
-		value = big.NewInt(0)
-	} else if inAddr == fs.addr.String() {
-		value = value.Mul(value, big.NewInt(-1))
 	}
 
 	if !relevant {
