@@ -192,6 +192,10 @@ func (fs *FilecoinService) processIncomingBlock(block model.Block) {
 					fs.saveSingleTxToDB(*ret, int32(block.Height))
 					return
 				}
+				// Incoming txs do not have a signature attached and we can't rebroadcast.
+				if txn.Value > 0 {
+					return
+				}
 				// Rebroadcast unconfirmed transactions
 				_, err = fs.client.Broadcast(tx.Bytes)
 				if err != nil {
@@ -222,6 +226,10 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 		faddr, err := NewFilecoinAddress(in.Addr)
 		if err != nil {
 			Log.Errorf("error parsing address %s: %s", fs.coinType.String(), err.Error())
+			continue
+		}
+
+		if in.ValueIface == nil {
 			continue
 		}
 

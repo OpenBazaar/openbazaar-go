@@ -478,7 +478,7 @@ func (w *FilecoinWallet) Broadcast(msg *types.SignedMessage) error {
 	}
 
 	cTxn := model.Transaction{
-		Txid:          id.String(),
+		Txid:          msg.Message.Cid().String(),
 		Version:       int(msg.Message.Version),
 		Confirmations: 0,
 		Time:          time.Now().Unix(),
