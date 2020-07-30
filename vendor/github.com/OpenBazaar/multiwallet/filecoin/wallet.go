@@ -208,20 +208,13 @@ func (w *FilecoinWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	confirmed, unconfirmed := big.NewInt(0), big.NewInt(0)
 	for _, tx := range txns {
 		val, _ := new(big.Int).SetString(tx.Value, 10)
-		if val.Cmp(big.NewInt(0)) > 0 {
-			if tx.Height > 0 {
-				confirmed.Add(confirmed, val)
-			} else {
-				unconfirmed.Add(confirmed, val)
-			}
-		} else if val.Cmp(big.NewInt(0)) < 0 {
-			if tx.Height > 0 {
-				confirmed.Add(confirmed, val)
-			} else {
-				unconfirmed.Add(confirmed, val)
-			}
+		if tx.Height > 0 {
+			confirmed.Add(confirmed, val)
+		} else {
+			unconfirmed.Add(unconfirmed, val)
 		}
 	}
+	unconfirmed.Add(confirmed, unconfirmed)
 	return wi.CurrencyValue{Value: *confirmed, Currency: FilecoinCurrencyDefinition},
 		wi.CurrencyValue{Value: *unconfirmed, Currency: FilecoinCurrencyDefinition}
 }
