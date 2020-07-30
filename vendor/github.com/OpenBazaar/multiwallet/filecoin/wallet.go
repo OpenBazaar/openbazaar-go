@@ -464,7 +464,6 @@ func (w *FilecoinWallet) DumpTables(wr io.Writer) {
 
 // Build a client.Transaction so we can ingest it into the wallet service then broadcast
 func (w *FilecoinWallet) Broadcast(msg *types.SignedMessage) error {
-	id := msg.Cid()
 	ser, err := msg.Serialize()
 	if err != nil {
 		return err

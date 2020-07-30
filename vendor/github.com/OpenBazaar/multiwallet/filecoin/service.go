@@ -193,8 +193,11 @@ func (fs *FilecoinService) processIncomingBlock(block model.Block) {
 					return
 				}
 				// Incoming txs do not have a signature attached and we can't rebroadcast.
-				if txn.Value > 0 {
-					return
+				if txn.Value != "" {
+					bigVal, _ := new(big.Int).SetString(txn.Value, 10)
+					if bigVal.Cmp(big.NewInt(0)) > 0 {
+						return
+					}
 				}
 				// Rebroadcast unconfirmed transactions
 				_, err = fs.client.Broadcast(tx.Bytes)
