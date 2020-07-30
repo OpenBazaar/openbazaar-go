@@ -216,9 +216,9 @@ func (w *FilecoinWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 			}
 		} else if val.Cmp(big.NewInt(0)) < 0 {
 			if tx.Height > 0 {
-				confirmed.Sub(confirmed, val)
+				confirmed.Add(confirmed, val)
 			} else {
-				unconfirmed.Sub(confirmed, val)
+				unconfirmed.Add(confirmed, val)
 			}
 		}
 	}
