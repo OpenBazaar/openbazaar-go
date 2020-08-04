@@ -662,7 +662,7 @@ func (i *BlockBookClient) setupListeners() error {
 			tx, err := i.GetTransaction(txid)
 			if err != nil {
 				Log.Errorf("error downloading tx after socket notification: %s", err.Error())
-				return
+				continue
 			}
 			tx.Time = time.Now().Unix()
 			i.txNotifyChan <- *tx
