@@ -87,10 +87,17 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			refundRecord = new(pb.TransactionRecord)
 			// Direct we need to use the transaction info in the contract's refund object
 			ch, err := chainhash.NewHashFromStr(strings.TrimPrefix(contract.Refund.RefundTransaction.Txid, "0x"))
+			var txid string
 			if err != nil {
-				return paymentRecords, refundRecord, err
+				if strings.HasPrefix(contract.Refund.RefundTransaction.Txid, "bafy") {
+					txid = contract.Refund.RefundTransaction.Txid
+				} else {
+					return paymentRecords, refundRecord, err
+				}
+			} else {
+				txid = ch.String()
 			}
-			confirmations, height, err := wal.GetConfirmations(ch.String())
+			confirmations, height, err := wal.GetConfirmations(txid)
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}
