@@ -2003,12 +2003,12 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 
 	log.Debugf("retrieving %s transaction %s", paymentDetails.Coin, txid)
 	var txn wallet.Txn
-	for i := 0; i<10; i++ {
+	for i := 0; i < 10; i++ {
 		txn, err = wal.GetTransaction(txid)
 		if err == nil {
-			break;
+			break
 		}
-		time.Sleep(time.Second*2)
+		time.Sleep(time.Second * 2)
 	}
 	if err != nil {
 		return nil, err
