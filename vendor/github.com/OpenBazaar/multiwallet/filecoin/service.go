@@ -9,6 +9,7 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
+	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/ipfs/go-cid"
 	"github.com/op/go-logging"
 	"math/big"
@@ -219,12 +220,15 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 	}
 
 	txHash, err := cid.Decode(u.Txid)
+
 	if err != nil {
 		Log.Errorf("error converting to txHash for %s: %s", fs.coinType.String(), err.Error())
 		return
 	}
 	var relevant bool
+	sender := false
 	cb := wallet.TransactionCallback{Txid: txHash.String(), Height: height, Timestamp: time.Unix(u.Time, 0)}
+
 	for _, in := range u.Inputs {
 		faddr, err := NewFilecoinAddress(in.Addr)
 		if err != nil {
@@ -233,6 +237,11 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 		}
 
 		if in.ValueIface == nil {
+			if in.Addr == fs.addr.String() {
+				relevant = true
+				sender = true
+				hits++
+			}
 			continue
 		}
 
@@ -245,8 +254,8 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 
 		if in.Addr == fs.addr.String() {
 			relevant = true
+			sender = true
 			hits++
-			value.Sub(value, v)
 		}
 	}
 	for i, out := range u.Outputs {
@@ -266,9 +275,18 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 
 		if out.ScriptPubKey.Addresses[0] == fs.addr.String() {
 			relevant = true
-			value.Add(value, v)
 			hits++
 		}
+
+		if sender {
+			value.Sub(value, v)
+		} else {
+			value.Add(value, v)
+		}
+	}
+
+	if value.String() == "0" {
+		relevant = false
 	}
 
 	if !relevant {
@@ -277,8 +295,25 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 	}
 
 	cb.Value = *value
+
 	saved, err := fs.db.Txns().Get(txHash.String())
 	if err != nil {
+
+		// Check to see if this is a incoming block tx
+		allTxs, err := fs.db.Txns().GetAll(true)
+		for _, iTx := range allTxs {
+			sm, checkError := types.DecodeSignedMessage(iTx.Bytes)
+			if checkError != nil {
+				continue
+			}
+			if sm.Message.Cid().String() == u.Txid {
+				fmt.Println("found match")
+				txHash = sm.Cid()
+				u.RawBytes = iTx.Bytes
+				break
+			}
+		}
+
 		ts := time.Now()
 		if u.Confirmations > 0 {
 			ts = time.Unix(u.BlockTime, 0)
