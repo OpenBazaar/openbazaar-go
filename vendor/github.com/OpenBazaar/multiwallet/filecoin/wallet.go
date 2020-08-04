@@ -211,10 +211,9 @@ func (w *FilecoinWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 		if tx.Height > 0 {
 			confirmed.Add(confirmed, val)
 		} else {
-			unconfirmed.Add(unconfirmed, val)
+			unconfirmed.Sub(unconfirmed, val)
 		}
 	}
-	unconfirmed.Add(confirmed, unconfirmed)
 	return wi.CurrencyValue{Value: *confirmed, Currency: FilecoinCurrencyDefinition},
 		wi.CurrencyValue{Value: *unconfirmed, Currency: FilecoinCurrencyDefinition}
 }
@@ -255,6 +254,42 @@ func (w *FilecoinWallet) Transactions() ([]wi.Txn, error) {
 
 func (w *FilecoinWallet) GetTransaction(txid string) (wi.Txn, error) {
 	txn, err := w.db.Txns().Get(txid)
+
+	var from string
+	var to string
+
+	sm, smError := types.DecodeSignedMessage(txn.Bytes)
+	if smError != nil {
+		m, mError := types.DecodeMessage(txn.Bytes)
+		if mError != nil {
+			return wi.Txn{}, err
+		}
+		from = m.From.String()
+		to = m.To.String()
+	} else {
+		from = sm.Message.From.String()
+		to = sm.Message.To.String()
+	}
+
+	txn.ToAddress = to
+	txn.FromAddress = from
+
+	v, ok := new (big.Int).SetString(txn.Value, 10)
+	if !ok {
+		return wi.Txn{}, err
+	}
+
+	fToAddress, err := w.DecodeAddress(txn.ToAddress)
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
+	output := wi.TransactionOutput{
+		Value: *v,
+		Address: fToAddress,
+	}
+	txn.Outputs = []wi.TransactionOutput{output}
+
 	return txn, err
 }
 
@@ -291,25 +326,17 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 		if val.Cmp(big.NewInt(0)) > 0 {
 			continue
 		}
-
-		m, err := types.DecodeMessage(tx.Bytes)
-		if err != nil {
-			return "", err
-		}
-		if m.Nonce > nonce {
-			nonce = m.Nonce
-		}
-	}
-	if nonce > 0 {
 		nonce++
 	}
 
 	m := types.Message{
 		To:       address,
+		Version:  0,
 		Value:    bigAmt,
 		From:     w.addr,
 		GasLimit: 1000,
 		Nonce:    nonce,
+		Params:   []byte(referenceID),
 	}
 
 	id := m.Cid()
@@ -349,7 +376,7 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 				LinkedAddress: myAddr,
 			},
 		},
-		Value: *amount.Mul(&amount, big.NewInt(-1)),
+		Value: amount,
 		Txid: signed.Cid().String(),
 	})
 
@@ -470,7 +497,7 @@ func (w *FilecoinWallet) Broadcast(msg *types.SignedMessage) error {
 	}
 
 	cTxn := model.Transaction{
-		Txid:          msg.Message.Cid().String(),
+		Txid:          msg.Cid().String(),
 		Version:       int(msg.Message.Version),
 		Confirmations: 0,
 		Time:          time.Now().Unix(),
