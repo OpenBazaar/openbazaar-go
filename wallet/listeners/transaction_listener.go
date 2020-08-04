@@ -2,6 +2,7 @@ package bitcoin
 
 import (
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,6 +93,11 @@ func (l *TransactionListener) cleanupOrderState(isSale bool, contract *pb.Ricard
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	l.Lock()
 	defer l.Unlock()
+
+	if strings.HasPrefix(cb.Txid, "bafy") && cb.Outputs[0].OrderID == "" {
+		return
+	}
+
 	for _, output := range cb.Outputs {
 		if output.Address == nil {
 			continue
