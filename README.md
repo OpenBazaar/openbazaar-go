@@ -34,6 +34,14 @@ The easiest way to run the server is to download a pre-built binary. You can fin
 
 To build from source you will need to have Go installed and properly configured. Detailed instructions for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs).
 
+### Run via Docker image
+
+You can also use our Docker Hub image to run openbazaar-go. `latest` points to the latest release, but you can run any other version by matching the release tag to the Docker image tag.
+
+```
+docker run -it openbazaar/server:latest [OPTIONS] start [start-OPTIONS]
+```
+
 ## Dependency Management
 
 We use [Godeps](https://github.com/tools/godep) with vendored third-party packages.
