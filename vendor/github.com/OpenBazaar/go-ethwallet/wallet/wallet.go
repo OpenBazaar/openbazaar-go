@@ -45,8 +45,6 @@ var _ = wi.Wallet(&EthereumWallet{})
 var done, doneBalanceTicker chan bool
 
 const (
-	// InfuraAPIKey is the hard coded Infura API key
-	InfuraAPIKey = "v3/91c82af0169c4115940c76d331410749"
 	// EtherScanAPIKey is needed for all Eherscan requests
 	EtherScanAPIKey = "KA15D8FCHGBFZ4CQ25Y4NZM24417AXWF7M"
 	maxGasLimit     = 400000
@@ -206,7 +204,15 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 
 // NewEthereumWallet will return a reference to the Eth Wallet
 func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
-	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
+	ikey, ok := cfg.Options["infuraKey"]
+	if !ok {
+		return nil, errors.New("no infura key in config")
+	}
+	infuraKey, ok := ikey.(string)
+	if !ok {
+		return nil, errors.New("no infura key in config")
+	}
+	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + infuraKey)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
 		return nil, err

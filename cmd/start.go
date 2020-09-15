@@ -87,7 +87,7 @@ type Start struct {
 	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
-
+	InfuraKey            string   `long:"infurakey" description:"if you want to use the ethereum wallet you will need to enter your ethereum infura key. This can acquire for free from infura."`
 	ForceKeyCachePurge bool `long:"forcekeypurge" description:"repair test for issue OpenBazaar/openbazaar-go#1593; use as instructed only"`
 }
 

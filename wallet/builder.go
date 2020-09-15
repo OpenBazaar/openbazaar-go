@@ -53,6 +53,8 @@ type WalletConfig struct {
 	Proxy proxy.Dialer
 	// DisableExchangeRates will disable usage of the internal exchange rate API
 	DisableExchangeRates bool
+	// Key for infura if you want to use the ethereum wallet.
+	InfuraKey string
 }
 
 // NewMultiWallet returns a functional set of wallets using the provided WalletConfig.
@@ -92,7 +94,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
-		if coinConfig != nil {
+		if coinConfig != nil && (coin != wallet.Ethereum || cfg.InfuraKey != "") {
 			actualCoin, newWallet, err := createAPIWallet(coin, coinConfig, cfg)
 			if err != nil {
 				logger.Errorf("failed creating wallet for %s: %s", actualCoin, err)
@@ -172,6 +174,7 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		} else {
 			actualCoin = wallet.Ethereum
 		}
+		coinConfig.Options["infuraKey"] = cfg.InfuraKey
 		//actualCoin = wallet.Ethereum
 		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Params, cfg.Mnemonic, cfg.Proxy)
 		if err != nil {
