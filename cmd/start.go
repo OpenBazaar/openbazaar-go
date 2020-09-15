@@ -449,6 +449,7 @@ func (x *Start) Execute(args []string) error {
 		WalletCreationDate:   creationDate,
 		Mnemonic:             mn,
 		DisableExchangeRates: x.DisableExchangeRates,
+		InfuraKey:            x.InfuraKey,
 	}
 	mw, err := wallet.NewMultiWallet(multiwalletConfig)
 	if err != nil {
