@@ -673,6 +673,10 @@ func (x *Start) Execute(args []string) error {
 		core.Node.StartRecordAgingNotifier()
 		core.Node.StartInboundMsgScanner()
 
+		if err := core.Node.RemoveDisabledCurrenciesFromListings(); err != nil {
+			log.Error(err)
+		}
+
 		core.Node.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
 		if err != nil {
