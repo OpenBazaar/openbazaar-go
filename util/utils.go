@@ -65,7 +65,10 @@ const EmojiPattern = "[\\x{2712}\\x{2714}\\x{2716}\\x{271d}\\x{2721}\\x{2728}\\x
 
 // NormalizeAddress is used to strip the 0x prefix
 func NormalizeAddress(addr string) string {
-	return strings.Replace(addr, "0x", "", 1)
+	if addr[0:2] == "0x" {
+		return strings.Replace(addr, "0x", "", 1)
+	}
+	return addr
 }
 
 // AreAddressesEqual - check if addresses are equal after normalizing them
