@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"gx/ipfs/QmSY3nkMNLzh9GdbFKK5tT7YMfLpf52iUZ8ZRkr29MJaa5/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmTW4SdgBWq9GjsBsHeUx8WuGxzhgzAf88UMH2w62PC8yK/go-libp2p-crypto"
 	ma "gx/ipfs/QmTZBfrPJmjWsCvHEtX5FE6KimVJhsJg5sBbqEFYf4UZtL/go-multiaddr"
 	cid "gx/ipfs/QmTbxNB1NwDesLmKTscr4udL2tVP7MaxvXnD1D9yX7g3PN/go-cid"
@@ -32,7 +31,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.14.4"
+	VERSION = "0.14.5"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
