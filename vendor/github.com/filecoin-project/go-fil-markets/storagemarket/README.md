@@ -144,16 +144,6 @@ func PublishDeals(ctx context.Context, deal MinerDeal) (cid.Cid, error)
 ```
 Post the deal to chain, returning the posted message CID.
 
-#### ListProviderDeals
-```go
-func ListProviderDeals(ctx context.Context, addr address.Address, tok shared.TipSetToken,
-                  ) ([]StorageDeal, error)
-```
-
-List all storage deals for storage provider `addr`, as of `tok`. Return a slice of `StorageDeal`.
-`StorageDeal` is a local combination of a storage deal proposal and a current deal 
-state. See [storagemarket/types.go](./types.go)
-
 #### OnDealComplete
 ```go
 func OnDealComplete(ctx context.Context, deal MinerDeal, pieceSize abi.UnpaddedPieceSize, 
@@ -203,7 +193,6 @@ Register callbacks to be called when a deal expires or is slashed.
 * [`GetDefaultWalletAddress`](#GetDefaultWalletAddress)
 * [`OnDealSectorCommitted`](#OnDealSectorCommitted)
 * [`OnDealExpiredOrSlashed`](#OnDealExpiredOrSlashed)
-* [`ValidateAskSignature`](#ValidateAskSignature)
 
 #### StorageCommon
 `StorageClientNode` implements `StorageCommon`, described above.
@@ -213,13 +202,6 @@ Register callbacks to be called when a deal expires or is slashed.
 func GetChainHead(ctx context.Context) (shared.TipSetToken, abi.ChainEpoch, error)
 ```
 Get the current chain head. Return its TipSetToken and its abi.ChainEpoch.
-
-#### ListClientDeals
-```go
-func ListClientDeals(ctx context.Context, addr address.Address, tok shared.TipSetToken,
-                 ) ([]StorageDeal, error)
-```
-List all deals associated with storage client `addr`, as of `tok`. Return a slice of `StorageDeal`.
 
 #### ListStorageProviders
 ```go
@@ -269,14 +251,6 @@ func OnDealExpiredOrSlashed(
 ```
 
 Register callbacks to be called when a deal expires or is slashed.
-
-#### ValidateAskSignature
-```go
-func ValidateAskSignature(ctx context.Context, ask *SignedStorageAsk, tok shared.TipSetToken,
-                     ) (bool, error)
-```
-Verify the signature in `ask`, returning true (valid) or false (invalid).
-
 
 #### GetMinerInfo
 ```go
@@ -370,7 +344,7 @@ See this repo's [piecestore module](../piecestore).
   that was written for your node.
 * `minerAddress address.Address` is the miner owner address.
 * `rt abi.RegisteredProof` is an int64 indicating the type of proof to use when generating a piece commitment (CommP).
-    see [github.com/filecoin-project/specs-actors/actors/abi/sector.go](https://github.com/filecoin-project/specs-actors/blob/master/actors/abi/sector.go)
+    see [github.com/filecoin-project/go-state-types/abi/sector.go](https://github.com/filecoin-project/specs-actors/blob/master/actors/abi/sector.go)
     for the list and meaning of accepted values.
 * `storedAsk StoredAsk` is an interface for getting and adding storage Asks. It is implemented in storagemarket.
     To create a `StoredAsk`:

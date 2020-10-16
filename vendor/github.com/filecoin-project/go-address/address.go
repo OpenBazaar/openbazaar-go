@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -30,6 +31,9 @@ var addressAtlasEntry = atlas.BuildEntry(Address{}).Transform().
 			return NewFromBytes([]byte(x))
 		})).
 	Complete()
+
+// CurrentNetwork specifies which network the address belongs to
+var CurrentNetwork = Testnet
 
 // Address is the go type that represents an address in the filecoin network.
 type Address struct{ str string }
@@ -79,6 +83,9 @@ func (a Address) Protocol() Protocol {
 
 // Payload returns the payload of the address.
 func (a Address) Payload() []byte {
+	if len(a.str) == 0 {
+		return nil
+	}
 	return []byte(a.str[1:])
 }
 
@@ -89,7 +96,7 @@ func (a Address) Bytes() []byte {
 
 // String returns an address encoded as a string.
 func (a Address) String() string {
-	str, err := encode(Testnet, a)
+	str, err := encode(CurrentNetwork, a)
 	if err != nil {
 		panic(err) // I don't know if this one is okay
 	}
@@ -149,6 +156,9 @@ func (a *Address) Scan(value interface{}) error {
 
 // NewIDAddress returns an address using the ID protocol.
 func NewIDAddress(id uint64) (Address, error) {
+	if id > math.MaxInt64 {
+		return Undef, xerrors.New("IDs must be less than 2^63")
+	}
 	return newAddress(ID, varint.ToUvarint(id))
 }
 
@@ -352,8 +362,13 @@ func (a *Address) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-func (a Address) MarshalCBOR(w io.Writer) error {
-	if a == Undef {
+func (a *Address) MarshalCBOR(w io.Writer) error {
+	if a == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	if *a == Undef {
 		return fmt.Errorf("cannot marshal undefined address")
 	}
 
@@ -368,7 +383,9 @@ func (a Address) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (a *Address) UnmarshalCBOR(br io.Reader) error {
+func (a *Address) UnmarshalCBOR(r io.Reader) error {
+	br := cbg.GetPeeker(r)
+
 	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err

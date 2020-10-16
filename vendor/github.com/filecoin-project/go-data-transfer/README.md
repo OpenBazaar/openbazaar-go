@@ -36,17 +36,19 @@ Install the module in your package or app with `go get "github.com/filecoin-proj
 
     import (
         gsimpl "github.com/ipfs/go-graphsync/impl"
-        "github.com/filecoin-project/go-data-transfer/datatransfer"
+        datatransfer "github.com/filecoin-project/go-data-transfer/impl"
+        gstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
         "github.com/libp2p/go-libp2p-core/host"
     )
             
     ```
 1. Provide or create a [libp2p host.Host](https://github.com/libp2p/go-libp2p-examples/tree/master/libp2p-host)
-1. Provide or create a [go-graphsync GraphExchange](https://github.com/ipfs/go-graphsync#initializing-a-graphsync-exchange)
-1. Create a new instance of GraphsyncDataTransfer
+1. You will need a transport protocol. The current default transport is graphsync. [go-graphsync GraphExchange](https://github.com/ipfs/go-graphsync#initializing-a-graphsync-exchange)
+1. Create a data transfer by building a transport interface and then initializing a new data transfer instance
     ```go
-    func NewGraphsyncDatatransfer(h host.Host, gs graphsync.GraphExchange) {
-        dt := datatransfer.NewGraphSyncDataTransfer(h, gs)
+    func NewGraphsyncDataTransfer(h host.Host, gs graphsync.GraphExchange) {
+        tp := gstransport.NewTransport(h.ID(), gs)
+        dt := impl.NewDataTransfer(h, tp)
     }
     ```
 
@@ -81,7 +83,7 @@ func (v *myVoucher) Type() string {
 
 type myValidator struct {
 	ctx                 context.Context
-	validationsReceived chan receivedValidation
+	ValidationsReceived chan receivedValidation
 }
 
 func (vl *myValidator) ValidatePush(
@@ -126,7 +128,8 @@ by its `reflect.Type` and `dataTransfer.RequestValidator` for vouchers that
 must be sent with the request.  Using the trivial examples above:
 ```go
     func NewGraphsyncDatatransfer(h host.Host, gs graphsync.GraphExchange) {
-        dt := datatransfer.NewGraphSyncDataTransfer(h, gs)
+        tp := gstransport.NewTransport(h.ID(), gs)
+        dt := impl.NewDataTransfer(h, tp)
 
         vouch := &myVoucher{}
         mv := &myValidator{} 
@@ -134,7 +137,7 @@ must be sent with the request.  Using the trivial examples above:
     }
 ```
     
-For more detail, please see the [unit tests](https://github.com/filecoin-project/go-data-transfer/blob/master/impl/graphsync/graphsync_impl_test.go).
+For more detail, please see the [unit tests](https://github.com/filecoin-project/go-data-transfer/blob/master/impl/impl_test.go).
 
 ### Open a Push or Pull Request
 For a push or pull request, provide a context, a `datatransfer.Voucher`, a host recipient `peer.ID`, a baseCID `cid.CID` and a selector `ipld.Node`.  These

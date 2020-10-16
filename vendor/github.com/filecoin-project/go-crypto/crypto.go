@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"io"
 
-	secp256k1 "github.com/ethereum/go-ethereum/crypto/secp256k1"
+	secp256k1 "github.com/ipsn/go-secp256k1"
 )
 
 // PrivateKeyBytes is the size of a serialized private key.

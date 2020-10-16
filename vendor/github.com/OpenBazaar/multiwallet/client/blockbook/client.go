@@ -333,7 +333,6 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 	}
 	for n, o := range tx.Vout {
 		newOut := model.Output{
-			ValueIface:   tx.Vout[n].ValueIface,
 			Value:        tx.Vout[n].Value,
 			N:            o.N,
 			ScriptPubKey: o.ScriptPubKey,
@@ -647,7 +646,6 @@ func (i *BlockBookClient) setupListeners() error {
 	i.SocketClient.Emit("subscribe", protocol.ToArgArray("bitcoind/hashblock"))
 
 	i.SocketClient.On("bitcoind/addresstxid", func(h *gosocketio.Channel, arg interface{}) {
-		fmt.Println("On addr txid", arg)
 		m, ok := arg.(map[string]interface{})
 		if !ok {
 			Log.Errorf("error checking type after socket notification: %T", arg)
@@ -662,7 +660,7 @@ func (i *BlockBookClient) setupListeners() error {
 			tx, err := i.GetTransaction(txid)
 			if err != nil {
 				Log.Errorf("error downloading tx after socket notification: %s", err.Error())
-				continue
+				return
 			}
 			tx.Time = time.Now().Unix()
 			i.txNotifyChan <- *tx

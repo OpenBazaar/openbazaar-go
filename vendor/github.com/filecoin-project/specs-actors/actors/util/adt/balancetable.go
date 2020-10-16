@@ -1,17 +1,16 @@
 package adt
 
 import (
-	"errors"
-	"fmt"
-
 	addr "github.com/filecoin-project/go-address"
 	cid "github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/abi/big"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
 )
 
-// A specialization of a map of addresses to token amounts.
+// A specialization of a map of addresses to (positive) token amounts.
+// Absent keys implicitly have a balance of zero.
 type BalanceTable Map
 
 // Interprets a store as balance table with root `r`.
@@ -32,61 +31,41 @@ func (t *BalanceTable) Root() (cid.Cid, error) {
 	return (*Map)(t).Root()
 }
 
-// Gets the balance for a key. The entry must have been previously initialized.
+// Gets the balance for a key, which is zero if they key has never been added to.
 func (t *BalanceTable) Get(key addr.Address) (abi.TokenAmount, error) {
 	var value abi.TokenAmount
-	found, err := (*Map)(t).Get(AddrKey(key), &value)
-	if err != nil {
-		return big.Zero(), err // The errors from Map carry good information, no need to wrap here.
+	found, err := (*Map)(t).Get(abi.AddrKey(key), &value)
+	if !found || err != nil {
+		value = big.Zero()
 	}
-	if !found {
-		return big.Zero(), ErrNotFound{t.lastCid, key}
-	}
-	return value, nil
+
+	return value, err
 }
 
-// Has checks if the balance for a key exists
-func (t *BalanceTable) Has(key addr.Address) (bool, error) {
-	var value abi.TokenAmount
-	return (*Map)(t).Get(AddrKey(key), &value)
-}
-
-// Sets the balance for an address, overwriting any previous balance.
-func (t *BalanceTable) Set(key addr.Address, value abi.TokenAmount) error {
-	return (*Map)(t).Put(AddrKey(key), &value)
-}
-
-// Adds an amount to a balance. The entry must have been previously initialized.
+// Adds an amount to a balance, requiring the resulting balance to be non-negative.
 func (t *BalanceTable) Add(key addr.Address, value abi.TokenAmount) error {
 	prev, err := t.Get(key)
 	if err != nil {
 		return err
 	}
 	sum := big.Add(prev, value)
-	return (*Map)(t).Put(AddrKey(key), &sum)
-}
-
-// Adds an amount to a balance. Create entry if not exists
-func (t *BalanceTable) AddCreate(key addr.Address, value abi.TokenAmount) error {
-	var prev abi.TokenAmount
-	found, err := (*Map)(t).Get(AddrKey(key), &prev)
-	if err != nil {
-		return err
+	sign := sum.Sign()
+	if sign < 0 {
+		return xerrors.Errorf("adding %v to balance %v would give negative: %v", value, prev, sum)
+	} else if sign == 0 && !prev.IsZero() {
+		return (*Map)(t).Delete(abi.AddrKey(key))
 	}
-	if found {
-		value = big.Add(prev, value)
-	}
-
-	return (*Map)(t).Put(AddrKey(key), &value)
+	return (*Map)(t).Put(abi.AddrKey(key), &sum)
 }
 
 // Subtracts up to the specified amount from a balance, without reducing the balance below some minimum.
-// Returns the amount subtracted (always positive or zero).
+// Returns the amount subtracted.
 func (t *BalanceTable) SubtractWithMinimum(key addr.Address, req abi.TokenAmount, floor abi.TokenAmount) (abi.TokenAmount, error) {
 	prev, err := t.Get(key)
 	if err != nil {
 		return big.Zero(), err
 	}
+
 	available := big.Max(big.Zero(), big.Sub(prev, floor))
 	sub := big.Min(available, req)
 	if sub.Sign() > 0 {
@@ -98,28 +77,17 @@ func (t *BalanceTable) SubtractWithMinimum(key addr.Address, req abi.TokenAmount
 	return sub, nil
 }
 
+// MustSubtract subtracts the given amount from the account's balance.
+// Returns an error if the account has insufficient balance
 func (t *BalanceTable) MustSubtract(key addr.Address, req abi.TokenAmount) error {
-	subst, err := t.SubtractWithMinimum(key, req, big.Zero())
+	prev, err := t.Get(key)
 	if err != nil {
 		return err
 	}
-	if !subst.Equals(req) {
-		return errors.New("couldn't subtract the requested amount")
+	if req.GreaterThan(prev) {
+		return xerrors.New("couldn't subtract the requested amount")
 	}
-	return nil
-}
-
-// Removes an entry from the table, returning the prior value. The entry must have been previously initialized.
-func (t *BalanceTable) Remove(key addr.Address) (abi.TokenAmount, error) {
-	prev, err := t.Get(key)
-	if err != nil {
-		return big.Zero(), err
-	}
-	err = (*Map)(t).Delete(AddrKey(key))
-	if err != nil {
-		return big.Zero(), err
-	}
-	return prev, nil
+	return t.Add(key, req.Neg())
 }
 
 // Returns the total balance held by this BalanceTable
@@ -131,14 +99,4 @@ func (t *BalanceTable) Total() (abi.TokenAmount, error) {
 		return nil
 	})
 	return total, err
-}
-
-// Error type returned when an expected key is absent.
-type ErrNotFound struct {
-	Root cid.Cid
-	Key  interface{}
-}
-
-func (e ErrNotFound) Error() string {
-	return fmt.Sprintf("no key %v in map root %v", e.Key, e.Root)
 }
