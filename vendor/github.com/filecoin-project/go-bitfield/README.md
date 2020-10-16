@@ -6,6 +6,8 @@
 
 > Advanced RLE+ implementation
 
+Features iterator based primitives that scale with number of runs instead of number of bits.
+
 ## License
 
 The Filecoin Project is dual-licensed under Apache 2.0 and MIT terms:

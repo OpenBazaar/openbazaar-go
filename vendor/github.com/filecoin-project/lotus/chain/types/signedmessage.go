@@ -2,11 +2,12 @@ package types
 
 import (
 	"bytes"
+	"encoding/json"
 
-	"github.com/filecoin-project/specs-actors/actors/crypto"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/crypto"
 	block "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	"github.com/multiformats/go-multihash"
 )
 
 func (sm *SignedMessage) ToStorageBlock() (block.Block, error) {
@@ -19,8 +20,7 @@ func (sm *SignedMessage) ToStorageBlock() (block.Block, error) {
 		return nil, err
 	}
 
-	pref := cid.NewPrefixV1(cid.DagCBOR, multihash.BLAKE2B_MIN+31)
-	c, err := pref.Sum(data)
+	c, err := abi.CidBuilder.Sum(data)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +63,29 @@ func (sm *SignedMessage) Serialize() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (m *SignedMessage) ChainLength() int {
-	ser, err := m.Serialize()
+type smCid struct {
+	*RawSignedMessage
+	CID cid.Cid
+}
+
+type RawSignedMessage SignedMessage
+
+func (sm *SignedMessage) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&smCid{
+		RawSignedMessage: (*RawSignedMessage)(sm),
+		CID:              sm.Cid(),
+	})
+}
+
+func (sm *SignedMessage) ChainLength() int {
+	var ser []byte
+	var err error
+	if sm.Signature.Type == crypto.SigTypeBLS {
+		// BLS chain message length doesn't include signature
+		ser, err = sm.Message.Serialize()
+	} else {
+		ser, err = sm.Serialize()
+	}
 	if err != nil {
 		panic(err)
 	}

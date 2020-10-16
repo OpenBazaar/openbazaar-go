@@ -1,27 +1,34 @@
 package storagemarket
 
 import (
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin/market"
-	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-address"
+	datatransfer "github.com/filecoin-project/go-data-transfer"
+	"github.com/filecoin-project/go-multistore"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/specs-actors/actors/builtin/market"
 
 	"github.com/filecoin-project/go-fil-markets/filestore"
 )
 
-//go:generate cbor-gen-for ClientDeal MinerDeal Balance SignedStorageAsk StorageAsk StorageDeal DataRef ProviderDealState
+//go:generate cbor-gen-for --map-encoding ClientDeal MinerDeal Balance SignedStorageAsk StorageAsk DataRef ProviderDealState
 
 // DealProtocolID is the ID for the libp2p protocol for proposing storage deals.
-const DealProtocolID = "/fil/storage/mk/1.0.1"
+const OldDealProtocolID = "/fil/storage/mk/1.0.1"
+const DealProtocolID = "/fil/storage/mk/1.1.0"
 
 // AskProtocolID is the ID for the libp2p protocol for querying miners for their current StorageAsk.
-const AskProtocolID = "/fil/storage/ask/1.0.1"
+const OldAskProtocolID = "/fil/storage/ask/1.0.1"
+const AskProtocolID = "/fil/storage/ask/1.1.0"
 
 // DealStatusProtocolID is the ID for the libp2p protocol for querying miners for the current status of a deal.
-const DealStatusProtocolID = "/fil/storage/status/1.0.1"
+const OldDealStatusProtocolID = "/fil/storage/status/1.0.1"
+const DealStatusProtocolID = "/fil/storage/status/1.1.0"
 
 // Balance represents a current balance of funds in the StorageMarketActor.
 type Balance struct {
@@ -35,7 +42,8 @@ type Balance struct {
 // storage provider may run its own decision logic).
 type StorageAsk struct {
 	// Price per GiB / Epoch
-	Price abi.TokenAmount
+	Price         abi.TokenAmount
+	VerifiedPrice abi.TokenAmount
 
 	MinPieceSize abi.PaddedPieceSize
 	MaxPieceSize abi.PaddedPieceSize
@@ -77,45 +85,48 @@ var StorageAskUndefined = StorageAsk{}
 // MinerDeal is the local state tracked for a deal by a StorageProvider
 type MinerDeal struct {
 	market.ClientDealProposal
-	ProposalCid   cid.Cid
-	AddFundsCid   *cid.Cid
-	PublishCid    *cid.Cid
-	Miner         peer.ID
-	Client        peer.ID
-	State         StorageDealStatus
-	PiecePath     filestore.Path
-	MetadataPath  filestore.Path
-	SlashEpoch    abi.ChainEpoch
-	FastRetrieval bool
-	Message       string
+	ProposalCid           cid.Cid
+	AddFundsCid           *cid.Cid
+	PublishCid            *cid.Cid
+	Miner                 peer.ID
+	Client                peer.ID
+	State                 StorageDealStatus
+	PiecePath             filestore.Path
+	MetadataPath          filestore.Path
+	SlashEpoch            abi.ChainEpoch
+	FastRetrieval         bool
+	Message               string
+	StoreID               *multistore.StoreID
+	FundsReserved         abi.TokenAmount
+	Ref                   *DataRef
+	AvailableForRetrieval bool
 
-	Ref *DataRef
+	DealID       abi.DealID
+	CreationTime cbg.CborTime
 
-	DealID abi.DealID
+	TransferChannelId *datatransfer.ChannelID
 }
 
 // ClientDeal is the local state tracked for a deal by a StorageClient
 type ClientDeal struct {
 	market.ClientDealProposal
-	ProposalCid    cid.Cid
-	AddFundsCid    *cid.Cid
-	State          StorageDealStatus
-	Miner          peer.ID
-	MinerWorker    address.Address
-	DealID         abi.DealID
-	DataRef        *DataRef
-	Message        string
-	PublishMessage *cid.Cid
-	SlashEpoch     abi.ChainEpoch
-	PollRetryCount uint64
-	PollErrorCount uint64
-	FastRetrieval  bool
-}
-
-// StorageDeal is a local combination of a proposal and a current deal state
-type StorageDeal struct {
-	market.DealProposal
-	market.DealState
+	ProposalCid       cid.Cid
+	AddFundsCid       *cid.Cid
+	State             StorageDealStatus
+	Miner             peer.ID
+	MinerWorker       address.Address
+	DealID            abi.DealID
+	DataRef           *DataRef
+	Message           string
+	PublishMessage    *cid.Cid
+	SlashEpoch        abi.ChainEpoch
+	PollRetryCount    uint64
+	PollErrorCount    uint64
+	FastRetrieval     bool
+	StoreID           *multistore.StoreID
+	FundsReserved     abi.TokenAmount
+	CreationTime      cbg.CborTime
+	TransferChannelID *datatransfer.ChannelID
 }
 
 // StorageProviderInfo describes on chain information about a StorageProvider
@@ -132,6 +143,21 @@ type StorageProviderInfo struct {
 // ProposeStorageDealResult returns the result for a proposing a deal
 type ProposeStorageDealResult struct {
 	ProposalCid cid.Cid
+}
+
+// ProposeStorageDealParams describes the parameters for proposing a storage deal
+type ProposeStorageDealParams struct {
+	Addr          address.Address
+	Info          *StorageProviderInfo
+	Data          *DataRef
+	StartEpoch    abi.ChainEpoch
+	EndEpoch      abi.ChainEpoch
+	Price         abi.TokenAmount
+	Collateral    abi.TokenAmount
+	Rt            abi.RegisteredSealProof
+	FastRetrieval bool
+	VerifiedDeal  bool
+	StoreID       *multistore.StoreID
 }
 
 const (

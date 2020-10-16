@@ -6,31 +6,35 @@ import (
 	"fmt"
 	"io"
 
-	abi "github.com/filecoin-project/specs-actors/actors/abi"
+	abi "github.com/filecoin-project/go-state-types/abi"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	xerrors "golang.org/x/xerrors"
 )
 
 var _ = xerrors.Errorf
 
+var lengthBufState = []byte{131}
+
 func (t *State) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{131}); err != nil {
+	if _, err := w.Write(lengthBufState); err != nil {
 		return err
 	}
 
+	scratch := make([]byte, 9)
+
 	// t.AddressMap (cid.Cid) (struct)
 
-	if err := cbg.WriteCid(w, t.AddressMap); err != nil {
+	if err := cbg.WriteCidBuf(scratch, w, t.AddressMap); err != nil {
 		return xerrors.Errorf("failed to write cid field t.AddressMap: %w", err)
 	}
 
 	// t.NextID (abi.ActorID) (uint64)
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.NextID))); err != nil {
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.NextID)); err != nil {
 		return err
 	}
 
@@ -39,19 +43,22 @@ func (t *State) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.NetworkName was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.NetworkName)))); err != nil {
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.NetworkName))); err != nil {
 		return err
 	}
-	if _, err := w.Write([]byte(t.NetworkName)); err != nil {
+	if _, err := io.WriteString(w, string(t.NetworkName)); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (t *State) UnmarshalCBOR(r io.Reader) error {
-	br := cbg.GetPeeker(r)
+	*t = State{}
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -79,7 +86,7 @@ func (t *State) UnmarshalCBOR(r io.Reader) error {
 
 	{
 
-		maj, extra, err = cbg.CborReadHeader(br)
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -92,7 +99,7 @@ func (t *State) UnmarshalCBOR(r io.Reader) error {
 	// t.NetworkName (string) (string)
 
 	{
-		sval, err := cbg.ReadString(br)
+		sval, err := cbg.ReadStringBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -102,33 +109,40 @@ func (t *State) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
+var lengthBufConstructorParams = []byte{129}
+
 func (t *ConstructorParams) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{129}); err != nil {
+	if _, err := w.Write(lengthBufConstructorParams); err != nil {
 		return err
 	}
+
+	scratch := make([]byte, 9)
 
 	// t.NetworkName (string) (string)
 	if len(t.NetworkName) > cbg.MaxLength {
 		return xerrors.Errorf("Value in field t.NetworkName was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.NetworkName)))); err != nil {
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.NetworkName))); err != nil {
 		return err
 	}
-	if _, err := w.Write([]byte(t.NetworkName)); err != nil {
+	if _, err := io.WriteString(w, string(t.NetworkName)); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (t *ConstructorParams) UnmarshalCBOR(r io.Reader) error {
-	br := cbg.GetPeeker(r)
+	*t = ConstructorParams{}
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -143,7 +157,7 @@ func (t *ConstructorParams) UnmarshalCBOR(r io.Reader) error {
 	// t.NetworkName (string) (string)
 
 	{
-		sval, err := cbg.ReadString(br)
+		sval, err := cbg.ReadStringBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -153,18 +167,22 @@ func (t *ConstructorParams) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
+var lengthBufExecParams = []byte{130}
+
 func (t *ExecParams) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{130}); err != nil {
+	if _, err := w.Write(lengthBufExecParams); err != nil {
 		return err
 	}
 
+	scratch := make([]byte, 9)
+
 	// t.CodeCID (cid.Cid) (struct)
 
-	if err := cbg.WriteCid(w, t.CodeCID); err != nil {
+	if err := cbg.WriteCidBuf(scratch, w, t.CodeCID); err != nil {
 		return xerrors.Errorf("failed to write cid field t.CodeCID: %w", err)
 	}
 
@@ -173,19 +191,23 @@ func (t *ExecParams) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Byte array in field t.ConstructorParams was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(t.ConstructorParams)))); err != nil {
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.ConstructorParams))); err != nil {
 		return err
 	}
-	if _, err := w.Write(t.ConstructorParams); err != nil {
+
+	if _, err := w.Write(t.ConstructorParams[:]); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (t *ExecParams) UnmarshalCBOR(r io.Reader) error {
-	br := cbg.GetPeeker(r)
+	*t = ExecParams{}
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -211,7 +233,7 @@ func (t *ExecParams) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.ConstructorParams ([]uint8) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -222,19 +244,25 @@ func (t *ExecParams) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajByteString {
 		return fmt.Errorf("expected byte array")
 	}
-	t.ConstructorParams = make([]byte, extra)
-	if _, err := io.ReadFull(br, t.ConstructorParams); err != nil {
+
+	if extra > 0 {
+		t.ConstructorParams = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(br, t.ConstructorParams[:]); err != nil {
 		return err
 	}
 	return nil
 }
+
+var lengthBufExecReturn = []byte{130}
 
 func (t *ExecReturn) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{130}); err != nil {
+	if _, err := w.Write(lengthBufExecReturn); err != nil {
 		return err
 	}
 
@@ -251,9 +279,12 @@ func (t *ExecReturn) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *ExecReturn) UnmarshalCBOR(r io.Reader) error {
-	br := cbg.GetPeeker(r)
+	*t = ExecReturn{}
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}

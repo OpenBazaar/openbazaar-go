@@ -16,15 +16,16 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cpacia/bchutil v0.0.0-20181003130114-b126f6a35b6c
 	github.com/ethereum/go-ethereum v1.9.15 // indirect
-	github.com/filecoin-project/go-address v0.0.2-0.20200504173055-8b6f2fb2b3ef
-	github.com/filecoin-project/lotus v0.4.0
-	github.com/filecoin-project/specs-actors v0.7.1
+	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20201006125140-a62d00da59d1 // indirect
+	github.com/filecoin-project/go-address v0.0.4
+	github.com/filecoin-project/go-state-types v0.0.0-20201013222834-41ea465f274f
+	github.com/filecoin-project/lotus v0.10.2
 	github.com/gcash/bchd v0.16.4
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.4.1 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hunterlong/tokenbalance v0.0.12-0.20191105170207-4f98e641e619 // indirect
-	github.com/ipfs/go-cid v0.0.6-0.20200501230655-7c82f3b81c00
+	github.com/ipfs/go-cid v0.0.7
 	github.com/jarcoal/httpmock v1.0.5
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/joho/godotenv v1.3.0 // indirect
@@ -38,9 +39,12 @@ require (
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/prometheus/tsdb v0.7.1 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/stretchr/testify v1.6.0 // indirect
+	github.com/sirupsen/logrus v1.7.0 // indirect
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200707235045-ab33eee955e0
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.30.0
+	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 )

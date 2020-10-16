@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/bits"
 
 	cid "github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -149,12 +148,13 @@ func (r *Root) Get(ctx context.Context, i uint64, out interface{}) error {
 
 func (n *Node) get(ctx context.Context, bs cbor.IpldStore, height int, i uint64, out interface{}) error {
 	subi := i / nodesForHeight(height)
-	set, _ := n.getBit(subi)
-	if !set {
+	if !n.isSet(subi) {
 		return &ErrNotFound{i}
 	}
 	if height == 0 {
-		n.expandValues()
+		if err := n.expandValues(); err != nil {
+			return err
+		}
 
 		d := n.expVals[i]
 
@@ -213,12 +213,13 @@ func (r *Root) Delete(ctx context.Context, i uint64) error {
 
 func (n *Node) delete(ctx context.Context, bs cbor.IpldStore, height int, i uint64) error {
 	subi := i / nodesForHeight(height)
-	set, _ := n.getBit(subi)
-	if !set {
+	if !n.isSet(subi) {
 		return &ErrNotFound{i}
 	}
 	if height == 0 {
-		n.expandValues()
+		if err := n.expandValues(); err != nil {
+			return err
+		}
 
 		n.expVals[i] = nil
 		n.clearBit(i)
@@ -262,7 +263,9 @@ func (r *Root) ForEachAt(ctx context.Context, start uint64, cb func(uint64, *cbg
 
 func (n *Node) forEachAt(ctx context.Context, bs cbor.IpldStore, height int, start, offset uint64, cb func(uint64, *cbg.Deferred) error) error {
 	if height == 0 {
-		n.expandValues()
+		if err := n.expandValues(); err != nil {
+			return err
+		}
 
 		for i, v := range n.expVals {
 			if v != nil {
@@ -281,7 +284,9 @@ func (n *Node) forEachAt(ctx context.Context, bs cbor.IpldStore, height int, sta
 	}
 
 	if n.cache == nil {
-		n.expandLinks()
+		if err := n.expandLinks(); err != nil {
+			return err
+		}
 	}
 
 	subCount := nodesForHeight(height)
@@ -319,7 +324,9 @@ var errNoVals = fmt.Errorf("no values")
 
 func (n *Node) firstSetIndex(ctx context.Context, bs cbor.IpldStore, height int) (uint64, error) {
 	if height == 0 {
-		n.expandValues()
+		if err := n.expandValues(); err != nil {
+			return 0, err
+		}
 		for i, v := range n.expVals {
 			if v != nil {
 				return uint64(i), nil
@@ -330,12 +337,13 @@ func (n *Node) firstSetIndex(ctx context.Context, bs cbor.IpldStore, height int)
 	}
 
 	if n.cache == nil {
-		n.expandLinks()
+		if err := n.expandLinks(); err != nil {
+			return 0, err
+		}
 	}
 
 	for i := 0; i < width; i++ {
-		ok, _ := n.getBit(uint64(i))
-		if ok {
+		if n.isSet(uint64(i)) {
 			subn, err := n.loadNode(ctx, bs, uint64(i), false)
 			if err != nil {
 				return 0, err
@@ -354,24 +362,32 @@ func (n *Node) firstSetIndex(ctx context.Context, bs cbor.IpldStore, height int)
 	return 0, errNoVals
 }
 
-func (n *Node) expandValues() {
+func (n *Node) expandValues() error {
 	if len(n.expVals) == 0 {
 		n.expVals = make([]*cbg.Deferred, width)
+		i := 0
 		for x := uint64(0); x < width; x++ {
-			set, ix := n.getBit(x)
-			if set {
-				n.expVals[x] = n.Values[ix]
+			if n.isSet(x) {
+				if i >= len(n.Values) {
+					n.expVals = nil
+					return fmt.Errorf("bitfield does not match values")
+				}
+				n.expVals[x] = n.Values[i]
+				i++
 			}
 		}
 	}
+	return nil
 }
 
 func (n *Node) set(ctx context.Context, bs cbor.IpldStore, height int, i uint64, val *cbg.Deferred) (bool, error) {
 	//nfh := nodesForHeight(height)
 	//fmt.Printf("[set] h: %d, i: %d, subi: %d\n", height, i, i/nfh)
 	if height == 0 {
-		n.expandValues()
-		alreadySet, _ := n.getBit(i)
+		if err := n.expandValues(); err != nil {
+			return false, err
+		}
+		alreadySet := n.isSet(i)
 		n.expVals[i] = val
 		n.setBit(i)
 
@@ -388,21 +404,12 @@ func (n *Node) set(ctx context.Context, bs cbor.IpldStore, height int, i uint64,
 	return subn.set(ctx, bs, height-1, i%nfh, val)
 }
 
-func (n *Node) getBit(i uint64) (bool, int) {
+func (n *Node) isSet(i uint64) bool {
 	if i > 7 {
 		panic("cant deal with wider arrays yet")
 	}
 
-	if len(n.Bmap) == 0 {
-		return false, 0
-	}
-
-	if n.Bmap[0]&byte(1<<i) == 0 {
-		return false, 0
-	}
-
-	mask := byte((1 << i) - 1)
-	return true, bits.OnesCount8(n.Bmap[0] & mask)
+	return len(n.Bmap) != 0 && n.Bmap[0]&byte(1<<i) != 0
 }
 
 func (n *Node) setBit(i uint64) {
@@ -431,30 +438,37 @@ func (n *Node) clearBit(i uint64) {
 	n.Bmap[0] = n.Bmap[0] & mask
 }
 
-func (n *Node) expandLinks() {
+func (n *Node) expandLinks() error {
 	n.cache = make([]*Node, width)
 	n.expLinks = make([]cid.Cid, width)
+	i := 0
 	for x := uint64(0); x < width; x++ {
-		set, ix := n.getBit(x)
-		if set {
-			n.expLinks[x] = n.Links[ix]
+		if n.isSet(x) {
+			if i >= len(n.Links) {
+				n.cache = nil
+				n.expLinks = nil
+				return fmt.Errorf("bitfield does not match links")
+			}
+			n.expLinks[x] = n.Links[i]
+			i++
 		}
 	}
+	return nil
 }
 
 func (n *Node) loadNode(ctx context.Context, bs cbor.IpldStore, i uint64, create bool) (*Node, error) {
 	if n.cache == nil {
-		n.expandLinks()
+		if err := n.expandLinks(); err != nil {
+			return nil, err
+		}
 	} else {
 		if n := n.cache[i]; n != nil {
 			return n, nil
 		}
 	}
 
-	set, _ := n.getBit(i)
-
 	var subn *Node
-	if set {
+	if n.isSet(i) {
 		var sn Node
 		if err := bs.Get(ctx, n.expLinks[i], &sn); err != nil {
 			return nil, err
@@ -500,6 +514,7 @@ func (n *Node) Flush(ctx context.Context, bs cbor.IpldStore, depth int) error {
 		if len(n.expVals) == 0 {
 			return nil
 		}
+		n.Bmap = [...]byte{0}
 		n.Values = nil
 		for i := uint64(0); i < width; i++ {
 			v := n.expVals[i]

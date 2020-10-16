@@ -47,7 +47,7 @@ type Decoder interface {
 func NewDecoder(decodeType Encodable) (Decoder, error) {
 	// check if type is ipld.Node, if so, just use style
 	if ipldDecodable, ok := decodeType.(ipld.Node); ok {
-		return &ipldDecoder{ipldDecodable.Style()}, nil
+		return &ipldDecoder{ipldDecodable.Prototype()}, nil
 	}
 	// check if type is a pointer, as we need that to make new copies
 	// for cborgen types & regular IPLD types
@@ -73,7 +73,7 @@ func NewDecoder(decodeType Encodable) (Decoder, error) {
 }
 
 type ipldDecoder struct {
-	style ipld.NodeStyle
+	style ipld.NodePrototype
 }
 
 func (decoder *ipldDecoder) DecodeFromCbor(encoded []byte) (Encodable, error) {

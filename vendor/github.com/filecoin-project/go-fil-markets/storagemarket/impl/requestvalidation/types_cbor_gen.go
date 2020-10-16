@@ -12,18 +12,22 @@ import (
 
 var _ = xerrors.Errorf
 
+var lengthBufStorageDataTransferVoucher = []byte{129}
+
 func (t *StorageDataTransferVoucher) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{129}); err != nil {
+	if _, err := w.Write(lengthBufStorageDataTransferVoucher); err != nil {
 		return err
 	}
 
+	scratch := make([]byte, 9)
+
 	// t.Proposal (cid.Cid) (struct)
 
-	if err := cbg.WriteCid(w, t.Proposal); err != nil {
+	if err := cbg.WriteCidBuf(scratch, w, t.Proposal); err != nil {
 		return xerrors.Errorf("failed to write cid field t.Proposal: %w", err)
 	}
 
@@ -31,9 +35,12 @@ func (t *StorageDataTransferVoucher) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *StorageDataTransferVoucher) UnmarshalCBOR(r io.Reader) error {
-	br := cbg.GetPeeker(r)
+	*t = StorageDataTransferVoucher{}
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}

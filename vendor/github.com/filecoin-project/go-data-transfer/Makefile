@@ -14,4 +14,19 @@ test:
 	go test ./...
 
 type-gen: build
-	go run ./cbor-gen/main.go
+	go generate ./...
+
+imports:
+	scripts/fiximports
+
+cbor-gen:
+	go generate ./...
+
+tidy:
+	go mod tidy
+
+lint:
+	git fetch
+	golangci-lint run -v --concurrency 2 --new-from-rev origin/master
+
+prepare-pr: cbor-gen tidy imports lint
