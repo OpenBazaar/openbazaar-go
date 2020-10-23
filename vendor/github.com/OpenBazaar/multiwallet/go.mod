@@ -3,7 +3,7 @@ module github.com/OpenBazaar/multiwallet
 go 1.14
 
 require (
-	github.com/OpenBazaar/go-ethwallet v0.0.0-20200604192229-31db816d691c
+	github.com/OpenBazaar/go-ethwallet v0.1.0
 	github.com/OpenBazaar/golang-socketio v0.0.0-20200109001351-4147b5f0d294
 	github.com/OpenBazaar/openbazaar-go v0.14.3 // indirect
 	github.com/OpenBazaar/spvwallet v0.0.0-20200112224336-39f04e8d6d34
@@ -16,10 +16,17 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cpacia/bchutil v0.0.0-20181003130114-b126f6a35b6c
 	github.com/ethereum/go-ethereum v1.9.15 // indirect
+<<<<<<< Updated upstream
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20201006125140-a62d00da59d1 // indirect
 	github.com/filecoin-project/go-address v0.0.4
 	github.com/filecoin-project/go-state-types v0.0.0-20201013222834-41ea465f274f
 	github.com/filecoin-project/lotus v1.1.0
+=======
+	github.com/filecoin-project/go-address v0.0.4
+	github.com/filecoin-project/go-state-types v0.0.0-20201013222834-41ea465f274f
+	github.com/filecoin-project/lotus v0.10.2
+	github.com/filecoin-project/specs-actors v0.9.12
+>>>>>>> Stashed changes
 	github.com/gcash/bchd v0.16.4
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/websocket v1.4.2
@@ -38,8 +45,11 @@ require (
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/prometheus/tsdb v0.7.1 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
+<<<<<<< Updated upstream
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
+=======
+>>>>>>> Stashed changes
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200707235045-ab33eee955e0
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
