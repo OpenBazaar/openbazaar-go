@@ -21,7 +21,6 @@ import (
 	"github.com/OpenBazaar/multiwallet/client/transport"
 	"github.com/OpenBazaar/multiwallet/model"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/cenkalti/backoff"
 	"github.com/cpacia/bchutil"
@@ -262,7 +261,8 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 	}
 	type resOut struct {
 		model.Output
-		Spent bool `json:"spent"`
+		Spent     bool     `json:"spent"`
+		Addresses []string `json:"addresses"`
 	}
 	type resTx struct {
 		model.Transaction
@@ -281,6 +281,9 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 		return nil, fmt.Errorf("error decoding transactions: %s", err)
 	}
 	for n, in := range tx.Vin {
+		if in.ValueIface == "" || in.ValueIface == nil {
+			in.ValueIface = "0"
+		}
 		f, err := model.ToFloat(in.ValueIface)
 		if err != nil {
 			return nil, err
@@ -288,6 +291,9 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 		tx.Vin[n].Value = f
 	}
 	for n, out := range tx.Vout {
+		if out.ValueIface == "" || out.ValueIface == nil {
+			out.ValueIface = "0"
+		}
 		f, err := model.ToFloat(out.ValueIface)
 		if err != nil {
 			return nil, err
@@ -333,6 +339,9 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 		}
 		for i, addr := range newOut.ScriptPubKey.Addresses {
 			newOut.ScriptPubKey.Addresses[i] = maybeTrimCashAddrPrefix(addr)
+		}
+		if len(o.Addresses) > 0 {
+			newOut.ScriptPubKey.Addresses = o.Addresses
 		}
 		ctx.Outputs = append(ctx.Outputs, newOut)
 	}
@@ -387,6 +396,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 	type resAddr struct {
 		TotalPages   int      `json:"totalPages"`
 		Transactions []string `json:"transactions"`
+		Txids        []string `json:"txids"`
 	}
 	type txOrError struct {
 		Tx  *model.Transaction
@@ -409,6 +419,10 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 			return nil, fmt.Errorf("error decoding addrs response: %s", err)
 		}
 		txChan := make(chan txOrError)
+		if len(res.Transactions) == 0 && len(res.Txids) > 0 {
+			res.Transactions = res.Txids
+		}
+
 		go func() {
 			var wg sync.WaitGroup
 			wg.Add(len(res.Transactions))
@@ -643,16 +657,13 @@ func (i *BlockBookClient) setupListeners() error {
 				Log.Errorf("error checking type after socket notification: %T", arg)
 				return
 			}
-			_, err := chainhash.NewHashFromStr(txid) // Check is 256 bit hash. Might also be address
-			if err == nil {
-				tx, err := i.GetTransaction(txid)
-				if err != nil {
-					Log.Errorf("error downloading tx after socket notification: %s", err.Error())
-					return
-				}
-				tx.Time = time.Now().Unix()
-				i.txNotifyChan <- *tx
+			tx, err := i.GetTransaction(txid)
+			if err != nil {
+				Log.Errorf("error downloading tx after socket notification: %s", err.Error())
+				return
 			}
+			tx.Time = time.Now().Unix()
+			i.txNotifyChan <- *tx
 		}
 	})
 

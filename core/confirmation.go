@@ -127,6 +127,10 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *p
 	}
 
 	if confirmedContract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return errors.New("wallet does not support escrow")
+		}
 		// Sweep the temp address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
@@ -176,7 +180,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(oldState pb.OrderState, contract *p
 			recoverState()
 			return err
 		}
-		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		_, err = escrowWallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			recoverState()
 			return err
@@ -213,6 +217,10 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	}
 	rejectMsg.Timestamp = ts
 	if order.Payment.Method == pb.Order_Payment_MODERATED {
+		escrowWallet, ok := wal.(wallet.EscrowWallet)
+		if !ok {
+			return errors.New("wallet does not support escrow")
+		}
 		var ins []wallet.TransactionInput
 		outValue := *big.NewInt(0)
 		for _, r := range records {
@@ -265,7 +273,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if !ok {
 			return errors.New("invalid refund fee value")
 		}
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
+		signatures, err := escrowWallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
 		}

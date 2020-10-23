@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
@@ -46,9 +45,7 @@ import (
 // escrowed payment.
 type Wallet interface {
 	walletMustManager
-	walletMustKeysmither
 	walletMustBanker
-	walletCanBumpFee
 }
 
 var (
@@ -66,6 +63,74 @@ type WalletMustManuallyAssociateTransactionToOrder interface {
 	// basis. It should be called as soon as the wallet transaction and referenceID are both
 	// known by the openbazaar-go node (which should be reported from the buyer to the vendor).
 	AssociateTransactionWithOrder(cb TransactionCallback)
+}
+
+// EscrowWallet is implemented by wallets capable of performing escrow transactions.
+type EscrowWallet interface {
+	// SweepAddress should sweep all the funds from the provided inputs into the provided `address` using the given
+	// `key`. If `address` is nil, the funds should be swept into an internal address own by this wallet.
+	// If the `redeemScript` is not nil, this should be treated as a multisig (p2sh) address and signed accordingly.
+	//
+	// This method is called by openbazaar-go in the following scenarios:
+	// 1) The buyer placed a direct order to a vendor who was offline. The buyer sent funds into a 1 of 2 multisig.
+	// Upon returning online the vendor accepts the order and calls SweepAddress to move the funds into his wallet.
+	//
+	// 2) Same as above but the buyer wishes to cancel the order before the vendor comes online. He calls SweepAddress
+	// to return the funds from the 1 of 2 multisig back into has wallet.
+	//
+	// 3) Same as above but rather than accepting the order, the vendor rejects it. When the buyer receives the reject
+	// message he calls SweepAddress to move the funds back into his wallet.
+	//
+	// 4) The timeout has expired on a 2 of 3 multisig. The vendor calls SweepAddress to claim the funds.
+	SweepAddress(ins []TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (string, error)
+
+	// GenerateMultisigScript should deterministically create a redeem script and address from the information provided.
+	// This method should be strictly limited to taking the input data, combining it to produce the redeem script and
+	// address and that's it. There is no need to interact with the network or make any transactions when this is called.
+	//
+	// Openbazaar-go will call this method in the following situations:
+	// 1) When the buyer places an order he passes in the relevant keys for each party to get back the address where
+	// the funds should be sent and the redeem script. The redeem script is saved in order (and openbazaar-go database).
+	//
+	// 2) The vendor calls this method when he receives and order so as to validate that the address they buyer is sending
+	// funds to is indeed correctly constructed. If this method fails to return the same values for the vendor as it
+	// did the buyer, the vendor will reject the order.
+	//
+	// 3) The moderator calls this function upon receiving a dispute so that he can validate the payment address for the
+	// order and make sure neither party is trying to maliciously lie about the details of the dispute to get the moderator
+	// to release the funds.
+	//
+	// Note that according to the order flow, this method is called by the buyer *before* the order is sent to the vendor,
+	// and before the vendor validates the order. Only after the buyer hears back from the vendor does the buyer send
+	// funds (either from an external wallet or via the `Spend` method) to the address specified in this method's return.
+	//
+	// `threshold` is the number of keys required to release the funds from the address. If `threshold` is two and len(keys)
+	// is three, this is a two of three multisig. If `timeoutKey` is not nil, then the script should allow the funds to
+	// be released with a signature from the `timeoutKey` after the `timeout` duration has passed.
+	// For example:
+	// OP_IF 2 <buyerPubkey> <vendorPubkey> <moderatorPubkey> 3 OP_ELSE <timeout> OP_CHECKSEQUENCEVERIFY <timeoutKey> OP_CHECKSIG OP_ENDIF
+	//
+	// If `timeoutKey` is nil then the a normal multisig without a timeout should be created.
+	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error)
+
+	// CreateMultisigSignature should build a transaction using the given inputs and outputs and sign it with the
+	// provided key. A list of signatures (one for each input) should be returned.
+	//
+	// This method is called by openbazaar-go by each party whenever they decide to release the funds from escrow.
+	// This method should not actually move any funds or make any transactions, only create necessary signatures to
+	// do so. The caller will then take the signature and share it with the other parties. Once all parties have shared
+	// their signatures, the person who wants to release the funds collects them and uses them as an input to the
+	// `Multisign` method.
+	CreateMultisigSignature(ins []TransactionInput, outs []TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]Signature, error)
+
+	// Multisign collects all of the signatures generated by the `CreateMultisigSignature` function and builds a final
+	// transaction that can then be broadcast to the blockchain. The []byte return is the raw transaction. It should be
+	// broadcasted if `broadcast` is true. If the signatures combine and produce an invalid transaction then an error
+	// should be returned.
+	//
+	// This method is called by openbazaar-go by whichever party to the escrow is trying to release the funds only after
+	// all needed parties have signed using `CreateMultisigSignature` and have shared their signatures with each other.
+	Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error)
 }
 
 type walletMustManager interface {
@@ -140,10 +205,10 @@ type walletMustManager interface {
 	Transactions() ([]Txn, error)
 
 	// GetTransaction return info on a specific transaction given the txid.
-	GetTransaction(txid chainhash.Hash) (Txn, error)
+	GetTransaction(txid string) (Txn, error)
 
 	// ChainTip returns the best block hash and height of the blockchain.
-	ChainTip() (uint32, chainhash.Hash)
+	ChainTip() (uint32, string)
 
 	// ReSyncBlockchain is called in response to a user action to rescan transactions. API based
 	// wallets should do another scan of their addresses to find anything missing. Full node, or SPV
@@ -151,10 +216,8 @@ type walletMustManager interface {
 	ReSyncBlockchain(fromTime time.Time)
 
 	// GetConfirmations returns the number of confirmations and the height for a transaction.
-	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
-}
+	GetConfirmations(txid string) (confirms, atHeight uint32, err error)
 
-type walletMustKeysmither interface {
 	// ChildKey generate a child key using the given chaincode. Each openbazaar-go node
 	// keeps a master key (an hd secp256k1 key) that it uses in multisig transactions.
 	// Rather than use the key directly (which would result in an on chain privacy leak),
@@ -170,54 +233,6 @@ type walletMustKeysmither interface {
 	// transaction that the other party(s) signed does indeed pay to an address that we
 	// control.
 	HasKey(addr btc.Address) bool
-
-	// GenerateMultisigScript should deterministically create a redeem script and address from the information provided.
-	// This method should be strictly limited to taking the input data, combining it to produce the redeem script and
-	// address and that's it. There is no need to interact with the network or make any transactions when this is called.
-	//
-	// Openbazaar-go will call this method in the following situations:
-	// 1) When the buyer places an order he passes in the relevant keys for each party to get back the address where
-	// the funds should be sent and the redeem script. The redeem script is saved in order (and openbazaar-go database).
-	//
-	// 2) The vendor calls this method when he receives and order so as to validate that the address they buyer is sending
-	// funds to is indeed correctly constructed. If this method fails to return the same values for the vendor as it
-	// did the buyer, the vendor will reject the order.
-	//
-	// 3) The moderator calls this function upon receiving a dispute so that he can validate the payment address for the
-	// order and make sure neither party is trying to maliciously lie about the details of the dispute to get the moderator
-	// to release the funds.
-	//
-	// Note that according to the order flow, this method is called by the buyer *before* the order is sent to the vendor,
-	// and before the vendor validates the order. Only after the buyer hears back from the vendor does the buyer send
-	// funds (either from an external wallet or via the `Spend` method) to the address specified in this method's return.
-	//
-	// `threshold` is the number of keys required to release the funds from the address. If `threshold` is two and len(keys)
-	// is three, this is a two of three multisig. If `timeoutKey` is not nil, then the script should allow the funds to
-	// be released with a signature from the `timeoutKey` after the `timeout` duration has passed.
-	// For example:
-	// OP_IF 2 <buyerPubkey> <vendorPubkey> <moderatorPubkey> 3 OP_ELSE <timeout> OP_CHECKSEQUENCEVERIFY <timeoutKey> OP_CHECKSIG OP_ENDIF
-	//
-	// If `timeoutKey` is nil then the a normal multisig without a timeout should be created.
-	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error)
-
-	// CreateMultisigSignature should build a transaction using the given inputs and outputs and sign it with the
-	// provided key. A list of signatures (one for each input) should be returned.
-	//
-	// This method is called by openbazaar-go by each party whenever they decide to release the funds from escrow.
-	// This method should not actually move any funds or make any transactions, only create necessary signatures to
-	// do so. The caller will then take the signature and share it with the other parties. Once all parties have shared
-	// their signatures, the person who wants to release the funds collects them and uses them as an input to the
-	// `Multisign` method.
-	CreateMultisigSignature(ins []TransactionInput, outs []TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte big.Int) ([]Signature, error)
-
-	// Multisign collects all of the signatures generated by the `CreateMultisigSignature` function and builds a final
-	// transaction that can then be broadcast to the blockchain. The []byte return is the raw transaction. It should be
-	// broadcasted if `broadcast` is true. If the signatures combine and produce an invalid transaction then an error
-	// should be returned.
-	//
-	// This method is called by openbazaar-go by whichever party to the escrow is trying to release the funds only after
-	// all needed parties have signed using `CreateMultisigSignature` and have shared their signatures with each other.
-	Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte big.Int, broadcast bool) ([]byte, error)
 }
 
 type walletMustBanker interface {
@@ -238,7 +253,7 @@ type walletMustBanker interface {
 	// be swept to the provided payment address. For most coins this entails subtracting the
 	// transaction fee from the total amount being sent rather than adding it on as is normally
 	// the case when spendAll is false.
-	Spend(amount big.Int, addr btc.Address, feeLevel FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error)
+	Spend(amount big.Int, addr btc.Address, feeLevel FeeLevel, referenceID string, spendAll bool) (string, error)
 
 	// EstimateFee should return the estimate fee that will be required to make a transaction
 	// spending from the given inputs to the given outputs. FeePerByte is denominated in
@@ -253,37 +268,20 @@ type walletMustBanker interface {
 	//
 	// All amounts should be in the coin's base unit (for example: satoshis).
 	EstimateSpendFee(amount big.Int, feeLevel FeeLevel) (big.Int, error)
-
-	// SweepAddress should sweep all the funds from the provided inputs into the provided `address` using the given
-	// `key`. If `address` is nil, the funds should be swept into an internal address own by this wallet.
-	// If the `redeemScript` is not nil, this should be treated as a multisig (p2sh) address and signed accordingly.
-	//
-	// This method is called by openbazaar-go in the following scenarios:
-	// 1) The buyer placed a direct order to a vendor who was offline. The buyer sent funds into a 1 of 2 multisig.
-	// Upon returning online the vendor accepts the order and calls SweepAddress to move the funds into his wallet.
-	//
-	// 2) Same as above but the buyer wishes to cancel the order before the vendor comes online. He calls SweepAddress
-	// to return the funds from the 1 of 2 multisig back into has wallet.
-	//
-	// 3) Same as above but rather than accepting the order, the vendor rejects it. When the buyer receives the reject
-	// message he calls SweepAddress to move the funds back into his wallet.
-	//
-	// 4) The timeout has expired on a 2 of 3 multisig. The vendor calls SweepAddress to claim the funds.
-	SweepAddress(ins []TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error)
 }
 
-type walletCanBumpFee interface {
+type WalletCanBumpFee interface {
 	// BumpFee should attempt to bump the fee on a given unconfirmed transaction (if possible) to
 	// try to get it confirmed and return the txid of the new transaction (if one exists).
 	// Since this method is only called in response to user action, it is acceptable to
 	// return an error if this functionality is not available in this wallet or on the network.
-	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)
+	BumpFee(txid string) (string, error)
 }
 
 type FeeLevel int
 
 const (
-	PRIORITY       FeeLevel = 0
+	PRIOIRTY       FeeLevel = 0
 	NORMAL                  = 1
 	ECONOMIC                = 2
 	FEE_BUMP                = 3

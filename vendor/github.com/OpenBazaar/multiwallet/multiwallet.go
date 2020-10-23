@@ -2,6 +2,7 @@ package multiwallet
 
 import (
 	"errors"
+	"github.com/OpenBazaar/multiwallet/filecoin"
 	"strings"
 	"time"
 
@@ -97,6 +98,16 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 				multiwallet[wallet.Ethereum] = w
 			} else {
 				multiwallet[wallet.TestnetEthereum] = w
+			}
+		case wallet.Filecoin:
+			w, err = filecoin.NewFilecoinWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy, cfg.Cache, cfg.DisableExchangeRates)
+			if err != nil {
+				return nil, err
+			}
+			if cfg.Params.Name == chaincfg.MainNetParams.Name {
+				multiwallet[wallet.Filecoin] = w
+			} else {
+				multiwallet[wallet.TestnetFilecoin] = w
 			}
 		}
 	}

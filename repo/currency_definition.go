@@ -72,6 +72,7 @@ var (
 		"LTC": {Name: "Litecoin", Code: CurrencyCode("LTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
 		"ZEC": {Name: "Zcash", Code: CurrencyCode("ZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"ETH": {Name: "Ethereum", Code: CurrencyCode("ETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
+		"FIL": {Name: "Filecoin", Code: CurrencyCode("FIL"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
 	testnetCryptoDefinitions = map[string]CurrencyDefinition{
 		"TBTC": {Name: "Testnet Bitcoin", Code: CurrencyCode("TBTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
@@ -79,6 +80,7 @@ var (
 		"TLTC": {Name: "Testnet Litecoin", Code: CurrencyCode("TLTC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: 150 * time.Second},
 		"TZEC": {Name: "Testnet Zcash", Code: CurrencyCode("TZEC"), CurrencyType: Crypto, Divisibility: 8, BlockTime: DefaultBlockTime},
 		"TETH": {Name: "Testnet Ethereum", Code: CurrencyCode("TETH"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
+		"TFIL": {Name: "Testnet Filecoin", Code: CurrencyCode("TFIL"), CurrencyType: Crypto, Divisibility: 18, BlockTime: 10 * time.Second},
 	}
 	fiatDefinitions = map[string]CurrencyDefinition{
 		"AED": {Name: "UAE Dirham", Code: CurrencyCode("AED"), CurrencyType: Fiat, Divisibility: 2},

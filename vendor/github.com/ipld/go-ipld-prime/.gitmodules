@@ -1,0 +1,39 @@
+[submodule ".gopath/src/github.com/polydawn/refmt"]
+	path = .gopath/src/github.com/polydawn/refmt
+	url = https://github.com/polydawn/refmt
+[submodule ".gopath/src/golang.org/x/sys"]
+	path = .gopath/src/golang.org/x/sys
+	url = https://go.googlesource.com/sys
+[submodule ".gopath/src/golang.org/x/crypto"]
+	path = .gopath/src/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
+[submodule ".gopath/src/github.com/ipfs/go-cid"]
+	path = .gopath/src/github.com/ipfs/go-cid
+	url = https://github.com/ipfs/go-cid
+[submodule ".gopath/src/github.com/multiformats/go-multibase"]
+	path = .gopath/src/github.com/multiformats/go-multibase
+	url = https://github.com/multiformats/go-multibase
+[submodule ".gopath/src/github.com/multiformats/go-multihash"]
+	path = .gopath/src/github.com/multiformats/go-multihash
+	url = https://github.com/multiformats/go-multihash
+[submodule ".gopath/src/github.com/minio/sha256-simd"]
+	path = .gopath/src/github.com/minio/sha256-simd
+	url = https://github.com/minio/sha256-simd
+[submodule ".gopath/src/github.com/minio/blake2b-simd"]
+	path = .gopath/src/github.com/minio/blake2b-simd
+	url = https://github.com/minio/blake2b-simd
+[submodule ".gopath/src/github.com/gxed/hashland"]
+	path = .gopath/src/github.com/gxed/hashland
+	url = https://github.com/gxed/hashland
+[submodule ".gopath/src/github.com/mr-tron/base58"]
+	path = .gopath/src/github.com/mr-tron/base58
+	url = https://github.com/mr-tron/base58
+[submodule ".gopath/src/github.com/spaolacci/murmur3"]
+	path = .gopath/src/github.com/spaolacci/murmur3
+	url = https://github.com/spaolacci/murmur3
+[submodule ".gopath/src/github.com/multiformats/go-base32"]
+	path = .gopath/src/github.com/multiformats/go-base32
+	url = https://github.com/multiformats/go-base32
+[submodule ".gopath/src/github.com/warpfork/go-wish"]
+	path = .gopath/src/github.com/warpfork/go-wish
+	url = https://github.com/warpfork/go-wish

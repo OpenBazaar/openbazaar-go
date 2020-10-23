@@ -3371,7 +3371,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	var wal wallet.Wallet
 	for _, w := range i.node.Multiwallet {
-		_, err := w.GetTransaction(*txHash)
+		_, err := w.GetTransaction(txHash.String())
 		if err == nil {
 			wal = w
 			break
@@ -3381,7 +3381,12 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "transaction not found in any wallet")
 		return
 	}
-	newTxid, err := wal.BumpFee(*txHash)
+	feeBumper, ok := wal.(wallet.WalletCanBumpFee)
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, "wallet does not support bumping fees")
+		return
+	}
+	newTxid, err := feeBumper.BumpFee(txHash.String())
 	if err != nil {
 		if err == spvwallet.BumpFeeAlreadyConfirmedError {
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -3405,7 +3410,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid:       newTxid.String(),
+		Txid:       newTxid,
 		Address:    "",
 		Memo:       fmt.Sprintf("Fee bump of %s", txid),
 		OrderId:    "",
@@ -3429,7 +3434,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	txn, err := wal.GetTransaction(*newTxid)
+	txn, err := wal.GetTransaction(newTxid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3439,7 +3444,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 
 	t := repo.NewAPITime(txn.Timestamp)
 	resp := &response{
-		Txid:               newTxid.String(),
+		Txid:               newTxid,
 		ConfirmedBalance:   &repo.CurrencyValue{Currency: defn, Amount: &confirmed.Value},
 		UnconfirmedBalance: &repo.CurrencyValue{Currency: defn, Amount: &unconfirmed.Value},
 		Amount:             amt0,
@@ -3468,7 +3473,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(fl) {
 	case "PRIORITY":
-		feeLevel = wallet.PRIORITY
+		feeLevel = wallet.PRIOIRTY
 	case "NORMAL":
 		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
@@ -3526,7 +3531,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
-			priority := wal.GetFeePerByte(wallet.PRIORITY)
+			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
 			superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
@@ -3555,7 +3560,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
 		return
 	}
-	priority := wal.GetFeePerByte(wallet.PRIORITY)
+	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
 	superEconomic := wal.GetFeePerByte(wallet.SUPER_ECONOMIC)
@@ -3947,7 +3952,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 		ret := make(map[string]interface{})
 		for ct, wal := range i.node.Multiwallet {
 			height, hash := wal.ChainTip()
-			ret[ct.CurrencyCode()] = status{height, hash.String()}
+			ret[ct.CurrencyCode()] = status{height, hash}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -3963,7 +3968,7 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	height, hash := wal.ChainTip()
-	st := status{height, hash.String()}
+	st := status{height, hash}
 	out, err := json.MarshalIndent(st, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

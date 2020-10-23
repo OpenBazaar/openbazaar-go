@@ -212,6 +212,10 @@ func (n *OpenBazaarNode) Purchase(data *repo.PurchaseData) (orderID string, paym
 }
 
 func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, contract *pb.RicardianContract, wal wallet.Wallet) (*pb.RicardianContract, error) {
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return nil, errors.New("wallet does not support escrow")
+	}
 	if data.Moderator == n.IpfsNode.Identity.Pretty() {
 		return nil, errors.New("cannot select self as moderator")
 	}
@@ -303,7 +307,7 @@ func prepareModeratedOrderContract(data *repo.PurchaseData, n *OpenBazaarNode, c
 	if err != nil {
 		return nil, err
 	}
-	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+	addr, redeemScript, err := escrowWallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 	if err != nil {
 		return nil, err
 	}
@@ -379,6 +383,10 @@ func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wa
 }
 
 func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, big.Int, error) {
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return "", "", big.Int{}, errors.New("wallet does not support escrow")
+	}
 	// Vendor offline
 	// Change payment code to direct
 	v5Order, err := repo.ToV5Order(contract.BuyerOrder, nil)
@@ -414,7 +422,7 @@ func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *p
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}
-	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
+	addr, redeemScript, err := escrowWallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 	if err != nil {
 		return "", "", *big.NewInt(0), err
 	}
@@ -1095,6 +1103,10 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 	// Sweep the temp address into our wallet
 	var utxos []wallet.TransactionInput
 	for _, r := range records {
@@ -1141,7 +1153,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	_, err = wal.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+	_, err = escrowWallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}
@@ -1838,6 +1850,10 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
+	}
 	mECKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return err
@@ -1850,7 +1866,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
+	addr, redeemScript, err := escrowWallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 	if err != nil {
 		return err
 	}
@@ -1869,6 +1885,10 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.AmountCurrency.Code)
 	if err != nil {
 		return err
+	}
+	escrowWallet, ok := wal.(wallet.EscrowWallet)
+	if !ok {
+		return errors.New("wallet does not support escrow")
 	}
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
 	profileBytes, err := ipfs.ResolveThenCat(n.IpfsNode, ipnsPath, time.Minute, n.IPNSQuorumSize, true)
@@ -1912,7 +1932,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	if !bytes.Equal(order.Payment.ModeratorKey, modPub.SerializeCompressed()) {
 		return errors.New("invalid moderator key")
 	}
-	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+	addr, redeemScript, err := escrowWallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package wallet
 import (
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/multiwallet/filecoin"
 	"net"
 	"net/url"
 	"os"
@@ -89,6 +90,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		enableAPIWallet[wallet.Litecoin] = cfg.ConfigFile.LTC
 	}
 	enableAPIWallet[wallet.Ethereum] = cfg.ConfigFile.ETH
+	enableAPIWallet[wallet.Filecoin] = cfg.ConfigFile.FIL
 
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
@@ -174,6 +176,18 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		}
 		//actualCoin = wallet.Ethereum
 		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Params, cfg.Mnemonic, cfg.Proxy)
+		if err != nil {
+			return InvalidCoinType, nil, err
+		}
+		return actualCoin, w, nil
+	case wallet.Filecoin:
+		if testnet {
+			actualCoin = wallet.TestnetFilecoin
+		} else {
+			actualCoin = wallet.Filecoin
+		}
+		//actualCoin = wallet.Filecoin
+		w, err := filecoin.NewFilecoinWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
 		if err != nil {
 			return InvalidCoinType, nil, err
 		}
@@ -297,6 +311,8 @@ func prepareAPICoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wal
 		defaultConfig = defaultConfigSet.LTC
 	case wallet.Zcash:
 		defaultConfig = defaultConfigSet.ZEC
+	case wallet.Filecoin:
+		defaultConfig = defaultConfigSet.FIL
 	case wallet.Ethereum:
 		defaultConfig = defaultConfigSet.ETH
 		defaultCoinOptions = schema.EthereumDefaultOptions()

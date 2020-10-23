@@ -8,7 +8,6 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type TxnsDB struct {
@@ -41,7 +40,7 @@ func (t *TxnsDB) Put(raw []byte, txid, value string, height int, timestamp time.
 	return nil
 }
 
-func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
+func (t *TxnsDB) Get(txid string) (wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var txn wallet.Txn
@@ -55,7 +54,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	var timestamp int
 	var value string
 	var watchOnlyInt int
-	err = stmt.QueryRow(txid.String(), t.coinType.CurrencyCode()).Scan(&raw, &value, &height, &timestamp, &watchOnlyInt)
+	err = stmt.QueryRow(txid, t.coinType.CurrencyCode()).Scan(&raw, &value, &height, &timestamp, &watchOnlyInt)
 	if err != nil {
 		return txn, err
 	}
@@ -64,7 +63,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 		watchOnly = true
 	}
 	txn = wallet.Txn{
-		Txid:      txid.String(),
+		Txid:      txid,
 		Value:     value,
 		Height:    int32(height),
 		Timestamp: time.Unix(int64(timestamp), 0),
@@ -117,17 +116,17 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	return ret, nil
 }
 
-func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
+func (t *TxnsDB) Delete(txid string) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	_, err := t.db.Exec("delete from txns where txid=? and coin=?", txid.String(), t.coinType.CurrencyCode())
+	_, err := t.db.Exec("delete from txns where txid=? and coin=?", txid, t.coinType.CurrencyCode())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int, timestamp time.Time) error {
+func (t *TxnsDB) UpdateHeight(txid string, height int, timestamp time.Time) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -136,7 +135,7 @@ func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int, timestamp time.Ti
 		return fmt.Errorf("prepare txn sql: %s", err.Error())
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(height, int(timestamp.Unix()), txid.String(), t.coinType.CurrencyCode())
+	_, err = stmt.Exec(height, int(timestamp.Unix()), txid, t.coinType.CurrencyCode())
 	if err != nil {
 		return fmt.Errorf("update txns: %s", err.Error())
 	}

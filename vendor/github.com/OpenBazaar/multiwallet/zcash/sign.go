@@ -13,7 +13,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/minio/blake2b-simd"
 
-	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -42,7 +41,7 @@ var (
 
 const (
 	sigHashMask = 0x1f
-	branchID    = 0xf5b9230b
+	branchID    = 0x2BB40E60
 )
 
 func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
@@ -297,32 +296,36 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 	}
 }
 
-func (w *ZCashWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+func (w *ZCashWallet) bumpFee(txid string) (string, error) {
 	txn, err := w.db.Txns().Get(txid)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if txn.Height > 0 {
-		return nil, spvwallet.BumpFeeAlreadyConfirmedError
+		return "", util.BumpFeeAlreadyConfirmedError
 	}
 	if txn.Height < 0 {
-		return nil, spvwallet.BumpFeeTransactionDeadError
+		return "", util.BumpFeeTransactionDeadError
+	}
+	chTxid, err := chainhash.NewHashFromStr(txid)
+	if err != nil {
+		return "", err
 	}
 	// Check utxos for CPFP
 	utxos, _ := w.db.Utxos().GetAll()
 	for _, u := range utxos {
-		if u.Op.Hash.IsEqual(&txid) && u.AtHeight == 0 {
+		if u.Op.Hash.IsEqual(chTxid) && u.AtHeight == 0 {
 			addr, err := w.ScriptToAddress(u.ScriptPubkey)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			key, err := w.km.GetKeyForScript(addr.ScriptAddress())
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			h, err := hex.DecodeString(u.Op.Hash.String())
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			n := new(big.Int)
 			n, _ = n.SetString(u.Value, 10)
@@ -334,15 +337,15 @@ func (w *ZCashWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			}
 			transactionID, err := w.sweepAddress([]wi.TransactionInput{in}, nil, key, nil, wi.FEE_BUMP)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			return transactionID, nil
 		}
 	}
-	return nil, spvwallet.BumpFeeNotFoundError
+	return "", util.BumpFeeNotFoundError
 }
 
-func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (string, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -351,7 +354,7 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	}
 	script, err := zaddr.PayToAddrScript(internalAddr)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	var val int64
@@ -363,11 +366,11 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 		values = append(values, in.Value.Int64())
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		script, err := zaddr.PayToAddrScript(in.LinkedAddress)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
 		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
@@ -379,7 +382,7 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	txType := P2PKH
 	if redeemScript != nil {
 		txType = P2SH_1of2_Multisig
-		_, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+		_, err := util.LockTimeFromRedeemScript(*redeemScript)
 		if err == nil {
 			txType = P2SH_Multisig_Timelock_1Sig
 		}
@@ -412,13 +415,13 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	// Sign tx
 	privKey, err := key.ECPrivKey()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	for i, txIn := range tx.TxIn {
 		sig, err := rawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, privKey, values[i])
 		if err != nil {
-			return nil, errors.New("failed to sign transaction")
+			return "", errors.New("failed to sign transaction")
 		}
 		builder := txscript.NewScriptBuilder()
 		builder.AddOp(txscript.OP_0)
@@ -428,7 +431,7 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 		}
 		script, err := builder.Script()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		txIn.SignatureScript = script
 	}
@@ -436,9 +439,9 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	// broadcast
 	txid, err := w.Broadcast(tx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return chainhash.NewHashFromStr(txid)
+	return txid, nil
 }
 
 func (w *ZCashWallet) createMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
