@@ -14,9 +14,10 @@ This is noteworthy because in codegen, this is typically *not* the case:
 in codegen, even scalar types are boxed in a struct, such that it prevents
 casting values into those types.
 
-This casting is not a concern for ipldfree types, because
-A) we don't have any kind of validation rules to make such casting worrying; and
-B) since our types are unexported, casting is still blocked by this anyway.
+This casting is not a concern for the node implementations in this package, because
+
+- A) we don't have any kind of validation rules to make such casting worrying; and
+- B) since our types are unexported, casting is still blocked by this anyway.
 
 ### about builders for scalars
 
@@ -45,7 +46,7 @@ More often, one will use the "any" builder (which is has a whole different set
 of design constraints and tradeoffs);
 or, if one is writing code and knows which scalar they need, the exported
 direct constructor function for that kind
-(e.g., `String("foo")` instead of `Style__String{}.NewBuilder().AssignString("foo")`)
+(e.g., `String("foo")` instead of `Prototype__String{}.NewBuilder().AssignString("foo")`)
 will do the right thing and do it in one allocation (and it's less to type, too).
 
 ### maps and list keyAssembler and valueAssemblers have custom scalar handling
@@ -105,18 +106,18 @@ Note that these remarks are for the `basicnode` package, but may also
 apply to other implementations too (e.g., our codegen output follows similar
 overall logic).
 
-### nodestyles are available through a singleton
+### NodePrototypes are available through a singleton
 
-Every NodeStyle available from this package is exposed as a field
+Every NodePrototype available from this package is exposed as a field
 in a struct of which there's one public exported instance available,
-called 'Style'.
+called 'Prototype'.
 
 This means you can use it like this:
 
 ```go
-nbm := basicnode.Style.Map.NewBuilder()
-nbs := basicnode.Style.String.NewBuilder()
-nba := basicnode.Style.Any.NewBuilder()
+nbm := basicnode.Prototype.Map.NewBuilder()
+nbs := basicnode.Prototype.String.NewBuilder()
+nba := basicnode.Prototype.Any.NewBuilder()
 // etc
 ```
 
@@ -127,13 +128,13 @@ structs, the compiler can effectively treat them as constants,
 and thus freely elide any memory dereferences that would
 otherwise be necessary to get methods on such a value.)
 
-### nodestyles are (also) available as exported concrete types
+### NodePrototypes are (also) available as exported concrete types
 
-The 'Style' singleton is one way to access the NodeStyle in this package;
+The 'Prototype' singleton is one way to access the NodePrototype in this package;
 their exported types are another equivalent way.
 
 ```go
-basicnode.Style.Map = basicnode.Style__Map{}
+basicnode.Prototype.Map = basicnode.Prototype__Map{}
 ```
 
 It is recommended to use the singleton style;

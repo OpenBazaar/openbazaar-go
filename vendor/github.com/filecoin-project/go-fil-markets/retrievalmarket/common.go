@@ -13,7 +13,7 @@ import (
 // provided cbor-encoded selector
 func DecodeNode(defnode *cbg.Deferred) (ipld.Node, error) {
 	reader := bytes.NewReader(defnode.Raw)
-	nb := basicnode.Style.Any.NewBuilder()
+	nb := basicnode.Prototype.Any.NewBuilder()
 	err := dagcbor.Decoder(nb, reader)
 	if err != nil {
 		return nil, err

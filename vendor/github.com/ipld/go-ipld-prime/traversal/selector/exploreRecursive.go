@@ -172,7 +172,7 @@ func (pc ParseContext) ParseExploreRecursive(n ipld.Node) (Selector, error) {
 		return nil, fmt.Errorf("selector spec parse rejected: selector body must be a map")
 	}
 
-	limitNode, err := n.LookupString(SelectorKey_Limit)
+	limitNode, err := n.LookupByString(SelectorKey_Limit)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: limit field must be present in ExploreRecursive selector")
 	}
@@ -180,7 +180,7 @@ func (pc ParseContext) ParseExploreRecursive(n ipld.Node) (Selector, error) {
 	if err != nil {
 		return nil, err
 	}
-	sequence, err := n.LookupString(SelectorKey_Sequence)
+	sequence, err := n.LookupByString(SelectorKey_Sequence)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: sequence field must be present in ExploreRecursive selector")
 	}

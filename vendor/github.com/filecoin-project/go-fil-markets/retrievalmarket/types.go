@@ -2,32 +2,35 @@ package retrievalmarket
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
-	"io"
 
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/abi/big"
-	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
 	"github.com/ipfs/go-cid"
 	"github.com/ipld/go-ipld-prime"
 	"github.com/ipld/go-ipld-prime/codec/dagcbor"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	cbg "github.com/whyrusleeping/cbor-gen"
+	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-fil-markets/shared"
+	"github.com/filecoin-project/go-address"
+	datatransfer "github.com/filecoin-project/go-data-transfer"
+	"github.com/filecoin-project/go-multistore"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
+
+	"github.com/filecoin-project/go-fil-markets/piecestore"
 )
 
-//go:generate cbor-gen-for Query QueryResponse DealProposal DealResponse Params QueryParams DealPayment Block ClientDealState ProviderDealState PaymentInfo
-
-// ProtocolID is the protocol for proposing / responding to retrieval deals
-const ProtocolID = "/fil/retrieval/0.0.1"
+//go:generate cbor-gen-for --map-encoding Query QueryResponse DealProposal DealResponse Params QueryParams DealPayment ClientDealState ProviderDealState PaymentInfo RetrievalPeer Ask
 
 // QueryProtocolID is the protocol for querying information about retrieval
 // deal parameters
-const QueryProtocolID = "/fil/retrieval/qry/0.0.1"
+const QueryProtocolID = protocol.ID("/fil/retrieval/qry/1.0.0")
+
+// OldQueryProtocolID is the old query protocol for tuple structs
+const OldQueryProtocolID = protocol.ID("/fil/retrieval/qry/0.0.1")
 
 // Unsubscribe is a function that unsubscribes a subscriber for either the
 // client or the provider
@@ -43,224 +46,42 @@ type PaymentInfo struct {
 // of a retrieval client
 type ClientDealState struct {
 	DealProposal
-	TotalFunds       abi.TokenAmount
-	ClientWallet     address.Address
-	MinerWallet      address.Address
-	PaymentInfo      *PaymentInfo
-	Status           DealStatus
-	Sender           peer.ID
-	TotalReceived    uint64
-	Message          string
-	BytesPaidFor     uint64
-	CurrentInterval  uint64
-	PaymentRequested abi.TokenAmount
-	FundsSpent       abi.TokenAmount
-	WaitMsgCID       *cid.Cid // the CID of any message the client deal is waiting for
-}
-
-// ClientEvent is an event that occurs in a deal lifecycle on the client
-type ClientEvent uint64
-
-const (
-	// ClientEventOpen indicates a deal was initiated
-	ClientEventOpen ClientEvent = iota
-
-	// ClientEventPaymentChannelErrored means there was a failure creating a payment channel
-	ClientEventPaymentChannelErrored
-
-	// ClientEventAllocateLaneErrored means there was a failure creating a lane in a payment channel
-	ClientEventAllocateLaneErrored
-
-	// ClientEventPaymentChannelCreateInitiated means we are waiting for a message to
-	// create a payment channel to appear on chain
-	ClientEventPaymentChannelCreateInitiated
-
-	// ClientEventPaymentChannelReady means the newly created payment channel is ready for the
-	// deal to resume
-	ClientEventPaymentChannelReady
-
-	// ClientEventPaymentChannelAddingFunds mean we are waiting for funds to be
-	// added to a payment channel
-	ClientEventPaymentChannelAddingFunds
-
-	// ClientEventPaymentChannelAddFundsErrored means that adding funds to the payment channel
-	// failed
-	ClientEventPaymentChannelAddFundsErrored
-
-	// ClientEventWriteDealProposalErrored means a network error writing a deal proposal
-	ClientEventWriteDealProposalErrored
-
-	// ClientEventReadDealResponseErrored means a network error reading a deal response
-	ClientEventReadDealResponseErrored
-
-	// ClientEventDealRejected means a deal was rejected by the provider
-	ClientEventDealRejected
-
-	// ClientEventDealNotFound means a provider could not find a piece for a deal
-	ClientEventDealNotFound
-
-	// ClientEventDealAccepted means a provider accepted a deal
-	ClientEventDealAccepted
-
-	// ClientEventUnknownResponseReceived means a client received a response it doesn't
-	// understand from the provider
-	ClientEventUnknownResponseReceived
-
-	// ClientEventFundsExpended indicates a deal has run out of funds in the payment channel
-	// forcing the client to add more funds to continue the deal
-	ClientEventFundsExpended // when totalFunds is expended
-
-	// ClientEventBadPaymentRequested indicates the provider asked for funds
-	// in a way that does not match the terms of the deal
-	ClientEventBadPaymentRequested
-
-	// ClientEventCreateVoucherFailed indicates an error happened creating a payment voucher
-	ClientEventCreateVoucherFailed
-
-	// ClientEventWriteDealPaymentErrored indicates a network error trying to write a payment
-	ClientEventWriteDealPaymentErrored
-
-	// ClientEventPaymentSent indicates a payment was sent to the provider
-	ClientEventPaymentSent
-
-	// ClientEventConsumeBlockFailed indicates an error occurred while trying to
-	// read a block from the provider
-	ClientEventConsumeBlockFailed
-
-	// ClientEventLastPaymentRequested indicates the provider requested a final payment
-	ClientEventLastPaymentRequested
-
-	// ClientEventAllBlocksReceived indicates the provider has sent all blocks
-	ClientEventAllBlocksReceived
-
-	// ClientEventEarlyTermination indicates the provider completed the deal without sending all blocks
-	ClientEventEarlyTermination
-
-	// ClientEventPaymentRequested indicates the provider requested a payment
-	ClientEventPaymentRequested
-
-	// ClientEventBlocksReceived indicates the provider has sent blocks
-	ClientEventBlocksReceived
-
-	// ClientEventProgress indicates more data was received for a retrieval
-	ClientEventProgress
-
-	// ClientEventError indicates an error occurred during a deal
-	ClientEventError
-
-	// ClientEventComplete indicates a deal has completed
-	ClientEventComplete
-)
-
-// ClientEvents is a human readable map of client event name -> event description
-var ClientEvents = map[ClientEvent]string{
-	ClientEventOpen:                          "ClientEventOpen",
-	ClientEventPaymentChannelErrored:         "ClientEventPaymentChannelErrored",
-	ClientEventAllocateLaneErrored:           "ClientEventAllocateLaneErrored",
-	ClientEventPaymentChannelCreateInitiated: "ClientEventPaymentChannelCreateInitiated",
-	ClientEventPaymentChannelReady:           "ClientEventPaymentChannelReady",
-	ClientEventPaymentChannelAddingFunds:     "ClientEventPaymentChannelAddingFunds",
-	ClientEventPaymentChannelAddFundsErrored: "ClientEventPaymentChannelAddFundsErrored",
-	ClientEventWriteDealProposalErrored:      "ClientEventWriteDealProposalErrored",
-	ClientEventReadDealResponseErrored:       "ClientEventReadDealResponseErrored",
-	ClientEventDealRejected:                  "ClientEventDealRejected",
-	ClientEventDealNotFound:                  "ClientEventDealNotFound",
-	ClientEventDealAccepted:                  "ClientEventDealAccepted",
-	ClientEventUnknownResponseReceived:       "ClientEventUnknownResponseReceived",
-	ClientEventFundsExpended:                 "ClientEventFundsExpended",
-	ClientEventBadPaymentRequested:           "ClientEventBadPaymentRequested",
-	ClientEventCreateVoucherFailed:           "ClientEventCreateVoucherFailed",
-	ClientEventWriteDealPaymentErrored:       "ClientEventWriteDealPaymentErrored",
-	ClientEventPaymentSent:                   "ClientEventPaymentSent",
-	ClientEventConsumeBlockFailed:            "ClientEventConsumeBlockFailed",
-	ClientEventLastPaymentRequested:          "ClientEventLastPaymentRequested",
-	ClientEventAllBlocksReceived:             "ClientEventAllBlocksReceived",
-	ClientEventEarlyTermination:              "ClientEventEarlyTermination",
-	ClientEventPaymentRequested:              "ClientEventPaymentRequested",
-	ClientEventBlocksReceived:                "ClientEventBlocksReceived",
-	ClientEventProgress:                      "ClientEventProgress",
-	ClientEventError:                         "ClientEventError",
-	ClientEventComplete:                      "ClientEventComplete",
-}
-
-// ClientSubscriber is a callback that is registered to listen for retrieval events
-type ClientSubscriber func(event ClientEvent, state ClientDealState)
-
-// RetrievalClient is a client interface for making retrieval deals
-type RetrievalClient interface {
-	// V0
-
-	// Find Providers finds retrieval providers who may be storing a given piece
-	FindProviders(payloadCID cid.Cid) []RetrievalPeer
-
-	// Query asks a provider for information about a piece it is storing
-	Query(
-		ctx context.Context,
-		p RetrievalPeer,
-		payloadCID cid.Cid,
-		params QueryParams,
-	) (QueryResponse, error)
-
-	// Retrieve retrieves all or part of a piece with the given retrieval parameters
-	Retrieve(
-		ctx context.Context,
-		payloadCID cid.Cid,
-		params Params,
-		totalFunds abi.TokenAmount,
-		miner peer.ID,
-		clientWallet address.Address,
-		minerWallet address.Address,
-	) (DealID, error)
-
-	// SubscribeToEvents listens for events that happen related to client retrievals
-	SubscribeToEvents(subscriber ClientSubscriber) Unsubscribe
-
-	// V1
-	AddMoreFunds(id DealID, amount abi.TokenAmount) error
-	CancelDeal(id DealID) error
-	RetrievalStatus(id DealID)
-	ListDeals() map[DealID]ClientDealState
-}
-
-// RetrievalClientNode are the node dependencies for a RetrievalClient
-type RetrievalClientNode interface {
-	GetChainHead(ctx context.Context) (shared.TipSetToken, abi.ChainEpoch, error)
-
-	// GetOrCreatePaymentChannel sets up a new payment channel if one does not exist
-	// between a client and a miner and ensures the client has the given amount of funds available in the channel
-	GetOrCreatePaymentChannel(ctx context.Context, clientAddress, minerAddress address.Address,
-		clientFundsAvailable abi.TokenAmount, tok shared.TipSetToken) (address.Address, cid.Cid, error)
-
-	// Allocate late creates a lane within a payment channel so that calls to
-	// CreatePaymentVoucher will automatically make vouchers only for the difference
-	// in total
-	AllocateLane(paymentChannel address.Address) (uint64, error)
-
-	// CreatePaymentVoucher creates a new payment voucher in the given lane for a
-	// given payment channel so that all the payment vouchers in the lane add up
-	// to the given amount (so the payment voucher will be for the difference)
-	CreatePaymentVoucher(ctx context.Context, paymentChannel address.Address, amount abi.TokenAmount,
-		lane uint64, tok shared.TipSetToken) (*paych.SignedVoucher, error)
-
-	// WaitForPaymentChannelAddFunds waits for a message on chain that funds have
-	// been sent to a payment channel
-	WaitForPaymentChannelAddFunds(messageCID cid.Cid) error
-
-	// WaitForPaymentChannelCreation waits for a message on chain that a
-	// payment channel has been created
-	WaitForPaymentChannelCreation(messageCID cid.Cid) (address.Address, error)
+	StoreID              *multistore.StoreID
+	ChannelID            datatransfer.ChannelID
+	LastPaymentRequested bool
+	AllBlocksReceived    bool
+	TotalFunds           abi.TokenAmount
+	ClientWallet         address.Address
+	MinerWallet          address.Address
+	PaymentInfo          *PaymentInfo
+	Status               DealStatus
+	Sender               peer.ID
+	TotalReceived        uint64
+	Message              string
+	BytesPaidFor         uint64
+	CurrentInterval      uint64
+	PaymentRequested     abi.TokenAmount
+	FundsSpent           abi.TokenAmount
+	UnsealFundsPaid      abi.TokenAmount
+	WaitMsgCID           *cid.Cid // the CID of any message the client deal is waiting for
+	VoucherShortfall     abi.TokenAmount
+	LegacyProtocol       bool
 }
 
 // ProviderDealState is the current state of a deal from the point of view
 // of a retrieval provider
 type ProviderDealState struct {
 	DealProposal
+	StoreID         multistore.StoreID
+	ChannelID       datatransfer.ChannelID
+	PieceInfo       *piecestore.PieceInfo
 	Status          DealStatus
 	Receiver        peer.ID
 	TotalSent       uint64
 	FundsReceived   abi.TokenAmount
 	Message         string
 	CurrentInterval uint64
+	LegacyProtocol  bool
 }
 
 // Identifier provides a unique id for this provider deal
@@ -278,146 +99,12 @@ func (p ProviderDealIdentifier) String() string {
 	return fmt.Sprintf("%v/%v", p.Receiver, p.DealID)
 }
 
-// ProviderEvent is an event that occurs in a deal lifecycle on the provider
-type ProviderEvent uint64
-
-const (
-	// ProviderEventOpen indicates a new deal was received from a client
-	ProviderEventOpen ProviderEvent = iota
-
-	// ProviderEventDealReceived means the deal has passed initial checks and is
-	// in custom decisioning logic
-	ProviderEventDealReceived
-
-	// ProviderEventDecisioningError means the Deciding function returned an error
-	ProviderEventDecisioningError
-
-	// ProviderEventWriteResponseFailed happens when a network error occurs writing a deal response
-	ProviderEventWriteResponseFailed
-
-	// ProviderEventReadPaymentFailed happens when a network error occurs trying to read a
-	// payment from the client
-	ProviderEventReadPaymentFailed
-
-	// ProviderEventGetPieceSizeErrored happens when the provider encounters an error
-	// looking up the requested pieces size
-	ProviderEventGetPieceSizeErrored
-
-	// ProviderEventDealNotFound happens when the provider cannot find the piece for the
-	// deal proposed by the client
-	ProviderEventDealNotFound
-
-	// ProviderEventDealRejected happens when a provider rejects a deal proposed
-	// by the client
-	ProviderEventDealRejected
-
-	// ProviderEventDealAccepted happens when a provider accepts a deal
-	ProviderEventDealAccepted
-
-	// ProviderEventBlockErrored happens when the provider encounters an error
-	// trying to read the next block from the piece
-	ProviderEventBlockErrored
-
-	// ProviderEventBlocksCompleted happens when the provider reads the last block
-	// in the piece
-	ProviderEventBlocksCompleted
-
-	// ProviderEventPaymentRequested happens when a provider asks for payment from
-	// a client for blocks sent
-	ProviderEventPaymentRequested
-
-	// ProviderEventSaveVoucherFailed happens when an attempt to save a payment
-	// voucher fails
-	ProviderEventSaveVoucherFailed
-
-	// ProviderEventPartialPaymentReceived happens when a provider receives and processes
-	// a payment that is less than what was requested to proceed with the deal
-	ProviderEventPartialPaymentReceived
-
-	// ProviderEventPaymentReceived happens when a provider receives a payment
-	// and resumes processing a deal
-	ProviderEventPaymentReceived
-
-	// ProviderEventComplete indicates a retrieval deal was completed for a client
-	ProviderEventComplete
-)
-
-// ProviderEvents is a human readable map of provider event name -> event description
-var ProviderEvents = map[ProviderEvent]string{
-	ProviderEventOpen:                   "ProviderEventOpen",
-	ProviderEventDealReceived:           "ProviderEventDealReceived",
-	ProviderEventDecisioningError:       "ProviderEventDecisioningError",
-	ProviderEventWriteResponseFailed:    "ProviderEventWriteResponseFailed",
-	ProviderEventReadPaymentFailed:      "ProviderEventReadPaymentFailed",
-	ProviderEventGetPieceSizeErrored:    "ProviderEventGetPieceSizeErrored",
-	ProviderEventDealNotFound:           "ProviderEventDealNotFound",
-	ProviderEventDealRejected:           "ProviderEventDealRejected",
-	ProviderEventDealAccepted:           "ProviderEventDealAccepted",
-	ProviderEventBlockErrored:           "ProviderEventBlockErrored",
-	ProviderEventBlocksCompleted:        "ProviderEventBlocksCompleted",
-	ProviderEventPaymentRequested:       "ProviderEventPaymentRequested",
-	ProviderEventSaveVoucherFailed:      "ProviderEventSaveVoucherFailed",
-	ProviderEventPartialPaymentReceived: "ProviderEventPartialPaymentReceived",
-	ProviderEventPaymentReceived:        "ProviderEventPaymentReceived",
-	ProviderEventComplete:               "ProviderEventComplete",
-}
-
-// ProviderDealID is a unique identifier for a deal on a provider -- it is
-// a combination of DealID set by the client and the peer ID of the client
-type ProviderDealID struct {
-	From peer.ID
-	ID   DealID
-}
-
-// ProviderSubscriber is a callback that is registered to listen for retrieval events on a provider
-type ProviderSubscriber func(event ProviderEvent, state ProviderDealState)
-
-// RetrievalProvider is an interface by which a provider configures their
-// retrieval operations and monitors deals received and process
-type RetrievalProvider interface {
-	// Start begins listening for deals on the given host
-	Start() error
-
-	// Stop stops handling incoming requests
-	Stop() error
-
-	// V0
-
-	// SetPricePerByte sets the price per byte a miner charges for retrievals
-	SetPricePerByte(price abi.TokenAmount)
-
-	// SetPaymentInterval sets the maximum number of bytes a a provider will send before
-	// requesting further payment, and the rate at which that value increases
-	SetPaymentInterval(paymentInterval uint64, paymentIntervalIncrease uint64)
-
-	// SubscribeToEvents listens for events that happen related to client retrievals
-	SubscribeToEvents(subscriber ProviderSubscriber) Unsubscribe
-
-	// V1
-	SetPricePerUnseal(price abi.TokenAmount)
-	ListDeals() map[ProviderDealID]ProviderDealState
-}
-
-// RetrievalProviderNode are the node depedencies for a RetrevalProvider
-type RetrievalProviderNode interface {
-	GetChainHead(ctx context.Context) (shared.TipSetToken, abi.ChainEpoch, error)
-
-	// returns the worker address associated with a miner
-	GetMinerWorkerAddress(ctx context.Context, miner address.Address, tok shared.TipSetToken) (address.Address, error)
-	UnsealSector(ctx context.Context, sectorID uint64, offset uint64, length uint64) (io.ReadCloser, error)
-	SavePaymentVoucher(ctx context.Context, paymentChannel address.Address, voucher *paych.SignedVoucher, proof []byte, expectedAmount abi.TokenAmount, tok shared.TipSetToken) (abi.TokenAmount, error)
-}
-
-// PeerResolver is an interface for looking up providers that may have a piece
-type PeerResolver interface {
-	GetPeers(payloadCID cid.Cid) ([]RetrievalPeer, error) // TODO: channel
-}
-
 // RetrievalPeer is a provider address/peer.ID pair (everything needed to make
 // deals for with a miner)
 type RetrievalPeer struct {
-	Address address.Address
-	ID      peer.ID // optional
+	Address  address.Address
+	ID       peer.ID // optional
+	PieceCID *cid.Cid
 }
 
 // QueryResponseStatus indicates whether a queried piece is available
@@ -476,9 +163,19 @@ type Query struct {
 // QueryUndefined is a query with no values
 var QueryUndefined = Query{}
 
-// NewQueryV0 creates a V0 query (which only specifies a piece)
+// NewQueryV0 creates a V0 query (which only specifies a payload)
 func NewQueryV0(payloadCID cid.Cid) Query {
 	return Query{PayloadCID: payloadCID}
+}
+
+// NewQueryV1 creates a V1 query (which has an optional pieceCID)
+func NewQueryV1(payloadCID cid.Cid, pieceCID *cid.Cid) Query {
+	return Query{
+		PayloadCID: payloadCID,
+		QueryParams: QueryParams{
+			PieceCID: pieceCID,
+		},
+	}
 }
 
 // QueryResponse is a miners response to a given retrieval query
@@ -495,14 +192,15 @@ type QueryResponse struct {
 	MaxPaymentInterval         uint64
 	MaxPaymentIntervalIncrease uint64
 	Message                    string
+	UnsealPrice                abi.TokenAmount
 }
 
 // QueryResponseUndefined is an empty QueryResponse
 var QueryResponseUndefined = QueryResponse{}
 
-// PieceRetrievalPrice is the total price to retrieve the piece (size * MinPricePerByte)
+// PieceRetrievalPrice is the total price to retrieve the piece (size * MinPricePerByte + UnsealedPrice)
 func (qr QueryResponse) PieceRetrievalPrice() abi.TokenAmount {
-	return big.Mul(qr.MinPricePerByte, abi.NewTokenAmount(int64(qr.Size)))
+	return big.Add(big.Mul(qr.MinPricePerByte, abi.NewTokenAmount(int64(qr.Size))), qr.UnsealPrice)
 }
 
 // PayloadRetrievalPrice is the expected price to retrieve just the given payload
@@ -511,102 +209,11 @@ func (qr QueryResponse) PieceRetrievalPrice() abi.TokenAmount {
 //	return types.BigMul(qr.MinPricePerByte, types.NewInt(qr.ExpectedPayloadSize))
 //}
 
-// DealStatus is the status of a retrieval deal returned by a provider
-// in a DealResponse
-type DealStatus uint64
-
-const (
-	// DealStatusNew is a deal that nothing has happened with yet
-	DealStatusNew DealStatus = iota
-
-	// DealStatusPaymentChannelCreating is the status set while waiting for the
-	// payment channel creation to complete
-	DealStatusPaymentChannelCreating
-
-	// DealStatusPaymentChannelAddingFunds is the status when we are waiting for funds
-	// to finish being sent to the payment channel
-	DealStatusPaymentChannelAddingFunds
-
-	// DealStatusPaymentChannelAllocatingLane is the status during lane allocation
-	DealStatusPaymentChannelAllocatingLane
-
-	// DealStatusPaymentChannelReady is a deal status that has a payment channel
-	// & lane setup
-	DealStatusPaymentChannelReady
-
-	// DealStatusAwaitingAcceptance - deal is waiting for the decider function to finish
-	DealStatusAwaitingAcceptance
-
-	// DealStatusAccepted means a deal has been accepted by a provider
-	// and its is ready to proceed with retrieval
-	DealStatusAccepted
-
-	// DealStatusFailed indicates something went wrong during a retrieval
-	DealStatusFailed
-
-	// DealStatusRejected indicates the provider rejected a client's deal proposal
-	// for some reason
-	DealStatusRejected
-
-	// DealStatusFundsNeeded indicates the provider needs a payment voucher to
-	// continue processing the deal
-	DealStatusFundsNeeded
-
-	// DealStatusOngoing indicates the provider is continuing to process a deal
-	DealStatusOngoing
-
-	// DealStatusFundsNeededLastPayment indicates the provider needs a payment voucher
-	// in order to complete a deal
-	DealStatusFundsNeededLastPayment
-
-	// DealStatusCompleted indicates a deal is complete
-	DealStatusCompleted
-
-	// DealStatusDealNotFound indicates an update was received for a deal that could
-	// not be identified
-	DealStatusDealNotFound
-
-	// DealStatusVerified means a deal has been verified as having the right parameters
-	DealStatusVerified
-
-	// DealStatusErrored indicates something went wrong with a deal
-	DealStatusErrored
-
-	// DealStatusBlocksComplete indicates that all blocks have been processed for the piece
-	DealStatusBlocksComplete
-
-	// DealStatusFinalizing means the last payment has been received and
-	// we are just confirming the deal is complete
-	DealStatusFinalizing
-)
-
-// DealStatuses maps deal status to a human readable representation
-var DealStatuses = map[DealStatus]string{
-	DealStatusNew:                          "DealStatusNew",
-	DealStatusPaymentChannelCreating:       "DealStatusPaymentChannelCreating",
-	DealStatusPaymentChannelAddingFunds:    "DealStatusPaymentChannelAddingFunds",
-	DealStatusPaymentChannelAllocatingLane: "DealStatusPaymentChannelAllocatingLane",
-	DealStatusPaymentChannelReady:          "DealStatusPaymentChannelReady",
-	DealStatusAwaitingAcceptance:           "DealStatusAwaitingAcceptance",
-	DealStatusAccepted:                     "DealStatusAccepted",
-	DealStatusFailed:                       "DealStatusFailed",
-	DealStatusRejected:                     "DealStatusRejected",
-	DealStatusFundsNeeded:                  "DealStatusFundsNeeded",
-	DealStatusOngoing:                      "DealStatusOngoing",
-	DealStatusFundsNeededLastPayment:       "DealStatusFundsNeededLastPayment",
-	DealStatusCompleted:                    "DealStatusCompleted",
-	DealStatusDealNotFound:                 "DealStatusDealNotFound",
-	DealStatusVerified:                     "DealStatusVerified",
-	DealStatusErrored:                      "DealStatusErrored",
-	DealStatusBlocksComplete:               "DealStatusBlocksComplete",
-	DealStatusFinalizing:                   "DealStatusFinalizing",
-}
-
 // IsTerminalError returns true if this status indicates processing of this deal
 // is complete with an error
 func IsTerminalError(status DealStatus) bool {
 	return status == DealStatusDealNotFound ||
-		status == DealStatusFailed ||
+		status == DealStatusFailing ||
 		status == DealStatusRejected
 }
 
@@ -628,7 +235,12 @@ type Params struct {
 	PieceCID                *cid.Cid
 	PricePerByte            abi.TokenAmount
 	PaymentInterval         uint64 // when to request payment
-	PaymentIntervalIncrease uint64 //
+	PaymentIntervalIncrease uint64
+	UnsealPrice             abi.TokenAmount
+}
+
+func (p Params) SelectorSpecified() bool {
+	return p.Selector != nil && !bytes.Equal(p.Selector.Raw, cbg.CborNull)
 }
 
 // NewParamsV0 generates parameters for a retrieval deal, which is always a whole piece deal
@@ -637,15 +249,21 @@ func NewParamsV0(pricePerByte abi.TokenAmount, paymentInterval uint64, paymentIn
 		PricePerByte:            pricePerByte,
 		PaymentInterval:         paymentInterval,
 		PaymentIntervalIncrease: paymentIntervalIncrease,
+		UnsealPrice:             big.Zero(),
 	}
 }
 
 // NewParamsV1 generates parameters for a retrieval deal, including a selector
-func NewParamsV1(pricePerByte abi.TokenAmount, paymentInterval uint64, paymentIntervalIncrease uint64, sel ipld.Node, pieceCid *cid.Cid) Params {
+func NewParamsV1(pricePerByte abi.TokenAmount, paymentInterval uint64, paymentIntervalIncrease uint64, sel ipld.Node, pieceCid *cid.Cid, unsealPrice abi.TokenAmount) (Params, error) {
 	var buffer bytes.Buffer
+
+	if sel == nil {
+		return Params{}, xerrors.New("selector required for NewParamsV1")
+	}
+
 	err := dagcbor.Encoder(sel, &buffer)
 	if err != nil {
-		return Params{}
+		return Params{}, xerrors.Errorf("error encoding selector: %w", err)
 	}
 
 	return Params{
@@ -654,7 +272,8 @@ func NewParamsV1(pricePerByte abi.TokenAmount, paymentInterval uint64, paymentIn
 		PricePerByte:            pricePerByte,
 		PaymentInterval:         paymentInterval,
 		PaymentIntervalIncrease: paymentIntervalIncrease,
-	}
+		UnsealPrice:             unsealPrice,
+	}, nil
 }
 
 // DealID is an identifier for a retrieval deal (unique to a client)
@@ -671,17 +290,13 @@ type DealProposal struct {
 	Params
 }
 
-// DealProposalUndefined is an undefined deal proposal
-var DealProposalUndefined = DealProposal{}
-
-// Block is an IPLD block in bitswap format
-type Block struct {
-	Prefix []byte
-	Data   []byte
+// Type method makes DealProposal usable as a voucher
+func (dp *DealProposal) Type() datatransfer.TypeIdentifier {
+	return "RetrievalDealProposal/1"
 }
 
-// EmptyBlock is just a block with no content
-var EmptyBlock = Block{}
+// DealProposalUndefined is an undefined deal proposal
+var DealProposalUndefined = DealProposal{}
 
 // DealResponse is a response to a retrieval deal proposal
 type DealResponse struct {
@@ -692,7 +307,11 @@ type DealResponse struct {
 	PaymentOwed abi.TokenAmount
 
 	Message string
-	Blocks  []Block // V0 only
+}
+
+// Type method makes DealResponse usable as a voucher result
+func (dr *DealResponse) Type() datatransfer.TypeIdentifier {
+	return "RetrievalDealResponse/1"
 }
 
 // DealResponseUndefined is an undefined deal response
@@ -705,6 +324,11 @@ type DealPayment struct {
 	PaymentVoucher *paych.SignedVoucher
 }
 
+// Type method makes DealPayment usable as a voucher
+func (dr *DealPayment) Type() datatransfer.TypeIdentifier {
+	return "RetrievalDealPayment/1"
+}
+
 // DealPaymentUndefined is an undefined deal payment
 var DealPaymentUndefined = DealPayment{}
 
@@ -715,3 +339,45 @@ var (
 	// ErrVerification means a retrieval contained a block response that did not verify
 	ErrVerification = errors.New("Error when verify data")
 )
+
+type Ask struct {
+	PricePerByte            abi.TokenAmount
+	UnsealPrice             abi.TokenAmount
+	PaymentInterval         uint64
+	PaymentIntervalIncrease uint64
+}
+
+// ShortfallErorr is an error that indicates a short fall of funds
+type ShortfallError struct {
+	shortfall abi.TokenAmount
+}
+
+// NewShortfallError returns a new error indicating a shortfall of funds
+func NewShortfallError(shortfall abi.TokenAmount) error {
+	return ShortfallError{shortfall}
+}
+
+// Shortfall returns the numerical value of the shortfall
+func (se ShortfallError) Shortfall() abi.TokenAmount {
+	return se.shortfall
+}
+func (se ShortfallError) Error() string {
+	return fmt.Sprintf("Inssufficient Funds. Shortfall: %s", se.shortfall.String())
+}
+
+// ChannelAvailableFunds provides information about funds in a channel
+type ChannelAvailableFunds struct {
+	// ConfirmedAmt is the amount of funds that have been confirmed on-chain
+	// for the channel
+	ConfirmedAmt abi.TokenAmount
+	// PendingAmt is the amount of funds that are pending confirmation on-chain
+	PendingAmt abi.TokenAmount
+	// PendingWaitSentinel can be used with PaychGetWaitReady to wait for
+	// confirmation of pending funds
+	PendingWaitSentinel *cid.Cid
+	// QueuedAmt is the amount that is queued up behind a pending request
+	QueuedAmt abi.TokenAmount
+	// VoucherRedeemedAmt is the amount that is redeemed by vouchers on-chain
+	// and in the local datastore
+	VoucherReedeemedAmt abi.TokenAmount
+}

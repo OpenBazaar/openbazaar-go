@@ -2,8 +2,8 @@ package builtin
 
 import (
 	addr "github.com/filecoin-project/go-address"
+
 	autil "github.com/filecoin-project/specs-actors/actors/util"
-	"github.com/ipfs/go-cid"
 )
 
 // Addresses for singleton system actors.
@@ -26,15 +26,4 @@ func mustMakeAddress(id uint64) addr.Address {
 	address, err := addr.NewIDAddress(id)
 	autil.AssertNoError(err)
 	return address
-}
-
-// IsSingletonActor returns true if the code belongs to a singleton actor.
-func IsSingletonActor(code cid.Cid) bool {
-	return code.Equals(SystemActorCodeID) ||
-		code.Equals(InitActorCodeID) ||
-		code.Equals(RewardActorCodeID) ||
-		code.Equals(CronActorCodeID) ||
-		code.Equals(StoragePowerActorCodeID) ||
-		code.Equals(StorageMarketActorCodeID) ||
-		code.Equals(VerifiedRegistryActorCodeID)
 }

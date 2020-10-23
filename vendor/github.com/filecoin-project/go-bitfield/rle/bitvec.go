@@ -34,14 +34,50 @@ var bitMasks = [9]byte{
 	0xFF,
 }
 
-func (bv *rbitvec) Get(count byte) byte {
-	res := byte(bv.bits) & bitMasks[count] // select count bits
-	bv.bits = bv.bits >> count             // remove those bits from storage
-	bv.bitCap = bv.bitCap - count          // decrease nuber of stored bits
+func (bv *rbitvec) GetByte() byte {
+	// Advancing byte by byte is simpler than advancing an odd number of
+	// bits because we _always_ load the next byte.
+	res := byte(bv.bits)
+	bv.bits >>= 8
 
 	if bv.index < len(bv.vec) { // if vector allows
 		// add bits onto the end of temporary storage
-		bv.bits = bv.bits | uint16(bv.vec[bv.index])<<bv.bitCap
+		bv.bits |= uint16(bv.vec[bv.index]) << (bv.bitCap - 8)
+	}
+
+	bv.index += 1
+	return res
+}
+
+func (bv *rbitvec) GetBit() bool {
+	// The specialized GetBit is easier for the compiler to optimize, for some reason.
+
+	res := (bv.bits&0x1 != 0)
+	bv.bits >>= 1
+	bv.bitCap -= 1
+
+	if bv.index < len(bv.vec) { // if vector allows
+		// add bits onto the end of temporary storage
+		bv.bits |= uint16(bv.vec[bv.index]) << bv.bitCap
+	}
+
+	// When we advance one by one, this branch is very predictable (and
+	// faster than fancy math).
+	if bv.bitCap < 8 {
+		bv.index += 1
+		bv.bitCap += 8
+	}
+	return res
+}
+
+func (bv *rbitvec) Get(count byte) byte {
+	res := byte(bv.bits) & bitMasks[count] // select count bits
+	bv.bits >>= count                      // remove those bits from storage
+	bv.bitCap -= count                     // decrease nuber of stored bits
+
+	if bv.index < len(bv.vec) { // if vector allows
+		// add bits onto the end of temporary storage
+		bv.bits |= uint16(bv.vec[bv.index]) << bv.bitCap
 	}
 
 	// Here be dragons
@@ -56,9 +92,9 @@ func (bv *rbitvec) Get(count byte) byte {
 
 	// if bitCap < 8 it underflows, then high bits get set to 1s
 	// we shift by 7 so the highest bit is in place of the lowest
-	inc := (bv.bitCap - 8) >> 7    // inc == 1 iff bitcap<8 (+10% perf)
-	bv.index = bv.index + int(inc) // increase index if we need more bits
-	bv.bitCap = bv.bitCap + inc*8  // increase bitCap by 8
+	inc := (bv.bitCap - 8) >> 7 // inc == 1 iff bitcap<8 (+10% perf)
+	bv.index += int(inc)        // increase index if we need more bits
+	bv.bitCap += inc * 8        // increase bitCap by 8
 
 	return res
 }
@@ -69,25 +105,30 @@ func writeBitvec(buf []byte) *wbitvec {
 }
 
 type wbitvec struct {
-	buf   []byte // buffer we will be saving to
-	index int    // index of at which the next byte will be saved
+	buf []byte // buffer we will be saving to
 
 	bits   uint16 // temporary storage for bits
 	bitCap byte   // number of bits stored in temporary storage
 }
 
+// Returns the resulting bitvector, with any trailing zero bytes removed.
 func (bv *wbitvec) Out() []byte {
 	if bv.bitCap != 0 {
 		// if there are some bits in temporary storage we need to save them
-		bv.buf = append(bv.buf, 0)[:bv.index+1]
-		bv.buf[bv.index] = byte(bv.bits)
+		bv.buf = append(bv.buf, byte(bv.bits))
 	}
 	if bv.bitCap > 8 {
 		// if we store some needed bits in second byte, save them also
 		bv.buf = append(bv.buf, byte(bv.bits>>8))
-		bv.index++
-		bv.bits = bv.bits - 8
 	}
+	bv.bitCap = 0
+	bv.bits = 0
+
+	// Minimally encode.
+	for len(bv.buf) > 0 && bv.buf[len(bv.buf)-1] == 0 {
+		bv.buf = bv.buf[:len(bv.buf)-1]
+	}
+
 	return bv.buf
 }
 
@@ -97,18 +138,9 @@ func (bv *wbitvec) Put(val byte, count byte) {
 	// increase bitCap by the number of bits
 	bv.bitCap = bv.bitCap + count
 
-	// increase len of the buffer if it is needed
-	if bv.index+1 > cap(bv.buf) {
-		bv.buf = append(bv.buf, 0)
+	if bv.bitCap >= 8 {
+		bv.buf = append(bv.buf, byte(bv.bits))
+		bv.bitCap -= 8
+		bv.bits >>= 8
 	}
-	bv.buf = bv.buf[:bv.index+1]
-	// save the bits
-	bv.buf[bv.index] = byte(bv.bits)
-
-	// Warning, dragons again
-	// if bitCap is greater than 7 it underflows, same thing as in Put
-	inc := (7 - bv.bitCap) >> 7    // inc == 1 iff bitcap>=8
-	bv.index = bv.index + int(inc) // increase index for the next save
-	bv.bitCap = bv.bitCap - inc*8  // we store less bits now in temporary buffer
-	bv.bits = bv.bits >> (inc * 8) // we can discard those bits as they were saved
 }

@@ -2,9 +2,9 @@ package paych
 
 import (
 	addr "github.com/filecoin-project/go-address"
-
-	abi "github.com/filecoin-project/specs-actors/actors/abi"
-	big "github.com/filecoin-project/specs-actors/actors/abi/big"
+	abi "github.com/filecoin-project/go-state-types/abi"
+	big "github.com/filecoin-project/go-state-types/big"
+	"github.com/ipfs/go-cid"
 )
 
 // A given payment channel actor is established by From
@@ -25,13 +25,12 @@ type State struct {
 	MinSettleHeight abi.ChainEpoch
 
 	// Collections of lane states for the channel, maintained in ID order.
-	LaneStates []*LaneState
+	LaneStates cid.Cid // AMT<LaneState>
 }
 
 // The Lane state tracks the latest (highest) voucher nonce used to merge the lane
 // as well as the amount it has already redeemed.
 type LaneState struct {
-	ID       uint64 // Unique to this channel
 	Redeemed big.Int
 	Nonce    uint64
 }
@@ -42,13 +41,13 @@ type Merge struct {
 	Nonce uint64
 }
 
-func ConstructState(from addr.Address, to addr.Address) *State {
+func ConstructState(from addr.Address, to addr.Address, emptyArrCid cid.Cid) *State {
 	return &State{
 		From:            from,
 		To:              to,
 		ToSend:          big.Zero(),
 		SettlingAt:      0,
 		MinSettleHeight: 0,
-		LaneStates:      []*LaneState{},
+		LaneStates:      emptyArrCid,
 	}
 }

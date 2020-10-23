@@ -22,17 +22,17 @@ type Bool struct {
 func (Bool) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Bool
 }
-func (x Bool) LookupString(string) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupString", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_Bool}
+func (x Bool) LookupByString(string) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByString", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_Bool}
 }
-func (x Bool) Lookup(key ipld.Node) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "Lookup", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_Bool}
+func (x Bool) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByNode", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_Bool}
 }
-func (x Bool) LookupIndex(idx int) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_Bool}
+func (x Bool) LookupByIndex(idx int) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_Bool}
 }
-func (x Bool) LookupSegment(ipld.PathSegment) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupSegment", AppropriateKind: ipld.ReprKindSet_Recursive, ActualKind: ipld.ReprKind_Bool}
+func (x Bool) LookupBySegment(ipld.PathSegment) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupBySegment", AppropriateKind: ipld.ReprKindSet_Recursive, ActualKind: ipld.ReprKind_Bool}
 }
 func (Bool) MapIterator() ipld.MapIterator {
 	return nil
@@ -43,7 +43,7 @@ func (Bool) ListIterator() ipld.ListIterator {
 func (Bool) Length() int {
 	return -1
 }
-func (Bool) IsUndefined() bool {
+func (Bool) IsAbsent() bool {
 	return false
 }
 func (Bool) IsNull() bool {

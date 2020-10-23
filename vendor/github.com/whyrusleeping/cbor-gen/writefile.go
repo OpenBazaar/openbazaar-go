@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"go/format"
 	"os"
-	"os/exec"
 
 	"golang.org/x/xerrors"
 )
@@ -12,12 +11,21 @@ import (
 func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	buf := new(bytes.Buffer)
 
-	if err := PrintHeaderAndUtilityMethods(buf, pkg); err != nil {
+	typeInfos := make([]*GenTypeInfo, len(types))
+	for i, t := range types {
+		gti, err := ParseTypeInfo(t)
+		if err != nil {
+			return xerrors.Errorf("failed to parse type info: %w", err)
+		}
+		typeInfos[i] = gti
+	}
+
+	if err := PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
 		return xerrors.Errorf("failed to write header: %w", err)
 	}
 
-	for _, t := range types {
-		if err := GenTupleEncodersForType(pkg, t, buf); err != nil {
+	for _, t := range typeInfos {
+		if err := GenTupleEncodersForType(t, buf); err != nil {
 			return xerrors.Errorf("failed to generate encoders: %w", err)
 		}
 	}
@@ -38,10 +46,6 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 		return err
 	}
 	_ = fi.Close()
-
-	if err := exec.Command("goimports", "-w", fname).Run(); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -49,12 +53,21 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 	buf := new(bytes.Buffer)
 
-	if err := PrintHeaderAndUtilityMethods(buf, pkg); err != nil {
+	typeInfos := make([]*GenTypeInfo, len(types))
+	for i, t := range types {
+		gti, err := ParseTypeInfo(t)
+		if err != nil {
+			return xerrors.Errorf("failed to parse type info: %w", err)
+		}
+		typeInfos[i] = gti
+	}
+
+	if err := PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
 		return xerrors.Errorf("failed to write header: %w", err)
 	}
 
-	for _, t := range types {
-		if err := GenMapEncodersForType(pkg, t, buf); err != nil {
+	for _, t := range typeInfos {
+		if err := GenMapEncodersForType(t, buf); err != nil {
 			return xerrors.Errorf("failed to generate encoders: %w", err)
 		}
 	}
@@ -75,10 +88,6 @@ func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 		return err
 	}
 	_ = fi.Close()
-
-	if err := exec.Command("goimports", "-w", fname).Run(); err != nil {
-		return err
-	}
 
 	return nil
 }

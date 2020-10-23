@@ -58,75 +58,81 @@ const (
 
 	GitRaw = 0x78
 
-	EthBlock           = 0x90
-	EthBlockList       = 0x91
-	EthTxTrie          = 0x92
-	EthTx              = 0x93
-	EthTxReceiptTrie   = 0x94
-	EthTxReceipt       = 0x95
-	EthStateTrie       = 0x96
-	EthAccountSnapshot = 0x97
-	EthStorageTrie     = 0x98
-	BitcoinBlock       = 0xb0
-	BitcoinTx          = 0xb1
-	ZcashBlock         = 0xc0
-	ZcashTx            = 0xc1
-	DecredBlock        = 0xe0
-	DecredTx           = 0xe1
-	DashBlock          = 0xf0
-	DashTx             = 0xf1
+	EthBlock              = 0x90
+	EthBlockList          = 0x91
+	EthTxTrie             = 0x92
+	EthTx                 = 0x93
+	EthTxReceiptTrie      = 0x94
+	EthTxReceipt          = 0x95
+	EthStateTrie          = 0x96
+	EthAccountSnapshot    = 0x97
+	EthStorageTrie        = 0x98
+	BitcoinBlock          = 0xb0
+	BitcoinTx             = 0xb1
+	ZcashBlock            = 0xc0
+	ZcashTx               = 0xc1
+	DecredBlock           = 0xe0
+	DecredTx              = 0xe1
+	DashBlock             = 0xf0
+	DashTx                = 0xf1
+	FilCommitmentUnsealed = 0xf101
+	FilCommitmentSealed   = 0xf102
 )
 
 // Codecs maps the name of a codec to its type
 var Codecs = map[string]uint64{
-	"v0":                   DagProtobuf,
-	"raw":                  Raw,
-	"protobuf":             DagProtobuf,
-	"cbor":                 DagCBOR,
-	"libp2p-key":           Libp2pKey,
-	"git-raw":              GitRaw,
-	"eth-block":            EthBlock,
-	"eth-block-list":       EthBlockList,
-	"eth-tx-trie":          EthTxTrie,
-	"eth-tx":               EthTx,
-	"eth-tx-receipt-trie":  EthTxReceiptTrie,
-	"eth-tx-receipt":       EthTxReceipt,
-	"eth-state-trie":       EthStateTrie,
-	"eth-account-snapshot": EthAccountSnapshot,
-	"eth-storage-trie":     EthStorageTrie,
-	"bitcoin-block":        BitcoinBlock,
-	"bitcoin-tx":           BitcoinTx,
-	"zcash-block":          ZcashBlock,
-	"zcash-tx":             ZcashTx,
-	"decred-block":         DecredBlock,
-	"decred-tx":            DecredTx,
-	"dash-block":           DashBlock,
-	"dash-tx":              DashTx,
+	"v0":                      DagProtobuf,
+	"raw":                     Raw,
+	"protobuf":                DagProtobuf,
+	"cbor":                    DagCBOR,
+	"libp2p-key":              Libp2pKey,
+	"git-raw":                 GitRaw,
+	"eth-block":               EthBlock,
+	"eth-block-list":          EthBlockList,
+	"eth-tx-trie":             EthTxTrie,
+	"eth-tx":                  EthTx,
+	"eth-tx-receipt-trie":     EthTxReceiptTrie,
+	"eth-tx-receipt":          EthTxReceipt,
+	"eth-state-trie":          EthStateTrie,
+	"eth-account-snapshot":    EthAccountSnapshot,
+	"eth-storage-trie":        EthStorageTrie,
+	"bitcoin-block":           BitcoinBlock,
+	"bitcoin-tx":              BitcoinTx,
+	"zcash-block":             ZcashBlock,
+	"zcash-tx":                ZcashTx,
+	"decred-block":            DecredBlock,
+	"decred-tx":               DecredTx,
+	"dash-block":              DashBlock,
+	"dash-tx":                 DashTx,
+	"fil-commitment-unsealed": FilCommitmentUnsealed,
+	"fil-commitment-sealed":   FilCommitmentSealed,
 }
 
 // CodecToStr maps the numeric codec to its name
 var CodecToStr = map[uint64]string{
-	Raw:                "raw",
-	DagProtobuf:        "protobuf",
-	DagCBOR:            "cbor",
-	GitRaw:             "git-raw",
-	EthBlock:           "eth-block",
-	EthBlockList:       "eth-block-list",
-	EthTxTrie:          "eth-tx-trie",
-	EthTx:              "eth-tx",
-	EthTxReceiptTrie:   "eth-tx-receipt-trie",
-	EthTxReceipt:       "eth-tx-receipt",
-	EthStateTrie:       "eth-state-trie",
-	EthAccountSnapshot: "eth-account-snapshot",
-	EthStorageTrie:     "eth-storage-trie",
-	BitcoinBlock:       "bitcoin-block",
-	BitcoinTx:          "bitcoin-tx",
-	ZcashBlock:         "zcash-block",
-	ZcashTx:            "zcash-tx",
-	DecredBlock:        "decred-block",
-	DecredTx:           "decred-tx",
-	DashBlock:          "dash-block",
-	DashTx:             "dash-tx",
+	Raw:                   "raw",
+	DagProtobuf:           "protobuf",
+	DagCBOR:               "cbor",
+	GitRaw:                "git-raw",
+	EthBlock:              "eth-block",
+	EthBlockList:          "eth-block-list",
+	EthTxTrie:             "eth-tx-trie",
+	EthTx:                 "eth-tx",
+	EthTxReceiptTrie:      "eth-tx-receipt-trie",
+	EthTxReceipt:          "eth-tx-receipt",
+	EthStateTrie:          "eth-state-trie",
+	EthAccountSnapshot:    "eth-account-snapshot",
+	EthStorageTrie:        "eth-storage-trie",
+	BitcoinBlock:          "bitcoin-block",
+	BitcoinTx:             "bitcoin-tx",
+	ZcashBlock:            "zcash-block",
+	ZcashTx:               "zcash-tx",
+	DecredBlock:           "decred-block",
+	DecredTx:              "decred-tx",
+	DashBlock:             "dash-block",
+	DashTx:                "dash-tx",
+	FilCommitmentUnsealed: "fil-commitment-unsealed",
+	FilCommitmentSealed:   "fil-commitment-sealed",
 }
 
 // tryNewCidV0 tries to convert a multihash into a CIDv0 CID and returns an
@@ -512,12 +518,29 @@ func (c Cid) Loggable() map[string]interface{} {
 
 // Prefix builds and returns a Prefix out of a Cid.
 func (c Cid) Prefix() Prefix {
-	dec, _ := mh.Decode(c.Hash()) // assuming we got a valid multiaddr, this will not error
+	if c.Version() == 0 {
+		return Prefix{
+			MhType:   mh.SHA2_256,
+			MhLength: 32,
+			Version:  0,
+			Codec:    DagProtobuf,
+		}
+	}
+
+	offset := 0
+	version, n, _ := uvarint(c.str[offset:])
+	offset += n
+	codec, n, _ := uvarint(c.str[offset:])
+	offset += n
+	mhtype, n, _ := uvarint(c.str[offset:])
+	offset += n
+	mhlen, _, _ := uvarint(c.str[offset:])
+
 	return Prefix{
-		MhType:   dec.Code,
-		MhLength: dec.Length,
-		Version:  c.Version(),
-		Codec:    c.Type(),
+		MhType:   mhtype,
+		MhLength: int(mhlen),
+		Version:  version,
+		Codec:    codec,
 	}
 }
 

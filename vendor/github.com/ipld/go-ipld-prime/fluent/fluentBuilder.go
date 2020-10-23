@@ -4,8 +4,8 @@ import (
 	ipld "github.com/ipld/go-ipld-prime"
 )
 
-func Build(ns ipld.NodeStyle, fn func(NodeAssembler)) (ipld.Node, error) {
-	nb := ns.NewBuilder()
+func Build(np ipld.NodePrototype, fn func(NodeAssembler)) (ipld.Node, error) {
+	nb := np.NewBuilder()
 	fna := WrapAssembler(nb)
 	err := Recover(func() {
 		fn(fna)
@@ -13,16 +13,16 @@ func Build(ns ipld.NodeStyle, fn func(NodeAssembler)) (ipld.Node, error) {
 	return nb.Build(), err
 }
 
-func MustBuild(ns ipld.NodeStyle, fn func(NodeAssembler)) ipld.Node {
-	nb := ns.NewBuilder()
+func MustBuild(np ipld.NodePrototype, fn func(NodeAssembler)) ipld.Node {
+	nb := np.NewBuilder()
 	fn(WrapAssembler(nb))
 	return nb.Build()
 }
-func MustBuildMap(ns ipld.NodeStyle, sizeHint int, fn func(MapAssembler)) ipld.Node {
-	return MustBuild(ns, func(fna NodeAssembler) { fna.CreateMap(sizeHint, fn) })
+func MustBuildMap(np ipld.NodePrototype, sizeHint int, fn func(MapAssembler)) ipld.Node {
+	return MustBuild(np, func(fna NodeAssembler) { fna.CreateMap(sizeHint, fn) })
 }
-func MustBuildList(ns ipld.NodeStyle, sizeHint int, fn func(ListAssembler)) ipld.Node {
-	return MustBuild(ns, func(fna NodeAssembler) { fna.CreateList(sizeHint, fn) })
+func MustBuildList(np ipld.NodePrototype, sizeHint int, fn func(ListAssembler)) ipld.Node {
+	return MustBuild(np, func(fna NodeAssembler) { fna.CreateList(sizeHint, fn) })
 }
 
 func WrapAssembler(na ipld.NodeAssembler) NodeAssembler {
@@ -46,7 +46,7 @@ type NodeAssembler interface {
 	AssignLink(ipld.Link)
 	AssignNode(ipld.Node)
 
-	Style() ipld.NodeStyle
+	Prototype() ipld.NodePrototype
 }
 
 // MapAssembler is the same as the interface in the core package, except:
@@ -60,8 +60,8 @@ type MapAssembler interface {
 
 	AssembleEntry(k string) NodeAssembler
 
-	KeyStyle() ipld.NodeStyle
-	ValueStyle(k string) ipld.NodeStyle
+	KeyPrototype() ipld.NodePrototype
+	ValuePrototype(k string) ipld.NodePrototype
 }
 
 // ListAssembler is the same as the interface in the core package, except:
@@ -72,7 +72,7 @@ type MapAssembler interface {
 type ListAssembler interface {
 	AssembleValue() NodeAssembler
 
-	ValueStyle(idx int) ipld.NodeStyle
+	ValuePrototype(idx int) ipld.NodePrototype
 }
 
 type nodeAssembler struct {
@@ -139,8 +139,8 @@ func (fna *nodeAssembler) AssignNode(v ipld.Node) {
 		panic(Error{err})
 	}
 }
-func (fna *nodeAssembler) Style() ipld.NodeStyle {
-	return fna.na.Style()
+func (fna *nodeAssembler) Prototype() ipld.NodePrototype {
+	return fna.na.Prototype()
 }
 
 type mapNodeAssembler struct {
@@ -160,11 +160,11 @@ func (fma *mapNodeAssembler) AssembleEntry(k string) NodeAssembler {
 	}
 	return &nodeAssembler{va}
 }
-func (fma *mapNodeAssembler) KeyStyle() ipld.NodeStyle {
-	return fma.ma.KeyStyle()
+func (fma *mapNodeAssembler) KeyPrototype() ipld.NodePrototype {
+	return fma.ma.KeyPrototype()
 }
-func (fma *mapNodeAssembler) ValueStyle(k string) ipld.NodeStyle {
-	return fma.ma.ValueStyle(k)
+func (fma *mapNodeAssembler) ValuePrototype(k string) ipld.NodePrototype {
+	return fma.ma.ValuePrototype(k)
 }
 
 type listNodeAssembler struct {
@@ -174,6 +174,6 @@ type listNodeAssembler struct {
 func (fla *listNodeAssembler) AssembleValue() NodeAssembler {
 	return &nodeAssembler{fla.la.AssembleValue()}
 }
-func (fla *listNodeAssembler) ValueStyle(idx int) ipld.NodeStyle {
-	return fla.la.ValueStyle(idx)
+func (fla *listNodeAssembler) ValuePrototype(idx int) ipld.NodePrototype {
+	return fla.la.ValuePrototype(idx)
 }

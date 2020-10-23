@@ -6,6 +6,8 @@ import (
 
 type TypeName string // = ast.TypeName
 
+func (tn TypeName) String() string { return string(tn) }
+
 // typesystem.Type is an union interface; each of the `Type*` concrete types
 // in this package are one of its members.
 //
@@ -41,7 +43,8 @@ type TypeName string // = ast.TypeName
 // other kind of Type.)
 type Type interface {
 	// Unexported marker method to force the union closed.
-	_Type()
+	// Also used to set the internal pointer back to the universe its part of.
+	_Type(*TypeSystem)
 
 	// Returns a pointer to the TypeSystem this Type is a member of.
 	TypeSystem() *TypeSystem
@@ -70,89 +73,126 @@ type Type interface {
 	// can vary in representation kind based on their value (specifically,
 	// kinded-representation unions have this property).
 	Kind() Kind
+
+	// RepresentationBehavior returns a description of how the representation
+	// of this type will behave in terms of the IPLD Data Model.
+	// This property varies based on the representation strategy of a type.
+	//
+	// In one case, the representation behavior cannot be known statically,
+	// and varies based on the data: kinded unions have this trait.
+	//
+	// This property is used by kinded unions, which require that their members
+	// all have distinct representation behavior.
+	// (It follows that a kinded union cannot have another kinded union as a member.)
+	//
+	// You may also be interested in a related property that might have been called "TypeBehavior".
+	// However, this method doesn't exist, because it's a deterministic property of `Kind()`!
+	// You can use `Kind.ActsLike()` to get type-level behavioral information.
+	RepresentationBehavior() ipld.ReprKind
 }
 
 var (
-	_ Type = TypeBool{}
-	_ Type = TypeString{}
-	_ Type = TypeBytes{}
-	_ Type = TypeInt{}
-	_ Type = TypeFloat{}
-	_ Type = TypeMap{}
-	_ Type = TypeList{}
-	_ Type = TypeLink{}
-	_ Type = TypeUnion{}
-	_ Type = TypeStruct{}
-	_ Type = TypeEnum{}
+	_ Type = &TypeBool{}
+	_ Type = &TypeString{}
+	_ Type = &TypeBytes{}
+	_ Type = &TypeInt{}
+	_ Type = &TypeFloat{}
+	_ Type = &TypeMap{}
+	_ Type = &TypeList{}
+	_ Type = &TypeLink{}
+	_ Type = &TypeUnion{}
+	_ Type = &TypeStruct{}
+	_ Type = &TypeEnum{}
 )
 
-type anyType struct {
+type typeBase struct {
 	name     TypeName
 	universe *TypeSystem
 }
 
 type TypeBool struct {
-	anyType
+	typeBase
 }
 
 type TypeString struct {
-	anyType
+	typeBase
 }
 
 type TypeBytes struct {
-	anyType
+	typeBase
 }
 
 type TypeInt struct {
-	anyType
+	typeBase
 }
 
 type TypeFloat struct {
-	anyType
+	typeBase
 }
 
 type TypeMap struct {
-	anyType
+	typeBase
 	anonymous     bool
-	keyType       Type // must be ReprKind==string (e.g. Type==String|Enum).
-	valueType     Type
+	keyType       TypeName // must be ReprKind==string (e.g. Type==String|Enum).
+	valueType     TypeName
 	valueNullable bool
 }
 
 type TypeList struct {
-	anyType
+	typeBase
 	anonymous     bool
-	valueType     Type
+	valueType     TypeName
 	valueNullable bool
 }
 
 type TypeLink struct {
-	anyType
-	referencedType    Type
+	typeBase
+	referencedType    TypeName
 	hasReferencedType bool
 	// ...?
 }
 
 type TypeUnion struct {
-	anyType
-	style        UnionStyle
-	valuesKinded map[ipld.ReprKind]Type // for Style==Kinded
-	values       map[string]Type        // for Style!=Kinded (note, key is freetext, not necessarily TypeName of the value)
-	typeHintKey  string                 // for Style==Envelope|Inline
-	contentKey   string                 // for Style==Envelope
+	typeBase
+	// Members are listed in the order they appear in the schema.
+	// To find the discriminant info, you must look inside the representation; they all contain a 'table' of some kind in which the member types are the values.
+	// Note that multiple appearances of the same type as distinct members of the union is not possible.
+	//  While we could do this... A: that's... odd, and nearly never called for; B: not possible with kinded mode; C: imagine the golang-native type switch!  it's impossible.
+	//  We rely on this clarity in many ways: most visibly, the type-level Node implementation for a union always uses the type names as if they were map keys!  This behavior is consistent for all union representations.
+	members        []TypeName
+	representation UnionRepresentation
 }
 
-type UnionStyle struct{ x string }
+type UnionRepresentation interface{ _UnionRepresentation() }
 
-var (
-	UnionStyle_Kinded   = UnionStyle{"kinded"}
-	UnionStyle_Keyed    = UnionStyle{"keyed"}
-	UnionStyle_Envelope = UnionStyle{"envelope"}
-	UnionStyle_Inline   = UnionStyle{"inline"}
-)
+func (UnionRepresentation_Keyed) _UnionRepresentation()    {}
+func (UnionRepresentation_Kinded) _UnionRepresentation()   {}
+func (UnionRepresentation_Envelope) _UnionRepresentation() {}
+func (UnionRepresentation_Inline) _UnionRepresentation()   {}
+
+// A bunch of these tables in union representation might be easier to use if flipped;
+//  we almost always index into them by type (since that's what we have an ordered list of);
+//  and they're unique in both directions, so it's equally valid either way.
+//  The order they're currently written in matches the serial form in the schema AST.
+
+type UnionRepresentation_Keyed struct {
+	table map[string]TypeName // key is user-defined freetext
+}
+type UnionRepresentation_Kinded struct {
+	table map[ipld.ReprKind]TypeName
+}
+type UnionRepresentation_Envelope struct {
+	discriminantKey string
+	contentKey      string
+	table           map[string]TypeName // key is user-defined freetext
+}
+type UnionRepresentation_Inline struct {
+	discriminantKey string
+	table           map[string]TypeName // key is user-defined freetext
+}
 
 type TypeStruct struct {
-	anyType
+	typeBase
 	// n.b. `Fields` is an (order-preserving!) map in the schema-schema;
 	//  but it's a list here, with the keys denormalized into the value,
 	//   because that's typically how we use it.
@@ -161,8 +201,9 @@ type TypeStruct struct {
 	representation StructRepresentation
 }
 type StructField struct {
+	parent   *TypeStruct
 	name     string
-	typ      Type
+	typ      TypeName
 	optional bool
 	nullable bool
 }
@@ -172,17 +213,28 @@ type StructRepresentation interface{ _StructRepresentation() }
 func (StructRepresentation_Map) _StructRepresentation()         {}
 func (StructRepresentation_Tuple) _StructRepresentation()       {}
 func (StructRepresentation_StringPairs) _StructRepresentation() {}
-func (StructRepresentation_StringJoin) _StructRepresentation()  {}
+func (StructRepresentation_Stringjoin) _StructRepresentation()  {}
 
 type StructRepresentation_Map struct {
 	renames   map[string]string
-	implicits map[string]interface{}
+	implicits map[string]ImplicitValue
 }
 type StructRepresentation_Tuple struct{}
 type StructRepresentation_StringPairs struct{ sep1, sep2 string }
-type StructRepresentation_StringJoin struct{ sep string }
+type StructRepresentation_Stringjoin struct{ sep string }
 
 type TypeEnum struct {
-	anyType
+	typeBase
 	members []string
 }
+
+// ImplicitValue is an sum type holding values that are implicits.
+// It's not an 'Any' value because it can't be recursive
+// (or to be slightly more specific, it can be one of the recursive kinds,
+// but if so, only its empty value is valid here).
+type ImplicitValue interface{ _ImplicitValue() }
+
+type ImplicitValue_EmptyList struct{}
+type ImplicitValue_EmptyMap struct{}
+type ImplicitValue_String struct{ x string }
+type ImplicitValue_Int struct{ x int }

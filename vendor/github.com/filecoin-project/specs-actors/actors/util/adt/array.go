@@ -4,12 +4,11 @@ import (
 	"bytes"
 
 	amt "github.com/filecoin-project/go-amt-ipld/v2"
+	"github.com/filecoin-project/go-state-types/cbor"
 	cid "github.com/ipfs/go-cid"
 	errors "github.com/pkg/errors"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
-
-	runtime "github.com/filecoin-project/specs-actors/actors/runtime"
 )
 
 // Array stores a sparse sequence of values in an AMT.
@@ -47,14 +46,14 @@ func (a *Array) Root() (cid.Cid, error) {
 
 // Appends a value to the end of the array. Assumes continuous array.
 // If the array isn't continuous use Set and a separate counter
-func (a *Array) AppendContinuous(value runtime.CBORMarshaler) error {
+func (a *Array) AppendContinuous(value cbor.Marshaler) error {
 	if err := a.root.Set(a.store.Context(), a.root.Count, value); err != nil {
 		return errors.Wrapf(err, "array append failed to set index %v value %v in root %v, ", a.root.Count, value, a.root)
 	}
 	return nil
 }
 
-func (a *Array) Set(i uint64, value runtime.CBORMarshaler) error {
+func (a *Array) Set(i uint64, value cbor.Marshaler) error {
 	if err := a.root.Set(a.store.Context(), i, value); err != nil {
 		return xerrors.Errorf("array set failed to set index %v in root %v: %w", i, a.root, err)
 	}
@@ -78,11 +77,13 @@ func (a *Array) BatchDelete(ix []uint64) error {
 // Iterates all entries in the array, deserializing each value in turn into `out` and then calling a function.
 // Iteration halts if the function returns an error.
 // If the output parameter is nil, deserialization is skipped.
-func (a *Array) ForEach(out runtime.CBORUnmarshaler, fn func(i int64) error) error {
+func (a *Array) ForEach(out cbor.Unmarshaler, fn func(i int64) error) error {
 	return a.root.ForEach(a.store.Context(), func(k uint64, val *cbg.Deferred) error {
 		if out != nil {
-			// Why doesn't amt.ForEach() just return the value as bytes?
-			if err := out.UnmarshalCBOR(bytes.NewReader(val.Raw)); err != nil {
+			if deferred, ok := out.(*cbg.Deferred); ok {
+				// fast-path deferred -> deferred to avoid re-decoding.
+				*deferred = *val
+			} else if err := out.UnmarshalCBOR(bytes.NewReader(val.Raw)); err != nil {
 				return err
 			}
 		}
@@ -96,7 +97,7 @@ func (a *Array) Length() uint64 {
 
 // Get retrieves array element into the 'out' unmarshaler, returning a boolean
 //  indicating whether the element was found in the array
-func (a *Array) Get(k uint64, out runtime.CBORUnmarshaler) (bool, error) {
+func (a *Array) Get(k uint64, out cbor.Unmarshaler) (bool, error) {
 
 	if err := a.root.Get(a.store.Context(), k, out); err == nil {
 		return true, nil

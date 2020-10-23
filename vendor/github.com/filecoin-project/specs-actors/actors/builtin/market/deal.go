@@ -4,13 +4,19 @@ import (
 	"bytes"
 
 	addr "github.com/filecoin-project/go-address"
+	abi "github.com/filecoin-project/go-state-types/abi"
+	big "github.com/filecoin-project/go-state-types/big"
+	acrypto "github.com/filecoin-project/go-state-types/crypto"
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
-
-	abi "github.com/filecoin-project/specs-actors/actors/abi"
-	big "github.com/filecoin-project/specs-actors/actors/abi/big"
-	acrypto "github.com/filecoin-project/specs-actors/actors/crypto"
 )
+
+var PieceCIDPrefix = cid.Prefix{
+	Version:  1,
+	Codec:    cid.FilCommitmentUnsealed,
+	MhType:   mh.SHA2_256_TRUNC254_PADDED,
+	MhLength: 32,
+}
 
 // Note: Deal Collateral is only released and returned to clients and miners
 // when the storage deal stops counting towards power. In the current iteration,
@@ -21,7 +27,7 @@ import (
 // Note: ClientCollateralPerEpoch may not be needed and removed pending future confirmation.
 // There will be a Minimum value for both client and provider deal collateral.
 type DealProposal struct {
-	PieceCID     cid.Cid // CommP
+	PieceCID     cid.Cid `checked:"true"` // Checked in validateDeal, CommP
 	PieceSize    abi.PaddedPieceSize
 	VerifiedDeal bool
 	Client       addr.Address
@@ -69,19 +75,7 @@ func (p *DealProposal) Cid() (cid.Cid, error) {
 	if err := p.MarshalCBOR(buf); err != nil {
 		return cid.Undef, err
 	}
-	b := buf.Bytes()
-
-	mhType := uint64(mh.BLAKE2B_MIN + 31)
-	mhLen := -1
-
-	hash, err := mh.Sum(b, mhType, mhLen)
-	if err != nil {
-		return cid.Undef, err
-	}
-
-	c := cid.NewCidV1(cid.DagCBOR, hash)
-
-	return c, nil
+	return abi.CidBuilder.Sum(buf.Bytes())
 }
 
 type DealState struct {

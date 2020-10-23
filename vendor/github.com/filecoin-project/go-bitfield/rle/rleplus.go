@@ -17,8 +17,8 @@ var (
 )
 
 type RLE struct {
-	buf  []byte
-	runs []Run
+	buf       []byte
+	validated bool
 }
 
 func FromBuf(buf []byte) (RLE, error) {
@@ -31,29 +31,49 @@ func FromBuf(buf []byte) (RLE, error) {
 	return rle, nil
 }
 
-func (rle *RLE) RunIterator() (RunIterator, error) {
-	if rle.runs == nil {
+// Bytes returns the encoded RLE.
+//
+// Do not modify.
+func (rle *RLE) Bytes() []byte {
+	return rle.buf
+}
+
+// Validate is a separate function to show up on profile for repeated decode evaluation
+func (rle *RLE) Validate() error {
+	if !rle.validated {
 		source, err := DecodeRLE(rle.buf)
 		if err != nil {
-			return nil, xerrors.Errorf("decoding RLE: %w", err)
+			return xerrors.Errorf("decoding RLE: %w", err)
 		}
 		var length uint64
-		var runs []Run
+
 		for source.HasNext() {
 			r, err := source.NextRun()
 			if err != nil {
-				return nil, xerrors.Errorf("reading run: %w", err)
+				return xerrors.Errorf("reading run: %w", err)
 			}
 			if math.MaxUint64-r.Len < length {
-				return nil, xerrors.New("RLE+ overflows")
+				return xerrors.New("RLE+ overflows")
 			}
 			length += r.Len
-			runs = append(runs, r)
 		}
-		rle.runs = runs
+		rle.validated = true
+	}
+	return nil
+}
+
+func (rle *RLE) RunIterator() (RunIterator, error) {
+	err := rle.Validate()
+	if err != nil {
+		return nil, xerrors.Errorf("validation failed: %w", err)
 	}
 
-	return &RunSliceIterator{Runs: rle.runs}, nil
+	source, err := DecodeRLE(rle.buf)
+	if err != nil {
+		return nil, xerrors.Errorf("decoding RLE: %w", err)
+	}
+
+	return source, nil
 }
 
 func (rle *RLE) Count() (uint64, error) {
@@ -105,7 +125,7 @@ func (rle *RLE) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	rle.runs = []Run{}
+	runs := []Run{}
 	val := false
 	for i, v := range buf {
 		if v == 0 {
@@ -113,13 +133,18 @@ func (rle *RLE) UnmarshalJSON(b []byte) error {
 				return xerrors.New("Cannot have a zero-length run except at start")
 			}
 		} else {
-			rle.runs = append(rle.runs, Run{
+			runs = append(runs, Run{
 				Val: val,
 				Len: v,
 			})
 		}
 		val = !val
 	}
+	enc, err := EncodeRuns(&RunSliceIterator{Runs: runs}, []byte{})
+	if err != nil {
+		return xerrors.Errorf("encoding runs: %w", err)
+	}
+	rle.buf = enc
 
 	return nil
 }

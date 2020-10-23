@@ -17,6 +17,17 @@ func Focus(n ipld.Node, p ipld.Path, fn VisitFn) error {
 	return Progress{}.Focus(n, p, fn)
 }
 
+// Get is the equivalent of Focus, but returns the reached node (rather than invoking a callback at the target),
+// and does not yield Progress information.
+//
+// This function is a helper function which starts a new traversal with default configuration.
+// It cannot cross links automatically (since this requires configuration).
+// Use the equivalent Get function on the Progress structure
+// for more advanced and configurable walks.
+func Get(n ipld.Node, p ipld.Path) (ipld.Node, error) {
+	return Progress{}.Get(n, p)
+}
+
 // FocusedTransform traverses an ipld.Node graph, reaches a single Node,
 // and calls the given TransformFn to decide what new node to replace the visited node with.
 // A new Node tree will be returned (the original is unchanged).
@@ -45,6 +56,32 @@ func FocusedTransform(n ipld.Node, p ipld.Path, fn TransformFn) (ipld.Node, erro
 // the Path recorded of the traversal so far will continue to be extended,
 // and thus continued nested uses of Walk and Focus will see the fully contextualized Path.
 func (prog Progress) Focus(n ipld.Node, p ipld.Path, fn VisitFn) error {
+	n, err := prog.get(n, p, true)
+	if err != nil {
+		return err
+	}
+	return fn(prog, n)
+}
+
+// Get is the equivalent of Focus, but returns the reached node (rather than invoking a callback at the target),
+// and does not yield Progress information.
+//
+// Provide configuration to this process using the Config field in the Progress object.
+//
+// This walk will automatically cross links, but requires some configuration
+// with link loading functions to do so.
+//
+// If doing several traversals which are nested, consider using the Focus funcion in preference to Get;
+// the Focus functions provide updated Progress objects which can be used to do nested traversals while keeping consistent track of progress,
+// such that continued nested uses of Walk or Focus or Get will see the fully contextualized Path.
+func (prog Progress) Get(n ipld.Node, p ipld.Path) (ipld.Node, error) {
+	return prog.get(n, p, false)
+}
+
+// get is the internal implementation for Focus and Get.
+// It *mutates* the Progress object it's called on, and returns reached nodes.
+// For Get calls, trackProgress=false, which avoids some allocations for state tracking that's not needed by that call.
+func (prog *Progress) get(n ipld.Node, p ipld.Path, trackProgress bool) (ipld.Node, error) {
 	prog.init()
 	segments := p.Segments()
 	var prev ipld.Node // for LinkContext
@@ -52,25 +89,25 @@ func (prog Progress) Focus(n ipld.Node, p ipld.Path, fn VisitFn) error {
 		// Traverse the segment.
 		switch n.ReprKind() {
 		case ipld.ReprKind_Invalid:
-			return fmt.Errorf("cannot traverse node at %q: it is undefined", p.Truncate(i))
+			panic(fmt.Errorf("invalid node encountered at %q", p.Truncate(i)))
 		case ipld.ReprKind_Map:
-			next, err := n.LookupString(seg.String())
+			next, err := n.LookupByString(seg.String())
 			if err != nil {
-				return fmt.Errorf("error traversing segment %q on node at %q: %s", seg, p.Truncate(i), err)
+				return nil, fmt.Errorf("error traversing segment %q on node at %q: %s", seg, p.Truncate(i), err)
 			}
 			prev, n = n, next
 		case ipld.ReprKind_List:
 			intSeg, err := seg.Index()
 			if err != nil {
-				return fmt.Errorf("error traversing segment %q on node at %q: the segment cannot be parsed as a number and the node is a list", seg, p.Truncate(i))
+				return nil, fmt.Errorf("error traversing segment %q on node at %q: the segment cannot be parsed as a number and the node is a list", seg, p.Truncate(i))
 			}
-			next, err := n.LookupIndex(intSeg)
+			next, err := n.LookupByIndex(intSeg)
 			if err != nil {
-				return fmt.Errorf("error traversing segment %q on node at %q: %s", seg, p.Truncate(i), err)
+				return nil, fmt.Errorf("error traversing segment %q on node at %q: %s", seg, p.Truncate(i), err)
 			}
 			prev, n = n, next
 		default:
-			return fmt.Errorf("cannot traverse node at %q: %s", p.Truncate(i), fmt.Errorf("cannot traverse terminals"))
+			return nil, fmt.Errorf("cannot traverse node at %q: %s", p.Truncate(i), fmt.Errorf("cannot traverse terminals"))
 		}
 		// Dereference any links.
 		for n.ReprKind() == ipld.ReprKind_Link {
@@ -82,11 +119,11 @@ func (prog Progress) Focus(n ipld.Node, p ipld.Path, fn VisitFn) error {
 				ParentNode: prev,
 			}
 			// Pick what in-memory format we will build.
-			ns, err := prog.Cfg.LinkTargetNodeStyleChooser(lnk, lnkCtx)
+			np, err := prog.Cfg.LinkTargetNodePrototypeChooser(lnk, lnkCtx)
 			if err != nil {
-				return fmt.Errorf("error traversing node at %q: could not load link %q: %s", p.Truncate(i+1), lnk, err)
+				return nil, fmt.Errorf("error traversing node at %q: could not load link %q: %s", p.Truncate(i+1), lnk, err)
 			}
-			nb := ns.NewBuilder()
+			nb := np.NewBuilder()
 			// Load link!
 			err = lnk.Load(
 				prog.Cfg.Ctx,
@@ -95,15 +132,19 @@ func (prog Progress) Focus(n ipld.Node, p ipld.Path, fn VisitFn) error {
 				prog.Cfg.LinkLoader,
 			)
 			if err != nil {
-				return fmt.Errorf("error traversing node at %q: could not load link %q: %s", p.Truncate(i+1), lnk, err)
+				return nil, fmt.Errorf("error traversing node at %q: could not load link %q: %s", p.Truncate(i+1), lnk, err)
 			}
-			prog.LastBlock.Path = p.Truncate(i + 1)
-			prog.LastBlock.Link = lnk
+			if trackProgress {
+				prog.LastBlock.Path = p.Truncate(i + 1)
+				prog.LastBlock.Link = lnk
+			}
 			prev, n = n, nb.Build()
 		}
 	}
-	prog.Path = prog.Path.Join(p)
-	return fn(prog, n)
+	if trackProgress {
+		prog.Path = prog.Path.Join(p)
+	}
+	return n, nil
 }
 
 // FocusedTransform traverses an ipld.Node graph, reaches a single Node,

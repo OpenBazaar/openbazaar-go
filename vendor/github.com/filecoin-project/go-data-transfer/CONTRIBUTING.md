@@ -38,6 +38,8 @@ import (
         <single, empty line>
         [external packages]
         <single, empty line>
+        [other-filecoin-project packages]
+        <single, empty line>
         [go-data-transfer packages]
 )
 ```
@@ -55,9 +57,13 @@ import (
 	"github.com/ipfs/go-cid"
 	cborgen "github.com/whyrusleeping/cbor-gen"
 
-	"github.com/filecoin-project/go-data-transfer"
+        "github.com/filecoin-project/go-statemachine"
+
+	datatransfer "github.com/filecoin-project/go-data-transfer"
 )
 ```
+
+You can run `script/fiximports` to put all your code in the desired format
 
 #### Comments
 Comments are a communication to other developers (including your future self) to help them understand and maintain code. Good comments describe the _intent_ of the code, without repeating the procedures directly.

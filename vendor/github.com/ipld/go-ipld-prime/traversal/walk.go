@@ -142,7 +142,7 @@ func (prog Progress) walkAdv_iterateAll(n ipld.Node, s selector.Selector, fn Adv
 
 func (prog Progress) walkAdv_iterateSelective(n ipld.Node, attn []ipld.PathSegment, s selector.Selector, fn AdvVisitFn) error {
 	for _, ps := range attn {
-		v, err := n.LookupSegment(ps)
+		v, err := n.LookupBySegment(ps)
 		if err != nil {
 			continue
 		}
@@ -184,11 +184,11 @@ func (prog Progress) loadLink(v ipld.Node, parent ipld.Node) (ipld.Node, error) 
 		ParentNode: parent,
 	}
 	// Pick what in-memory format we will build.
-	ns, err := prog.Cfg.LinkTargetNodeStyleChooser(lnk, lnkCtx)
+	np, err := prog.Cfg.LinkTargetNodePrototypeChooser(lnk, lnkCtx)
 	if err != nil {
 		return nil, fmt.Errorf("error traversing node at %q: could not load link %q: %s", prog.Path, lnk, err)
 	}
-	nb := ns.NewBuilder()
+	nb := np.NewBuilder()
 	// Load link!
 	err = lnk.Load(
 		prog.Cfg.Ctx,
@@ -218,10 +218,10 @@ func (prog Progress) loadLink(v ipld.Node, parent ipld.Node) (ipld.Node, error) 
 // (You can certainly do a additional traversals, including transforms,
 // from inside the TransformFn while building the replacement node.)
 //
-// The style (that is, implementation) of Node returned will be the same as the
-// styles of the Nodes at the same positions in the existing tree
+// The prototype (that is, implementation) of Node returned will be the same as the
+// prototype of the Nodes at the same positions in the existing tree
 // (literally, builders used to construct any new needed intermediate nodes
-// are chosen by asking the existing nodes about their style).
+// are chosen by asking the existing nodes about their prototype).
 //
 // This feature is not yet implemented.
 func (prog Progress) WalkTransforming(n ipld.Node, s selector.Selector, fn TransformFn) (ipld.Node, error) {

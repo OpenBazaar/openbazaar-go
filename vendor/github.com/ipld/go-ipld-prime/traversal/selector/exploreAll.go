@@ -32,7 +32,7 @@ func (pc ParseContext) ParseExploreAll(n ipld.Node) (Selector, error) {
 	if n.ReprKind() != ipld.ReprKind_Map {
 		return nil, fmt.Errorf("selector spec parse rejected: selector body must be a map")
 	}
-	next, err := n.LookupString(SelectorKey_Next)
+	next, err := n.LookupByString(SelectorKey_Next)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: next field must be present in ExploreAll selector")
 	}

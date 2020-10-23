@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = &plainList{}
-	_ ipld.NodeStyle     = Style__List{}
+	_ ipld.NodePrototype = Prototype__List{}
 	_ ipld.NodeBuilder   = &plainList__Builder{}
 	_ ipld.NodeAssembler = &plainList__Assembler{}
 )
@@ -24,24 +24,24 @@ type plainList struct {
 func (plainList) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_List
 }
-func (plainList) LookupString(string) (ipld.Node, error) {
-	return mixins.List{"list"}.LookupString("")
+func (plainList) LookupByString(string) (ipld.Node, error) {
+	return mixins.List{"list"}.LookupByString("")
 }
-func (plainList) Lookup(ipld.Node) (ipld.Node, error) {
-	return mixins.List{"list"}.Lookup(nil)
+func (plainList) LookupByNode(ipld.Node) (ipld.Node, error) {
+	return mixins.List{"list"}.LookupByNode(nil)
 }
-func (n *plainList) LookupIndex(idx int) (ipld.Node, error) {
+func (n *plainList) LookupByIndex(idx int) (ipld.Node, error) {
 	if n.Length() <= idx {
 		return nil, ipld.ErrNotExists{ipld.PathSegmentOfInt(idx)}
 	}
 	return n.x[idx], nil
 }
-func (n *plainList) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
+func (n *plainList) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
 	idx, err := seg.Index()
 	if err != nil {
-		panic("todo name this kind of error")
+		return nil, ipld.ErrInvalidSegmentForList{TroubleSegment: seg, Reason: err}
 	}
-	return n.LookupIndex(idx)
+	return n.LookupByIndex(idx)
 }
 func (plainList) MapIterator() ipld.MapIterator {
 	return nil
@@ -52,7 +52,7 @@ func (n *plainList) ListIterator() ipld.ListIterator {
 func (n *plainList) Length() int {
 	return len(n.x)
 }
-func (plainList) IsUndefined() bool {
+func (plainList) IsAbsent() bool {
 	return false
 }
 func (plainList) IsNull() bool {
@@ -76,8 +76,8 @@ func (plainList) AsBytes() ([]byte, error) {
 func (plainList) AsLink() (ipld.Link, error) {
 	return mixins.List{"list"}.AsLink()
 }
-func (plainList) Style() ipld.NodeStyle {
-	return Style__List{}
+func (plainList) Prototype() ipld.NodePrototype {
+	return Prototype__List{}
 }
 
 type plainList_ListIterator struct {
@@ -98,11 +98,11 @@ func (itr *plainList_ListIterator) Done() bool {
 	return itr.idx >= len(itr.n.x)
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__List struct{}
+type Prototype__List struct{}
 
-func (Style__List) NewBuilder() ipld.NodeBuilder {
+func (Prototype__List) NewBuilder() ipld.NodeBuilder {
 	return &plainList__Builder{plainList__Assembler{w: &plainList{}}}
 }
 
@@ -182,16 +182,18 @@ func (plainList__Assembler) AssignLink(ipld.Link) error {
 }
 func (na *plainList__Assembler) AssignNode(v ipld.Node) error {
 	// Sanity check, then update, assembler state.
+	//  Update of state to 'finished' comes later; where exactly depends on if shortcuts apply.
 	if na.state != laState_initial {
 		panic("misuse")
 	}
-	na.state = laState_finished
 	// Copy the content.
 	if v2, ok := v.(*plainList); ok { // if our own type: shortcut.
 		// Copy the structure by value.
 		//  This means we'll have pointers into the same internal maps and slices;
 		//   this is okay, because the Node type promises it's immutable, and we are going to instantly finish ourselves to also maintain that.
+		// FIXME: the shortcut behaves differently than the long way: it discards any existing progress.  Doesn't violate immut, but is odd.
 		*na.w = *v2
+		na.state = laState_finished
 		return nil
 	}
 	// If the above shortcut didn't work, resort to a generic copy.
@@ -209,11 +211,10 @@ func (na *plainList__Assembler) AssignNode(v ipld.Node) error {
 			return err
 		}
 	}
-	// validators could run and report errors promptly, if this type had any -- same as for regular Finish.
-	return nil
+	return na.Finish()
 }
-func (plainList__Assembler) Style() ipld.NodeStyle {
-	return Style__List{}
+func (plainList__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__List{}
 }
 
 // -- ListAssembler -->
@@ -242,8 +243,8 @@ func (la *plainList__Assembler) Finish() error {
 	// validators could run and report errors promptly, if this type had any.
 	return nil
 }
-func (plainList__Assembler) ValueStyle(_ int) ipld.NodeStyle {
-	return Style__Any{}
+func (plainList__Assembler) ValuePrototype(_ int) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 // -- ListAssembler.ValueAssembler -->
@@ -295,8 +296,8 @@ func (lva *plainList__ValueAssembler) AssignNode(v ipld.Node) error {
 	lva.la = nil // invalidate self to prevent further incorrect use.
 	return nil
 }
-func (plainList__ValueAssembler) Style() ipld.NodeStyle {
-	return Style__Any{}
+func (plainList__ValueAssembler) Prototype() ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 type plainList__ValueAssemblerMap struct {
@@ -317,11 +318,11 @@ func (ma *plainList__ValueAssemblerMap) AssembleKey() ipld.NodeAssembler {
 func (ma *plainList__ValueAssemblerMap) AssembleValue() ipld.NodeAssembler {
 	return ma.ca.AssembleValue()
 }
-func (plainList__ValueAssemblerMap) KeyStyle() ipld.NodeStyle {
-	return Style__String{}
+func (plainList__ValueAssemblerMap) KeyPrototype() ipld.NodePrototype {
+	return Prototype__String{}
 }
-func (plainList__ValueAssemblerMap) ValueStyle(_ string) ipld.NodeStyle {
-	return Style__Any{}
+func (plainList__ValueAssemblerMap) ValuePrototype(_ string) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 func (ma *plainList__ValueAssemblerMap) Finish() error {
@@ -345,8 +346,8 @@ type plainList__ValueAssemblerList struct {
 func (la *plainList__ValueAssemblerList) AssembleValue() ipld.NodeAssembler {
 	return la.ca.AssembleValue()
 }
-func (plainList__ValueAssemblerList) ValueStyle(_ int) ipld.NodeStyle {
-	return Style__Any{}
+func (plainList__ValueAssemblerList) ValuePrototype(_ int) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 func (la *plainList__ValueAssemblerList) Finish() error {

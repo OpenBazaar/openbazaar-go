@@ -122,7 +122,7 @@ func (it *it2r) prep() error {
 	if !it.HasNext() {
 		return nil
 	}
-	if it.run[0].Val == false {
+	if !it.run[0].Val {
 		it.run[1].Val = true
 		it.run[1].Len = 1
 		return nil

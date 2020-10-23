@@ -6,8 +6,8 @@ import (
 
 var (
 	//_ ipld.Node          = &anyNode{}
-	_ ipld.NodeStyle   = Style__Any{}
-	_ ipld.NodeBuilder = &anyBuilder{}
+	_ ipld.NodePrototype = Prototype__Any{}
+	_ ipld.NodeBuilder   = &anyBuilder{}
 	//_ ipld.NodeAssembler = &anyAssembler{}
 )
 
@@ -33,11 +33,11 @@ var (
 
 // Unimplemented at present -- see "REVIEW" comment on anyNode.
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Any struct{}
+type Prototype__Any struct{}
 
-func (Style__Any) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Any) NewBuilder() ipld.NodeBuilder {
 	return &anyBuilder{}
 }
 
@@ -56,7 +56,7 @@ func (Style__Any) NewBuilder() ipld.NodeBuilder {
 type anyBuilder struct {
 	// kind is set on first interaction, and used to select which builder to delegate 'Build' to!
 	// As soon as it's been set to a value other than zero (being "Invalid"), all other Assign/Begin calls will fail since something is already in progress.
-	// May also be set to the magic value '99', which means "i dunno, I'm just carrying another node of unknown style".
+	// May also be set to the magic value '99', which means "i dunno, I'm just carrying another node of unknown prototype".
 	kind ipld.ReprKind
 
 	// Only one of the following ends up being used...
@@ -65,7 +65,7 @@ type anyBuilder struct {
 	//    freed as soon as the builder is done.
 	// Builders are only used for recursives;
 	//  scalars are simple enough we just do them directly.
-	// 'scalarNode' may also hold another Node of unknown style (possibly not even from this package),
+	// 'scalarNode' may also hold another Node of unknown prototype (possibly not even from this package),
 	//  in which case this is indicated by 'kind==99'.
 
 	mapBuilder  plainMap__Builder
@@ -156,8 +156,8 @@ func (nb *anyBuilder) AssignNode(v ipld.Node) error {
 	nb.scalarNode = v
 	return nil
 }
-func (anyBuilder) Style() ipld.NodeStyle {
-	return Style__Any{}
+func (anyBuilder) Prototype() ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 func (nb *anyBuilder) Build() ipld.Node {

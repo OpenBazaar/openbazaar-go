@@ -2,14 +2,15 @@ package init
 
 import (
 	addr "github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/cbor"
+	"github.com/filecoin-project/go-state-types/exitcode"
 	cid "github.com/ipfs/go-cid"
 
-	abi "github.com/filecoin-project/specs-actors/actors/abi"
-	builtin "github.com/filecoin-project/specs-actors/actors/builtin"
-	runtime "github.com/filecoin-project/specs-actors/actors/runtime"
-	exitcode "github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	"github.com/filecoin-project/specs-actors/actors/builtin"
+	"github.com/filecoin-project/specs-actors/actors/runtime"
 	autil "github.com/filecoin-project/specs-actors/actors/util"
-	adt "github.com/filecoin-project/specs-actors/actors/util/adt"
+	"github.com/filecoin-project/specs-actors/actors/util/adt"
 )
 
 // The init actor uniquely has the power to create new actors.
@@ -23,26 +24,34 @@ func (a Actor) Exports() []interface{} {
 	}
 }
 
-var _ abi.Invokee = Actor{}
+func (a Actor) Code() cid.Cid {
+	return builtin.InitActorCodeID
+}
+
+func (a Actor) IsSingleton() bool {
+	return true
+}
+
+func (a Actor) State() cbor.Er { return new(State) }
+
+var _ runtime.VMActor = Actor{}
 
 type ConstructorParams struct {
 	NetworkName string
 }
 
-func (a Actor) Constructor(rt runtime.Runtime, params *ConstructorParams) *adt.EmptyValue {
+func (a Actor) Constructor(rt runtime.Runtime, params *ConstructorParams) *abi.EmptyValue {
 	rt.ValidateImmediateCallerIs(builtin.SystemActorAddr)
 	emptyMap, err := adt.MakeEmptyMap(adt.AsStore(rt)).Root()
-	if err != nil {
-		rt.Abortf(exitcode.ErrIllegalState, "failed to construct state: %v", err)
-	}
+	builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to construct state")
 
 	st := ConstructState(emptyMap, params.NetworkName)
-	rt.State().Create(st)
+	rt.StateCreate(st)
 	return nil
 }
 
 type ExecParams struct {
-	CodeCID           cid.Cid
+	CodeCID           cid.Cid `checked:"true"` // invalid CIDs won't get committed to the state tree
 	ConstructorParams []byte
 }
 
@@ -53,8 +62,8 @@ type ExecReturn struct {
 
 func (a Actor) Exec(rt runtime.Runtime, params *ExecParams) *ExecReturn {
 	rt.ValidateImmediateCallerAcceptAny()
-	callerCodeCID, ok := rt.GetActorCodeCID(rt.Message().Caller())
-	autil.AssertMsg(ok, "no code for actor at %s", rt.Message().Caller())
+	callerCodeCID, ok := rt.GetActorCodeCID(rt.Caller())
+	autil.AssertMsg(ok, "no code for actor at %s", rt.Caller())
 	if !canExec(callerCodeCID, params.CodeCID) {
 		rt.Abortf(exitcode.ErrForbidden, "caller type %v cannot exec actor type %v", callerCodeCID, params.CodeCID)
 	}
@@ -68,19 +77,18 @@ func (a Actor) Exec(rt runtime.Runtime, params *ExecParams) *ExecReturn {
 	// Allocate an ID for this actor.
 	// Store mapping of pubkey or actor address to actor ID
 	var st State
-	idAddr := rt.State().Transaction(&st, func() interface{} {
-		idAddr, err := st.MapAddressToNewID(adt.AsStore(rt), uniqueAddress)
-		if err != nil {
-			rt.Abortf(exitcode.ErrIllegalState, "exec failed: %v", err)
-		}
-		return idAddr
-	}).(addr.Address)
+	var idAddr addr.Address
+	rt.StateTransaction(&st, func() {
+		var err error
+		idAddr, err = st.MapAddressToNewID(adt.AsStore(rt), uniqueAddress)
+		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to allocate ID address")
+	})
 
 	// Create an empty actor.
 	rt.CreateActor(params.CodeCID, idAddr)
 
 	// Invoke constructor.
-	_, code := rt.Send(idAddr, builtin.MethodConstructor, runtime.CBORBytes(params.ConstructorParams), rt.Message().ValueReceived())
+	code := rt.Send(idAddr, builtin.MethodConstructor, runtime.CBORBytes(params.ConstructorParams), rt.ValueReceived(), &builtin.Discard{})
 	builtin.RequireSuccess(rt, code, "constructor failed")
 
 	return &ExecReturn{idAddr, uniqueAddress}

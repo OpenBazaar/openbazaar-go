@@ -4,9 +4,11 @@ import (
 	"context"
 	"io"
 
-	"github.com/filecoin-project/go-fil-markets/shared"
-	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
+
+	"github.com/filecoin-project/go-state-types/abi"
+
+	"github.com/filecoin-project/go-fil-markets/shared"
 )
 
 // ProviderSubscriber is a callback that is run when events are emitted on a StorageProvider
@@ -21,18 +23,18 @@ type StorageProvider interface {
 	// messages on the storage market's libp2p protocols
 	Start(ctx context.Context) error
 
+	// OnReady registers a listener for when the provider comes on line
+	OnReady(shared.ReadyFunc)
+
 	// Stop terminates processing of deals on a StorageProvider
 	Stop() error
 
-	// SetAsk configures the storage miner's ask with the provided price,
+	// SetAsk configures the storage miner's ask with the provided prices (for unverified and verified deals),
 	// duration, and options. Any previously-existing ask is replaced.
-	SetAsk(price abi.TokenAmount, duration abi.ChainEpoch, options ...StorageAskOption) error
+	SetAsk(price abi.TokenAmount, verifiedPrice abi.TokenAmount, duration abi.ChainEpoch, options ...StorageAskOption) error
 
 	// GetAsk returns the storage miner's ask, or nil if one does not exist.
 	GetAsk() *SignedStorageAsk
-
-	// ListDeals lists on-chain deals associated with this storage provider
-	ListDeals(ctx context.Context) ([]StorageDeal, error)
 
 	// ListLocalDeals lists deals processed by this storage provider
 	ListLocalDeals() ([]MinerDeal, error)

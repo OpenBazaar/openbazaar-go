@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = &plainLink{}
-	_ ipld.NodeStyle     = Style__Link{}
+	_ ipld.NodePrototype = Prototype__Link{}
 	_ ipld.NodeBuilder   = &plainLink__Builder{}
 	_ ipld.NodeAssembler = &plainLink__Assembler{}
 )
@@ -26,17 +26,17 @@ type plainLink struct {
 func (plainLink) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Link
 }
-func (plainLink) LookupString(string) (ipld.Node, error) {
-	return mixins.Link{"link"}.LookupString("")
+func (plainLink) LookupByString(string) (ipld.Node, error) {
+	return mixins.Link{"link"}.LookupByString("")
 }
-func (plainLink) Lookup(key ipld.Node) (ipld.Node, error) {
-	return mixins.Link{"link"}.Lookup(nil)
+func (plainLink) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return mixins.Link{"link"}.LookupByNode(nil)
 }
-func (plainLink) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Link{"link"}.LookupIndex(0)
+func (plainLink) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Link{"link"}.LookupByIndex(0)
 }
-func (plainLink) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return mixins.Link{"link"}.LookupSegment(seg)
+func (plainLink) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return mixins.Link{"link"}.LookupBySegment(seg)
 }
 func (plainLink) MapIterator() ipld.MapIterator {
 	return nil
@@ -47,7 +47,7 @@ func (plainLink) ListIterator() ipld.ListIterator {
 func (plainLink) Length() int {
 	return -1
 }
-func (plainLink) IsUndefined() bool {
+func (plainLink) IsAbsent() bool {
 	return false
 }
 func (plainLink) IsNull() bool {
@@ -71,15 +71,15 @@ func (plainLink) AsBytes() ([]byte, error) {
 func (n *plainLink) AsLink() (ipld.Link, error) {
 	return n.x, nil
 }
-func (plainLink) Style() ipld.NodeStyle {
-	return Style__Link{}
+func (plainLink) Prototype() ipld.NodePrototype {
+	return Prototype__Link{}
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Link struct{}
+type Prototype__Link struct{}
 
-func (Style__Link) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Link) NewBuilder() ipld.NodeBuilder {
 	var w plainLink
 	return &plainLink__Builder{plainLink__Assembler{w: &w}}
 }
@@ -140,6 +140,6 @@ func (na *plainLink__Assembler) AssignNode(v ipld.Node) error {
 		return nil
 	}
 }
-func (plainLink__Assembler) Style() ipld.NodeStyle {
-	return Style__Link{}
+func (plainLink__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Link{}
 }

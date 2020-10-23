@@ -3,8 +3,9 @@ package requestvalidation
 import (
 	"errors"
 
-	datatransfer "github.com/filecoin-project/go-data-transfer"
 	"github.com/ipfs/go-cid"
+
+	datatransfer "github.com/filecoin-project/go-data-transfer"
 
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 )
@@ -37,7 +38,9 @@ var (
 	ErrInacceptableDealState = errors.New("deal is not a in a state where deals are accepted")
 
 	// DataTransferStates are the states in which it would make sense to actually start a data transfer
-	DataTransferStates = []storagemarket.StorageDealStatus{storagemarket.StorageDealValidating, storagemarket.StorageDealWaitingForData, storagemarket.StorageDealUnknown}
+	// We accept deals even in the StorageDealTransferring state too as we could also also receive a data transfer restart request
+	DataTransferStates = []storagemarket.StorageDealStatus{storagemarket.StorageDealValidating, storagemarket.StorageDealWaitingForData, storagemarket.StorageDealUnknown,
+		storagemarket.StorageDealTransferring, storagemarket.StorageDealProviderTransferRestart}
 )
 
 // StorageDataTransferVoucher is the voucher type for data transfers

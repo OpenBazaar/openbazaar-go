@@ -1,10 +1,16 @@
 package schema
 
+import (
+	ipld "github.com/ipld/go-ipld-prime"
+)
+
 /* cookie-cutter standard interface stuff */
 
-func (anyType) _Type()                    {}
-func (t anyType) TypeSystem() *TypeSystem { return t.universe }
-func (t anyType) Name() TypeName          { return t.name }
+func (t *typeBase) _Type(ts *TypeSystem) {
+	t.universe = ts
+}
+func (t typeBase) TypeSystem() *TypeSystem { return t.universe }
+func (t typeBase) Name() TypeName          { return t.name }
 
 func (TypeBool) Kind() Kind   { return Kind_Bool }
 func (TypeString) Kind() Kind { return Kind_String }
@@ -18,7 +24,63 @@ func (TypeUnion) Kind() Kind  { return Kind_Union }
 func (TypeStruct) Kind() Kind { return Kind_Struct }
 func (TypeEnum) Kind() Kind   { return Kind_Enum }
 
+func (TypeBool) RepresentationBehavior() ipld.ReprKind   { return ipld.ReprKind_Bool }
+func (TypeString) RepresentationBehavior() ipld.ReprKind { return ipld.ReprKind_String }
+func (TypeBytes) RepresentationBehavior() ipld.ReprKind  { return ipld.ReprKind_Bytes }
+func (TypeInt) RepresentationBehavior() ipld.ReprKind    { return ipld.ReprKind_Int }
+func (TypeFloat) RepresentationBehavior() ipld.ReprKind  { return ipld.ReprKind_Float }
+func (TypeMap) RepresentationBehavior() ipld.ReprKind    { return ipld.ReprKind_Map }
+func (TypeList) RepresentationBehavior() ipld.ReprKind   { return ipld.ReprKind_List }
+func (TypeLink) RepresentationBehavior() ipld.ReprKind   { return ipld.ReprKind_Link }
+func (t TypeUnion) RepresentationBehavior() ipld.ReprKind {
+	switch t.representation.(type) {
+	case UnionRepresentation_Keyed:
+		return ipld.ReprKind_Map
+	case UnionRepresentation_Kinded:
+		return ipld.ReprKind_Invalid // you can't know with this one, until you see the value (and thus can its inhabitant's behavior)!
+	case UnionRepresentation_Envelope:
+		return ipld.ReprKind_Map
+	case UnionRepresentation_Inline:
+		return ipld.ReprKind_Map
+	default:
+		panic("unreachable")
+	}
+}
+func (t TypeStruct) RepresentationBehavior() ipld.ReprKind {
+	switch t.representation.(type) {
+	case StructRepresentation_Map:
+		return ipld.ReprKind_Map
+	case StructRepresentation_Tuple:
+		return ipld.ReprKind_List
+	case StructRepresentation_StringPairs:
+		return ipld.ReprKind_String
+	case StructRepresentation_Stringjoin:
+		return ipld.ReprKind_String
+	default:
+		panic("unreachable")
+	}
+}
+func (t TypeEnum) RepresentationBehavior() ipld.ReprKind {
+	// TODO: this should have a representation strategy switch too; sometimes that will indicate int representation behavior.
+	return ipld.ReprKind_String
+}
+
 /* interesting methods per Type type */
+
+// beware: many of these methods will change when we successfully bootstrap self-hosting.
+//
+// The current methods return reified Type objects; in the future, there might be less of that.
+// Returning reified Type objects requires bouncing lookups through the typesystem map;
+// this is unavoidable because we need to handle cycles in definitions.
+// However, the extra (and cyclic) pointers that requires won't necessarily jive well if
+// we remake the Type types to have close resemblances to the Data Model tree data.)
+//
+// It's also unfortunate that some of the current methods collide in name with
+// the names of the Data Model fields.  We might reshuffling things to reduce this.
+//
+// At any rate, all of these changes will come as a sweep once we
+// get a self-hosting gen of the schema-schema, not before
+// (the effort of updating template references is substantial).
 
 // IsAnonymous is returns true if the type was unnamed.  Unnamed types will
 // claim to have a Name property like `{Foo:Bar}`, and this is not guaranteed
@@ -32,12 +94,12 @@ func (t TypeMap) IsAnonymous() bool {
 // Note that map keys will must always be some type which is representable as a
 // string in the IPLD Data Model (e.g. either TypeString or TypeEnum).
 func (t TypeMap) KeyType() Type {
-	return t.keyType
+	return t.universe.namedTypes[t.keyType]
 }
 
-// ValueType returns to the Type of the map values.
+// ValueType returns the Type of the map values.
 func (t TypeMap) ValueType() Type {
-	return t.valueType
+	return t.universe.namedTypes[t.valueType]
 }
 
 // ValueIsNullable returns a bool describing if the map values are permitted
@@ -55,7 +117,7 @@ func (t TypeList) IsAnonymous() bool {
 
 // ValueType returns to the Type of the list values.
 func (t TypeList) ValueType() Type {
-	return t.valueType
+	return t.universe.namedTypes[t.valueType]
 }
 
 // ValueIsNullable returns a bool describing if the list values are permitted
@@ -64,20 +126,32 @@ func (t TypeList) ValueIsNullable() bool {
 	return t.valueNullable
 }
 
-// UnionMembers returns a set of all the types that can inhabit this Union.
-func (t TypeUnion) UnionMembers() map[Type]struct{} {
-	m := make(map[Type]struct{}, len(t.values)+len(t.valuesKinded))
-	switch t.style {
-	case UnionStyle_Kinded:
-		for _, v := range t.valuesKinded {
-			m[v] = struct{}{}
-		}
-	default:
-		for _, v := range t.values {
-			m[v] = struct{}{}
+// Members returns the list of all types that are possible inhabitants of this union.
+func (t TypeUnion) Members() []Type {
+	a := make([]Type, len(t.members))
+	for i := range t.members {
+		a[i] = t.universe.namedTypes[t.members[i]]
+	}
+	return a
+}
+
+func (t TypeUnion) RepresentationStrategy() UnionRepresentation {
+	return t.representation
+}
+
+func (r UnionRepresentation_Keyed) GetDiscriminant(t Type) string {
+	for d, t2 := range r.table {
+		if t2 == t.Name() {
+			return d
 		}
 	}
-	return m
+	panic("that type isn't a member of this union")
+}
+
+// GetMember returns type info for the member matching the kind argument,
+// or may return nil if that kind is not mapped to a member of this union.
+func (r UnionRepresentation_Kinded) GetMember(k ipld.ReprKind) TypeName {
+	return r.table[k]
 }
 
 // Fields returns a slice of descriptions of the object's fields.
@@ -97,6 +171,17 @@ func (t TypeStruct) Field(name string) *StructField {
 	return nil
 }
 
+// Parent returns the type information that this field describes a part of.
+//
+// While in many cases, you may know the parent already from context,
+// there may still be situations where want to pass around a field and
+// not need to continue passing down the parent type with it; this method
+// helps your code be less redundant in such a situation.
+// (You'll find this useful for looking up any rename directives, for example,
+// when holding onto a field, since that requires looking up information from
+// the representation strategy, which is a property of the type as a whole.)
+func (f StructField) Parent() *TypeStruct { return f.parent }
+
 // Name returns the string name of this field.  The name is the string that
 // will be used as a map key if the structure this field is a member of is
 // serialized as a map representation.
@@ -104,7 +189,7 @@ func (f StructField) Name() string { return f.name }
 
 // Type returns the Type of this field's value.  Note the field may
 // also be unset if it is either Optional or Nullable.
-func (f StructField) Type() Type { return f.typ }
+func (f StructField) Type() Type { return f.parent.universe.namedTypes[f.typ] }
 
 // IsOptional returns true if the field is allowed to be absent from the object.
 // If IsOptional is false, the field may be absent from the serial representation
@@ -124,6 +209,12 @@ func (f StructField) IsOptional() bool { return f.optional }
 // or either, or neither.
 func (f StructField) IsNullable() bool { return f.nullable }
 
+// IsMaybe returns true if the field value is allowed to be either null or absent.
+//
+// This is a simple "or" of the two properties,
+// but this method is a shorthand that turns out useful often.
+func (f StructField) IsMaybe() bool { return f.nullable || f.optional }
+
 func (t TypeStruct) RepresentationStrategy() StructRepresentation {
 	return t.representation
 }
@@ -133,6 +224,10 @@ func (r StructRepresentation_Map) GetFieldKey(field StructField) string {
 		return n
 	}
 	return field.name
+}
+
+func (r StructRepresentation_Stringjoin) GetDelim() string {
+	return r.sep
 }
 
 // Members returns a slice the strings which are valid inhabitants of this enum.
@@ -156,5 +251,5 @@ func (t TypeLink) HasReferencedType() bool {
 
 // ReferencedType returns the type hint for the node on the other side of the link
 func (t TypeLink) ReferencedType() Type {
-	return t.referencedType
+	return t.universe.namedTypes[t.referencedType]
 }

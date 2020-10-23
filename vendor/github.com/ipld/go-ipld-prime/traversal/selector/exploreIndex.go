@@ -43,7 +43,7 @@ func (pc ParseContext) ParseExploreIndex(n ipld.Node) (Selector, error) {
 	if n.ReprKind() != ipld.ReprKind_Map {
 		return nil, fmt.Errorf("selector spec parse rejected: selector body must be a map")
 	}
-	indexNode, err := n.LookupString(SelectorKey_Index)
+	indexNode, err := n.LookupByString(SelectorKey_Index)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: index field must be present in ExploreIndex selector")
 	}
@@ -51,7 +51,7 @@ func (pc ParseContext) ParseExploreIndex(n ipld.Node) (Selector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: index field must be a number in ExploreIndex selector")
 	}
-	next, err := n.LookupString(SelectorKey_Next)
+	next, err := n.LookupByString(SelectorKey_Next)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: next field must be present in ExploreIndex selector")
 	}

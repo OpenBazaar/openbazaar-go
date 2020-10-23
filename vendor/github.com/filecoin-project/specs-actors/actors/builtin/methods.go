@@ -1,16 +1,12 @@
 package builtin
 
 import (
-	abi "github.com/filecoin-project/specs-actors/actors/abi"
+	abi "github.com/filecoin-project/go-state-types/abi"
 )
 
 const (
 	MethodSend        = abi.MethodNum(0)
 	MethodConstructor = abi.MethodNum(1)
-
-	// TODO fin: remove this once canonical method numbers are finalized
-	// https://github.com/filecoin-project/specs-actors/issues/461
-	MethodPlaceholder = abi.MethodNum(1 << 30)
 )
 
 var MethodsAccount = struct {
@@ -44,7 +40,8 @@ var MethodsMultisig = struct {
 	RemoveSigner                abi.MethodNum
 	SwapSigner                  abi.MethodNum
 	ChangeNumApprovalsThreshold abi.MethodNum
-}{MethodConstructor, 2, 3, 4, 5, 6, 7, 8}
+	LockBalance                 abi.MethodNum
+}{MethodConstructor, 2, 3, 4, 5, 6, 7, 8, 9}
 
 var MethodsPaych = struct {
 	Constructor        abi.MethodNum
@@ -96,7 +93,9 @@ var MethodsMiner = struct {
 	WithdrawBalance          abi.MethodNum
 	ConfirmSectorProofsValid abi.MethodNum
 	ChangeMultiaddrs         abi.MethodNum
-}{MethodConstructor, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}
+	CompactPartitions        abi.MethodNum
+	CompactSectorNumbers     abi.MethodNum
+}{MethodConstructor, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 
 var MethodsVerifiedRegistry = struct {
 	Constructor       abi.MethodNum

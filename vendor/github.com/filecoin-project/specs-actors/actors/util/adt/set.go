@@ -1,6 +1,7 @@
 package adt
 
 import (
+	"github.com/filecoin-project/go-state-types/abi"
 	cid "github.com/ipfs/go-cid"
 )
 
@@ -33,17 +34,17 @@ func (h *Set) Root() (cid.Cid, error) {
 }
 
 // Put adds `k` to the set.
-func (h *Set) Put(k Keyer) error {
+func (h *Set) Put(k abi.Keyer) error {
 	return h.m.Put(k, nil)
 }
 
 // Has returns true iff `k` is in the set.
-func (h *Set) Has(k Keyer) (bool, error) {
+func (h *Set) Has(k abi.Keyer) (bool, error) {
 	return h.m.Get(k, nil)
 }
 
 // Delete removes `k` from the set.
-func (h *Set) Delete(k Keyer) error {
+func (h *Set) Delete(k abi.Keyer) error {
 	return h.m.Delete(k)
 }
 

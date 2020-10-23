@@ -4,15 +4,16 @@ import (
 	"context"
 	"io"
 
-	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-fil-markets/shared"
-	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-actors/actors/builtin/market"
-	"github.com/filecoin-project/specs-actors/actors/crypto"
-	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
+
+	"github.com/filecoin-project/go-fil-markets/shared"
 )
 
 // DealSectorCommittedCallback is a callback that runs when a sector is committed
@@ -45,16 +46,26 @@ type StorageCommon interface {
 	VerifySignature(ctx context.Context, signature crypto.Signature, signer address.Address, plaintext []byte, tok shared.TipSetToken) (bool, error)
 
 	// WaitForMessage waits until a message appears on chain. If it is already on chain, the callback is called immediately
-	WaitForMessage(ctx context.Context, mcid cid.Cid, onCompletion func(exitcode.ExitCode, []byte, error) error) error
+	WaitForMessage(ctx context.Context, mcid cid.Cid, onCompletion func(exitcode.ExitCode, []byte, cid.Cid, error) error) error
 
 	// SignsBytes signs the given data with the given address's private key
 	SignBytes(ctx context.Context, signer address.Address, b []byte) (*crypto.Signature, error)
+
+	// DealProviderCollateralBounds returns the min and max collateral a storage provider can issue.
+	DealProviderCollateralBounds(ctx context.Context, size abi.PaddedPieceSize, isVerified bool) (abi.TokenAmount, abi.TokenAmount, error)
 
 	// OnDealSectorCommitted waits for a deal's sector to be sealed and proved, indicating the deal is active
 	OnDealSectorCommitted(ctx context.Context, provider address.Address, dealID abi.DealID, cb DealSectorCommittedCallback) error
 
 	// OnDealExpiredOrSlashed registers callbacks to be called when the deal expires or is slashed
 	OnDealExpiredOrSlashed(ctx context.Context, dealID abi.DealID, onDealExpired DealExpiredCallback, onDealSlashed DealSlashedCallback) error
+}
+
+// PackingResult returns information about how a deal was put into a sector
+type PackingResult struct {
+	SectorNumber abi.SectorNumber
+	Offset       abi.PaddedPieceSize
+	Size         abi.PaddedPieceSize
 }
 
 // StorageProviderNode are node dependencies for a StorageProvider
@@ -64,28 +75,22 @@ type StorageProviderNode interface {
 	// PublishDeals publishes a deal on chain, returns the message cid, but does not wait for message to appear
 	PublishDeals(ctx context.Context, deal MinerDeal) (cid.Cid, error)
 
-	// ListProviderDeals lists all deals on chain associated with a storage provider
-	ListProviderDeals(ctx context.Context, addr address.Address, tok shared.TipSetToken) ([]StorageDeal, error)
-
 	// OnDealComplete is called when a deal is complete and on chain, and data has been transferred and is ready to be added to a sector
-	OnDealComplete(ctx context.Context, deal MinerDeal, pieceSize abi.UnpaddedPieceSize, pieceReader io.Reader) error
+	OnDealComplete(ctx context.Context, deal MinerDeal, pieceSize abi.UnpaddedPieceSize, pieceReader io.Reader) (*PackingResult, error)
 
 	// GetMinerWorkerAddress returns the worker address associated with a miner
 	GetMinerWorkerAddress(ctx context.Context, addr address.Address, tok shared.TipSetToken) (address.Address, error)
 
 	// LocatePieceForDealWithinSector looks up a given dealID in the miners sectors, and returns its sectorID and location
-	LocatePieceForDealWithinSector(ctx context.Context, dealID abi.DealID, tok shared.TipSetToken) (sectorID uint64, offset uint64, length uint64, err error)
+	LocatePieceForDealWithinSector(ctx context.Context, dealID abi.DealID, tok shared.TipSetToken) (sectorID abi.SectorNumber, offset abi.PaddedPieceSize, length abi.PaddedPieceSize, err error)
 
 	// GetDataCap gets the current data cap for addr
-	GetDataCap(ctx context.Context, addr address.Address, tok shared.TipSetToken) (verifreg.DataCap, error)
+	GetDataCap(ctx context.Context, addr address.Address, tok shared.TipSetToken) (*verifreg.DataCap, error)
 }
 
 // StorageClientNode are node dependencies for a StorageClient
 type StorageClientNode interface {
 	StorageCommon
-
-	// ListClientDeals lists all on-chain deals associated with a storage client
-	ListClientDeals(ctx context.Context, addr address.Address, tok shared.TipSetToken) ([]StorageDeal, error)
 
 	// GetStorageProviders returns information about known miners
 	ListStorageProviders(ctx context.Context, tok shared.TipSetToken) ([]*StorageProviderInfo, error)
@@ -98,9 +103,6 @@ type StorageClientNode interface {
 
 	// GetDefaultWalletAddress returns the address for this client
 	GetDefaultWalletAddress(ctx context.Context) (address.Address, error)
-
-	// ValidateAskSignature verifies a the signature is valid for a given SignedStorageAsk
-	ValidateAskSignature(ctx context.Context, ask *SignedStorageAsk, tok shared.TipSetToken) (bool, error)
 
 	// GetMinerInfo returns info for a single miner with the given address
 	GetMinerInfo(ctx context.Context, maddr address.Address, tok shared.TipSetToken) (*StorageProviderInfo, error)

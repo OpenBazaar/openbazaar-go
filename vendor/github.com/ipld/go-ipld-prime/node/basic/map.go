@@ -9,7 +9,7 @@ import (
 
 var (
 	_ ipld.Node          = &plainMap{}
-	_ ipld.NodeStyle     = Style__Map{}
+	_ ipld.NodePrototype = Prototype__Map{}
 	_ ipld.NodeBuilder   = &plainMap__Builder{}
 	_ ipld.NodeAssembler = &plainMap__Assembler{}
 )
@@ -33,25 +33,25 @@ type plainMap__Entry struct {
 func (plainMap) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Map
 }
-func (n *plainMap) LookupString(key string) (ipld.Node, error) {
+func (n *plainMap) LookupByString(key string) (ipld.Node, error) {
 	v, exists := n.m[key]
 	if !exists {
 		return nil, ipld.ErrNotExists{ipld.PathSegmentOfString(key)}
 	}
 	return v, nil
 }
-func (n *plainMap) Lookup(key ipld.Node) (ipld.Node, error) {
+func (n *plainMap) LookupByNode(key ipld.Node) (ipld.Node, error) {
 	ks, err := key.AsString()
 	if err != nil {
 		return nil, err
 	}
-	return n.LookupString(ks)
+	return n.LookupByString(ks)
 }
-func (plainMap) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Map{"map"}.LookupIndex(0)
+func (plainMap) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Map{"map"}.LookupByIndex(0)
 }
-func (n *plainMap) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return n.LookupString(seg.String())
+func (n *plainMap) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return n.LookupByString(seg.String())
 }
 func (n *plainMap) MapIterator() ipld.MapIterator {
 	return &plainMap_MapIterator{n, 0}
@@ -62,7 +62,7 @@ func (plainMap) ListIterator() ipld.ListIterator {
 func (n *plainMap) Length() int {
 	return len(n.t)
 }
-func (plainMap) IsUndefined() bool {
+func (plainMap) IsAbsent() bool {
 	return false
 }
 func (plainMap) IsNull() bool {
@@ -86,8 +86,8 @@ func (plainMap) AsBytes() ([]byte, error) {
 func (plainMap) AsLink() (ipld.Link, error) {
 	return mixins.Map{"map"}.AsLink()
 }
-func (plainMap) Style() ipld.NodeStyle {
-	return Style__Map{}
+func (plainMap) Prototype() ipld.NodePrototype {
+	return Prototype__Map{}
 }
 
 type plainMap_MapIterator struct {
@@ -108,11 +108,11 @@ func (itr *plainMap_MapIterator) Done() bool {
 	return itr.idx >= len(itr.n.t)
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Map struct{}
+type Prototype__Map struct{}
 
-func (Style__Map) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Map) NewBuilder() ipld.NodeBuilder {
 	return &plainMap__Builder{plainMap__Assembler{w: &plainMap{}}}
 }
 
@@ -197,17 +197,19 @@ func (plainMap__Assembler) AssignLink(ipld.Link) error {
 	return mixins.MapAssembler{"map"}.AssignLink(nil)
 }
 func (na *plainMap__Assembler) AssignNode(v ipld.Node) error {
-	// Sanity check, then update, assembler state.
+	// Sanity check assembler state.
+	//  Update of state to 'finished' comes later; where exactly depends on if shortcuts apply.
 	if na.state != maState_initial {
 		panic("misuse")
 	}
-	na.state = maState_finished
 	// Copy the content.
 	if v2, ok := v.(*plainMap); ok { // if our own type: shortcut.
 		// Copy the structure by value.
 		//  This means we'll have pointers into the same internal maps and slices;
 		//   this is okay, because the Node type promises it's immutable, and we are going to instantly finish ourselves to also maintain that.
+		// FIXME: the shortcut behaves differently than the long way: it discards any existing progress.  Doesn't violate immut, but is odd.
 		*na.w = *v2
+		na.state = maState_finished
 		return nil
 	}
 	// If the above shortcut didn't work, resort to a generic copy.
@@ -228,11 +230,10 @@ func (na *plainMap__Assembler) AssignNode(v ipld.Node) error {
 			return err
 		}
 	}
-	// validators could run and report errors promptly, if this type had any -- same as for regular Finish.
-	return nil
+	return na.Finish()
 }
-func (plainMap__Assembler) Style() ipld.NodeStyle {
-	return Style__Map{}
+func (plainMap__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Map{}
 }
 
 // -- MapAssembler -->
@@ -240,16 +241,17 @@ func (plainMap__Assembler) Style() ipld.NodeStyle {
 // AssembleEntry is part of conforming to MapAssembler, which we do on
 // plainMap__Assembler so that BeginMap can just return a retyped pointer rather than new object.
 func (ma *plainMap__Assembler) AssembleEntry(k string) (ipld.NodeAssembler, error) {
-	// Sanity check, then update, assembler state.
+	// Sanity check assembler state.
+	//  Update of state comes after possible key rejection.
 	if ma.state != maState_initial {
 		panic("misuse")
 	}
-	ma.state = maState_midValue
 	// Check for dup keys; error if so.
 	_, exists := ma.w.m[k]
 	if exists {
 		return nil, ipld.ErrRepeatedMapKey{plainString(k)}
 	}
+	ma.state = maState_midValue
 	ma.w.t = append(ma.w.t, plainMap__Entry{k: plainString(k)})
 	// Make value assembler valid by giving it pointer back to whole 'ma'; yield it.
 	ma.va.ma = ma
@@ -264,8 +266,6 @@ func (ma *plainMap__Assembler) AssembleKey() ipld.NodeAssembler {
 		panic("misuse")
 	}
 	ma.state = maState_midKey
-	// Extend entry table.
-	ma.w.t = append(ma.w.t, plainMap__Entry{})
 	// Make key assembler valid by giving it pointer back to whole 'ma'; yield it.
 	ma.ka.ma = ma
 	return &ma.ka
@@ -295,11 +295,11 @@ func (ma *plainMap__Assembler) Finish() error {
 	// validators could run and report errors promptly, if this type had any.
 	return nil
 }
-func (plainMap__Assembler) KeyStyle() ipld.NodeStyle {
-	return Style__String{}
+func (plainMap__Assembler) KeyPrototype() ipld.NodePrototype {
+	return Prototype__String{}
 }
-func (plainMap__Assembler) ValueStyle(_ string) ipld.NodeStyle {
-	return Style__Any{}
+func (plainMap__Assembler) ValuePrototype(_ string) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 // -- MapAssembler.KeyAssembler -->
@@ -324,14 +324,18 @@ func (plainMap__KeyAssembler) AssignFloat(float64) error {
 }
 func (mka *plainMap__KeyAssembler) AssignString(v string) error {
 	// Check for dup keys; error if so.
+	//  (And, backtrack state to accepting keys again so we don't get eternally wedged here.)
 	_, exists := mka.ma.w.m[v]
 	if exists {
+		mka.ma.state = maState_initial
+		mka.ma = nil // invalidate self to prevent further incorrect use.
 		return ipld.ErrRepeatedMapKey{plainString(v)}
 	}
 	// Assign the key into the end of the entry table;
 	//  we'll be doing map insertions after we get the value in hand.
 	//  (There's no need to delegate to another assembler for the key type,
 	//   because we're just at Data Model level here, which only regards plain strings.)
+	mka.ma.w.t = append(mka.ma.w.t, plainMap__Entry{})
 	mka.ma.w.t[len(mka.ma.w.t)-1].k = plainString(v)
 	// Update parent assembler state: clear to proceed.
 	mka.ma.state = maState_expectValue
@@ -351,8 +355,8 @@ func (mka *plainMap__KeyAssembler) AssignNode(v ipld.Node) error {
 	}
 	return mka.AssignString(vs)
 }
-func (plainMap__KeyAssembler) Style() ipld.NodeStyle {
-	return Style__String{}
+func (plainMap__KeyAssembler) Prototype() ipld.NodePrototype {
+	return Prototype__String{}
 }
 
 // -- MapAssembler.ValueAssembler -->
@@ -406,8 +410,8 @@ func (mva *plainMap__ValueAssembler) AssignNode(v ipld.Node) error {
 	mva.ma = nil // invalidate self to prevent further incorrect use.
 	return nil
 }
-func (plainMap__ValueAssembler) Style() ipld.NodeStyle {
-	return Style__Any{}
+func (plainMap__ValueAssembler) Prototype() ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 type plainMap__ValueAssemblerMap struct {
@@ -428,11 +432,11 @@ func (ma *plainMap__ValueAssemblerMap) AssembleKey() ipld.NodeAssembler {
 func (ma *plainMap__ValueAssemblerMap) AssembleValue() ipld.NodeAssembler {
 	return ma.ca.AssembleValue()
 }
-func (plainMap__ValueAssemblerMap) KeyStyle() ipld.NodeStyle {
-	return Style__String{}
+func (plainMap__ValueAssemblerMap) KeyPrototype() ipld.NodePrototype {
+	return Prototype__String{}
 }
-func (plainMap__ValueAssemblerMap) ValueStyle(_ string) ipld.NodeStyle {
-	return Style__Any{}
+func (plainMap__ValueAssemblerMap) ValuePrototype(_ string) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 func (ma *plainMap__ValueAssemblerMap) Finish() error {
@@ -456,8 +460,8 @@ type plainMap__ValueAssemblerList struct {
 func (la *plainMap__ValueAssemblerList) AssembleValue() ipld.NodeAssembler {
 	return la.ca.AssembleValue()
 }
-func (plainMap__ValueAssemblerList) ValueStyle(_ int) ipld.NodeStyle {
-	return Style__Any{}
+func (plainMap__ValueAssemblerList) ValuePrototype(_ int) ipld.NodePrototype {
+	return Prototype__Any{}
 }
 
 func (la *plainMap__ValueAssemblerList) Finish() error {

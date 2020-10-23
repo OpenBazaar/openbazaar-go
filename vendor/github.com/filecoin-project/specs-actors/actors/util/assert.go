@@ -19,7 +19,3 @@ func AssertNoError(e error) {
 		panic(e.Error())
 	}
 }
-
-// Indicating behavior not yet specified, and may require other spec changes.
-func TODO(...interface{}) {
-}

@@ -22,17 +22,17 @@ type String struct {
 func (String) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_String
 }
-func (x String) LookupString(string) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupString", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_String}
+func (x String) LookupByString(string) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByString", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_String}
 }
-func (x String) Lookup(key ipld.Node) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "Lookup", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_String}
+func (x String) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByNode", AppropriateKind: ipld.ReprKindSet_JustMap, ActualKind: ipld.ReprKind_String}
 }
-func (x String) LookupIndex(idx int) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_String}
+func (x String) LookupByIndex(idx int) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_String}
 }
-func (x String) LookupSegment(ipld.PathSegment) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupSegment", AppropriateKind: ipld.ReprKindSet_Recursive, ActualKind: ipld.ReprKind_String}
+func (x String) LookupBySegment(ipld.PathSegment) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupBySegment", AppropriateKind: ipld.ReprKindSet_Recursive, ActualKind: ipld.ReprKind_String}
 }
 func (String) MapIterator() ipld.MapIterator {
 	return nil
@@ -43,7 +43,7 @@ func (String) ListIterator() ipld.ListIterator {
 func (String) Length() int {
 	return -1
 }
-func (String) IsUndefined() bool {
+func (String) IsAbsent() bool {
 	return false
 }
 func (String) IsNull() bool {

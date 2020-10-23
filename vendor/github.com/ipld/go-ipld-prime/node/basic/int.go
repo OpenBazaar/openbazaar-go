@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = plainInt(0)
-	_ ipld.NodeStyle     = Style__Int{}
+	_ ipld.NodePrototype = Prototype__Int{}
 	_ ipld.NodeBuilder   = &plainInt__Builder{}
 	_ ipld.NodeAssembler = &plainInt__Assembler{}
 )
@@ -25,17 +25,17 @@ type plainInt int
 func (plainInt) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Int
 }
-func (plainInt) LookupString(string) (ipld.Node, error) {
-	return mixins.Int{"int"}.LookupString("")
+func (plainInt) LookupByString(string) (ipld.Node, error) {
+	return mixins.Int{"int"}.LookupByString("")
 }
-func (plainInt) Lookup(key ipld.Node) (ipld.Node, error) {
-	return mixins.Int{"int"}.Lookup(nil)
+func (plainInt) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return mixins.Int{"int"}.LookupByNode(nil)
 }
-func (plainInt) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Int{"int"}.LookupIndex(0)
+func (plainInt) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Int{"int"}.LookupByIndex(0)
 }
-func (plainInt) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return mixins.Int{"int"}.LookupSegment(seg)
+func (plainInt) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return mixins.Int{"int"}.LookupBySegment(seg)
 }
 func (plainInt) MapIterator() ipld.MapIterator {
 	return nil
@@ -46,7 +46,7 @@ func (plainInt) ListIterator() ipld.ListIterator {
 func (plainInt) Length() int {
 	return -1
 }
-func (plainInt) IsUndefined() bool {
+func (plainInt) IsAbsent() bool {
 	return false
 }
 func (plainInt) IsNull() bool {
@@ -70,15 +70,15 @@ func (plainInt) AsBytes() ([]byte, error) {
 func (plainInt) AsLink() (ipld.Link, error) {
 	return mixins.Int{"int"}.AsLink()
 }
-func (plainInt) Style() ipld.NodeStyle {
-	return Style__Int{}
+func (plainInt) Prototype() ipld.NodePrototype {
+	return Prototype__Int{}
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Int struct{}
+type Prototype__Int struct{}
 
-func (Style__Int) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Int) NewBuilder() ipld.NodeBuilder {
 	var w plainInt
 	return &plainInt__Builder{plainInt__Assembler{w: &w}}
 }
@@ -139,6 +139,6 @@ func (na *plainInt__Assembler) AssignNode(v ipld.Node) error {
 		return nil
 	}
 }
-func (plainInt__Assembler) Style() ipld.NodeStyle {
-	return Style__Int{}
+func (plainInt__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Int{}
 }

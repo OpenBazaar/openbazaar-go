@@ -44,7 +44,7 @@ func (pc ParseContext) ParseExploreFields(n ipld.Node) (Selector, error) {
 	if n.ReprKind() != ipld.ReprKind_Map {
 		return nil, fmt.Errorf("selector spec parse rejected: selector body must be a map")
 	}
-	fields, err := n.LookupString(SelectorKey_Fields)
+	fields, err := n.LookupByString(SelectorKey_Fields)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: fields in ExploreFields selector must be present")
 	}

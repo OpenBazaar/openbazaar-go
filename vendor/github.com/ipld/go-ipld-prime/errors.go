@@ -70,6 +70,78 @@ func (e ErrRepeatedMapKey) Error() string {
 	return fmt.Sprintf("cannot repeat map key (\"%s\")", e.Key)
 }
 
+// ErrInvalidKey indicates a key is invalid for some reason.
+//
+// This is only possible for typed nodes; specifically, it may show up when
+// handling struct types, or maps with interesting key types.
+// (Other kinds of key invalidity that happen for untyped maps
+// fall under ErrRepeatedMapKey or ErrWrongKind.)
+// (Union types use ErrInvalidUnionDiscriminant instead of ErrInvalidKey,
+// even when their representation strategy is maplike.)
+type ErrInvalidKey struct {
+	// TypeName will indicate the named type of a node the function was called on.
+	TypeName string
+
+	// Key is the key that was rejected.
+	Key Node
+
+	// Reason, if set, may provide details (for example, the reason a key couldn't be converted to a type).
+	// If absent, it'll be presumed "no such field".
+	// ErrUnmatchable may show up as a reason for typed maps with complex keys.
+	Reason error
+}
+
+func (e ErrInvalidKey) Error() string {
+	if e.Reason == nil {
+		return fmt.Sprintf("invalid key for map %s: \"%s\": no such field", e.TypeName, e.Key)
+	} else {
+		return fmt.Sprintf("invalid key for map %s: \"%s\": %s", e.TypeName, e.Key, e.Reason)
+	}
+}
+
+// ErrInvalidSegmentForList is returned when using Node.LookupBySegment and the
+// given PathSegment can't be applied to a list because it's unparsable as a number.
+type ErrInvalidSegmentForList struct {
+	// TypeName may indicate the named type of a node the function was called on,
+	// or be empty string if working on untyped data.
+	TypeName string
+
+	// TroubleSegment is the segment we couldn't use.
+	TroubleSegment PathSegment
+
+	// Reason may explain more about why the PathSegment couldn't be used;
+	// in practice, it's probably a 'strconv.NumError'.
+	Reason error
+}
+
+func (e ErrInvalidSegmentForList) Error() string {
+	v := "invalid segment for lookup on a list"
+	if e.TypeName != "" {
+		v += " of type " + e.TypeName
+	}
+	return v + fmt.Sprintf(": %q: %s", e.TroubleSegment.s, e.Reason)
+}
+
+// ErrUnmatchable is the catch-all type for parse errors in schema representation work.
+//
+// REVIEW: are builders at type level ever going to return this?  i don't think so.
+// REVIEW: can this ever be triggered during the marshalling direction?  perhaps not.
+// REVIEW: do things like ErrWrongKind end up being wrapped by this?  that doesn't seem pretty.
+// REVIEW: do natural representations ever trigger this?  i don't think so.  maybe that's a hint towards a better name.
+// REVIEW: are user validation functions encouraged to return this?  or something else?
+//
+type ErrUnmatchable struct {
+	// TypeName will indicate the named type of a node the function was called on.
+	TypeName string
+
+	// Reason must always be present.  ErrUnmatchable doesn't say much otherwise.
+	Reason error
+}
+
+func (e ErrUnmatchable) Error() string {
+	return fmt.Sprintf("parsing of %s rejected: %s", e.TypeName, e.Reason)
+}
+
 // ErrIteratorOverread is returned when calling 'Next' on a MapIterator or
 // ListIterator when it is already done.
 type ErrIteratorOverread struct{}
@@ -78,9 +150,8 @@ func (e ErrIteratorOverread) Error() string {
 	return "iterator overread"
 }
 
-type ErrCannotBeNull struct{} // Review: arguably either ErrInvalidKindForNodeStyle.
+type ErrCannotBeNull struct{} // Review: arguably either ErrInvalidKindForNodePrototype.
 
-type ErrInvalidStructKey struct{}         // only possible for typed nodes -- specifically, struct types.
 type ErrMissingRequiredField struct{}     // only possible for typed nodes -- specifically, struct types.
 type ErrListOverrun struct{}              // only possible for typed nodes -- specifically, struct types with list (aka tuple) representations.
 type ErrInvalidUnionDiscriminant struct{} // only possible for typed nodes -- specifically, union types.

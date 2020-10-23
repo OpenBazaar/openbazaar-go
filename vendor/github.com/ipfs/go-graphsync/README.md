@@ -225,7 +225,7 @@ PRs are welcome!
 
 Before doing anything heavy, checkout the [Graphsync Architecture](docs/architecture.md)
 
-Small note: If editing the Readme, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme) specification.
+See our [Contributing Guidelines](https://github.com/ipfs/go-graphsync/blob/master/CONTRIBUTING.md) for more info.
 
 ## License
 

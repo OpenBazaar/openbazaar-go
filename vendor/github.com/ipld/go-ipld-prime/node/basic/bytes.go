@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = plainBytes(nil)
-	_ ipld.NodeStyle     = Style__Bytes{}
+	_ ipld.NodePrototype = Prototype__Bytes{}
 	_ ipld.NodeBuilder   = &plainBytes__Builder{}
 	_ ipld.NodeAssembler = &plainBytes__Assembler{}
 )
@@ -25,17 +25,17 @@ type plainBytes []byte
 func (plainBytes) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Bytes
 }
-func (plainBytes) LookupString(string) (ipld.Node, error) {
-	return mixins.Bytes{"bytes"}.LookupString("")
+func (plainBytes) LookupByString(string) (ipld.Node, error) {
+	return mixins.Bytes{"bytes"}.LookupByString("")
 }
-func (plainBytes) Lookup(key ipld.Node) (ipld.Node, error) {
-	return mixins.Bytes{"bytes"}.Lookup(nil)
+func (plainBytes) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return mixins.Bytes{"bytes"}.LookupByNode(nil)
 }
-func (plainBytes) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Bytes{"bytes"}.LookupIndex(0)
+func (plainBytes) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Bytes{"bytes"}.LookupByIndex(0)
 }
-func (plainBytes) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return mixins.Bytes{"bytes"}.LookupSegment(seg)
+func (plainBytes) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return mixins.Bytes{"bytes"}.LookupBySegment(seg)
 }
 func (plainBytes) MapIterator() ipld.MapIterator {
 	return nil
@@ -46,7 +46,7 @@ func (plainBytes) ListIterator() ipld.ListIterator {
 func (plainBytes) Length() int {
 	return -1
 }
-func (plainBytes) IsUndefined() bool {
+func (plainBytes) IsAbsent() bool {
 	return false
 }
 func (plainBytes) IsNull() bool {
@@ -70,15 +70,15 @@ func (n plainBytes) AsBytes() ([]byte, error) {
 func (plainBytes) AsLink() (ipld.Link, error) {
 	return mixins.Bytes{"bytes"}.AsLink()
 }
-func (plainBytes) Style() ipld.NodeStyle {
-	return Style__Bytes{}
+func (plainBytes) Prototype() ipld.NodePrototype {
+	return Prototype__Bytes{}
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Bytes struct{}
+type Prototype__Bytes struct{}
 
-func (Style__Bytes) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Bytes) NewBuilder() ipld.NodeBuilder {
 	var w plainBytes
 	return &plainBytes__Builder{plainBytes__Assembler{w: &w}}
 }
@@ -139,6 +139,6 @@ func (na *plainBytes__Assembler) AssignNode(v ipld.Node) error {
 		return nil
 	}
 }
-func (plainBytes__Assembler) Style() ipld.NodeStyle {
-	return Style__Bytes{}
+func (plainBytes__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Bytes{}
 }

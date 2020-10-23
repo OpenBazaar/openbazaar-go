@@ -15,10 +15,10 @@ The most central interfaces are the base package,
 but you'll certainly need to import additional packages to get concrete implementations into action.
 
 Roughly speaking, the core package interfaces are all about the IPLD Data Model;
-the codec packages contain functions for parsing serial data into the IPLD Data Model,
+the 'codec/*' packages contain functions for parsing serial data into the IPLD Data Model,
 and converting Data Model content back into serial formats;
-the traversal package is an example of higher-order functions on the Data Model;
-concrete 'Node' implementations ready to use can be found under 'impl/*';
+the 'traversal' package is an example of higher-order functions on the Data Model;
+concrete 'Node' implementations ready to use can be found in packages in the 'node/*' directory;
 and several additional packages contain advanced features such as IPLD Schemas.
 
 (Because the codecs, as well as higher-order features like traversals, are
@@ -28,8 +28,7 @@ if you want to write your own extensions, whether for new Node implementations
 or new codecs, or new higher-order order functions!)
 
 - `github.com/ipld/go-ipld-prime` -- imported as just `ipld` -- contains the core interfaces for IPLD.  The most important interfaces are `Node`, `NodeBuilder`, `Path`, and `Link`.
-- `github.com/ipld/go-ipld-prime/impl/free` -- imported as `ipldfree` -- provides concrete implementations of `Node` and `NodeBuilder` which work for any kind of data.
-- `github.com/ipld/go-ipld-prime/impl/cbor` -- imported as `ipldcbor` -- provides concrete implementations of `Node` and `NodeBuilder` which have some special features to accelerate certain workloads with CBOR.
+- `github.com/ipld/go-ipld-prime/node/basic` -- imported as `basicnode` -- provides concrete implementations of `Node` and `NodeBuilder` which work for any kind of data.
 - `github.com/ipld/go-ipld-prime/traversal` -- contains higher-order functions for traversing graphs of data easily.
 - `github.com/ipld/go-ipld-prime/traversal/selector` -- contains selectors, which are sort of like regexps, but for trees and graphs of IPLD data!
 - `github.com/ipld/go-ipld-prime/codec -- parent package of all the codec implementations!
@@ -37,7 +36,7 @@ or new codecs, or new higher-order order functions!)
 - `github.com/ipld/go-ipld-prime/codec/dagjson` -- implementations of marshalling and unmarshalling as JSON (a popular human readable format).
 - `github.com/ipld/go-ipld-prime/linking/cid` -- imported as `cidlink` -- provides concrete implementations of `Link` as a CID.  Also, the multicodec registry.
 - `github.com/ipld/go-ipld-prime/schema` -- contains the `schema.Type` and `schema.TypedNode` interface declarations, which represent IPLD Schema type information.
-- `github.com/ipld/go-ipld-prime/impl/typed` -- provides concrete implementations of `schema.TypedNode` which decorate a basic `Node` at runtime to have additional features described by IPLD Schemas.
+- `github.com/ipld/go-ipld-prime/node/typed` -- provides concrete implementations of `schema.TypedNode` which decorate a basic `Node` at runtime to have additional features described by IPLD Schemas.
 
 
 
@@ -73,12 +72,19 @@ Projects wishing to migrate can do so smoothly and at their leisure.
 There is no explicit deprecation timeline for the earlier golang IPLD libraries,
 but you should expect new features *here*, rather than in those libraries.
 
+Be advised that faculties for dealing with unixfsv1 data are still limited.
+You can find some tools in the [go-ipld-prime-proto](https://github.com/ipld/go-ipld-prime-proto/) repo,
+but be sure to read the caveats and limitations in that project's readme.
+We're happy to accept major PRs on this topic, though, if you who is reading this wants to fix this faster than wait for us :)
+
 
 
 Change Policy
 -------------
 
 The go-ipld-prime library is already usable.  We are also still in development, and may still change things.
+
+A changelog can be found at [CHANGELOG.md](CHANGELOG.md).
 
 Using a commit hash when depending on this library is advisable (as it is with any other).
 

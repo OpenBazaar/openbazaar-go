@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ const (
 	envLoggingFmt = "GOLOG_LOG_FMT"
 
 	envLoggingFile = "GOLOG_FILE" // /path/to/file
+	envLoggingOutput = "GOLOG_OUTPUT" // possible values: stdout|stderr|file combine multiple values with '+'
 )
 
 type LogFormat int
@@ -261,6 +263,21 @@ func configFromEnv() Config {
 	// https://github.com/ipfs/go-log/issues/83
 	if cfg.File != "" {
 		cfg.Stderr = false
+	}
+
+	output := os.Getenv(envLoggingOutput)
+	outputOptions := strings.Split(output, "+")
+	for _, opt := range outputOptions {
+		switch opt {
+		case "stdout":
+			cfg.Stdout = true
+		case "stderr":
+			cfg.Stderr = true
+		case "file":
+			if cfg.File == "" {
+				fmt.Fprint(os.Stderr, "please specify a GOLOG_FILE value to write to")
+			}
+		}
 	}
 
 	return cfg

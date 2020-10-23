@@ -3,13 +3,13 @@ package market
 import (
 	"reflect"
 
+	"github.com/filecoin-project/go-state-types/abi"
 	cid "github.com/ipfs/go-cid"
-	"github.com/ipfs/go-hamt-ipld"
+	"github.com/filecoin-project/go-hamt-ipld"
 	errors "github.com/pkg/errors"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	xerrors "golang.org/x/xerrors"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/util/adt"
 )
 
@@ -40,7 +40,7 @@ func (mm *SetMultimap) Root() (cid.Cid, error) {
 
 func (mm *SetMultimap) Put(epoch abi.ChainEpoch, v abi.DealID) error {
 	// Load the hamt under key, or initialize a new empty one if not found.
-	k := adt.UIntKey(uint64(epoch))
+	k := abi.UIntKey(uint64(epoch))
 	set, found, err := mm.get(k)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (mm *SetMultimap) Put(epoch abi.ChainEpoch, v abi.DealID) error {
 
 func (mm *SetMultimap) PutMany(epoch abi.ChainEpoch, vs []abi.DealID) error {
 	// Load the hamt under key, or initialize a new empty one if not found.
-	k := adt.UIntKey(uint64(epoch))
+	k := abi.UIntKey(uint64(epoch))
 	set, found, err := mm.get(k)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (mm *SetMultimap) PutMany(epoch abi.ChainEpoch, vs []abi.DealID) error {
 
 // Removes all values for a key.
 func (mm *SetMultimap) RemoveAll(key abi.ChainEpoch) error {
-	err := mm.mp.Delete(adt.UIntKey(uint64(key)))
+	err := mm.mp.Delete(abi.UIntKey(uint64(key)))
 	if err != nil && !xerrors.Is(err, hamt.ErrNotFound) {
 		return xerrors.Errorf("failed to delete set key %v: %w", key, err)
 	}
@@ -109,7 +109,7 @@ func (mm *SetMultimap) RemoveAll(key abi.ChainEpoch) error {
 
 // Iterates all entries for a key, iteration halts if the function returns an error.
 func (mm *SetMultimap) ForEach(epoch abi.ChainEpoch, fn func(id abi.DealID) error) error {
-	set, found, err := mm.get(adt.UIntKey(uint64(epoch)))
+	set, found, err := mm.get(abi.UIntKey(uint64(epoch)))
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (mm *SetMultimap) ForEach(epoch abi.ChainEpoch, fn func(id abi.DealID) erro
 	return nil
 }
 
-func (mm *SetMultimap) get(key adt.Keyer) (*adt.Set, bool, error) {
+func (mm *SetMultimap) get(key abi.Keyer) (*adt.Set, bool, error) {
 	var setRoot cbg.CborCid
 	found, err := mm.mp.Get(key, &setRoot)
 	if err != nil {
@@ -141,12 +141,12 @@ func (mm *SetMultimap) get(key adt.Keyer) (*adt.Set, bool, error) {
 	return set, found, nil
 }
 
-func dealKey(e abi.DealID) adt.Keyer {
-	return adt.UIntKey(uint64(e))
+func dealKey(e abi.DealID) abi.Keyer {
+	return abi.UIntKey(uint64(e))
 }
 
 func parseDealKey(s string) (abi.DealID, error) {
-	key, err := adt.ParseUIntKey(s)
+	key, err := abi.ParseUIntKey(s)
 	return abi.DealID(key), err
 }
 

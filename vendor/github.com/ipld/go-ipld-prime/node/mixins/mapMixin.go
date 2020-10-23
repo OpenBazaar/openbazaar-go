@@ -22,13 +22,13 @@ type Map struct {
 func (Map) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Map
 }
-func (x Map) LookupIndex(idx int) (ipld.Node, error) {
-	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_Map}
+func (x Map) LookupByIndex(idx int) (ipld.Node, error) {
+	return nil, ipld.ErrWrongKind{TypeName: x.TypeName, MethodName: "LookupByIndex", AppropriateKind: ipld.ReprKindSet_JustList, ActualKind: ipld.ReprKind_Map}
 }
 func (Map) ListIterator() ipld.ListIterator {
 	return nil
 }
-func (Map) IsUndefined() bool {
+func (Map) IsAbsent() bool {
 	return false
 }
 func (Map) IsNull() bool {

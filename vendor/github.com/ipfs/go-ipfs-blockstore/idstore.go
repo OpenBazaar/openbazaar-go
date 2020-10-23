@@ -18,6 +18,11 @@ func NewIdStore(bs Blockstore) Blockstore {
 }
 
 func extractContents(k cid.Cid) (bool, []byte) {
+	// Pre-check by calling Prefix(), this much faster than extracting the hash.
+	if k.Prefix().MhType != mh.IDENTITY {
+		return false, nil
+	}
+
 	dmh, err := mh.Decode(k.Hash())
 	if err != nil || dmh.Code != mh.ID {
 		return false, nil

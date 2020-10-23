@@ -15,6 +15,7 @@ import (
 	dsq "github.com/ipfs/go-datastore/query"
 	dshelp "github.com/ipfs/go-ipfs-ds-help"
 	logging "github.com/ipfs/go-log"
+	uatomic "go.uber.org/atomic"
 )
 
 var log = logging.Logger("blockstore")
@@ -101,17 +102,18 @@ func NewBlockstore(d ds.Batching) Blockstore {
 	dsb = dd
 	return &blockstore{
 		datastore: dsb,
+		rehash:    uatomic.NewBool(false),
 	}
 }
 
 type blockstore struct {
 	datastore ds.Batching
 
-	rehash bool
+	rehash *uatomic.Bool
 }
 
 func (bs *blockstore) HashOnRead(enabled bool) {
-	bs.rehash = enabled
+	bs.rehash.Store(enabled)
 }
 
 func (bs *blockstore) Get(k cid.Cid) (blocks.Block, error) {
@@ -126,7 +128,7 @@ func (bs *blockstore) Get(k cid.Cid) (blocks.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	if bs.rehash {
+	if bs.rehash.Load() {
 		rbcid, err := k.Prefix().Sum(bdata)
 		if err != nil {
 			return nil, err

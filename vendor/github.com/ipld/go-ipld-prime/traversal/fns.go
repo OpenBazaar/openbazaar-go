@@ -38,22 +38,22 @@ type Progress struct {
 }
 
 type Config struct {
-	Ctx                        context.Context            // Context carried through a traversal.  Optional; use it if you need cancellation.
-	LinkLoader                 ipld.Loader                // Loader used for automatic link traversal.
-	LinkTargetNodeStyleChooser LinkTargetNodeStyleChooser // Chooser for Node implementations to produce during automatic link traversal.
-	LinkStorer                 ipld.Storer                // Storer used if any mutation features (e.g. traversal.Transform) are used.
+	Ctx                            context.Context                // Context carried through a traversal.  Optional; use it if you need cancellation.
+	LinkLoader                     ipld.Loader                    // Loader used for automatic link traversal.
+	LinkTargetNodePrototypeChooser LinkTargetNodePrototypeChooser // Chooser for Node implementations to produce during automatic link traversal.
+	LinkStorer                     ipld.Storer                    // Storer used if any mutation features (e.g. traversal.Transform) are used.
 }
 
-// LinkTargetNodeStyleChooser is a function that returns a NodeStyle based on
+// LinkTargetNodePrototypeChooser is a function that returns a NodePrototype based on
 // the information in a Link and/or its LinkContext.
 //
-// A LinkTargetNodeStyleChooser can be used in a traversal.Config to be clear about
+// A LinkTargetNodePrototypeChooser can be used in a traversal.Config to be clear about
 // what kind of Node implementation to use when loading a Link.
-// In a simple example, it could constantly return a `basicnode.Style__Any{}`.
+// In a simple example, it could constantly return a `basicnode.Prototype__Any{}`.
 // In a more complex example, a program using `bind` over native Go types
 // could decide what kind of native type is expected, and return a
 // `bind.NodeBuilder` for that specific concrete native type.
-type LinkTargetNodeStyleChooser func(ipld.Link, ipld.LinkContext) (ipld.NodeStyle, error)
+type LinkTargetNodePrototypeChooser func(ipld.Link, ipld.LinkContext) (ipld.NodePrototype, error)
 
 // SkipMe is a signalling "error" which can be used to tell traverse to skip some data.
 //

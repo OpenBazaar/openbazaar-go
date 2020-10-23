@@ -24,12 +24,12 @@ func (tc *Config) init() {
 			return nil, fmt.Errorf("no link loader configured")
 		}
 	}
-	if tc.LinkTargetNodeStyleChooser == nil {
-		tc.LinkTargetNodeStyleChooser = func(lnk ipld.Link, lnkCtx ipld.LinkContext) (ipld.NodeStyle, error) {
+	if tc.LinkTargetNodePrototypeChooser == nil {
+		tc.LinkTargetNodePrototypeChooser = func(lnk ipld.Link, lnkCtx ipld.LinkContext) (ipld.NodePrototype, error) {
 			if tlnkNd, ok := lnkCtx.LinkNode.(schema.TypedLinkNode); ok {
-				return tlnkNd.LinkTargetNodeStyle(), nil
+				return tlnkNd.LinkTargetNodePrototype(), nil
 			}
-			return nil, fmt.Errorf("no LinkTargetNodeStyleChooser configured")
+			return nil, fmt.Errorf("no LinkTargetNodePrototypeChooser configured")
 		}
 	}
 	if tc.LinkStorer == nil {

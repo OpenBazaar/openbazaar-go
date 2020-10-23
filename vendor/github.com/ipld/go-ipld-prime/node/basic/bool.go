@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = plainBool(false)
-	_ ipld.NodeStyle     = Style__Bool{}
+	_ ipld.NodePrototype = Prototype__Bool{}
 	_ ipld.NodeBuilder   = &plainBool__Builder{}
 	_ ipld.NodeAssembler = &plainBool__Assembler{}
 )
@@ -25,17 +25,17 @@ type plainBool bool
 func (plainBool) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Bool
 }
-func (plainBool) LookupString(string) (ipld.Node, error) {
-	return mixins.Bool{"bool"}.LookupString("")
+func (plainBool) LookupByString(string) (ipld.Node, error) {
+	return mixins.Bool{"bool"}.LookupByString("")
 }
-func (plainBool) Lookup(key ipld.Node) (ipld.Node, error) {
-	return mixins.Bool{"bool"}.Lookup(nil)
+func (plainBool) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return mixins.Bool{"bool"}.LookupByNode(nil)
 }
-func (plainBool) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Bool{"bool"}.LookupIndex(0)
+func (plainBool) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Bool{"bool"}.LookupByIndex(0)
 }
-func (plainBool) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return mixins.Bool{"bool"}.LookupSegment(seg)
+func (plainBool) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return mixins.Bool{"bool"}.LookupBySegment(seg)
 }
 func (plainBool) MapIterator() ipld.MapIterator {
 	return nil
@@ -46,7 +46,7 @@ func (plainBool) ListIterator() ipld.ListIterator {
 func (plainBool) Length() int {
 	return -1
 }
-func (plainBool) IsUndefined() bool {
+func (plainBool) IsAbsent() bool {
 	return false
 }
 func (plainBool) IsNull() bool {
@@ -70,15 +70,15 @@ func (plainBool) AsBytes() ([]byte, error) {
 func (plainBool) AsLink() (ipld.Link, error) {
 	return mixins.Bool{"bool"}.AsLink()
 }
-func (plainBool) Style() ipld.NodeStyle {
-	return Style__Bool{}
+func (plainBool) Prototype() ipld.NodePrototype {
+	return Prototype__Bool{}
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Bool struct{}
+type Prototype__Bool struct{}
 
-func (Style__Bool) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Bool) NewBuilder() ipld.NodeBuilder {
 	var w plainBool
 	return &plainBool__Builder{plainBool__Assembler{w: &w}}
 }
@@ -139,6 +139,6 @@ func (na *plainBool__Assembler) AssignNode(v ipld.Node) error {
 		return nil
 	}
 }
-func (plainBool__Assembler) Style() ipld.NodeStyle {
-	return Style__Bool{}
+func (plainBool__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Bool{}
 }

@@ -39,26 +39,29 @@ package ipld
 // be more optimal for some programs than others, and changing the Node
 // (and NodeBuilder) implementations lets the programmer choose.
 //
-// For concrete implementations of Node, check out the "./impl/" folder,
+// For concrete implementations of Node, check out the "./node/" folder,
 // and the packages within it.
-// "impl/free" should probably be your first start; the Node and NodeBuilder
+// "node/basic" should probably be your first start; the Node and NodeBuilder
 // implementations in that package work for any data.
 // Other packages are optimized for specific use-cases.
 // Codegen tools can also be used to produce concrete implementations of Node;
 // these may be specific to certain data, but still conform to the Node
 // interface for interoperability and to support higher-level functions.
 //
-// Nodes may also be *typed* -- see the 'schema' and 'impl/typed' packages.
-// Typed nodes have additional constraints and behaviors (and have a
-// `.Type().Kind()` in addition to their `.ReprKind()`!), but still behave
-// as a regular Node in all the basic ways.
+// Nodes may also be *typed* -- see the 'schema' package and `schema.TypedNode`
+// interface, which extends the Node interface with additional methods.
+// Typed nodes have additional constraints and behaviors:
+// for example, they may be a "struct" and have a specific type/structure
+// to what data you can put inside them, but still behave as a regular Node
+// in all ways this interface specifies (so you can traverse typed nodes, etc,
+// without any additional special effort).
 type Node interface {
 	// ReprKind returns a value from the ReprKind enum describing what the
 	// essential serializable kind of this node is (map, list, int, etc).
 	// Most other handling of a node requires first switching upon the kind.
 	ReprKind() ReprKind
 
-	// LookupString looks up a child object in this node and returns it.
+	// LookupByString looks up a child object in this node and returns it.
 	// The returned Node may be any of the ReprKind:
 	// a primitive (string, int, etc), a map, a list, or a link.
 	//
@@ -66,9 +69,9 @@ type Node interface {
 	// will be returned.
 	//
 	// If the key does not exist, a nil node and an error will be returned.
-	LookupString(key string) (Node, error)
+	LookupByString(key string) (Node, error)
 
-	// Lookup is the equivalent of LookupString, but takes a reified Node
+	// LookupByNode is the equivalent of LookupByString, but takes a reified Node
 	// as a parameter instead of a plain string.
 	// This mechanism is useful if working with typed maps (if the key types
 	// have constraints, and you already have a reified `schema.TypedNode` value,
@@ -77,27 +80,27 @@ type Node interface {
 	//
 	// (When writing generic functions over Node, a good rule of thumb is:
 	// when handling a map, check for `schema.TypedNode`, and in this case prefer
-	// the Lookup(Node) method; otherwise, favor LookupString; typically
+	// the LookupByNode(Node) method; otherwise, favor LookupByString; typically
 	// implementations will have their fastest paths thusly.)
-	Lookup(key Node) (Node, error)
+	LookupByNode(key Node) (Node, error)
 
-	// LookupIndex is the equivalent of LookupString but for indexing into a list.
-	// As with LookupString, the returned Node may be any of the ReprKind:
+	// LookupByIndex is the equivalent of LookupByString but for indexing into a list.
+	// As with LookupByString, the returned Node may be any of the ReprKind:
 	// a primitive (string, int, etc), a map, a list, or a link.
 	//
 	// If the Kind of this Node is not ReprKind_List, a nil node and an error
 	// will be returned.
 	//
 	// If idx is out of range, a nil node and an error will be returned.
-	LookupIndex(idx int) (Node, error)
+	LookupByIndex(idx int) (Node, error)
 
-	// LookupSegment is will act as either LookupString or LookupIndex,
+	// LookupBySegment is will act as either LookupByString or LookupByIndex,
 	// whichever is contextually appropriate.
 	//
-	// Using LookupSegment may imply an "atoi" conversion if used on a list node,
+	// Using LookupBySegment may imply an "atoi" conversion if used on a list node,
 	// or an "itoa" conversion if used on a map node.  If an "itoa" conversion
 	// takes place, it may error, and this method may return that error.
-	LookupSegment(seg PathSegment) (Node, error)
+	LookupBySegment(seg PathSegment) (Node, error)
 
 	// Note that when using codegenerated types, there may be a fifth variant
 	// of lookup method on maps: `Get($GeneratedTypeKey) $GeneratedTypeValue`!
@@ -124,13 +127,18 @@ type Node interface {
 	// or -1 if the node is not of list nor map kind.
 	Length() int
 
-	// Undefined nodes are returned when traversing a struct field that is
-	// defined by a schema but unset in the data.  (Undefined nodes are not
+	// Absent nodes are returned when traversing a struct field that is
+	// defined by a schema but unset in the data.  (Absent nodes are not
 	// possible otherwise; you'll only see them from `schema.TypedNode`.)
-	// The undefined flag is necessary so iterating over structs can
+	// The absent flag is necessary so iterating over structs can
 	// unambiguously make the distinction between values that are
 	// present-and-null versus values that are absent.
-	IsUndefined() bool
+	//
+	// Absent nodes respond to `ReprKind()` as `ipld.ReprKind_Null`,
+	// for lack of any better descriptive value; you should therefore
+	// always check IsAbsent rather than just a switch on kind
+	// when it may be important to handle absent values distinctly.
+	IsAbsent() bool
 
 	IsNull() bool
 	AsBool() (bool, error)
@@ -140,57 +148,57 @@ type Node interface {
 	AsBytes() ([]byte, error)
 	AsLink() (Link, error)
 
-	// Style returns a NodeStyle which can describe some properties of this node's implementation,
+	// Prototype returns a NodePrototype which can describe some properties of this node's implementation,
 	// and also be used to get a NodeBuilder,
 	// which can be use to create new nodes with the same implementation as this one.
 	//
-	// For typed nodes, the NodeStyle will also implement schema.Type.
+	// For typed nodes, the NodePrototype will also implement schema.Type.
 	//
-	// For Advanced Data Layouts, the NodeStyle will encapsulate any additional
+	// For Advanced Data Layouts, the NodePrototype will encapsulate any additional
 	// parameters and configuration of the ADL, and will also (usually)
-	// implement NodeStyleSupportingAmend.
+	// implement NodePrototypeSupportingAmend.
 	//
 	// Calling this method should not cause an allocation.
-	Style() NodeStyle
+	Prototype() NodePrototype
 }
 
-// NodeStyle describes a node implementation (all Node have a NodeStyle),
-// and a NodeStyle can always be used to get a NodeBuilder.
+// NodePrototype describes a node implementation (all Node have a NodePrototype),
+// and a NodePrototype can always be used to get a NodeBuilder.
 //
-// A NodeStyle may also provide other information about implementation;
-// such information is specific to this library ("style" isn't a concept
+// A NodePrototype may also provide other information about implementation;
+// such information is specific to this library ("prototype" isn't a concept
 // you'll find in the IPLD Specifications), and is usually provided through
-// feature-detection interfaces (for example, see NodeStyleSupportingAmend).
+// feature-detection interfaces (for example, see NodePrototypeSupportingAmend).
 //
-// Generic algorithms for working with IPLD Nodes make use of NodeStyle
+// Generic algorithms for working with IPLD Nodes make use of NodePrototype
 // to get builders for new nodes when creating data, and can also use the
 // feature-detection interfaces to help decide what kind of operations
 // will be optimal to use on a given node implementation.
 //
-// Note that NodeStyle is not the same as schema.Type.
-// NodeStyle is a (golang-specific!) way to reflect upon the implementation
+// Note that NodePrototype is not the same as schema.Type.
+// NodePrototype is a (golang-specific!) way to reflect upon the implementation
 // and in-memory layout of some IPLD data.
 // schema.Type is information about how a group of nodes is related in a schema
 // (if they have one!) and the rules that the type mandates the node must follow.
-// (Every node must have a style; but schema types are an optional feature.)
-type NodeStyle interface {
+// (Every node must have a prototype; but schema types are an optional feature.)
+type NodePrototype interface {
 	// NewBuilder returns a NodeBuilder that can be used to create a new Node.
 	//
 	// Note that calling NewBuilder often performs an allocation
-	// (while in contrast, getting a NodeStyle typically does not!) --
+	// (while in contrast, getting a NodePrototype typically does not!) --
 	// this may be consequential when writing high performance code.
 	NewBuilder() NodeBuilder
 }
 
-// NodeStyleSupportingAmend is a feature-detection interface that can be
-// used on a NodeStyle to see if it's possible to build new nodes of this style
+// NodePrototypeSupportingAmend is a feature-detection interface that can be
+// used on a NodePrototype to see if it's possible to build new nodes of this style
 // while sharing some internal data in a copy-on-write way.
 //
 // For example, Nodes using an Advanced Data Layout will typically
 // support this behavior, and since ADLs are often used for handling large
 // volumes of data, detecting and using this feature can result in significant
 // performance savings.
-type NodeStyleSupportingAmend interface {
+type NodePrototypeSupportingAmend interface {
 	AmendingBuilder(base Node) NodeBuilder
 	// FUTURE: probably also needs a `AmendingWithout(base Node, filter func(k,v) bool) NodeBuilder`, or similar.
 	//  ("deletion" based APIs are also possible but both more complicated in interfaces added, and prone to accidentally quadratic usage.)

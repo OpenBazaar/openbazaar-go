@@ -28,16 +28,16 @@ type NodeAssembler interface {
 
 	AssignNode(Node) error // if you already have a completely constructed subtree, this method puts the whole thing in place at once.
 
-	// Style returns a NodeStyle describing what kind of value we're assembling.
+	// Prototype returns a NodePrototype describing what kind of value we're assembling.
 	//
 	// You often don't need this (because you should be able to
 	// just feed data and check errors), but it's here.
 	//
-	// Using `this.Style().NewBuilder()` to produce a new `Node`,
+	// Using `this.Prototype().NewBuilder()` to produce a new `Node`,
 	// then giving that node to `this.AssignNode(n)` should always work.
 	// (Note that this is not necessarily an _exclusive_ statement on what
 	// sort of values will be accepted by `this.AssignNode(n)`.)
-	Style() NodeStyle
+	Prototype() NodePrototype
 }
 
 // MapAssembler assembles a map node!  (You guessed it.)
@@ -63,32 +63,34 @@ type MapAssembler interface {
 
 	Finish() error
 
-	// KeyStyle returns a NodeStyle that knows how to build keys of a type this map uses.
+	// KeyPrototype returns a NodePrototype that knows how to build keys of a type this map uses.
 	//
 	// You often don't need this (because you should be able to
 	// just feed data and check errors), but it's here.
 	//
 	// For all Data Model maps, this will answer with a basic concept of "string".
 	// For Schema typed maps, this may answer with a more complex type (potentially even a struct type).
-	KeyStyle() NodeStyle
+	KeyPrototype() NodePrototype
 
-	// ValueStyle returns a NodeStyle that knows how to build values this map can contain.
+	// ValuePrototype returns a NodePrototype that knows how to build values this map can contain.
 	//
 	// You often don't need this (because you should be able to
 	// just feed data and check errors), but it's here.
 	//
-	// ValueStyle requires a parameter describing the key in order to say what
-	// NodeStyle will be acceptable as a value for that key, because when using
+	// ValuePrototype requires a parameter describing the key in order to say what
+	// NodePrototype will be acceptable as a value for that key, because when using
 	// struct types (or union types) from the Schemas system, they behave as maps
 	// but have different acceptable types for each field (or member, for unions).
 	// For plain maps (that is, not structs or unions masquerading as maps),
-	// the empty string can be used as a parameter, and the returned NodeStyle
+	// the empty string can be used as a parameter, and the returned NodePrototype
 	// can be assumed applicable for all values.
-	// Using an empty string for a struct or union will return a nil NodeStyle.
+	// Using an empty string for a struct or union will return nil,
+	// as will using any string which isn't a field or member of those types.
+	//
 	// (Design note: a string is sufficient for the parameter here rather than
 	// a full Node, because the only cases where the value types vary are also
 	// cases where the keys may not be complex.)
-	ValueStyle(k string) NodeStyle
+	ValuePrototype(k string) NodePrototype
 }
 
 type ListAssembler interface {
@@ -96,23 +98,23 @@ type ListAssembler interface {
 
 	Finish() error
 
-	// ValueStyle returns a NodeStyle that knows how to build values this map can contain.
+	// ValuePrototype returns a NodePrototype that knows how to build values this map can contain.
 	//
 	// You often don't need this (because you should be able to
 	// just feed data and check errors), but it's here.
 	//
-	// ValueStyle, much like the matching method on the MapAssembler interface,
+	// ValuePrototype, much like the matching method on the MapAssembler interface,
 	// requires a parameter specifying the index in the list in order to say
-	// what NodeStyle will be acceptable as a value at that position.
+	// what NodePrototype will be acceptable as a value at that position.
 	// For many lists (and *all* lists which operate exclusively at the Data Model level),
-	// this will return the same NodeStyle regardless of the value of 'idx';
+	// this will return the same NodePrototype regardless of the value of 'idx';
 	// the only time this value will vary is when operating with a Schema,
 	// and handling the representation NodeAssembler for a struct type with
 	// a representation of a list kind.
 	// If you know you are operating in a situation that won't have varying
-	// NodeStyles, it is acceptable to call `ValueStyle(0)` and use the
-	// resulting NodeStyle for all reasoning.
-	ValueStyle(idx int) NodeStyle
+	// NodePrototypes, it is acceptable to call `ValuePrototype(0)` and use the
+	// resulting NodePrototype for all reasoning.
+	ValuePrototype(idx int) NodePrototype
 }
 
 type NodeBuilder interface {

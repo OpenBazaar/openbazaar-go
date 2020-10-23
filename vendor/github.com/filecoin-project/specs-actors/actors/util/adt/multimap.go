@@ -1,12 +1,12 @@
 package adt
 
 import (
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/cbor"
 	cid "github.com/ipfs/go-cid"
 	errors "github.com/pkg/errors"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
-
-	runtime "github.com/filecoin-project/specs-actors/actors/runtime"
 )
 
 // Multimap stores multiple values per key in a HAMT of AMTs.
@@ -37,7 +37,7 @@ func (mm *Multimap) Root() (cid.Cid, error) {
 }
 
 // Adds a value for a key.
-func (mm *Multimap) Add(key Keyer, value runtime.CBORMarshaler) error {
+func (mm *Multimap) Add(key abi.Keyer, value cbor.Marshaler) error {
 	// Load the array under key, or initialize a new empty one if not found.
 	array, found, err := mm.Get(key)
 	if err != nil {
@@ -67,7 +67,7 @@ func (mm *Multimap) Add(key Keyer, value runtime.CBORMarshaler) error {
 }
 
 // Removes all values for a key.
-func (mm *Multimap) RemoveAll(key Keyer) error {
+func (mm *Multimap) RemoveAll(key abi.Keyer) error {
 	err := mm.mp.Delete(key)
 	if err != nil {
 		return errors.Wrapf(err, "failed to delete multimap key %v root %v", key, mm.mp.root)
@@ -79,7 +79,7 @@ func (mm *Multimap) RemoveAll(key Keyer) error {
 // calling a function.
 // Iteration halts if the function returns an error.
 // If the output parameter is nil, deserialization is skipped.
-func (mm *Multimap) ForEach(key Keyer, out runtime.CBORUnmarshaler, fn func(i int64) error) error {
+func (mm *Multimap) ForEach(key abi.Keyer, out cbor.Unmarshaler, fn func(i int64) error) error {
 	array, found, err := mm.Get(key)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func (mm *Multimap) ForAll(fn func(k string, arr *Array) error) error {
 	return nil
 }
 
-func (mm *Multimap) Get(key Keyer) (*Array, bool, error) {
+func (mm *Multimap) Get(key abi.Keyer) (*Array, bool, error) {
 	var arrayRoot cbg.CborCid
 	found, err := mm.mp.Get(key, &arrayRoot)
 	if err != nil {

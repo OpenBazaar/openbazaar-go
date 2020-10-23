@@ -45,7 +45,7 @@ type ExploreFieldsSpecBuilder interface {
 }
 
 type selectorSpecBuilder struct {
-	ns ipld.NodeStyle
+	np ipld.NodePrototype
 }
 
 type selectorSpec struct {
@@ -61,14 +61,14 @@ func (ss selectorSpec) Selector() (selector.Selector, error) {
 }
 
 // NewSelectorSpecBuilder creates a SelectorSpecBuilder which will store
-// data in the format determined by the given ipld.NodeStyle.
-func NewSelectorSpecBuilder(ns ipld.NodeStyle) SelectorSpecBuilder {
-	return &selectorSpecBuilder{ns}
+// data in the format determined by the given ipld.NodePrototype.
+func NewSelectorSpecBuilder(np ipld.NodePrototype) SelectorSpecBuilder {
+	return &selectorSpecBuilder{np}
 }
 
 func (ssb *selectorSpecBuilder) ExploreRecursiveEdge() SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreRecursiveEdge).CreateMap(0, func(na fluent.MapAssembler) {})
 		}),
 	}
@@ -76,7 +76,7 @@ func (ssb *selectorSpecBuilder) ExploreRecursiveEdge() SelectorSpec {
 
 func (ssb *selectorSpecBuilder) ExploreRecursive(limit selector.RecursionLimit, sequence SelectorSpec) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreRecursive).CreateMap(2, func(na fluent.MapAssembler) {
 				na.AssembleEntry(selector.SelectorKey_Limit).CreateMap(1, func(na fluent.MapAssembler) {
 					switch limit.Mode() {
@@ -96,7 +96,7 @@ func (ssb *selectorSpecBuilder) ExploreRecursive(limit selector.RecursionLimit, 
 
 func (ssb *selectorSpecBuilder) ExploreAll(next SelectorSpec) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreAll).CreateMap(1, func(na fluent.MapAssembler) {
 				na.AssembleEntry(selector.SelectorKey_Next).AssignNode(next.Node())
 			})
@@ -105,7 +105,7 @@ func (ssb *selectorSpecBuilder) ExploreAll(next SelectorSpec) SelectorSpec {
 }
 func (ssb *selectorSpecBuilder) ExploreIndex(index int, next SelectorSpec) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreIndex).CreateMap(2, func(na fluent.MapAssembler) {
 				na.AssembleEntry(selector.SelectorKey_Index).AssignInt(index)
 				na.AssembleEntry(selector.SelectorKey_Next).AssignNode(next.Node())
@@ -116,7 +116,7 @@ func (ssb *selectorSpecBuilder) ExploreIndex(index int, next SelectorSpec) Selec
 
 func (ssb *selectorSpecBuilder) ExploreRange(start int, end int, next SelectorSpec) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreRange).CreateMap(3, func(na fluent.MapAssembler) {
 				na.AssembleEntry(selector.SelectorKey_Start).AssignInt(start)
 				na.AssembleEntry(selector.SelectorKey_End).AssignInt(end)
@@ -128,7 +128,7 @@ func (ssb *selectorSpecBuilder) ExploreRange(start int, end int, next SelectorSp
 
 func (ssb *selectorSpecBuilder) ExploreUnion(members ...SelectorSpec) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreUnion).CreateList(len(members), func(na fluent.ListAssembler) {
 				for _, member := range members {
 					na.AssembleValue().AssignNode(member.Node())
@@ -140,7 +140,7 @@ func (ssb *selectorSpecBuilder) ExploreUnion(members ...SelectorSpec) SelectorSp
 
 func (ssb *selectorSpecBuilder) ExploreFields(specBuilder ExploreFieldsSpecBuildingClosure) SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_ExploreFields).CreateMap(1, func(na fluent.MapAssembler) {
 				na.AssembleEntry(selector.SelectorKey_Fields).CreateMap(-1, func(na fluent.MapAssembler) {
 					specBuilder(exploreFieldsSpecBuilder{na})
@@ -152,7 +152,7 @@ func (ssb *selectorSpecBuilder) ExploreFields(specBuilder ExploreFieldsSpecBuild
 
 func (ssb *selectorSpecBuilder) Matcher() SelectorSpec {
 	return selectorSpec{
-		fluent.MustBuildMap(ssb.ns, 1, func(na fluent.MapAssembler) {
+		fluent.MustBuildMap(ssb.np, 1, func(na fluent.MapAssembler) {
 			na.AssembleEntry(selector.SelectorKey_Matcher).CreateMap(0, func(na fluent.MapAssembler) {})
 		}),
 	}

@@ -47,7 +47,7 @@ func (pc ParseContext) ParseExploreRange(n ipld.Node) (Selector, error) {
 	if n.ReprKind() != ipld.ReprKind_Map {
 		return nil, fmt.Errorf("selector spec parse rejected: selector body must be a map")
 	}
-	startNode, err := n.LookupString(SelectorKey_Start)
+	startNode, err := n.LookupByString(SelectorKey_Start)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: start field must be present in ExploreRange selector")
 	}
@@ -55,7 +55,7 @@ func (pc ParseContext) ParseExploreRange(n ipld.Node) (Selector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: start field must be a number in ExploreRange selector")
 	}
-	endNode, err := n.LookupString(SelectorKey_End)
+	endNode, err := n.LookupByString(SelectorKey_End)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: end field must be present in ExploreRange selector")
 	}
@@ -66,7 +66,7 @@ func (pc ParseContext) ParseExploreRange(n ipld.Node) (Selector, error) {
 	if startValue >= endValue {
 		return nil, fmt.Errorf("selector spec parse rejected: end field must be greater than start field in ExploreRange selector")
 	}
-	next, err := n.LookupString(SelectorKey_Next)
+	next, err := n.LookupByString(SelectorKey_Next)
 	if err != nil {
 		return nil, fmt.Errorf("selector spec parse rejected: next field must be present in ExploreRange selector")
 	}

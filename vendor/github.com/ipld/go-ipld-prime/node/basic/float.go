@@ -7,7 +7,7 @@ import (
 
 var (
 	_ ipld.Node          = plainFloat(0)
-	_ ipld.NodeStyle     = Style__Float{}
+	_ ipld.NodePrototype = Prototype__Float{}
 	_ ipld.NodeBuilder   = &plainFloat__Builder{}
 	_ ipld.NodeAssembler = &plainFloat__Assembler{}
 )
@@ -25,17 +25,17 @@ type plainFloat float64
 func (plainFloat) ReprKind() ipld.ReprKind {
 	return ipld.ReprKind_Float
 }
-func (plainFloat) LookupString(string) (ipld.Node, error) {
-	return mixins.Float{"float"}.LookupString("")
+func (plainFloat) LookupByString(string) (ipld.Node, error) {
+	return mixins.Float{"float"}.LookupByString("")
 }
-func (plainFloat) Lookup(key ipld.Node) (ipld.Node, error) {
-	return mixins.Float{"float"}.Lookup(nil)
+func (plainFloat) LookupByNode(key ipld.Node) (ipld.Node, error) {
+	return mixins.Float{"float"}.LookupByNode(nil)
 }
-func (plainFloat) LookupIndex(idx int) (ipld.Node, error) {
-	return mixins.Float{"float"}.LookupIndex(0)
+func (plainFloat) LookupByIndex(idx int) (ipld.Node, error) {
+	return mixins.Float{"float"}.LookupByIndex(0)
 }
-func (plainFloat) LookupSegment(seg ipld.PathSegment) (ipld.Node, error) {
-	return mixins.Float{"float"}.LookupSegment(seg)
+func (plainFloat) LookupBySegment(seg ipld.PathSegment) (ipld.Node, error) {
+	return mixins.Float{"float"}.LookupBySegment(seg)
 }
 func (plainFloat) MapIterator() ipld.MapIterator {
 	return nil
@@ -46,7 +46,7 @@ func (plainFloat) ListIterator() ipld.ListIterator {
 func (plainFloat) Length() int {
 	return -1
 }
-func (plainFloat) IsUndefined() bool {
+func (plainFloat) IsAbsent() bool {
 	return false
 }
 func (plainFloat) IsNull() bool {
@@ -70,15 +70,15 @@ func (plainFloat) AsBytes() ([]byte, error) {
 func (plainFloat) AsLink() (ipld.Link, error) {
 	return mixins.Float{"float"}.AsLink()
 }
-func (plainFloat) Style() ipld.NodeStyle {
-	return Style__Float{}
+func (plainFloat) Prototype() ipld.NodePrototype {
+	return Prototype__Float{}
 }
 
-// -- NodeStyle -->
+// -- NodePrototype -->
 
-type Style__Float struct{}
+type Prototype__Float struct{}
 
-func (Style__Float) NewBuilder() ipld.NodeBuilder {
+func (Prototype__Float) NewBuilder() ipld.NodeBuilder {
 	var w plainFloat
 	return &plainFloat__Builder{plainFloat__Assembler{w: &w}}
 }
@@ -139,6 +139,6 @@ func (na *plainFloat__Assembler) AssignNode(v ipld.Node) error {
 		return nil
 	}
 }
-func (plainFloat__Assembler) Style() ipld.NodeStyle {
-	return Style__Float{}
+func (plainFloat__Assembler) Prototype() ipld.NodePrototype {
+	return Prototype__Float{}
 }

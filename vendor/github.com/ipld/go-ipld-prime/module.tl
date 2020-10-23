@@ -15,7 +15,7 @@
 				"action": {
 					"exec": [
 						"/bin/bash", "-c",
-						"export PATH=$PATH:/app/go/go/bin && export GOPATH=$PWD/.gopath && go test ./..."
+						"export PATH=$PATH:/app/go/go/bin && export GOPATH=$PWD/.gopath && go test -tags 'skipgenbehavtests' ./..."
 					]
 				}
 			}
