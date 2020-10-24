@@ -857,7 +857,9 @@ type ChatRead struct {
 	Subject   string `json:"subject"`
 }
 
-func (n ChatRead) Data() ([]byte, error)                       { return json.MarshalIndent(messageReadWrapper{n}, "", "    ") }
+func (n ChatRead) Data() ([]byte, error) {
+	return json.MarshalIndent(messageReadWrapper{n}, "", "    ")
+}
 func (n ChatRead) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n ChatRead) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatRead) GetType() NotificationType                   { return NotifierTypeChatRead }

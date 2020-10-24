@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/tyler-smith/go-bip39"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 func TestMain(m *testing.M) {
@@ -110,8 +110,10 @@ func TestMustDefaultConfig(t *testing.T) {
 	if config == nil {
 		t.Error("Expected config to not be empty")
 	}
-	if config.Addresses.Gateway[0] != "/ip4/127.0.0.1/tcp/4002" {
-		t.Error("config.Addresses.Gateway is not set")
+	if config != nil {
+		if config.Addresses.Gateway[0] != "/ip4/127.0.0.1/tcp/4002" {
+			t.Error("config.Addresses.Gateway is not set")
+		}
 	}
 }
 

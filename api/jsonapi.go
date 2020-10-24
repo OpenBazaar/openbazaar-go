@@ -40,7 +40,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/OpenBazaar/wallet-interface"
+	wallet "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
@@ -4503,11 +4503,11 @@ func (i *jsonAPIHandler) POSTResendOrderMessage(w http.ResponseWriter, r *http.R
 	}
 
 	if args.MessageType == "" {
-		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing messageType argument"))
+		ErrorResponse(w, http.StatusBadRequest, "missing messageType argument")
 		return
 	}
 	if args.OrderID == "" {
-		ErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("missing orderID argument"))
+		ErrorResponse(w, http.StatusBadRequest, "missing orderID argument")
 		return
 	}
 
