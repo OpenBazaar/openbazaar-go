@@ -42,7 +42,7 @@ var (
 
 const (
 	sigHashMask = 0x1f
-	branchID    = 0xf5b9230b
+	branchID    = 0xe9ff75a6
 )
 
 func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
