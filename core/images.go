@@ -109,7 +109,8 @@ func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	err = jpeg.Encode(out, img, nil)
+	q := &jpeg.Options{Quality: 100}
+	err = jpeg.Encode(out, img, q)
 	if err != nil {
 		return "", err
 	}
