@@ -32,7 +32,7 @@ import (
 
 const (
 	// VERSION - current version
-	VERSION = "0.14.5"
+	VERSION = "0.14.6"
 	// USERAGENT - user-agent header string
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
