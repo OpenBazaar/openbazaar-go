@@ -19,9 +19,12 @@ class EthCompleteDirectOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
         api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print("bob api_url : ", api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             address = resp["address"]
+            print(address)
         elif r.status_code == 404:
             raise TestFailure("EthCompleteDirectOnlineTest - FAIL: Address endpoint not found")
         else:
@@ -55,10 +58,13 @@ class EthCompleteDirectOnlineTest(OpenBazaarTestFramework):
         # get listing hash
         api_url = alice["gateway_url"] + "ob/listings/" + alice["peerId"]
         r = requests.get(api_url)
+        print("alice api_url : ", api_url)
         if r.status_code != 200:
             raise TestFailure("EthCompleteDirectOnlineTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
+
+        time.sleep(36000)
 
         # bob send order
         with open('testdata/v5/order_direct.json') as order_file:

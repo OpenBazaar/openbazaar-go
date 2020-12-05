@@ -98,6 +98,16 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 			} else {
 				multiwallet[wallet.TestnetEthereum] = w
 			}
+		case wallet.OBToken:
+			w, err = eth.NewERC20Wallet(coin, cfg.Params, cfg.Mnemonic, cfg.Proxy)
+			if err != nil {
+				return nil, err
+			}
+			if cfg.Params.Name == chaincfg.MainNetParams.Name {
+				multiwallet[wallet.OBToken] = w
+			} else {
+				multiwallet[wallet.TestnetOBToken] = w
+			}
 		}
 	}
 	return multiwallet, nil

@@ -47,6 +47,7 @@ type EthClient struct {
 	eClient *etherscan.Client
 	ws      *websocket.Conn
 	url     string
+	wsurl   string
 }
 
 var txns []wi.Txn
@@ -81,6 +82,7 @@ func NewEthClient(url string) (*EthClient, error) {
 		Client:  conn,
 		eClient: econn,
 		url:     url,
+		wsurl:   wsURL,
 		ws:      ws,
 	}, nil
 
@@ -142,7 +144,7 @@ func (client *EthClient) Transfer(from *Account, destAccount common.Address, val
 }
 
 // TransferToken will transfer erc20 token from this user account to dest address
-func (client *EthClient) TransferToken(from *Account, toAddress common.Address, tokenAddress common.Address, value *big.Int) (common.Hash, error) {
+func (client *EthClient) TransferToken(from *Account, toAddress common.Address, tokenAddress common.Address, value *big.Int, spendAll bool, fee big.Int) (common.Hash, error) {
 	var err error
 	fromAddress := from.Address()
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -172,7 +174,8 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 	if err != nil {
 		return common.BytesToHash([]byte{}), err
 	}
-	rawTx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+	gasLimit = 500000
+	rawTx := types.NewTransaction(nonce, tokenAddress, big.NewInt(0), gasLimit, gasPrice, data)
 	signedTx, err := from.SignTransaction(types.HomesteadSigner{}, rawTx) //types.SignTx(tx, types.HomesteadSigner{}, privateKey)
 	if err != nil {
 		return common.BytesToHash([]byte{}), err

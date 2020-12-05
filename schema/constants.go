@@ -47,6 +47,14 @@ const (
 	EthereumRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
 	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
 
+	// OBToken
+	OBTRegistryAddressMainnet = "0x5c69ccf91eab4ef80d9929b3c1b4d5bc03eb0981"
+	OBTRegistryAddressRinkeby = "0x5cEF053c7b383f430FC4F4e1ea2F7D31d8e2D16C"
+	OBTRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+	OBTAddressMainnet         = "0x6b175474e89094c44da98b954eedeac495271d0f" //"0xe46ea07736e68df951df7b987dda453962ba7d5a"
+	OBTAddressRinkeby         = "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea" //"0xe46ea07736e68df951df7b987dda453962ba7d5a"
+	OBTAddressRopsten         = "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea" //"0xe46ea07736e68df951df7b987dda453962ba7d5a"
+
 	DataPushNodeOne   = "QmbwN82MVyBukT7WTdaQDppaACo62oUfma8dUa5R9nBFHm"
 	DataPushNodeTwo   = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
 	DataPushNodeThree = "QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ"
@@ -89,6 +97,19 @@ func EthereumDefaultOptions() map[string]interface{} {
 	}
 }
 
+func OBTDefaultOptions() map[string]interface{} {
+	return map[string]interface{}{
+		"Name":                   "OB Token",
+		"Symbol":                 "OBT",
+		"MainNetAddress":         OBTAddressMainnet,
+		"RinkebyAddress":         OBTAddressRinkeby,
+		"RopstenAddress":         OBTAddressRopsten,
+		"RegistryAddress":        OBTRegistryAddressMainnet,
+		"RinkebyRegistryAddress": OBTRegistryAddressRinkeby,
+		"RopstenRegistryAddress": OBTRegistryAddressRopsten,
+	}
+}
+
 const (
 	WalletTypeAPI = "API"
 	WalletTypeSPV = "SPV"
@@ -100,12 +121,14 @@ const (
 	CoinAPIOpenBazaarLTC = "https://ltc.api.openbazaar.org/api"
 	CoinAPIOpenBazaarZEC = "https://zec.api.openbazaar.org/api"
 	CoinAPIOpenBazaarETH = "https://mainnet.infura.io"
+	CoinAPIOpenBazaarOBT = "https://mainnet.infura.io"
 
 	CoinAPIOpenBazaarTBTC = "https://tbtc.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTBCH = "https://tbch.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTLTC = "https://tltc.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTZEC = "https://tzec.api.openbazaar.org/api"
 	CoinAPIOpenBazaarTETH = "https://rinkeby.infura.io"
+	CoinAPIOpenBazaarTOBT = "https://rinkeby.infura.io"
 )
 
 var (
@@ -114,10 +137,12 @@ var (
 	CoinPoolLTC = []string{CoinAPIOpenBazaarLTC}
 	CoinPoolZEC = []string{CoinAPIOpenBazaarZEC}
 	CoinPoolETH = []string{CoinAPIOpenBazaarETH}
+	CoinPoolOBT = []string{CoinAPIOpenBazaarOBT}
 
 	CoinPoolTBTC = []string{CoinAPIOpenBazaarTBTC}
 	CoinPoolTBCH = []string{CoinAPIOpenBazaarTBCH}
 	CoinPoolTLTC = []string{CoinAPIOpenBazaarTLTC}
 	CoinPoolTZEC = []string{CoinAPIOpenBazaarTZEC}
 	CoinPoolTETH = []string{CoinAPIOpenBazaarTETH}
+	CoinPoolTOBT = []string{CoinAPIOpenBazaarTOBT}
 )

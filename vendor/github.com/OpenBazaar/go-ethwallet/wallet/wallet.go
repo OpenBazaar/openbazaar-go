@@ -382,10 +382,8 @@ func (wallet *EthereumWallet) CurrencyCode() string {
 	}
 	if wallet.params.Name == chaincfg.MainNetParams.Name {
 		return "ETH"
-	} else {
-		return "TETH"
 	}
-	//return "ETH"
+	return "TETH"
 }
 
 // IsDust Check if this amount is considered dust - 10000 wei
@@ -686,11 +684,11 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 // Spend - Send ether to an external wallet
 func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
-		hash common.Hash
-		h *chainhash.Hash
+		hash      common.Hash
+		h         *chainhash.Hash
 		watchOnly bool
-		nonce int32
-		err error
+		nonce     int32
+		err       error
 	)
 	actualRecipient := addr
 
@@ -1448,9 +1446,6 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 
 // GetConfirmations - Return the number of confirmations and the height for a transaction
 func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
-	// TODO: etherscan api is being used
-	// when mainnet is activated we may need a way to set the
-	// url correctly - done 6 April 2019
 	hash := common.HexToHash(util.EnsureCorrectPrefix(txid.String()))
 	network := etherscan.Rinkby
 	if strings.Contains(wallet.client.url, "mainnet") {
@@ -1527,7 +1522,7 @@ func (wallet *EthereumWallet) CreateAddress() (common.Address, error) {
 // PrintKeys - used to print the keys for this wallet
 func (wallet *EthereumWallet) PrintKeys() {
 	privateKeyBytes := crypto.FromECDSA(wallet.account.privateKey)
-	log.Debug(string(privateKeyBytes))
+	log.Debug(hexutil.Encode(privateKeyBytes)[2:])
 	publicKey := wallet.account.privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {

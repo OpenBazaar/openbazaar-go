@@ -60,7 +60,7 @@ func (c *Config) Connect() error {
 	}
 	config = c
 	Geth = ethConn
-	log(fmt.Sprintf("Connected to Geth at: %v\n", c.GethLocation), false)
+	//log(fmt.Sprintf("Connected to Geth at: %v\n", c.GethLocation), false)
 	return err
 }
 
