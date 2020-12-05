@@ -697,7 +697,7 @@ func (n *OpenBazaarNode) SetPriceOnListings(percentage float64) error {
 }
 
 // SetCurrencyOnListings - set currencies accepted for a listing
-func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
+func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string, seedNode bool) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
 	if err != nil {
 		return err
@@ -740,9 +740,20 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 		return err
 	}
 
-	err = n.SeedNode()
-	if err != nil {
-		return err
+	if seedNode {
+		err = n.SeedNode()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) RemoveDisabledCurrenciesFromListings() error {
+	var cur []string
+	for cc := range n.Multiwallet {
+		cur = append(cur, cc.CurrencyCode())
+	}
+
+	return n. SetCurrencyOnListings(cur, false)
 }

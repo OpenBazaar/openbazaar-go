@@ -52,7 +52,7 @@ func TestOpenBazaarNode_SetCurrencyOnListings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := node.SetCurrencyOnListings(newAcceptedCurrencies); err != nil {
+	if err := node.SetCurrencyOnListings(newAcceptedCurrencies, true); err != nil {
 		t.Fatal(err)
 	}
 
