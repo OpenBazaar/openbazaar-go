@@ -684,7 +684,7 @@ func (wallet *EthereumWallet) GetFeePerByte(feeLevel wi.FeeLevel) big.Int {
 }
 
 // Spend - Send ether to an external wallet
-func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, fee wi.Fee, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
 		hash common.Hash
 		h *chainhash.Hash
@@ -694,9 +694,20 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 	)
 	actualRecipient := addr
 
+	var feePerBytes big.Int
+	if fee.CustomFee != "" {
+		f, ok := new(big.Int).SetString(fee.CustomFee, 10)
+		if !ok {
+			return nil, errors.New("bad custom fee")
+		}
+		feePerBytes = *f
+	} else {
+		feePerBytes = wallet.GetFeePerByte(fee.FeeLevel)
+	}
+
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
-		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
+		hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, feePerBytes)
 	} else {
 		watchOnly = true
 		// this is a spend which means it has to be linked to an order
@@ -731,16 +742,26 @@ func (wallet *EthereumWallet) Spend(amount big.Int, addr btcutil.Address, feeLev
 			}
 			addrScrHash := common.HexToAddress(scrHash)
 			actualRecipient = EthAddress{address: &addrScrHash}
-			hash, _, err = wallet.callAddTransaction(ethScript, &amount, feeLevel)
+			hash, _, err = wallet.callAddTransaction(ethScript, &amount, fee)
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
 				return nil, wi.ErrInsufficientFunds
 			}
 		} else {
-			if !wallet.balanceCheck(feeLevel, amount) {
+			if !wallet.balanceCheck(fee, amount) {
 				return nil, wi.ErrInsufficientFunds
 			}
-			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, wallet.GetFeePerByte(feeLevel))
+			var feePerByte big.Int
+			if fee.CustomFee != "" {
+				f, ok := new(big.Int).SetString(fee.CustomFee, 10)
+				if !ok {
+					return nil, errors.New("bad custom fee")
+				}
+				feePerByte = *f
+			} else {
+				feePerByte = wallet.GetFeePerByte(fee.FeeLevel)
+			}
+			hash, err = wallet.Transfer(util.EnsureCorrectPrefix(addr.String()), &amount, spendAll, feePerByte)
 		}
 		if err != nil {
 			return nil, err
@@ -877,14 +898,24 @@ func (wallet *EthereumWallet) EstimateFee(ins []wi.TransactionInput, outs []wi.T
 	return *sum
 }
 
-func (wallet *EthereumWallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int) bool {
-	fee := wallet.GetFeePerByte(feeLevel)
-	if fee.Int64() == 0 {
+func (wallet *EthereumWallet) balanceCheck(fee wi.Fee, amount big.Int) bool {
+	var feePerByte big.Int
+	if fee.CustomFee != "" {
+		f, ok := new(big.Int).SetString(fee.CustomFee, 10)
+		if !ok {
+			return false
+		}
+		feePerByte = *f
+	} else {
+		feePerByte = wallet.GetFeePerByte(fee.FeeLevel)
+	}
+
+	if feePerByte.Int64() == 0 {
 		return false
 	}
 	// lets check if the caller has enough balance to make the
 	// multisign call
-	requiredBalance := new(big.Int).Mul(&fee, big.NewInt(maxGasLimit))
+	requiredBalance := new(big.Int).Mul(&feePerByte, big.NewInt(maxGasLimit))
 	requiredBalance = new(big.Int).Add(requiredBalance, &amount)
 	currentBalance, err := wallet.GetBalance()
 	if err != nil {
@@ -900,7 +931,10 @@ func (wallet *EthereumWallet) balanceCheck(feeLevel wi.FeeLevel, amount big.Int)
 
 // EstimateSpendFee - Build a spend transaction for the amount and return the transaction fee
 func (wallet *EthereumWallet) EstimateSpendFee(amount big.Int, feeLevel wi.FeeLevel) (big.Int, error) {
-	if !wallet.balanceCheck(feeLevel, amount) {
+	fee := wi.Fee {
+		FeeLevel: feeLevel,
+	}
+	if !wallet.balanceCheck(fee, amount) {
 		return *big.NewInt(0), wi.ErrInsufficientFunds
 	}
 	gas, err := wallet.client.EstimateGasSpend(wallet.account.Address(), &amount)
@@ -940,7 +974,7 @@ func (wallet *EthereumWallet) ExchangeRates() wi.ExchangeRates {
 	return wallet.exchangeRates
 }
 
-func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *big.Int, feeLevel wi.FeeLevel) (common.Hash, uint64, error) {
+func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *big.Int, fee wi.Fee) (common.Hash, uint64, error) {
 
 	h := common.BigToHash(big.NewInt(0))
 
@@ -954,9 +988,21 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 	if err != nil {
 		log.Fatal(err)
 	}
-	gasPriceETHGAS := wallet.GetFeePerByte(feeLevel)
-	if gasPriceETHGAS.Int64() < gasPrice.Int64() {
-		gasPriceETHGAS = *gasPrice
+
+	var gasPriceETHGAS int64
+	if fee.CustomFee != "" {
+		cf, err := strconv.Atoi(fee.CustomFee)
+		if err != nil {
+			return h, nonce, err
+		}
+		gasPriceETHGAS = int64(cf)
+	} else {
+		gas := wallet.GetFeePerByte(fee.FeeLevel)
+		gasPriceETHGAS = gas.Int64()
+	}
+
+	if gasPriceETHGAS < gasPrice.Int64() {
+		gasPriceETHGAS = gasPrice.Int64()
 	}
 	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
 
@@ -967,7 +1013,7 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 
 	// lets check if the caller has enough balance to make the
 	// multisign call
-	if !wallet.balanceCheck(feeLevel, *big.NewInt(0)) {
+	if !wallet.balanceCheck(fee, *big.NewInt(0)) {
 		// the wallet does not have the required balance
 		return h, nonce, wi.ErrInsufficientFunds
 	}

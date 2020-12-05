@@ -102,18 +102,18 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	return m
 }
 
-func (w *SPVWallet) Spend(amount big.Int, addr btc.Address, feeLevel wallet.FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error) {
+func (w *SPVWallet) Spend(amount big.Int, addr btc.Address, fee wallet.Fee, referenceID string, spendAll bool) (*chainhash.Hash, error) {
 	var (
 		tx  *wire.MsgTx
 		err error
 	)
 	if spendAll {
-		tx, err = w.buildSpendAllTx(addr, feeLevel)
+		tx, err = w.buildSpendAllTx(addr, fee)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		tx, err = w.buildTx(amount.Int64(), addr, feeLevel, nil)
+		tx, err = w.buildTx(amount.Int64(), addr, fee, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +245,10 @@ func (w *SPVWallet) EstimateSpendFee(amount big.Int, feeLevel wallet.FeeLevel) (
 	if err != nil {
 		return *big.NewInt(0), err
 	}
-	tx, err := w.buildTx(amount.Int64(), addr, feeLevel, nil)
+	fee := wallet.Fee{
+		FeeLevel: feeLevel,
+	}
+	tx, err := w.buildTx(amount.Int64(), addr, fee, nil)
 	if err != nil {
 		return *big.NewInt(0), err
 	}
@@ -609,7 +612,7 @@ func (w *SPVWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.Add
 	return &txid, nil
 }
 
-func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
+func (w *SPVWallet) buildTx(amount int64, addr btc.Address, fee wallet.Fee, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)
 	if isTxSizeDust(*big.NewInt(amount), len(script)) {
@@ -657,8 +660,17 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	}
 
 	// Get the fee per kilobyte
-	f := w.GetFeePerByte(feeLevel)
-	feePerKB := f.Int64() * 1000
+	var feePerKB int64
+	if fee.CustomFee != "" {
+		customFee, err := strconv.Atoi(fee.CustomFee)
+		if err != nil {
+			return nil, err
+		}
+		feePerKB = int64(customFee * 1000)
+	} else {
+		f := w.GetFeePerByte(fee.FeeLevel)
+		feePerKB = f.Int64() * 1000
+	}
 
 	// outputs
 	out := wire.NewTxOut(amount, script)
@@ -708,7 +720,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	return authoredTx.Tx, nil
 }
 
-func (w *SPVWallet) buildSpendAllTx(addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
+func (w *SPVWallet) buildSpendAllTx(addr btc.Address, fee wallet.Fee) (*wire.MsgTx, error) {
 	tx := wire.NewMsgTx(1)
 
 	coinMap := w.gatherCoins()
@@ -745,17 +757,28 @@ func (w *SPVWallet) buildSpendAllTx(addr btc.Address, feeLevel wallet.FeeLevel) 
 	}
 
 	// Get the fee
-	feePerByte := w.GetFeePerByte(feeLevel)
+	var feePerByte int64
+	if fee.CustomFee != "" {
+		cf, err := strconv.Atoi(fee.CustomFee)
+		if err != nil {
+			return nil, err
+		}
+		feePerByte = int64(cf)
+	} else {
+		f := w.GetFeePerByte(fee.FeeLevel)
+		feePerByte = f.Int64()
+	}
+
 	estimatedSize := EstimateSerializeSize(1, []*wire.TxOut{wire.NewTxOut(0, script)}, false, P2PKH)
-	fee := int64(estimatedSize) * feePerByte.Int64()
+	feeAmount := int64(estimatedSize) * feePerByte
 
 	// Check for dust output
-	if isTxSizeDust(*big.NewInt(totalIn - fee), len(script)) {
+	if isTxSizeDust(*big.NewInt(totalIn - feeAmount), len(script)) {
 		return nil, wallet.ErrorDustAmount
 	}
 
 	// Build the output
-	out := wire.NewTxOut(totalIn-fee, script)
+	out := wire.NewTxOut(totalIn-feeAmount, script)
 	tx.TxOut = append(tx.TxOut, out)
 
 	// BIP 69 sorting

@@ -3,10 +3,11 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
@@ -97,7 +98,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		txid, err := wal.Spend(*outValue, refundAddr, wallet.NORMAL, orderID, false)
+		fee := wallet.Fee{
+			FeeLevel: wallet.NORMAL,
+		}
+		txid, err := wal.Spend(*outValue, refundAddr, fee, orderID, false)
 		if err != nil {
 			return err
 		}

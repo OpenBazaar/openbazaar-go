@@ -238,7 +238,7 @@ type walletMustBanker interface {
 	// be swept to the provided payment address. For most coins this entails subtracting the
 	// transaction fee from the total amount being sent rather than adding it on as is normally
 	// the case when spendAll is false.
-	Spend(amount big.Int, addr btc.Address, feeLevel FeeLevel, referenceID string, spendAll bool) (*chainhash.Hash, error)
+	Spend(amount big.Int, addr btc.Address, fee Fee, referenceID string, spendAll bool) (*chainhash.Hash, error)
 
 	// EstimateFee should return the estimate fee that will be required to make a transaction
 	// spending from the given inputs to the given outputs. FeePerByte is denominated in
@@ -288,7 +288,13 @@ const (
 	ECONOMIC                = 2
 	FEE_BUMP                = 3
 	SUPER_ECONOMIC          = 4
+	CUSTOM                  = 5
 )
+
+type Fee struct {
+	FeeLevel  FeeLevel
+	CustomFee string
+}
 
 // The end leaves on the HD wallet have only two possible values. External keys are those given
 // to other people for the purpose of receiving transactions. These may include keys used for
