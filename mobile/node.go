@@ -480,12 +480,13 @@ func (n *Node) start() error {
 			SendAck:   n.OpenBazaarNode.SendOfflineAck,
 			SendError: n.OpenBazaarNode.SendError,
 		})
+		go MR.ResetPointerList()
 		go MR.Run()
 		n.OpenBazaarNode.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
-		MR.Wait()
+		// MR.Wait()
 
 		n.OpenBazaarNode.PublishLock.Unlock()
 		publishUnlocked = true
