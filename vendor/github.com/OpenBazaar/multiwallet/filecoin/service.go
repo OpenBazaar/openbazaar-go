@@ -224,7 +224,11 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		v, _ := new(big.Int).SetString(in.ValueIface.(string), 10)
+		inValue := "0"
+		if in.ValueIface != nil {
+			inValue = in.ValueIface.(string)
+		}
+		v, _ := new(big.Int).SetString(inValue, 10)
 		cbin := wallet.TransactionInput{
 			LinkedAddress: faddr,
 			Value:         *v,
@@ -246,7 +250,7 @@ func (fs *FilecoinService) saveSingleTxToDB(u model.Transaction, chainHeight int
 			continue
 		}
 
-		v, _ := new(big.Int).SetString(out.ValueIface.(string), 10)
+		v := new(big.Int).SetInt64(int64(out.Value))
 
 		cbout := wallet.TransactionOutput{Address: faddr, Value: *v, Index: uint32(i)}
 		cb.Outputs = append(cb.Outputs, cbout)

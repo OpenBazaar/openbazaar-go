@@ -21,6 +21,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	faddr "github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
@@ -273,6 +274,7 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 	}
 
 	nonce := uint64(0)
+	fmt.Println(txns)
 	for _, tx := range txns {
 		val, _ := new(big.Int).SetString(tx.Value, 10)
 		if val.Cmp(big.NewInt(0)) > 0 {
@@ -283,6 +285,7 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 		if err != nil {
 			return "", err
 		}
+
 		if m.Nonce > nonce {
 			nonce = m.Nonce
 		}
@@ -291,12 +294,18 @@ func (w *FilecoinWallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi
 		nonce++
 	}
 
+	nonce = uint64(len(txns))
+
+	fmt.Println(nonce)
+
 	m := types.Message{
 		To:       address,
 		Value:    bigAmt,
 		From:     w.addr,
-		GasLimit: 1000,
-		Nonce:    nonce,
+		GasLimit: 269397085,
+		GasFeeCap: abi.NewTokenAmount(5440982715),
+		Nonce:    1,
+		GasPremium: abi.NewTokenAmount(5301629),
 	}
 
 	id := m.Cid()
