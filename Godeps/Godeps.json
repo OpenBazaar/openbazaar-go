@@ -2501,11 +2501,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client/errors",
-<<<<<<< HEAD
-			"Rev": "2b4be2cd7336e77e7ceffe0bce05e8ebec3be287"
-=======
 			"Rev": "e2e450015927ced1aa82ded74eba802ec0b3ddf1"
->>>>>>> master
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/wallet-interface",
